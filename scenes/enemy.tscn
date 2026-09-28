@@ -1,0 +1,165 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy.gd" id="1_enemy"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_enemy"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="Material_armor"]
+resource_local_to_scene = true
+albedo_color = Color(0.68, 0.035, 0.28, 1)
+metallic = 0.55
+roughness = 0.32
+emission_enabled = true
+emission = Color(0.36, 0.008, 0.07, 1)
+emission_energy_multiplier = 0.25
+
+[sub_resource type="StandardMaterial3D" id="Material_metal"]
+albedo_color = Color(0.065, 0.09, 0.13, 1)
+metallic = 0.7
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="Material_visor"]
+shading_mode = 0
+albedo_color = Color(1, 0.72, 0.13, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_thruster"]
+shading_mode = 0
+albedo_color = Color(1, 0.12, 0.5, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_torso"]
+size = Vector3(0.57, 0.63, 0.4)
+
+[sub_resource type="BoxMesh" id="Mesh_chest"]
+size = Vector3(0.39, 0.35, 0.09)
+
+[sub_resource type="BoxMesh" id="Mesh_head"]
+size = Vector3(0.47, 0.34, 0.38)
+
+[sub_resource type="BoxMesh" id="Mesh_visor_frame"]
+size = Vector3(0.4, 0.14, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_visor"]
+size = Vector3(0.31, 0.043, 0.018)
+
+[sub_resource type="BoxMesh" id="Mesh_shoulder"]
+size = Vector3(0.26, 0.28, 0.42)
+
+[sub_resource type="BoxMesh" id="Mesh_arm"]
+size = Vector3(0.16, 0.37, 0.21)
+
+[sub_resource type="CylinderMesh" id="Mesh_hip"]
+top_radius = 0.27
+bottom_radius = 0.17
+height = 0.25
+radial_segments = 6
+
+[sub_resource type="CylinderMesh" id="Mesh_nozzle"]
+top_radius = 0.16
+bottom_radius = 0.12
+height = 0.2
+radial_segments = 6
+
+[sub_resource type="CylinderMesh" id="Mesh_exhaust"]
+top_radius = 0.085
+bottom_radius = 0.025
+height = 0.27
+radial_segments = 5
+
+[node name="Enemy" type="CharacterBody3D"]
+script = ExtResource("1_enemy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_enemy")
+
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.06, 0)
+mesh = SubResource("Mesh_torso")
+material_override = SubResource("Material_armor")
+
+[node name="Chest" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.04, -0.245)
+rotation = Vector3(0, 0, 0.12)
+mesh = SubResource("Mesh_chest")
+material_override = SubResource("Material_metal")
+
+[node name="Core" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, 0.07, -0.3)
+rotation = Vector3(0, 0, 1.570796)
+scale = Vector3(0.65, 1, 1)
+mesh = SubResource("Mesh_visor")
+material_override = SubResource("Material_thruster")
+
+[node name="Head" type="Node3D" parent="Visual"]
+position = Vector3(0, 0.58, -0.025)
+
+[node name="Armor" type="MeshInstance3D" parent="Visual/Head"]
+mesh = SubResource("Mesh_head")
+material_override = SubResource("Material_armor")
+
+[node name="VisorFrame" type="MeshInstance3D" parent="Visual/Head"]
+position = Vector3(0, -0.015, -0.205)
+mesh = SubResource("Mesh_visor_frame")
+material_override = SubResource("Material_metal")
+
+[node name="Visor" type="MeshInstance3D" parent="Visual/Head"]
+position = Vector3(0, -0.01, -0.235)
+mesh = SubResource("Mesh_visor")
+material_override = SubResource("Material_visor")
+
+[node name="LeftShoulder" type="Node3D" parent="Visual"]
+position = Vector3(-0.41, 0.28, 0)
+rotation = Vector3(0, 0, 0.2)
+
+[node name="Armor" type="MeshInstance3D" parent="Visual/LeftShoulder"]
+mesh = SubResource("Mesh_shoulder")
+material_override = SubResource("Material_armor")
+
+[node name="Arm" type="MeshInstance3D" parent="Visual/LeftShoulder"]
+position = Vector3(0, -0.29, 0)
+mesh = SubResource("Mesh_arm")
+material_override = SubResource("Material_metal")
+
+[node name="LeftGauntlet" type="MeshInstance3D" parent="Visual/LeftShoulder"]
+position = Vector3(0, -0.43, -0.01)
+scale = Vector3(0.8, 0.65, 0.65)
+mesh = SubResource("Mesh_shoulder")
+material_override = SubResource("Material_armor")
+
+[node name="RightShoulder" type="Node3D" parent="Visual"]
+position = Vector3(0.41, 0.28, 0)
+rotation = Vector3(0, 0, -0.2)
+
+[node name="Armor" type="MeshInstance3D" parent="Visual/RightShoulder"]
+mesh = SubResource("Mesh_shoulder")
+material_override = SubResource("Material_armor")
+
+[node name="Arm" type="MeshInstance3D" parent="Visual/RightShoulder"]
+position = Vector3(0, -0.29, 0)
+mesh = SubResource("Mesh_arm")
+material_override = SubResource("Material_metal")
+
+[node name="RightGauntlet" type="MeshInstance3D" parent="Visual/RightShoulder"]
+position = Vector3(0, -0.43, -0.01)
+scale = Vector3(0.8, 0.65, 0.65)
+mesh = SubResource("Mesh_shoulder")
+material_override = SubResource("Material_armor")
+
+[node name="Hip" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, -0.37, 0)
+mesh = SubResource("Mesh_hip")
+material_override = SubResource("Material_armor")
+
+[node name="Nozzle" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, -0.56, 0)
+mesh = SubResource("Mesh_nozzle")
+material_override = SubResource("Material_metal")
+
+[node name="Exhaust" type="MeshInstance3D" parent="Visual"]
+position = Vector3(0, -0.73, 0)
+mesh = SubResource("Mesh_exhaust")
+material_override = SubResource("Material_thruster")
+cast_shadow = 0
