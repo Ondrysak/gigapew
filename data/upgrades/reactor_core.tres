@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"reactor_core"
+display_name = "Reactor Core"
+description = "+6% damage and +6% area (total +6% each)."
+level_descriptions = PackedStringArray("+6% damage and +6% area (total +6% each).", "+6% damage and +6% area (total +12% each).", "+6% damage and +6% area (total +18% each).", "+6% damage and +6% area (total +24% each).", "+6% damage and +6% area (total +30% each).")
+max_level = 5
+weight = 0.7
+accent_color = Color(1.0, 0.5, 0.15, 1)
+damage_multiplier = 0.06
+area_multiplier = 0.06

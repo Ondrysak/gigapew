@@ -1,0 +1,884 @@
+class_name Horde
+extends Node3D
+
+## Data-oriented crowd of up to CAPACITY enemies. No per-enemy nodes or physics
+## bodies: positions live in packed arrays on the XZ floor plane, crowding uses
+## a uniform grid, and each enemy type draws as one MultiMesh. Weapons query
+## enemies through raycast/query_radius/nearest and damage them by index.
+
+signal enemy_killed(definition: HordeEnemyDefinition, position: Vector3)
+signal boss_spawned(definition: HordeEnemyDefinition)
+signal boss_health_changed(current: float, maximum: float)
+signal boss_killed
+
+const CAPACITY := 4096
+const CELL := 2.0
+const DEATH_TIME := 0.22
+const FLASH_TIME := 0.12
+const PLAYER_RADIUS := 0.4
+const MAX_NEIGHBOR_CHECKS := 8
+const SEPARATION := 0.45
+const MAX_PROJECTILES := 512
+const BIG_RADIUS := 0.9
+
+enum { FREE, ALIVE, DYING }
+enum Mode { SEEK, WINDUP, CHARGE }
+
+@export var enemy_shader: Shader
+@export var projectile_mesh: Mesh
+@export var projectile_material: Material
+@export var projectile_radius := 0.22
+## Crowd contact hurts in ticks: every contact_tick seconds the player takes
+## the summed contact_damage of touching enemies, capped at contact_cap.
+@export var contact_tick := 0.5
+@export var contact_cap := 4.0
+## Hitscan forgiveness above each enemy's height so level shots at eye height
+## still connect with short enemies.
+@export var hit_headroom := 0.6
+
+var alive_count := 0
+var target: ArenaPlayer
+
+var _defs: Array[HordeEnemyDefinition] = []
+var _type_of: Dictionary = {}
+var _t_behavior := PackedInt32Array()
+var _t_speed := PackedFloat32Array()
+var _t_radius := PackedFloat32Array()
+var _t_height := PackedFloat32Array()
+var _t_mass := PackedFloat32Array()
+var _t_contact := PackedFloat32Array()
+var _t_scale := PackedFloat32Array()
+var _t_boss := PackedByteArray()
+var _renderers: Array[MultiMeshInstance3D] = []
+var _buffers: Array[PackedFloat32Array] = []
+
+var _state := PackedInt32Array()
+var _type := PackedInt32Array()
+var _mode := PackedInt32Array()
+var _pos := PackedVector2Array()
+var _knock := PackedVector2Array()
+var _aim := PackedVector2Array()
+var _yaw := PackedFloat32Array()
+var _hp := PackedFloat32Array()
+var _max_hp := PackedFloat32Array()
+var _flash := PackedFloat32Array()
+var _timer := PackedFloat32Array()
+var _cooldown := PackedFloat32Array()
+var _phase := PackedFloat32Array()
+var _death := PackedFloat32Array()
+var _stamp := PackedInt32Array()
+var _cell_of := PackedInt32Array()
+var _query_id := 0
+
+var _active := PackedInt32Array()
+var _active_count := 0
+var _dying := PackedInt32Array()
+var _dying_count := 0
+var _free := PackedInt32Array()
+var _free_count := 0
+var _big := PackedInt32Array()
+var _boss_index := -1
+
+var _area := Rect2()
+## Walkable XZ rectangle enemies are confined to (read-only after setup).
+var play_area: Rect2:
+	get:
+		return _area
+## Slot of the living boss, or -1.
+var boss_index: int:
+	get:
+		return _boss_index
+var _grid_w := 1
+var _grid_h := 1
+var _cells := 1
+var _cell_start := PackedInt32Array()
+var _cell_cursor := PackedInt32Array()
+var _cell_items := PackedInt32Array()
+
+# Static obstacles: circles and axis-aligned boxes, bucketed per grid cell.
+var _obstacle_center := PackedVector2Array()
+var _obstacle_half := PackedVector2Array()
+var _obstacle_circle := PackedByteArray()
+var _cell_obstacle_start := PackedInt32Array()
+var _cell_obstacle_items := PackedInt32Array()
+
+var _contact_timer := 0.0
+var _rng := RandomNumberGenerator.new()
+
+var _shot_pos := PackedVector3Array()
+var _shot_vel := PackedVector3Array()
+var _shot_life := PackedFloat32Array()
+var _shot_damage := PackedFloat32Array()
+var _shot_count := 0
+var _shot_renderer: MultiMeshInstance3D
+var _shot_buffer := PackedFloat32Array()
+
+var _candidate_index := PackedInt32Array()
+var _candidate_t := PackedFloat32Array()
+var _scratch := PackedInt32Array()
+
+func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer) -> void:
+	target = player
+	_area = area
+	_rng.randomize()
+	# Packed arrays are values: resize each member directly, never via a temp list.
+	_state.resize(CAPACITY)
+	_type.resize(CAPACITY)
+	_mode.resize(CAPACITY)
+	_stamp.resize(CAPACITY)
+	_cell_of.resize(CAPACITY)
+	_state.fill(FREE)
+	_stamp.fill(0)
+	_yaw.resize(CAPACITY)
+	_hp.resize(CAPACITY)
+	_max_hp.resize(CAPACITY)
+	_flash.resize(CAPACITY)
+	_timer.resize(CAPACITY)
+	_cooldown.resize(CAPACITY)
+	_phase.resize(CAPACITY)
+	_death.resize(CAPACITY)
+	_pos.resize(CAPACITY)
+	_knock.resize(CAPACITY)
+	_aim.resize(CAPACITY)
+	_active.resize(CAPACITY)
+	_dying.resize(CAPACITY)
+	_cell_items.resize(CAPACITY)
+	_free.resize(CAPACITY)
+	for slot in CAPACITY:
+		_free[slot] = CAPACITY - 1 - slot
+	_free_count = CAPACITY
+	_grid_w = maxi(1, ceili(_area.size.x / CELL))
+	_grid_h = maxi(1, ceili(_area.size.y / CELL))
+	_cells = _grid_w * _grid_h
+	_cell_start.resize(_cells + 1)
+	_cell_cursor.resize(_cells)
+	_candidate_index.resize(64)
+	_candidate_t.resize(64)
+	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
+	for definition in definitions:
+		_register(definition, bounds)
+	_read_obstacles(obstacles)
+	_shot_pos.resize(MAX_PROJECTILES)
+	_shot_vel.resize(MAX_PROJECTILES)
+	_shot_life.resize(MAX_PROJECTILES)
+	_shot_damage.resize(MAX_PROJECTILES)
+	var shots := MultiMesh.new()
+	shots.transform_format = MultiMesh.TRANSFORM_3D
+	shots.mesh = projectile_mesh
+	shots.instance_count = MAX_PROJECTILES
+	shots.visible_instance_count = 0
+	_shot_renderer = MultiMeshInstance3D.new()
+	_shot_renderer.multimesh = shots
+	_shot_renderer.material_override = projectile_material
+	_shot_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_shot_renderer.custom_aabb = bounds
+	add_child(_shot_renderer)
+	_shot_buffer.resize(MAX_PROJECTILES * 12)
+
+func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
+	if _type_of.has(definition):
+		return
+	_type_of[definition] = _defs.size()
+	_defs.append(definition)
+	_t_behavior.append(definition.behavior)
+	_t_speed.append(definition.speed)
+	_t_radius.append(definition.radius)
+	_t_height.append(definition.height)
+	_t_mass.append(maxf(0.05, definition.mass))
+	_t_contact.append(definition.contact_damage)
+	_t_scale.append(definition.model_scale)
+	_t_boss.append(1 if definition.is_boss else 0)
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_custom_data = true
+	multimesh.mesh = HordeMeshBaker.bake(definition, enemy_shader)
+	multimesh.instance_count = 64
+	multimesh.visible_instance_count = 0
+	var renderer := MultiMeshInstance3D.new()
+	renderer.name = definition.display_name
+	renderer.multimesh = multimesh
+	renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if definition.is_boss else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	renderer.custom_aabb = bounds
+	add_child(renderer)
+	_renderers.append(renderer)
+	var buffer := PackedFloat32Array()
+	buffer.resize(64 * 16)
+	_buffers.append(buffer)
+
+func _read_obstacles(root: Node) -> void:
+	if root != null:
+		for body in root.get_children():
+			if not body is StaticBody3D:
+				continue
+			for child in body.get_children():
+				var collider := child as CollisionShape3D
+				if collider == null or collider.shape == null:
+					continue
+				var world := (body as Node3D).global_transform * collider.transform
+				var center := Vector2(world.origin.x, world.origin.z)
+				if collider.shape is CylinderShape3D:
+					var radius := (collider.shape as CylinderShape3D).radius * world.basis.get_scale().x
+					_obstacle_center.append(center)
+					_obstacle_half.append(Vector2(radius, radius))
+					_obstacle_circle.append(1)
+				elif collider.shape is BoxShape3D:
+					# Yaw is a multiple of 90 degrees: project the box extents onto X/Z.
+					var half := (collider.shape as BoxShape3D).size * 0.5
+					var x_axis := world.basis.x * half.x
+					var z_axis := world.basis.z * half.z
+					_obstacle_center.append(center)
+					_obstacle_half.append(Vector2(absf(x_axis.x) + absf(z_axis.x), absf(x_axis.z) + absf(z_axis.z)))
+					_obstacle_circle.append(0)
+	# Bucket obstacles into every cell their footprint (plus largest enemy) touches.
+	var buckets: Array[PackedInt32Array] = []
+	buckets.resize(_cells)
+	var margin := 2.0
+	for index in _obstacle_center.size():
+		var low := _obstacle_center[index] - _obstacle_half[index] - Vector2(margin, margin)
+		var high := _obstacle_center[index] + _obstacle_half[index] + Vector2(margin, margin)
+		for cz in range(_cell_z(low.y), _cell_z(high.y) + 1):
+			for cx in range(_cell_x(low.x), _cell_x(high.x) + 1):
+				buckets[cz * _grid_w + cx].append(index)
+	_cell_obstacle_start.resize(_cells + 1)
+	var total := 0
+	for cell in _cells:
+		_cell_obstacle_start[cell] = total
+		total += buckets[cell].size()
+		_cell_obstacle_items.append_array(buckets[cell])
+	_cell_obstacle_start[_cells] = total
+
+func _cell_x(x: float) -> int:
+	return clampi(int((x - _area.position.x) / CELL), 0, _grid_w - 1)
+
+func _cell_z(z: float) -> int:
+	return clampi(int((z - _area.position.y) / CELL), 0, _grid_h - 1)
+
+# ---------------------------------------------------------------- spawning
+
+func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
+	if _free_count == 0:
+		return -1
+	var type: int = _type_of[definition]
+	_free_count -= 1
+	var slot := _free[_free_count]
+	var radius := _t_radius[type]
+	xz.x = clampf(xz.x, _area.position.x + radius, _area.end.x - radius)
+	xz.y = clampf(xz.y, _area.position.y + radius, _area.end.y - radius)
+	_state[slot] = ALIVE
+	_type[slot] = type
+	_mode[slot] = Mode.SEEK
+	_pos[slot] = xz
+	_knock[slot] = Vector2.ZERO
+	_hp[slot] = definition.max_health * health_multiplier
+	_max_hp[slot] = _hp[slot]
+	_flash[slot] = 0.0
+	_cooldown[slot] = _rng.randf_range(0.5, definition.attack_cooldown)
+	_phase[slot] = _rng.randf() * TAU
+	_yaw[slot] = _rng.randf() * TAU
+	_active[_active_count] = slot
+	_active_count += 1
+	alive_count += 1
+	if radius > BIG_RADIUS:
+		_big.append(slot)
+	if definition.is_boss:
+		_boss_index = slot
+		boss_spawned.emit(definition)
+		boss_health_changed.emit(_hp[slot], _max_hp[slot])
+	return slot
+
+## True when a disc at xz would overlap an obstacle or leave the play area.
+func is_blocked(xz: Vector2, radius: float) -> bool:
+	if not _area.grow(-radius).has_point(xz):
+		return true
+	var cell := _cell_z(xz.y) * _grid_w + _cell_x(xz.x)
+	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
+		var o := _cell_obstacle_items[k]
+		var delta := xz - _obstacle_center[o]
+		var half := _obstacle_half[o]
+		if _obstacle_circle[o] == 1:
+			if delta.length() < half.x + radius:
+				return true
+		elif absf(delta.x) < half.x + radius and absf(delta.y) < half.y + radius:
+			return true
+	return false
+
+## Removes every enemy without rewards (stage clear).
+func clear() -> void:
+	for a in _active_count:
+		var slot := _active[a]
+		if _state[slot] == ALIVE:
+			_begin_death(slot)
+	_active_count = 0
+	alive_count = 0
+	_shot_count = 0
+
+# ---------------------------------------------------------------- queries
+
+func is_alive(index: int) -> bool:
+	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
+
+func enemy_position(index: int) -> Vector3:
+	var p := _pos[index]
+	return Vector3(p.x, _t_height[_type[index]] * 0.5, p.y)
+
+func get_definition(index: int) -> HordeEnemyDefinition:
+	return _defs[_type[index]]
+
+func query_radius(center: Vector3, radius: float, out: PackedInt32Array) -> int:
+	_query_id += 1
+	var c := Vector2(center.x, center.z)
+	var count := 0
+	var reach := radius + 1.0
+	for cz in range(_cell_z(c.y - reach), _cell_z(c.y + reach) + 1):
+		for cx in range(_cell_x(c.x - reach), _cell_x(c.x + reach) + 1):
+			var cell := cz * _grid_w + cx
+			for k in range(_cell_start[cell], _cell_start[cell + 1]):
+				count = _collect_in_radius(_cell_items[k], c, radius, out, count)
+	for slot in _big:
+		count = _collect_in_radius(slot, c, radius, out, count)
+	return count
+
+func _collect_in_radius(slot: int, c: Vector2, radius: float, out: PackedInt32Array, count: int) -> int:
+	if _state[slot] != ALIVE or _stamp[slot] == _query_id:
+		return count
+	_stamp[slot] = _query_id
+	var r := radius + _t_radius[_type[slot]]
+	if (_pos[slot] - c).length_squared() > r * r:
+		return count
+	if count >= out.size():
+		out.resize(maxi(16, out.size() * 2))
+	out[count] = slot
+	return count + 1
+
+func nearest(center: Vector3, max_radius: float) -> int:
+	var c := Vector2(center.x, center.z)
+	var best := -1
+	var best_d2 := max_radius * max_radius
+	var cx0 := _cell_x(c.x)
+	var cz0 := _cell_z(c.y)
+	var rings := ceili(max_radius / CELL) + 1
+	for ring in rings:
+		# Cells on this ring are at least (ring - 1) * CELL away.
+		if best >= 0 and pow(maxf(0.0, (ring - 1) * CELL), 2.0) > best_d2:
+			break
+		for cz in range(cz0 - ring, cz0 + ring + 1):
+			if cz < 0 or cz >= _grid_h:
+				continue
+			var edge := cz == cz0 - ring or cz == cz0 + ring
+			var step := 1 if edge else ring * 2
+			var cx := cx0 - ring
+			while cx <= cx0 + ring:
+				if cx >= 0 and cx < _grid_w:
+					var cell := cz * _grid_w + cx
+					for k in range(_cell_start[cell], _cell_start[cell + 1]):
+						var slot := _cell_items[k]
+						if _state[slot] != ALIVE:
+							continue
+						var d2 := (_pos[slot] - c).length_squared()
+						if d2 < best_d2:
+							best_d2 = d2
+							best = slot
+				cx += maxi(1, step)
+	for slot in _big:
+		if _state[slot] == ALIVE and (_pos[slot] - c).length_squared() < best_d2:
+			best_d2 = (_pos[slot] - c).length_squared()
+			best = slot
+	return best
+
+## Ray against enemy cylinders; writes up to max_hits nearest hits.
+func raycast(origin: Vector3, direction: Vector3, max_distance: float, max_hits: int, out_hits: PackedInt32Array, out_distances: PackedFloat32Array) -> int:
+	_query_id += 1
+	var candidates := 0
+	var h := Vector2(direction.x, direction.z)
+	var o := Vector2(origin.x, origin.z)
+	for slot in _big:
+		candidates = _ray_test(slot, origin, direction, o, h, max_distance, candidates)
+	var cx := _cell_x(o.x)
+	var cz := _cell_z(o.y)
+	var step_x := 1 if h.x > 0.0 else -1
+	var step_z := 1 if h.y > 0.0 else -1
+	var local := o - _area.position
+	var next_x := INF if absf(h.x) < 0.00001 else ((cx + (1 if step_x > 0 else 0)) * CELL - local.x) / h.x
+	var next_z := INF if absf(h.y) < 0.00001 else ((cz + (1 if step_z > 0 else 0)) * CELL - local.y) / h.y
+	var delta_x := INF if absf(h.x) < 0.00001 else CELL / absf(h.x)
+	var delta_z := INF if absf(h.y) < 0.00001 else CELL / absf(h.y)
+	var entered := 0.0
+	# Neighbor cells are included so bodies overlapping a cell edge still hit.
+	while entered <= max_distance:
+		for nz in range(maxi(0, cz - 1), mini(_grid_h, cz + 2)):
+			for nx in range(maxi(0, cx - 1), mini(_grid_w, cx + 2)):
+				var cell := nz * _grid_w + nx
+				for k in range(_cell_start[cell], _cell_start[cell + 1]):
+					candidates = _ray_test(_cell_items[k], origin, direction, o, h, max_distance, candidates)
+		if candidates >= max_hits and _kth_smallest(candidates, max_hits) < entered - CELL:
+			break
+		if next_x < next_z:
+			cx += step_x
+			entered = next_x
+			next_x += delta_x
+		else:
+			cz += step_z
+			entered = next_z
+			next_z += delta_z
+		if cx < 0 or cz < 0 or cx >= _grid_w or cz >= _grid_h or (next_x == INF and next_z == INF):
+			break
+	# Selection-sort the nearest max_hits candidates into the outputs.
+	var hits := mini(candidates, max_hits)
+	if out_hits.size() < hits:
+		out_hits.resize(hits)
+	if out_distances.size() < hits:
+		out_distances.resize(hits)
+	for n in hits:
+		var best := n
+		for m in range(n + 1, candidates):
+			if _candidate_t[m] < _candidate_t[best]:
+				best = m
+		var t := _candidate_t[best]
+		var slot := _candidate_index[best]
+		_candidate_t[best] = _candidate_t[n]
+		_candidate_index[best] = _candidate_index[n]
+		_candidate_t[n] = t
+		_candidate_index[n] = slot
+		out_hits[n] = slot
+		out_distances[n] = t
+	return hits
+
+func _kth_smallest(count: int, k: int) -> float:
+	# Upper bound of the k nearest: the largest of the first k after partial scan.
+	var worst := 0.0
+	var taken := 0
+	var threshold := -INF
+	while taken < k:
+		var best := INF
+		for m in count:
+			if _candidate_t[m] > threshold and _candidate_t[m] < best:
+				best = _candidate_t[m]
+		threshold = best
+		worst = best
+		taken += 1
+	return worst
+
+func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Vector2, max_distance: float, candidates: int) -> int:
+	if _state[slot] != ALIVE or _stamp[slot] == _query_id:
+		return candidates
+	_stamp[slot] = _query_id
+	var type := _type[slot]
+	var radius := _t_radius[type] + 0.08
+	var m := o - _pos[slot]
+	var a := h.length_squared()
+	var c := m.length_squared() - radius * radius
+	var t := 0.0
+	var t_exit := max_distance
+	if a < 0.000001:
+		if c > 0.0:
+			return candidates
+	else:
+		var b := m.dot(h)
+		var disc := b * b - a * c
+		if disc < 0.0:
+			return candidates
+		var root := sqrt(disc)
+		t = (-b - root) / a
+		t_exit = (-b + root) / a
+		if t_exit < 0.0:
+			return candidates
+		t = maxf(t, 0.0)
+	if t > max_distance:
+		return candidates
+	var y_enter := origin.y + direction.y * t
+	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
+	var height := _t_height[type] + hit_headroom
+	if minf(y_enter, y_exit) > height or maxf(y_enter, y_exit) < 0.0:
+		return candidates
+	if y_enter > height and direction.y < 0.0:
+		t = (height - origin.y) / direction.y
+	elif y_enter < 0.0 and direction.y > 0.0:
+		t = -origin.y / direction.y
+	if candidates >= _candidate_t.size():
+		_candidate_t.resize(candidates * 2)
+		_candidate_index.resize(candidates * 2)
+	_candidate_index[candidates] = slot
+	_candidate_t[candidates] = t
+	return candidates + 1
+
+## Positions for radar display, sampled evenly across the living crowd.
+func sample_positions(out: PackedVector2Array, max_count: int) -> int:
+	var stride := maxi(1, ceili(float(_active_count) / max_count))
+	var count := 0
+	var a := 0
+	while a < _active_count and count < max_count:
+		var slot := _active[a]
+		if _state[slot] == ALIVE:
+			if count >= out.size():
+				out.resize(max_count)
+			out[count] = _pos[slot]
+			count += 1
+		a += stride
+	return count
+
+# ---------------------------------------------------------------- damage
+
+func damage(index: int, amount: float, knockback := Vector3.ZERO) -> bool:
+	if not is_alive(index) or amount <= 0.0:
+		return false
+	_hp[index] -= amount
+	_flash[index] = 1.0
+	var mass := _t_mass[_type[index]]
+	_knock[index] += Vector2(knockback.x, knockback.z) / mass
+	if index == _boss_index:
+		boss_health_changed.emit(maxf(0.0, _hp[index]), _max_hp[index])
+	if _hp[index] > 0.0:
+		return false
+	var definition := _defs[_type[index]]
+	var at := enemy_position(index)
+	_begin_death(index)
+	alive_count -= 1
+	enemy_killed.emit(definition, at)
+	if index == _boss_index:
+		_boss_index = -1
+		boss_killed.emit()
+	return true
+
+func damage_radius(center: Vector3, radius: float, amount: float, knockback_strength := 0.0) -> int:
+	var count := query_radius(center, radius, _scratch)
+	var c := Vector2(center.x, center.z)
+	for n in count:
+		var slot := _scratch[n]
+		var away := _pos[slot] - c
+		var push := Vector3.ZERO
+		if knockback_strength > 0.0 and away.length_squared() > 0.0001:
+			away = away.normalized() * knockback_strength
+			push = Vector3(away.x, 0.0, away.y)
+		damage(slot, amount, push)
+	return count
+
+func _begin_death(slot: int) -> void:
+	_state[slot] = DYING
+	_death[slot] = DEATH_TIME
+	_flash[slot] = 1.0
+	_dying[_dying_count] = slot
+	_dying_count += 1
+	if _t_radius[_type[slot]] > BIG_RADIUS:
+		var at := _big.find(slot)
+		if at >= 0:
+			_big.remove_at(at)
+
+# ---------------------------------------------------------------- simulation
+
+func _physics_process(delta: float) -> void:
+	_rebuild_grid()
+	var chasing := is_instance_valid(target) and target.active
+	var player := Vector2.ZERO
+	var player_y := 0.0
+	if is_instance_valid(target):
+		player = Vector2(target.global_position.x, target.global_position.z)
+		player_y = target.global_position.y - 0.9
+	var contact := 0.0
+	var knock_decay := minf(1.0, 7.0 * delta)
+	var turn := minf(1.0, 10.0 * delta)
+	for a in _active_count:
+		var i := _active[a]
+		var type := _type[i]
+		var p := _pos[i]
+		var to := player - p
+		var distance := to.length()
+		var direction := to / distance if distance > 0.001 else Vector2.ZERO
+		var radius := _t_radius[type]
+		var reach := radius + PLAYER_RADIUS
+		var move := Vector2.ZERO
+		var face := direction
+		if _flash[i] > 0.0:
+			_flash[i] = maxf(0.0, _flash[i] - delta / FLASH_TIME)
+		if chasing:
+			move = _steer(i, type, direction, distance, delta)
+			if _mode[i] == Mode.CHARGE:
+				face = _aim[i]
+			var touching := distance < reach + 0.15 and player_y < _t_height[type] and player_y > -1.9
+			if touching:
+				contact += _t_contact[type]
+				if _mode[i] == Mode.CHARGE:
+					target.take_damage(ceili(_t_contact[type] * 2.0))
+					_end_charge(i, type)
+			if distance < reach and _mode[i] != Mode.CHARGE:
+				move = Vector2.ZERO
+		p += (move + _knock[i]) * delta + _separation(i, p, radius)
+		_knock[i] -= _knock[i] * knock_decay
+		var clamped := _constrain(p, radius)
+		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p):
+			_end_charge(i, type)
+		_pos[i] = clamped
+		if face != Vector2.ZERO:
+			_yaw[i] = lerp_angle(_yaw[i], atan2(-face.x, -face.y), turn)
+	_update_dying(delta)
+	_update_projectiles(delta)
+	_contact_timer = maxf(0.0, _contact_timer - delta)
+	if chasing and contact > 0.0 and _contact_timer <= 0.0:
+		_contact_timer = contact_tick
+		target.take_damage(ceili(minf(contact, contact_cap)))
+
+func _steer(i: int, type: int, direction: Vector2, distance: float, delta: float) -> Vector2:
+	var definition := _defs[type]
+	var behavior := _t_behavior[type]
+	_cooldown[i] = maxf(0.0, _cooldown[i] - delta)
+	match _mode[i]:
+		Mode.WINDUP:
+			_timer[i] -= delta
+			if _timer[i] <= 0.0:
+				_cooldown[i] = definition.attack_cooldown
+				if behavior == HordeEnemyDefinition.Behavior.RANGED:
+					_fire(i, type)
+					_mode[i] = Mode.SEEK
+				else:
+					_mode[i] = Mode.CHARGE
+					_aim[i] = direction
+					_timer[i] = definition.charge_duration
+			return Vector2.ZERO
+		Mode.CHARGE:
+			_timer[i] -= delta
+			if _timer[i] <= 0.0:
+				_mode[i] = Mode.SEEK
+			return _aim[i] * definition.charge_speed
+	var move := direction * _t_speed[type]
+	if behavior == HordeEnemyDefinition.Behavior.RANGED:
+		if distance < definition.preferred_range - 1.5:
+			move = -direction * _t_speed[type] * 0.7
+		elif distance < definition.preferred_range + 1.5:
+			move = Vector2.ZERO
+		if _cooldown[i] <= 0.0 and distance <= definition.attack_range:
+			_mode[i] = Mode.WINDUP
+			_timer[i] = definition.telegraph_duration
+	elif behavior == HordeEnemyDefinition.Behavior.CHARGER:
+		if _cooldown[i] <= 0.0 and distance <= definition.charge_range and distance > 2.0:
+			_mode[i] = Mode.WINDUP
+			_timer[i] = definition.telegraph_duration
+			return Vector2.ZERO
+	return move
+
+func _end_charge(i: int, type: int) -> void:
+	_mode[i] = Mode.SEEK
+	_cooldown[i] = _defs[type].attack_cooldown
+
+func _separation(i: int, p: Vector2, radius: float) -> Vector2:
+	var push := Vector2.ZERO
+	var checks := 0
+	var cell := _cell_of[i]
+	var cx := cell % _grid_w
+	var cz := cell / _grid_w
+	for nz in range(maxi(0, cz - 1), mini(_grid_h, cz + 2)):
+		for nx in range(maxi(0, cx - 1), mini(_grid_w, cx + 2)):
+			var neighbor := nz * _grid_w + nx
+			for k in range(_cell_start[neighbor], _cell_start[neighbor + 1]):
+				var j := _cell_items[k]
+				if j == i:
+					continue
+				var away := p - _pos[j]
+				var d2 := away.length_squared()
+				var reach := radius + _t_radius[_type[j]]
+				if d2 < reach * reach:
+					if d2 < 0.000001:
+						away = Vector2(float(i & 7) - 3.5, float(j & 7) - 3.5)
+						d2 = away.length_squared()
+					var d := sqrt(d2)
+					# Heavier neighbors shove harder.
+					push += away * ((reach - d) / d) * minf(2.0, _t_mass[_type[j]] / _t_mass[_type[i]])
+				checks += 1
+				if checks >= MAX_NEIGHBOR_CHECKS:
+					return (push * SEPARATION).limit_length(0.25)
+	return (push * SEPARATION).limit_length(0.25)
+
+func _constrain(p: Vector2, radius: float) -> Vector2:
+	p.x = clampf(p.x, _area.position.x + radius, _area.end.x - radius)
+	p.y = clampf(p.y, _area.position.y + radius, _area.end.y - radius)
+	var cell := _cell_z(p.y) * _grid_w + _cell_x(p.x)
+	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
+		var o := _cell_obstacle_items[k]
+		var center := _obstacle_center[o]
+		var half := _obstacle_half[o]
+		var delta := p - center
+		if _obstacle_circle[o] == 1:
+			var reach := half.x + radius
+			var d2 := delta.length_squared()
+			if d2 < reach * reach:
+				p = center + (delta / sqrt(d2) if d2 > 0.000001 else Vector2.RIGHT) * reach
+		else:
+			var gap_x := half.x + radius - absf(delta.x)
+			var gap_z := half.y + radius - absf(delta.y)
+			if gap_x > 0.0 and gap_z > 0.0:
+				if gap_x < gap_z:
+					p.x += gap_x * signf(delta.x if delta.x != 0.0 else 1.0)
+				else:
+					p.y += gap_z * signf(delta.y if delta.y != 0.0 else 1.0)
+	return p
+
+func _rebuild_grid() -> void:
+	_cell_cursor.fill(0)
+	var n := 0
+	for a in _active_count:
+		var slot := _active[a]
+		if _state[slot] != ALIVE:
+			continue
+		_active[n] = slot
+		n += 1
+		var p := _pos[slot]
+		var cell := _cell_z(p.y) * _grid_w + _cell_x(p.x)
+		_cell_of[slot] = cell
+		_cell_cursor[cell] += 1
+	_active_count = n
+	var total := 0
+	for cell in _cells:
+		_cell_start[cell] = total
+		var count := _cell_cursor[cell]
+		_cell_cursor[cell] = total
+		total += count
+	_cell_start[_cells] = total
+	for a in n:
+		var slot := _active[a]
+		var cell := _cell_of[slot]
+		_cell_items[_cell_cursor[cell]] = slot
+		_cell_cursor[cell] += 1
+
+func _update_dying(delta: float) -> void:
+	var n := 0
+	for d in _dying_count:
+		var slot := _dying[d]
+		_death[slot] -= delta
+		if _death[slot] > 0.0:
+			_dying[n] = slot
+			n += 1
+		else:
+			_state[slot] = FREE
+			_free[_free_count] = slot
+			_free_count += 1
+	_dying_count = n
+
+# ---------------------------------------------------------------- projectiles
+
+func _fire(i: int, type: int) -> void:
+	if _shot_count >= MAX_PROJECTILES or not is_instance_valid(target):
+		return
+	var definition := _defs[type]
+	var from := Vector3(_pos[i].x, _t_height[type] * 0.7, _pos[i].y)
+	var aim := target.global_position + Vector3(0.0, 0.2, 0.0) - from
+	_shot_pos[_shot_count] = from
+	_shot_vel[_shot_count] = aim.normalized() * definition.projectile_speed
+	_shot_life[_shot_count] = 30.0 / maxf(1.0, definition.projectile_speed) + 1.0
+	_shot_damage[_shot_count] = definition.projectile_damage
+	_shot_count += 1
+
+func _update_projectiles(delta: float) -> void:
+	if not is_instance_valid(target) or not target.active:
+		_shot_count = 0
+		return
+	var center := target.global_position
+	var hit_reach := projectile_radius + PLAYER_RADIUS
+	var n := 0
+	for s in _shot_count:
+		var p := _shot_pos[s] + _shot_vel[s] * delta
+		var life := _shot_life[s] - delta
+		var closest := Vector3(center.x, clampf(p.y, center.y - 0.9, center.y + 0.9), center.z)
+		if p.distance_squared_to(closest) < hit_reach * hit_reach:
+			target.take_damage(ceili(_shot_damage[s]))
+			continue
+		if life <= 0.0 or p.y < 0.0 or is_blocked(Vector2(p.x, p.z), 0.0):
+			continue
+		_shot_pos[n] = p
+		_shot_vel[n] = _shot_vel[s]
+		_shot_life[n] = life
+		_shot_damage[n] = _shot_damage[s]
+		n += 1
+	_shot_count = n
+
+# ---------------------------------------------------------------- rendering
+
+func _process(_delta: float) -> void:
+	for type in _defs.size():
+		_draw_type(type)
+	_draw_projectiles()
+
+func _draw_type(type: int) -> void:
+	var renderer := _renderers[type]
+	var multimesh := renderer.multimesh
+	var buffer := _buffers[type]
+	# Detach from the array so writes do not copy-on-write the shared data.
+	_buffers[type] = PackedFloat32Array()
+	var needed := 0
+	for a in _active_count:
+		if _type[_active[a]] == type and _state[_active[a]] == ALIVE:
+			needed += 1
+	for d in _dying_count:
+		if _type[_dying[d]] == type:
+			needed += 1
+	if needed > multimesh.instance_count:
+		var capacity := multimesh.instance_count
+		while capacity < needed:
+			capacity *= 2
+		multimesh.instance_count = mini(capacity, CAPACITY)
+		buffer.resize(multimesh.instance_count * 16)
+	var scale := _t_scale[type]
+	var k := 0
+	for a in _active_count:
+		var slot := _active[a]
+		if _type[slot] == type and _state[slot] == ALIVE:
+			k = _write_instance(buffer, k, slot, scale, scale, 0.0)
+	for d in _dying_count:
+		var slot := _dying[d]
+		if _type[slot] == type:
+			var left := _death[slot] / DEATH_TIME
+			# Collapse inward: slight widen on impact, then shrink away to nothing.
+			var widen := 1.0 + 0.15 * sin(left * PI)
+			k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.0)
+	if multimesh.instance_count > 0:
+		RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
+	multimesh.visible_instance_count = k / 16
+	_buffers[type] = buffer
+
+func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, _unused: float) -> int:
+	var yaw := _yaw[slot]
+	var c := cos(yaw)
+	var s := sin(yaw)
+	var p := _pos[slot]
+	var telegraph := 0.0
+	if _mode[slot] == Mode.WINDUP and _state[slot] == ALIVE:
+		var duration := _defs[_type[slot]].telegraph_duration
+		telegraph = clampf(1.0 - _timer[slot] / maxf(0.001, duration), 0.01, 1.0)
+	elif _mode[slot] == Mode.CHARGE and _state[slot] == ALIVE:
+		telegraph = 1.0
+	buffer[k] = c * scale_xz
+	buffer[k + 1] = 0.0
+	buffer[k + 2] = s * scale_xz
+	buffer[k + 3] = p.x
+	buffer[k + 4] = 0.0
+	buffer[k + 5] = scale_y
+	buffer[k + 6] = 0.0
+	buffer[k + 7] = 0.0
+	buffer[k + 8] = -s * scale_xz
+	buffer[k + 9] = 0.0
+	buffer[k + 10] = c * scale_xz
+	buffer[k + 11] = p.y
+	buffer[k + 12] = _flash[slot]
+	buffer[k + 13] = telegraph
+	buffer[k + 14] = _phase[slot]
+	buffer[k + 15] = 0.0
+	return k + 16
+
+func _draw_projectiles() -> void:
+	var buffer := _shot_buffer
+	_shot_buffer = PackedFloat32Array()
+	for s in _shot_count:
+		var k := s * 12
+		var p := _shot_pos[s]
+		buffer[k] = 1.0
+		buffer[k + 1] = 0.0
+		buffer[k + 2] = 0.0
+		buffer[k + 3] = p.x
+		buffer[k + 4] = 0.0
+		buffer[k + 5] = 1.0
+		buffer[k + 6] = 0.0
+		buffer[k + 7] = p.y
+		buffer[k + 8] = 0.0
+		buffer[k + 9] = 0.0
+		buffer[k + 10] = 1.0
+		buffer[k + 11] = p.z
+	RenderingServer.multimesh_set_buffer(_shot_renderer.multimesh.get_rid(), buffer)
+	_shot_renderer.multimesh.visible_instance_count = _shot_count
+	_shot_buffer = buffer

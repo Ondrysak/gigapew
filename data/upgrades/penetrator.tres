@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"penetrator"
+display_name = "Penetrator Cores"
+description = "Main gun shots pierce 1 more enemy (total +1)."
+level_descriptions = PackedStringArray("Main gun shots pierce 1 more enemy (total +1).", "Main gun shots pierce 1 more enemy (total +2).", "Main gun shots pierce 1 more enemy (total +3).")
+max_level = 3
+weight = 0.8
+accent_color = Color(0.95, 0.85, 0.35, 1)
+pierce_bonus = 1

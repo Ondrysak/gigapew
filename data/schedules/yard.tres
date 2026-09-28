@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="SpawnSchedule" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/spawn_schedule.gd" id="1_schedule"]
+[ext_resource type="Script" path="res://scripts/data/spawn_wave.gd" id="2_wave"]
+[ext_resource type="Resource" path="res://data/enemies/dreadnought.tres" id="3_dreadnought"]
+[ext_resource type="Resource" path="res://data/enemies/grunt.tres" id="4_grunt"]
+[ext_resource type="Resource" path="res://data/enemies/runner.tres" id="5_runner"]
+[ext_resource type="Resource" path="res://data/enemies/spitter.tres" id="6_spitter"]
+[ext_resource type="Resource" path="res://data/enemies/tank.tres" id="7_tank"]
+
+[sub_resource type="Resource" id="Wave_1"]
+script = ExtResource("2_wave")
+enemy = ExtResource("4_grunt")
+start_time = 0.0
+end_time = 180.0
+rate_start = 3.0
+rate_end = 18.0
+group_size = 6
+health_multiplier = 1.0
+
+[sub_resource type="Resource" id="Wave_2"]
+script = ExtResource("2_wave")
+enemy = ExtResource("4_grunt")
+start_time = 100.0
+end_time = 130.0
+rate_start = 2.0
+rate_end = 6.0
+group_size = 10
+health_multiplier = 1.0
+
+[sub_resource type="Resource" id="Wave_3"]
+script = ExtResource("2_wave")
+enemy = ExtResource("5_runner")
+start_time = 60.0
+end_time = 180.0
+rate_start = 1.0
+rate_end = 5.0
+group_size = 5
+health_multiplier = 1.0
+
+[sub_resource type="Resource" id="Wave_4"]
+script = ExtResource("2_wave")
+enemy = ExtResource("6_spitter")
+start_time = 110.0
+end_time = 180.0
+rate_start = 0.2
+rate_end = 0.6
+group_size = 1
+health_multiplier = 1.0
+
+[sub_resource type="Resource" id="Wave_5"]
+script = ExtResource("2_wave")
+enemy = ExtResource("7_tank")
+start_time = 140.0
+end_time = 180.0
+rate_start = 0.1
+rate_end = 0.25
+group_size = 1
+health_multiplier = 1.0
+
+[resource]
+script = ExtResource("1_schedule")
+duration = 180.0
+max_alive = 700
+waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5")])
+boss = ExtResource("3_dreadnought")
+boss_health_multiplier = 1.0
+spawn_distance_min = 20.0
+spawn_distance_max = 34.0

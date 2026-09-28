@@ -1,0 +1,82 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/auto/mortar_weapon.gd" id="1_weapon"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_casing"]
+albedo_color = Color(0.3, 0.3, 0.26, 1)
+metallic = 0.5
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="Mat_fuse"]
+shading_mode = 0
+albedo_color = Color(1, 0.55, 0.12, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.85, 0.5, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="Mat_blast"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.42, 0.08, 0.55)
+
+[sub_resource type="CylinderMesh" id="Mesh_casing"]
+top_radius = 0.08
+bottom_radius = 0.1
+height = 0.36
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_fuse"]
+radius = 0.09
+height = 0.18
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="Mesh_blast"]
+radius = 1.0
+height = 2.0
+radial_segments = 16
+rings = 8
+
+[node name="Mortar" type="Node3D" node_paths=PackedStringArray("shell_template", "blast_template")]
+script = ExtResource("1_weapon")
+base_damage = 22.0
+base_cooldown = 2.2
+shell_template = NodePath("ShellTemplate")
+blast_template = NodePath("BlastTemplate")
+
+[node name="ShellTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Casing" type="MeshInstance3D" parent="ShellTemplate"]
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_casing")
+material_override = SubResource("Mat_casing")
+cast_shadow = 0
+
+[node name="Fuse" type="MeshInstance3D" parent="ShellTemplate"]
+position = Vector3(0, 0, 0.2)
+mesh = SubResource("Mesh_fuse")
+material_override = SubResource("Mat_fuse")
+cast_shadow = 0
+
+[node name="BlastTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(0.55, 0.55, 0.55)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Shock" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(1, 0.6, 1)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_blast")
+cast_shadow = 0

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/runner.tscn" id="2_model"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Runner"
+behavior = 0
+max_health = 7.0
+speed = 7.5
+radius = 0.3
+height = 0.9
+mass = 0.7
+contact_damage = 1.0
+xp_value = 1
+bob_amplitude = 0.035
+bob_speed = 13.0
+flash_color = Color(0.85, 1, 1, 1)
+telegraph_color = Color(0.2, 1, 0.95, 1)
+model_scene = ExtResource("2_model")
+model_scale = 1.0

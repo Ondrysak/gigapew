@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"blast_amplifier"
+display_name = "Blast Amplifier"
+description = "Auto weapon areas and chain reach +12% (total +12%)."
+level_descriptions = PackedStringArray("Auto weapon areas and chain reach +12% (total +12%).", "Auto weapon areas and chain reach +12% (total +24%).", "Auto weapon areas and chain reach +12% (total +36%).", "Auto weapon areas and chain reach +12% (total +48%).", "Auto weapon areas and chain reach +12% (total +60%).")
+max_level = 5
+weight = 0.9
+accent_color = Color(0.8, 0.5, 1.0, 1)
+area_multiplier = 0.12

@@ -1,0 +1,3935 @@
+[gd_scene load_steps=19 format=3]
+
+[ext_resource type="Shader" path="res://shaders/yard_floor.gdshader" id="floor_shader"]
+
+[sub_resource type="ShaderMaterial" id="Material_floor"]
+shader = ExtResource("floor_shader")
+
+[sub_resource type="StandardMaterial3D" id="Material_wall"]
+albedo_color = Color(0.075, 0.105, 0.145, 1)
+roughness = 0.65
+metallic = 0.45
+
+[sub_resource type="StandardMaterial3D" id="Material_plate"]
+albedo_color = Color(0.15, 0.2, 0.255, 1)
+roughness = 0.55
+metallic = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Material_frame"]
+albedo_color = Color(0.035, 0.05, 0.07, 1)
+roughness = 0.7
+metallic = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Material_inset"]
+albedo_color = Color(0.015, 0.025, 0.039, 1)
+roughness = 0.9
+metallic = 0.1
+
+[sub_resource type="StandardMaterial3D" id="Material_tower"]
+albedo_color = Color(0.035, 0.056, 0.086, 1)
+roughness = 0.85
+metallic = 0.2
+
+[sub_resource type="StandardMaterial3D" id="Material_cyan"]
+albedo_color = Color(0.16, 0.86, 0.94, 1)
+roughness = 0.4
+metallic = 0
+shading_mode = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_amber"]
+albedo_color = Color(1, 0.55, 0.16, 1)
+roughness = 0.4
+metallic = 0
+shading_mode = 0
+
+[sub_resource type="BoxMesh" id="Mesh_unit"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_cylinder"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 16
+rings = 1
+
+[sub_resource type="Environment" id="Environment_arena"]
+background_mode = 1
+background_color = Color(0.012, 0.023, 0.048, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.37, 0.51, 0.69, 1)
+ambient_light_energy = 0.68
+reflected_light_source = 1
+tonemap_mode = 0
+
+[sub_resource type="BoxShape3D" id="shape_box_65_1_65"]
+size = Vector3(65, 1, 65)
+
+[sub_resource type="BoxShape3D" id="shape_box_65_4p5_0p5"]
+size = Vector3(65, 4.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="shape_box_0p5_4p5_65"]
+size = Vector3(0.5, 4.5, 65)
+
+[sub_resource type="CylinderShape3D" id="shape_cyl_1p2_4p5"]
+radius = 1.2
+height = 4.5
+
+[sub_resource type="BoxShape3D" id="shape_box_3p2_2p8_3p2"]
+size = Vector3(3.2, 2.8, 3.2)
+
+[sub_resource type="BoxShape3D" id="shape_box_2p6_2p9_7"]
+size = Vector3(2.6, 2.9, 7)
+
+[node name="Yard" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_arena")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.92, -0.48, 0)
+light_color = Color(0.67, 0.8, 1, 1)
+light_energy = 1.25
+shadow_enabled = true
+directional_shadow_max_distance = 55.0
+
+[node name="CyanFill" type="OmniLight3D" parent="."]
+position = Vector3(-18, 6.5, 6)
+light_color = Color(0.08, 0.73, 0.86, 1)
+light_energy = 3.4
+omni_range = 36
+
+[node name="AmberFill" type="OmniLight3D" parent="."]
+position = Vector3(16, 7, -18)
+light_color = Color(1, 0.43, 0.12, 1)
+light_energy = 3.8
+omni_range = 36
+
+[node name="CyanFillSouth" type="OmniLight3D" parent="."]
+position = Vector3(14, 6.5, 20)
+light_color = Color(0.08, 0.73, 0.86, 1)
+light_energy = 3
+omni_range = 32
+
+[node name="AmberFillWest" type="OmniLight3D" parent="."]
+position = Vector3(-20, 6.5, -22)
+light_color = Color(1, 0.43, 0.12, 1)
+light_energy = 2.8
+omni_range = 30
+
+[node name="Floor" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.5, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="Floor"]
+position = Vector3(0, 0, 0)
+scale = Vector3(65, 1, 65)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_floor")
+
+[node name="Collision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("shape_box_65_1_65")
+
+[node name="NorthWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 2.25, -32.25)
+
+[node name="Surface" type="MeshInstance3D" parent="NorthWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(65, 4.5, 0.5)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="NorthWall"]
+shape = SubResource("shape_box_65_4p5_0p5")
+
+[node name="SouthWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 2.25, 32.25)
+
+[node name="Surface" type="MeshInstance3D" parent="SouthWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(65, 4.5, 0.5)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="SouthWall"]
+shape = SubResource("shape_box_65_4p5_0p5")
+
+[node name="EastWall" type="StaticBody3D" parent="."]
+position = Vector3(32.25, 2.25, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="EastWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 4.5, 65)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="EastWall"]
+shape = SubResource("shape_box_0p5_4p5_65")
+
+[node name="WestWall" type="StaticBody3D" parent="."]
+position = Vector3(-32.25, 2.25, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="WestWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 4.5, 65)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="WestWall"]
+shape = SubResource("shape_box_0p5_4p5_65")
+
+[node name="NorthArchitecture" type="Node3D" parent="."]
+
+[node name="Coping" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(0, 4.53, -32.25)
+scale = Vector3(64.6, 0.24, 0.8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="UpperGuide" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(0, 4.25, -31.965)
+scale = Vector3(64, 0.07, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="BaseRail" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(0, 0.33, -31.99)
+scale = Vector3(64, 0.54, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="BaseGuide" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(0, 0.645, -31.95)
+scale = Vector3(64, 0.035, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent0Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel0Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel0Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-26.72, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent1Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel1Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel1Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-20.32, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent2Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel2Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel2Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-13.92, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent3Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel3Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel3Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-7.52, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel4" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess4" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent4Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel4Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel4Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-1.12, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel5" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess5" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent5Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel5Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel5Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(5.28, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel6" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess6" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent6Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel6Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel6Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(11.68, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel7" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess7" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent7Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel7Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel7Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(18.08, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel8" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess8" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent8Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel8Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel8Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(24.48, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel9" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess9" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent9Slat0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel9Foot" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel9Status" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(30.88, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Buttress0" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress0Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress0Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress1" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress1Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress1Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress2" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress2Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress2Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress3" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress3Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress3Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress4" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress4Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress4Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(-6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress6" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress6Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress6Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress7" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress7Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress7Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress8" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress8Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress8Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress9" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress9Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress9Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress10" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress10Cap" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress10Light" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="RearBeam" type="MeshInstance3D" parent="NorthArchitecture"]
+position = Vector3(0, 6.74, -32.9)
+scale = Vector3(64.8, 0.26, 0.48)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="EastArchitecture" type="Node3D" parent="."]
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="Coping" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 4.53, -32.25)
+scale = Vector3(64.6, 0.24, 0.8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="UpperGuide" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 4.25, -31.965)
+scale = Vector3(64, 0.07, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="BaseRail" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 0.33, -31.99)
+scale = Vector3(64, 0.54, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="BaseGuide" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 0.645, -31.95)
+scale = Vector3(64, 0.035, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent0Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel0Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel0Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-26.72, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent1Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel1Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel1Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-20.32, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent2Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel2Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel2Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-13.92, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent3Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel3Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel3Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-7.52, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel4" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess4" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent4Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel4Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel4Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-1.12, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel5" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess5" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent5Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel5Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel5Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(5.28, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel6" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess6" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent6Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel6Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel6Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(11.68, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel7" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess7" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent7Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel7Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel7Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(18.08, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel8" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess8" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent8Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel8Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel8Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(24.48, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel9" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess9" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent9Slat0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel9Foot" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel9Status" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(30.88, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Buttress0" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress0Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress0Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress1" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress1Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress1Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress2" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress2Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress2Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress3" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress3Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress3Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress4" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress4Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress4Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(-6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress5" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress5Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress5Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress6" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress6Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress6Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress7" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress7Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress7Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress8" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress8Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress8Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress9" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress9Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress9Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress10" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress10Cap" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress10Light" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="RearBeam" type="MeshInstance3D" parent="EastArchitecture"]
+position = Vector3(0, 6.74, -32.9)
+scale = Vector3(64.8, 0.26, 0.48)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="SouthArchitecture" type="Node3D" parent="."]
+rotation = Vector3(0, 3.1416, 0)
+
+[node name="Coping" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 4.53, -32.25)
+scale = Vector3(64.6, 0.24, 0.8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="UpperGuide" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 4.25, -31.965)
+scale = Vector3(64, 0.07, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="BaseRail" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 0.33, -31.99)
+scale = Vector3(64, 0.54, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="BaseGuide" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 0.645, -31.95)
+scale = Vector3(64, 0.035, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent0Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel0Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel0Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-26.72, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent1Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel1Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel1Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-20.32, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent2Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel2Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel2Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-13.92, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent3Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel3Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel3Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-7.52, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel4" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess4" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent4Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel4Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel4Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-1.12, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel5" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess5" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent5Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel5Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel5Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(5.28, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel6" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess6" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent6Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel6Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel6Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(11.68, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel7" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess7" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent7Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel7Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel7Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(18.08, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel8" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess8" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent8Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel8Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel8Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(24.48, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel9" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess9" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent9Slat0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel9Foot" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel9Status" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(30.88, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Buttress0" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress0Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress0Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress1" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress1Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress1Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress2" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress2Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress2Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress3" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress3Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress3Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress4" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress4Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress4Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(-6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress5" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress5Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress5Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress6" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress6Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress6Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress7" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress7Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress7Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress8" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress8Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress8Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress9" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress9Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress9Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress10" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress10Cap" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress10Light" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="RearBeam" type="MeshInstance3D" parent="SouthArchitecture"]
+position = Vector3(0, 6.74, -32.9)
+scale = Vector3(64.8, 0.26, 0.48)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="WestArchitecture" type="Node3D" parent="."]
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="Coping" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 4.53, -32.25)
+scale = Vector3(64.6, 0.24, 0.8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="UpperGuide" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 4.25, -31.965)
+scale = Vector3(64, 0.07, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="BaseRail" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 0.33, -31.99)
+scale = Vector3(64, 0.54, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="BaseGuide" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 0.645, -31.95)
+scale = Vector3(64, 0.035, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent0Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent0Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel0Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel0Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-26.72, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent1Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent1Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel1Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel1Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-20.32, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent2Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent2Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel2Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel2Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-13.92, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent3Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent3Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel3Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel3Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-7.52, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel4" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess4" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent4Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent4Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel4Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel4Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-1.12, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel5" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess5" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent5Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent5Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel5Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(3.2, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel5Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(5.28, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel6" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess6" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent6Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent6Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel6Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(9.6, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel6Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(11.68, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel7" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess7" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent7Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent7Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel7Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(16, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel7Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(18.08, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Panel8" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess8" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent8Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent8Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel8Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(22.4, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel8Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(24.48, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Panel9" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.28, -31.985)
+scale = Vector3(5.824, 3.18, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="VentRecess9" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.55, -31.96)
+scale = Vector3(4.64, 1.02, 0.025)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="Vent9Slat0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.145, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.4, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.655, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Vent9Slat3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 2.91, -31.94)
+scale = Vector3(4.512, 0.0675, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="Panel9Foot" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(28.8, 1.155, -31.94)
+scale = Vector3(4.64, 0.075, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Panel9Status" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(30.88, 3.465, -31.93)
+scale = Vector3(0.27, 0.12, 0.03)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Buttress0" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress0Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress0Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress1" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress1Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress1Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress2" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress2Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress2Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress3" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress3Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress3Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress4" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress4Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress4Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(-6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress5" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress5Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress5Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress6" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(6.4, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress6Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(6.4, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress6Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(6.4, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress7" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(12.8, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress7Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(12.8, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress7Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(12.8, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress8" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(19.2, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress8Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(19.2, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress8Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(19.2, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress9" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(25.6, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress9Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(25.6, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress9Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(25.6, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Buttress10" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(32, 3.195, -32.5)
+scale = Vector3(0.6, 6.39, 0.86)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Buttress10Cap" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(32, 6.3, -32.5)
+scale = Vector3(0.89, 0.26, 1.02)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Buttress10Light" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(32, 4.92, -32.05)
+scale = Vector3(0.12, 1.83, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="RearBeam" type="MeshInstance3D" parent="WestArchitecture"]
+position = Vector3(0, 6.74, -32.9)
+scale = Vector3(64.8, 0.26, 0.48)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="NorthGate" type="Node3D" parent="."]
+
+[node name="DoorRecess" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(0, 4.68, -32.83)
+scale = Vector3(10.2, 9.36, 0.6)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_inset")
+
+[node name="DoorLeft" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(-2.265, 4.35, -32.47)
+scale = Vector3(4.38, 8.7, 0.1)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="DoorRight" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(2.265, 4.35, -32.47)
+scale = Vector3(4.38, 8.7, 0.1)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="DoorSeam" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(0, 4.65, -32.39)
+scale = Vector3(0.06, 8.85, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="LeftPillar" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(-5.25, 4.95, -32.55)
+scale = Vector3(0.78, 9.9, 0.75)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="LeftStrip" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(-5.25, 6.75, -32.15)
+scale = Vector3(0.21, 5.1, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="RightPillar" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(5.25, 4.95, -32.55)
+scale = Vector3(0.78, 9.9, 0.75)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="RightStrip" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(5.25, 6.75, -32.15)
+scale = Vector3(0.21, 5.1, 0.04)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Lintel" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(0, 9.45, -32.5)
+scale = Vector3(11.4, 0.975, 1)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="LintelLight" type="MeshInstance3D" parent="NorthGate"]
+position = Vector3(0, 9.915, -32.01)
+scale = Vector3(11.4, 0.08, 0.045)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="SectorNumber" type="Label3D" parent="NorthGate"]
+position = Vector3(0, 8.1, -32.35)
+pixel_size = 0.021
+font_size = 128
+outline_size = 0
+modulate = Color(0.65, 0.82, 0.86, 1)
+text = "01"
+
+[node name="GateCaption" type="Label3D" parent="NorthGate"]
+position = Vector3(0, 6.45, -32.34)
+pixel_size = 0.0135
+font_size = 42
+outline_size = 0
+modulate = Color(0.65, 0.82, 0.86, 1)
+text = "COMBAT SYSTEMS"
+
+[node name="GateHeader" type="Label3D" parent="NorthGate"]
+position = Vector3(0, 9.405, -31.97)
+pixel_size = 0.0105
+font_size = 46
+outline_size = 0
+modulate = Color(0.65, 0.82, 0.86, 1)
+text = "T R A I N I N G   Y A R D"
+
+[node name="Skyline" type="Node3D" parent="."]
+
+[node name="Tower0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 8, -48)
+scale = Vector3(8, 16, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower0Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 16.2, -48)
+scale = Vector3(8.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower0Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 17.6, -48)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower0Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 18.95, -48)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower0WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 9.92, -43.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower0WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-40, 12.8, -43.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 12, -54)
+scale = Vector3(7, 24, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower1Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 24.2, -54)
+scale = Vector3(7.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower1Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 25.6, -54)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower1Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 26.95, -54)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower1WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 14.88, -49.97)
+scale = Vector3(4.55, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower1WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-22, 19.2, -49.97)
+scale = Vector3(4.55, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower2" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 9, -50)
+scale = Vector3(8, 18, 9)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower2Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 18.2, -50)
+scale = Vector3(8.4, 0.4, 9.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower2Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 19.6, -50)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower2Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 20.95, -50)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower2WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 11.16, -45.47)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower2WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(16, 14.4, -45.47)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower3" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 15, -58)
+scale = Vector3(9, 30, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower3Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 30.2, -58)
+scale = Vector3(9.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower3Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 31.6, -58)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower3Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 32.95, -58)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower3WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 18.6, -53.97)
+scale = Vector3(5.85, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower3WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(36, 24, -53.97)
+scale = Vector3(5.85, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower4" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-52, 10, -20)
+scale = Vector3(8, 20, 9)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower4Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-52, 20.2, -20)
+scale = Vector3(8.4, 0.4, 9.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower4Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-52, 21.6, -20)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower4Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-52, 22.95, -20)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower4WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-47.97, 12.4, -20)
+scale = Vector3(0.05, 0.14, 5.85)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower4WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-47.97, 16, -20)
+scale = Vector3(0.05, 0.14, 5.85)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower5" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-56, 7.5, 14)
+scale = Vector3(9, 15, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower5Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-56, 15.2, 14)
+scale = Vector3(9.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower5Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-56, 16.6, 14)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower5Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-56, 17.95, 14)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower5WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-51.47, 9.3, 14)
+scale = Vector3(0.05, 0.14, 5.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower5WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-51.47, 12, 14)
+scale = Vector3(0.05, 0.14, 5.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower6" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(50, 7, -10)
+scale = Vector3(8, 14, 9)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower6Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(50, 14.2, -10)
+scale = Vector3(8.4, 0.4, 9.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower6Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(50, 15.6, -10)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower6Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(50, 16.95, -10)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower6WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(45.97, 8.68, -10)
+scale = Vector3(0.05, 0.14, 5.85)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower6WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(45.97, 11.2, -10)
+scale = Vector3(0.05, 0.14, 5.85)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower7" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(54, 12, 22)
+scale = Vector3(8, 24, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower7Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(54, 24.2, 22)
+scale = Vector3(8.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower7Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(54, 25.6, 22)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower7Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(54, 26.95, 22)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower7WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(49.97, 14.88, 22)
+scale = Vector3(0.05, 0.14, 5.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower7WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(49.97, 19.2, 22)
+scale = Vector3(0.05, 0.14, 5.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower8" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 9, 52)
+scale = Vector3(8, 18, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower8Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 18.2, 52)
+scale = Vector3(8.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower8Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 19.6, 52)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower8Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 20.95, 52)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower8WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 11.16, 47.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower8WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-38, 14.4, 47.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower9" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 10.5, 56)
+scale = Vector3(10, 21, 9)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower9Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 21.2, 56)
+scale = Vector3(10.4, 0.4, 9.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower9Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 22.6, 56)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower9Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 23.95, 56)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower9WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 13.02, 51.47)
+scale = Vector3(6.5, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower9WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(-8, 16.8, 51.47)
+scale = Vector3(6.5, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower10" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 8, 51)
+scale = Vector3(8, 16, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower10Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 16.2, 51)
+scale = Vector3(8.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower10Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 17.6, 51)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower10Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 18.95, 51)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower10WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 9.92, 46.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower10WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(20, 12.8, 46.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower11" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 11, 48)
+scale = Vector3(8, 22, 8)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_tower")
+
+[node name="Tower11Crown" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 22.2, 48)
+scale = Vector3(8.4, 0.4, 8.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Tower11Antenna" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 23.6, 48)
+scale = Vector3(0.14, 2.6, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Tower11Beacon" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 24.95, 48)
+scale = Vector3(0.26, 0.18, 0.26)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="Tower11WindowBand0" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 13.64, 43.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Tower11WindowBand1" type="MeshInstance3D" parent="Skyline"]
+position = Vector3(44, 17.6, 43.97)
+scale = Vector3(5.2, 0.14, 0.05)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 1, 0)
+
+[node name="Obstacles" type="Node3D" parent="."]
+
+[node name="PillarNW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-16, 2.25, -16)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/PillarNW"]
+shape = SubResource("shape_cyl_1p2_4p5")
+
+[node name="Base" type="MeshInstance3D" parent="Obstacles/PillarNW"]
+position = Vector3(0, -2.05, 0)
+scale = Vector3(1.2, 0.4, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Shaft" type="MeshInstance3D" parent="Obstacles/PillarNW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(1.08, 4.5, 1.08)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="AmberBand" type="MeshInstance3D" parent="Obstacles/PillarNW"]
+position = Vector3(0, -1.7, 0)
+scale = Vector3(1.12, 0.06, 1.12)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="CyanBand" type="MeshInstance3D" parent="Obstacles/PillarNW"]
+position = Vector3(0, 0.65, 0)
+scale = Vector3(1.11, 0.1, 1.11)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Cap" type="MeshInstance3D" parent="Obstacles/PillarNW"]
+position = Vector3(0, 2.11, 0)
+scale = Vector3(1.2, 0.28, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="PillarNE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(16, 2.25, -16)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/PillarNE"]
+shape = SubResource("shape_cyl_1p2_4p5")
+
+[node name="Base" type="MeshInstance3D" parent="Obstacles/PillarNE"]
+position = Vector3(0, -2.05, 0)
+scale = Vector3(1.2, 0.4, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Shaft" type="MeshInstance3D" parent="Obstacles/PillarNE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(1.08, 4.5, 1.08)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="AmberBand" type="MeshInstance3D" parent="Obstacles/PillarNE"]
+position = Vector3(0, -1.7, 0)
+scale = Vector3(1.12, 0.06, 1.12)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="CyanBand" type="MeshInstance3D" parent="Obstacles/PillarNE"]
+position = Vector3(0, 0.65, 0)
+scale = Vector3(1.11, 0.1, 1.11)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Cap" type="MeshInstance3D" parent="Obstacles/PillarNE"]
+position = Vector3(0, 2.11, 0)
+scale = Vector3(1.2, 0.28, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="PillarSW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-16, 2.25, 16)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/PillarSW"]
+shape = SubResource("shape_cyl_1p2_4p5")
+
+[node name="Base" type="MeshInstance3D" parent="Obstacles/PillarSW"]
+position = Vector3(0, -2.05, 0)
+scale = Vector3(1.2, 0.4, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Shaft" type="MeshInstance3D" parent="Obstacles/PillarSW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(1.08, 4.5, 1.08)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="AmberBand" type="MeshInstance3D" parent="Obstacles/PillarSW"]
+position = Vector3(0, -1.7, 0)
+scale = Vector3(1.12, 0.06, 1.12)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="CyanBand" type="MeshInstance3D" parent="Obstacles/PillarSW"]
+position = Vector3(0, 0.65, 0)
+scale = Vector3(1.11, 0.1, 1.11)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Cap" type="MeshInstance3D" parent="Obstacles/PillarSW"]
+position = Vector3(0, 2.11, 0)
+scale = Vector3(1.2, 0.28, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="PillarSE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(16, 2.25, 16)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/PillarSE"]
+shape = SubResource("shape_cyl_1p2_4p5")
+
+[node name="Base" type="MeshInstance3D" parent="Obstacles/PillarSE"]
+position = Vector3(0, -2.05, 0)
+scale = Vector3(1.2, 0.4, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Shaft" type="MeshInstance3D" parent="Obstacles/PillarSE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(1.08, 4.5, 1.08)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="AmberBand" type="MeshInstance3D" parent="Obstacles/PillarSE"]
+position = Vector3(0, -1.7, 0)
+scale = Vector3(1.12, 0.06, 1.12)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="CyanBand" type="MeshInstance3D" parent="Obstacles/PillarSE"]
+position = Vector3(0, 0.65, 0)
+scale = Vector3(1.11, 0.1, 1.11)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="Cap" type="MeshInstance3D" parent="Obstacles/PillarSE"]
+position = Vector3(0, 2.11, 0)
+scale = Vector3(1.2, 0.28, 1.2)
+mesh = SubResource("Mesh_cylinder")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="CrateStackN" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(0, 1.4, -21)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrateStackN"]
+shape = SubResource("shape_box_3p2_2p8_3p2")
+
+[node name="LowerCrate" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, -0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="UpperCrate" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, 0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="SeamBand" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, 0, 0)
+scale = Vector3(3.2, 0.14, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="TopRim" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, 1.34, 0)
+scale = Vector3(3.2, 0.12, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, -0.95, 0)
+scale = Vector3(3.21, 0.07, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="StatusBand" type="MeshInstance3D" parent="Obstacles/CrateStackN"]
+position = Vector3(0, 0.95, 0)
+scale = Vector3(3.21, 0.05, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="CrateStackS" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(0, 1.4, 21)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrateStackS"]
+shape = SubResource("shape_box_3p2_2p8_3p2")
+
+[node name="LowerCrate" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, -0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="UpperCrate" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, 0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="SeamBand" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, 0, 0)
+scale = Vector3(3.2, 0.14, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="TopRim" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, 1.34, 0)
+scale = Vector3(3.2, 0.12, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, -0.95, 0)
+scale = Vector3(3.21, 0.07, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="StatusBand" type="MeshInstance3D" parent="Obstacles/CrateStackS"]
+position = Vector3(0, 0.95, 0)
+scale = Vector3(3.21, 0.05, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="CrateStackW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-22, 1.4, -3)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrateStackW"]
+shape = SubResource("shape_box_3p2_2p8_3p2")
+
+[node name="LowerCrate" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, -0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="UpperCrate" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, 0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="SeamBand" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(3.2, 0.14, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="TopRim" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, 1.34, 0)
+scale = Vector3(3.2, 0.12, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, -0.95, 0)
+scale = Vector3(3.21, 0.07, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="StatusBand" type="MeshInstance3D" parent="Obstacles/CrateStackW"]
+position = Vector3(0, 0.95, 0)
+scale = Vector3(3.21, 0.05, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="CrateStackE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(22, 1.4, 3)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrateStackE"]
+shape = SubResource("shape_box_3p2_2p8_3p2")
+
+[node name="LowerCrate" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, -0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="UpperCrate" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, 0.7, 0)
+scale = Vector3(3.14, 1.4, 3.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_wall")
+
+[node name="SeamBand" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(3.2, 0.14, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="TopRim" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, 1.34, 0)
+scale = Vector3(3.2, 0.12, 3.2)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, -0.95, 0)
+scale = Vector3(3.21, 0.07, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="StatusBand" type="MeshInstance3D" parent="Obstacles/CrateStackE"]
+position = Vector3(0, 0.95, 0)
+scale = Vector3(3.21, 0.05, 3.21)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="ContainerW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-26, 1.45, 13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ContainerW"]
+shape = SubResource("shape_box_2p6_2p9_7")
+
+[node name="Shell" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(2.54, 2.9, 6.94)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Rib0" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 0, -2.4)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib1" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 0, -0.8)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib2" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 0, 0.8)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib3" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 0, 2.4)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="RoofLight" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, 1.43, 0)
+scale = Vector3(0.12, 0.04, 6.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/ContainerW"]
+position = Vector3(0, -1.05, 0)
+scale = Vector3(2.61, 0.07, 7.01)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")
+
+[node name="ContainerE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(26, 1.45, -13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ContainerE"]
+shape = SubResource("shape_box_2p6_2p9_7")
+
+[node name="Shell" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(2.54, 2.9, 6.94)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Rib0" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 0, -2.4)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib1" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 0, -0.8)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib2" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 0, 0.8)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Rib3" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 0, 2.4)
+scale = Vector3(2.6, 2.86, 0.14)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="RoofLight" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, 1.43, 0)
+scale = Vector3(0.12, 0.04, 6.4)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_cyan")
+
+[node name="HazardBand" type="MeshInstance3D" parent="Obstacles/ContainerE"]
+position = Vector3(0, -1.05, 0)
+scale = Vector3(2.61, 0.07, 7.01)
+mesh = SubResource("Mesh_unit")
+surface_material_override/0 = SubResource("Material_amber")

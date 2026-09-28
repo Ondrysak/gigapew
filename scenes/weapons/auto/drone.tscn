@@ -1,0 +1,73 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/auto/drone_weapon.gd" id="1_weapon"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_hull"]
+albedo_color = Color(0.2, 0.26, 0.33, 1)
+metallic = 0.6
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+shading_mode = 0
+albedo_color = Color(0.2, 1, 0.92, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_eye"]
+shading_mode = 0
+albedo_color = Color(1, 0.62, 0.18, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_tracer"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.35, 1, 0.95, 0.9)
+
+[sub_resource type="SphereMesh" id="Mesh_body"]
+radius = 0.13
+height = 0.22
+radial_segments = 10
+rings = 5
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.17
+outer_radius = 0.21
+rings = 16
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="Mesh_eye"]
+size = Vector3(0.07, 0.04, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_tracer"]
+size = Vector3(0.03, 0.03, 1)
+
+[node name="Drone" type="Node3D" node_paths=PackedStringArray("drone_template", "tracer_template")]
+script = ExtResource("1_weapon")
+base_damage = 9.0
+base_cooldown = 0.75
+drone_template = NodePath("DroneTemplate")
+tracer_template = NodePath("TracerTemplate")
+
+[node name="DroneTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Body" type="MeshInstance3D" parent="DroneTemplate"]
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_hull")
+cast_shadow = 0
+
+[node name="Ring" type="MeshInstance3D" parent="DroneTemplate"]
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="Eye" type="MeshInstance3D" parent="DroneTemplate"]
+position = Vector3(0, 0, -0.12)
+mesh = SubResource("Mesh_eye")
+material_override = SubResource("Mat_eye")
+cast_shadow = 0
+
+[node name="TracerTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_tracer")
+material_override = SubResource("Mat_tracer")
+cast_shadow = 0

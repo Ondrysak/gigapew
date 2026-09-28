@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"overclock"
+display_name = "Trigger Overclock"
+description = "Main gun fires 12% faster (total +12%)."
+level_descriptions = PackedStringArray("Main gun fires 12% faster (total +12%).", "Main gun fires 12% faster (total +24%).", "Main gun fires 12% faster (total +36%).", "Main gun fires 12% faster (total +48%).", "Main gun fires 12% faster (total +60%).")
+max_level = 5
+weight = 1.0
+accent_color = Color(1.0, 0.62, 0.18, 1)
+fire_rate_multiplier = 0.12

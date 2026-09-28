@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"servo_striders"
+display_name = "Servo Striders"
+description = "Move 7% faster (total +7%)."
+level_descriptions = PackedStringArray("Move 7% faster (total +7%).", "Move 7% faster (total +14%).", "Move 7% faster (total +21%).", "Move 7% faster (total +28%).", "Move 7% faster (total +35%).")
+max_level = 5
+weight = 1.0
+accent_color = Color(0.35, 1.0, 0.55, 1)
+move_speed_multiplier = 0.07

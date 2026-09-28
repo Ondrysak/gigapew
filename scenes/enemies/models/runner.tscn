@@ -1,0 +1,96 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Armor"]
+albedo_color = Color(0.4, 0.12, 0.82, 1)
+metallic = 0.5
+roughness = 0.28
+emission_enabled = true
+emission = Color(0.14, 0.03, 0.34, 1)
+emission_energy_multiplier = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Metal"]
+albedo_color = Color(0.07, 0.06, 0.12, 1)
+metallic = 0.75
+roughness = 0.32
+
+[sub_resource type="StandardMaterial3D" id="Light"]
+shading_mode = 0
+albedo_color = Color(0.2, 1, 0.95, 1)
+
+[sub_resource type="PrismMesh" id="DartMesh"]
+size = Vector3(0.46, 0.82, 0.26)
+
+[sub_resource type="BoxMesh" id="SpineMesh"]
+size = Vector3(0.16, 0.14, 0.4)
+
+[sub_resource type="BoxMesh" id="EyeMesh"]
+size = Vector3(0.14, 0.045, 0.03)
+
+[sub_resource type="BoxMesh" id="LegMesh"]
+size = Vector3(0.06, 0.56, 0.08)
+
+[sub_resource type="BoxMesh" id="FinMesh"]
+size = Vector3(0.04, 0.22, 0.34)
+
+[sub_resource type="BoxMesh" id="GlowMesh"]
+size = Vector3(0.26, 0.1, 0.04)
+
+[node name="Runner" type="Node3D"]
+
+[node name="Dart" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.58, 0)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("DartMesh")
+material_override = SubResource("Armor")
+
+[node name="Spine" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.74, 0.02)
+mesh = SubResource("SpineMesh")
+material_override = SubResource("Metal")
+
+[node name="Eye" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.75, -0.195)
+mesh = SubResource("EyeMesh")
+material_override = SubResource("Light")
+
+[node name="FrontLeftLeg" type="MeshInstance3D" parent="."]
+position = Vector3(-0.19, 0.28, -0.12)
+rotation = Vector3(0.35, 0, -0.3)
+mesh = SubResource("LegMesh")
+material_override = SubResource("Metal")
+
+[node name="FrontRightLeg" type="MeshInstance3D" parent="."]
+position = Vector3(0.19, 0.28, -0.12)
+rotation = Vector3(0.35, 0, 0.3)
+mesh = SubResource("LegMesh")
+material_override = SubResource("Metal")
+
+[node name="RearLeftLeg" type="MeshInstance3D" parent="."]
+position = Vector3(-0.2, 0.28, 0.24)
+rotation = Vector3(-0.35, 0, -0.3)
+mesh = SubResource("LegMesh")
+material_override = SubResource("Metal")
+
+[node name="RearRightLeg" type="MeshInstance3D" parent="."]
+position = Vector3(0.2, 0.28, 0.24)
+rotation = Vector3(-0.35, 0, 0.3)
+mesh = SubResource("LegMesh")
+material_override = SubResource("Metal")
+
+[node name="LeftFin" type="MeshInstance3D" parent="."]
+position = Vector3(-0.12, 0.8, 0.26)
+rotation = Vector3(0.35, 0, 0.45)
+mesh = SubResource("FinMesh")
+material_override = SubResource("Armor")
+
+[node name="RightFin" type="MeshInstance3D" parent="."]
+position = Vector3(0.12, 0.8, 0.26)
+rotation = Vector3(0.35, 0, -0.45)
+mesh = SubResource("FinMesh")
+material_override = SubResource("Armor")
+
+[node name="Thrust" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.58, 0.42)
+mesh = SubResource("GlowMesh")
+material_override = SubResource("Light")
+cast_shadow = 0

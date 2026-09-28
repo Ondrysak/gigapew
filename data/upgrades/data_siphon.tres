@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"data_siphon"
+display_name = "Data Siphon"
+description = "Gain 10% more experience (total +10%)."
+level_descriptions = PackedStringArray("Gain 10% more experience (total +10%).", "Gain 10% more experience (total +20%).", "Gain 10% more experience (total +30%).", "Gain 10% more experience (total +40%).", "Gain 10% more experience (total +50%).")
+max_level = 5
+weight = 0.8
+accent_color = Color(0.4, 1.0, 0.5, 1)
+xp_multiplier = 0.1

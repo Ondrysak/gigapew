@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/auto/drone.tscn" id="2_weapon"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"drone"
+display_name = "Sentry Drones"
+description = "Deploy an orbiting drone that snipes the nearest enemy within 18 m."
+level_descriptions = PackedStringArray("Deploy an orbiting drone that snipes the nearest enemy within 18 m.", "Drones hit 25% harder and fire faster.", "Deploy a second drone.", "Drones hit 25% harder and fire faster.", "Deploy a third drone.")
+kind = 1
+max_level = 5
+weight = 1.3
+accent_color = Color(0.3, 1.0, 0.92, 1)
+weapon_scene = ExtResource("2_weapon")

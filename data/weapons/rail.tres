@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/rail.tscn" id="2_view"]
+
+[resource]
+script = ExtResource("1_definition")
+display_name = "Rail"
+description = "Heavy beam / pierces the whole line"
+damage = 100
+fire_interval = 0.8
+range_meters = 64.0
+pellet_count = 1
+spread_degrees = 0.0
+knockback = 10.0
+pierce = 30
+view_scene = ExtResource("2_view")

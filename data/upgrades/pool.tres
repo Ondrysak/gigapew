@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="UpgradePool" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_pool.gd" id="1_pool"]
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="2_definition"]
+[ext_resource type="Resource" path="res://data/upgrades/drone.tres" id="3_drone"]
+[ext_resource type="Resource" path="res://data/upgrades/nova.tres" id="4_nova"]
+[ext_resource type="Resource" path="res://data/upgrades/mortar.tres" id="5_mortar"]
+[ext_resource type="Resource" path="res://data/upgrades/arc.tres" id="6_arc"]
+[ext_resource type="Resource" path="res://data/upgrades/overclock.tres" id="7_overclock"]
+[ext_resource type="Resource" path="res://data/upgrades/hardened_rounds.tres" id="8_hardened_rounds"]
+[ext_resource type="Resource" path="res://data/upgrades/penetrator.tres" id="9_penetrator"]
+[ext_resource type="Resource" path="res://data/upgrades/servo_striders.tres" id="10_servo_striders"]
+[ext_resource type="Resource" path="res://data/upgrades/reinforced_frame.tres" id="11_reinforced_frame"]
+[ext_resource type="Resource" path="res://data/upgrades/nanite_weave.tres" id="12_nanite_weave"]
+[ext_resource type="Resource" path="res://data/upgrades/salvage_magnet.tres" id="13_salvage_magnet"]
+[ext_resource type="Resource" path="res://data/upgrades/blast_amplifier.tres" id="14_blast_amplifier"]
+[ext_resource type="Resource" path="res://data/upgrades/rapid_capacitors.tres" id="15_rapid_capacitors"]
+[ext_resource type="Resource" path="res://data/upgrades/ablative_plates.tres" id="16_ablative_plates"]
+[ext_resource type="Resource" path="res://data/upgrades/data_siphon.tres" id="17_data_siphon"]
+[ext_resource type="Resource" path="res://data/upgrades/splitter_array.tres" id="18_splitter_array"]
+[ext_resource type="Resource" path="res://data/upgrades/reactor_core.tres" id="19_reactor_core"]
+[ext_resource type="Resource" path="res://data/upgrades/field_repair.tres" id="20_field_repair"]
+
+[resource]
+script = ExtResource("1_pool")
+upgrades = Array[ExtResource("2_definition")]([ExtResource("3_drone"), ExtResource("4_nova"), ExtResource("5_mortar"), ExtResource("6_arc"), ExtResource("7_overclock"), ExtResource("8_hardened_rounds"), ExtResource("9_penetrator"), ExtResource("10_servo_striders"), ExtResource("11_reinforced_frame"), ExtResource("12_nanite_weave"), ExtResource("13_salvage_magnet"), ExtResource("14_blast_amplifier"), ExtResource("15_rapid_capacitors"), ExtResource("16_ablative_plates"), ExtResource("17_data_siphon"), ExtResource("18_splitter_array"), ExtResource("19_reactor_core"), ExtResource("20_field_repair")])

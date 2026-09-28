@@ -1,0 +1,144 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+
+[sub_resource type="StandardMaterial3D" id="Shell"]
+albedo_color = Color(0.32, 0.3, 0.46, 1)
+metallic = 0.7
+roughness = 0.28
+
+[sub_resource type="StandardMaterial3D" id="Dark"]
+albedo_color = Color(0.045, 0.055, 0.08, 1)
+metallic = 0.45
+
+[sub_resource type="StandardMaterial3D" id="Glow"]
+shading_mode = 0
+albedo_color = Color(0.64, 0.38, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Trace"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.7, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Impact"]
+shading_mode = 0
+albedo_color = Color(0.8, 0.86, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Hit"]
+shading_mode = 0
+albedo_color = Color(1, 0.3, 0.65, 1)
+
+[sub_resource type="BoxMesh" id="Body"]
+size = Vector3(0.21, 0.23, 0.52)
+
+[sub_resource type="BoxMesh" id="Rail"]
+size = Vector3(0.065, 0.095, 0.62)
+
+[sub_resource type="BoxMesh" id="Coil"]
+size = Vector3(0.022, 0.045, 0.57)
+
+[sub_resource type="CylinderMesh" id="Core"]
+top_radius = 0.045
+bottom_radius = 0.045
+height = 0.48
+radial_segments = 8
+
+[sub_resource type="CylinderMesh" id="Scope"]
+top_radius = 0.055
+bottom_radius = 0.055
+height = 0.25
+radial_segments = 10
+
+[sub_resource type="SphereMesh" id="Flash"]
+radius = 0.1
+height = 0.36
+radial_segments = 8
+rings = 4
+
+[node name="Rail" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
+position = Vector3(0.32, -0.29, -0.64)
+script = ExtResource("1_view")
+muzzle = NodePath("Flash")
+flash = NodePath("Flash")
+flash_light = NodePath("Light")
+trace_material = SubResource("Trace")
+impact_material = SubResource("Impact")
+target_impact_material = SubResource("Hit")
+shot_cue = &"rail"
+recoil_distance = 0.15
+recoil_angle = 0.12
+trace_width = 0.045
+trace_duration = 0.12
+flash_duration = 0.085
+
+[node name="Receiver" type="MeshInstance3D" parent="."]
+mesh = SubResource("Body")
+material_override = SubResource("Shell")
+cast_shadow = 0
+
+[node name="Stock" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.08, 0.25)
+scale = Vector3(0.7, 0.6, 0.65)
+mesh = SubResource("Body")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="Core" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -0.41)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Core")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="LeftRail" type="MeshInstance3D" parent="."]
+position = Vector3(-0.078, 0, -0.44)
+mesh = SubResource("Rail")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="RightRail" type="MeshInstance3D" parent="."]
+position = Vector3(0.078, 0, -0.44)
+mesh = SubResource("Rail")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="LeftCoil" type="MeshInstance3D" parent="."]
+position = Vector3(-0.078, 0.055, -0.44)
+mesh = SubResource("Coil")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="RightCoil" type="MeshInstance3D" parent="."]
+position = Vector3(0.078, 0.055, -0.44)
+mesh = SubResource("Coil")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="Scope" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.17, -0.03)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Scope")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="Lens" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.17, 0.1)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.8, 0.05, 0.8)
+mesh = SubResource("Scope")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="Flash" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.83)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Flash")
+material_override = SubResource("Trace")
+cast_shadow = 0
+
+[node name="Light" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.85)
+light_color = Color(0.64, 0.4, 1, 1)
+light_energy = 2.3
+omni_range = 4.0

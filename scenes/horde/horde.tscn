@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/horde/horde.gd" id="1_horde"]
+[ext_resource type="Shader" path="res://shaders/horde_enemy.gdshader" id="2_shader"]
+
+[sub_resource type="SphereMesh" id="Bolt"]
+radius = 0.22
+height = 0.44
+radial_segments = 8
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="BoltMaterial"]
+shading_mode = 0
+albedo_color = Color(1, 0.55, 0.12, 1)
+
+[node name="Horde" type="Node3D"]
+script = ExtResource("1_horde")
+enemy_shader = ExtResource("2_shader")
+projectile_mesh = SubResource("Bolt")
+projectile_material = SubResource("BoltMaterial")

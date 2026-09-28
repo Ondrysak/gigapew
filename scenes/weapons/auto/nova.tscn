@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/auto/nova_weapon.gd" id="1_weapon"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.72, 0.4, 1, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="Mat_halo"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.35, 0.2, 1, 0.35)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.95
+outer_radius = 1.0
+rings = 48
+ring_segments = 4
+
+[sub_resource type="TorusMesh" id="Mesh_halo"]
+inner_radius = 0.82
+outer_radius = 1.02
+rings = 48
+ring_segments = 4
+
+[node name="Nova" type="Node3D" node_paths=PackedStringArray("ring_template")]
+script = ExtResource("1_weapon")
+base_damage = 14.0
+base_cooldown = 2.6
+ring_template = NodePath("RingTemplate")
+
+[node name="RingTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="RingTemplate"]
+scale = Vector3(1, 0.4, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="Halo" type="MeshInstance3D" parent="RingTemplate"]
+scale = Vector3(1, 0.15, 1)
+mesh = SubResource("Mesh_halo")
+material_override = SubResource("Mat_halo")
+cast_shadow = 0

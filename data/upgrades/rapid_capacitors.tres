@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"rapid_capacitors"
+display_name = "Rapid Capacitors"
+description = "Auto weapons recharge 8% faster (total -8% cooldown)."
+level_descriptions = PackedStringArray("Auto weapons recharge 8% faster (total -8% cooldown).", "Auto weapons recharge 8% faster (total -16% cooldown).", "Auto weapons recharge 8% faster (total -24% cooldown).", "Auto weapons recharge 8% faster (total -32% cooldown).", "Auto weapons recharge 8% faster (total -40% cooldown).")
+max_level = 5
+weight = 0.9
+accent_color = Color(0.3, 0.75, 1.0, 1)
+cooldown_multiplier = -0.08

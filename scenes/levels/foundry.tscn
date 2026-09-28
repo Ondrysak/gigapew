@@ -1,0 +1,2480 @@
+[gd_scene load_steps=17 format=3]
+
+[ext_resource type="Shader" path="res://shaders/foundry_floor.gdshader" id="floor_shader"]
+
+[sub_resource type="ShaderMaterial" id="mat_floor"]
+shader = ExtResource("floor_shader")
+
+[sub_resource type="StandardMaterial3D" id="mat_wall"]
+albedo_color = Color(0.14, 0.115, 0.09, 1)
+roughness = 0.55
+metallic = 0.7
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+albedo_color = Color(0.22, 0.25, 0.28, 1)
+roughness = 0.55
+metallic = 0.8
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+albedo_color = Color(0.022, 0.027, 0.035, 1)
+roughness = 0.55
+metallic = 0.5
+
+[sub_resource type="StandardMaterial3D" id="mat_accent"]
+albedo_color = Color(1, 0.34, 0.065, 1)
+roughness = 0.55
+metallic = 0.1
+shading_mode = 0
+
+[sub_resource type="StandardMaterial3D" id="mat_glow"]
+albedo_color = Color(1, 0.7, 0.19, 1)
+roughness = 0.55
+metallic = 0
+shading_mode = 0
+
+[sub_resource type="BoxMesh" id="box"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="CylinderMesh" id="cylinder"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 20
+rings = 1
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 1
+background_color = Color(0.045, 0.018, 0.012, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.47, 0.32, 1)
+ambient_light_energy = 0.72
+reflected_light_source = 1
+
+[sub_resource type="BoxShape3D" id="shape_box_97p2_1_53p2"]
+size = Vector3(97.2, 1, 53.2)
+
+[sub_resource type="BoxShape3D" id="shape_box_97p2_6_0p6"]
+size = Vector3(97.2, 6, 0.6)
+
+[sub_resource type="BoxShape3D" id="shape_box_0p6_6_53p2"]
+size = Vector3(0.6, 6, 53.2)
+
+[sub_resource type="CylinderShape3D" id="shape_cyl_1p6_3p4"]
+radius = 1.6
+height = 3.4
+
+[sub_resource type="BoxShape3D" id="shape_box_1p6_7_1p6"]
+size = Vector3(1.6, 7, 1.6)
+
+[sub_resource type="BoxShape3D" id="shape_box_4_2p6_2p4"]
+size = Vector3(4, 2.6, 2.4)
+
+[node name="Foundry" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-1.05, -0.5, 0)
+light_color = Color(0.82, 0.86, 1, 1)
+light_energy = 1.2
+shadow_enabled = true
+directional_shadow_max_distance = 55.0
+
+[node name="Floor" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.5, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="Floor"]
+position = Vector3(0, 0, 0)
+scale = Vector3(97.2, 1, 53.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_floor")
+
+[node name="Collision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("shape_box_97p2_1_53p2")
+
+[node name="NorthWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 3, -26.3)
+
+[node name="Surface" type="MeshInstance3D" parent="NorthWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(97.2, 6, 0.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="NorthWall"]
+shape = SubResource("shape_box_97p2_6_0p6")
+
+[node name="SouthWall" type="StaticBody3D" parent="."]
+position = Vector3(0, 3, 26.3)
+
+[node name="Surface" type="MeshInstance3D" parent="SouthWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(97.2, 6, 0.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="SouthWall"]
+shape = SubResource("shape_box_97p2_6_0p6")
+
+[node name="WestWall" type="StaticBody3D" parent="."]
+position = Vector3(-48.3, 3, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="WestWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.6, 6, 53.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="WestWall"]
+shape = SubResource("shape_box_0p6_6_53p2")
+
+[node name="EastWall" type="StaticBody3D" parent="."]
+position = Vector3(48.3, 3, 0)
+
+[node name="Surface" type="MeshInstance3D" parent="EastWall"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.6, 6, 53.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Collision" type="CollisionShape3D" parent="EastWall"]
+shape = SubResource("shape_box_0p6_6_53p2")
+
+[node name="NorthBays" type="Node3D" parent="."]
+
+[node name="WallTop" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(0, 6.07, -26.3)
+scale = Vector3(96.8, 0.2, 0.85)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="ServiceRail" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(0, 9.24, -25.1)
+scale = Vector3(97, 0.3, 0.22)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FurnaceBay0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille0_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-44, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille1_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-36, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille2_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-28, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille3_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-20, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille4_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(-12, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay7" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore7" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille7_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader7" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(12, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay8" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore8" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille8_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader8" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(20, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay9" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore9" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille9_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader9" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(28, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay10" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore10" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille10_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader10" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(36, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay11" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore11" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille11_0" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_1" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_2" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_3" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_4" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_5" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader11" type="MeshInstance3D" parent="NorthBays"]
+position = Vector3(44, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="SouthBays" type="Node3D" parent="."]
+rotation = Vector3(0, 3.1416, 0)
+
+[node name="WallTop" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(0, 6.07, -26.3)
+scale = Vector3(96.8, 0.2, 0.85)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="ServiceRail" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(0, 9.24, -25.1)
+scale = Vector3(97, 0.3, 0.22)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FurnaceBay0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille0_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille0_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-44, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille1_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille1_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-36, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille2_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille2_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-28, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille3_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille3_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-20, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille4_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille4_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-12, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille5_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille5_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille5_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille5_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille5_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille5_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(-4, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay6" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore6" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille6_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille6_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille6_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille6_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille6_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille6_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader6" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(4, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay7" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore7" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille7_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille7_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader7" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(12, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay8" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore8" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille8_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille8_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader8" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(20, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay9" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore9" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille9_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille9_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader9" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(28, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay10" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore10" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille10_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille10_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader10" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(36, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="FurnaceBay11" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 2.76, -25.97)
+scale = Vector3(4.75, 4.08, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="HeatCore11" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 2.52, -25.93)
+scale = Vector3(3.5, 2.7, 0.045)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="HeatGrille11_0" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 1.26, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_1" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 1.776, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_2" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 2.292, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_3" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 2.808, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_4" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 3.324, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="HeatGrille11_5" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 3.84, -25.89)
+scale = Vector3(3.8125, 0.156, 0.07)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="BayHeader11" type="MeshInstance3D" parent="SouthBays"]
+position = Vector3(44, 5.016, -25.9)
+scale = Vector3(4.75, 0.13, 0.05)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Gantries" type="Node3D" parent="."]
+
+[node name="Leg0N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face0N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp0N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg0S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face0S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp0S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder0" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow0" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-40, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Leg1N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face1N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp1N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg1S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face1S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp1S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder1" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow1" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-24, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Leg2N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face2N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp2N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg2S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face2S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp2S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder2" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow2" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(-8, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Leg3N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face3N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp3N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg3S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face3S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp3S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder3" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow3" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(8, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Leg4N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face4N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp4N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg4S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face4S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp4S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder4" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow4" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(24, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="Leg5N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 5.28, -26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face5N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 3, -25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp5N" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 3.72, -25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Leg5S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 5.28, 26.75)
+scale = Vector3(1.25, 10.56, 0.9)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Face5S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 3, 25.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Lamp5S" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 3.72, 25.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Girder5" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 10.08, 0)
+scale = Vector3(1.25, 0.96, 54.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Underglow5" type="MeshInstance3D" parent="Gantries"]
+position = Vector3(40, 9.58, 0)
+scale = Vector3(0.16, 0.05, 44)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="MainFurnace" type="Node3D" parent="."]
+
+[node name="Housing" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0, 6, -28.35)
+scale = Vector3(13.75, 12, 3.5)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Frame" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0, 6.72, -25.95)
+scale = Vector3(10, 7.8, 0.3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Mouth" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0, 6.6, -25.76)
+scale = Vector3(8.25, 6.36, 0.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="MouthGrille0" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-3.75, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille1" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-2.8125, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille2" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-1.875, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille3" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-0.9375, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille4" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille5" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0.9375, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille6" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(1.875, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille7" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(2.8125, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille8" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(3.75, 6.6, -25.68)
+scale = Vector3(0.19, 6.6, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Crown" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(0, 10.8, -26.3)
+scale = Vector3(15, 0.9, 3.75)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="ChimneyW" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-6.25, 12, -28.8)
+scale = Vector3(1.375, 12, 1.375)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ChimneyBandW" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(-6.25, 15.6, -28.8)
+scale = Vector3(1.5, 0.42, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="ChimneyE" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(6.25, 12, -28.8)
+scale = Vector3(1.375, 12, 1.375)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ChimneyBandE" type="MeshInstance3D" parent="MainFurnace"]
+position = Vector3(6.25, 15.6, -28.8)
+scale = Vector3(1.5, 0.42, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Sector" type="Label3D" parent="MainFurnace"]
+position = Vector3(0, 11.2, -24.7)
+pixel_size = 0.017
+font_size = 64
+outline_size = 0
+modulate = Color(0.8, 0.9, 1, 1)
+text = "02 / FOUNDRY"
+
+[node name="WestFurnace" type="Node3D" parent="."]
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="WallTop" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 6.07, -48.3)
+scale = Vector3(52.8, 0.2, 0.85)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Housing" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 4.5, -50.1)
+scale = Vector3(8, 9, 3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Frame" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 3.6, -47.95)
+scale = Vector3(6, 4.8, 0.3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Mouth" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 3.5, -47.76)
+scale = Vector3(5, 3.9, 0.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="MouthGrille0" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-2, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille1" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-1, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille2" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille3" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(1, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille4" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(2, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Crown" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 6.4, -48.3)
+scale = Vector3(9, 0.7, 3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Chimney" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 9, -50.8)
+scale = Vector3(1.1, 12, 1.1)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ChimneyBand" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(0, 12, -50.8)
+scale = Vector3(1.22, 0.35, 1.22)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Pier0" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-18, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp0" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-18, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier1" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-10, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp1" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(-10, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier2" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(10, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp2" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(10, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier3" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(18, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp3" type="MeshInstance3D" parent="WestFurnace"]
+position = Vector3(18, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="EastFurnace" type="Node3D" parent="."]
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="WallTop" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 6.07, -48.3)
+scale = Vector3(52.8, 0.2, 0.85)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Housing" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 4.5, -50.1)
+scale = Vector3(8, 9, 3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Frame" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 3.6, -47.95)
+scale = Vector3(6, 4.8, 0.3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Mouth" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 3.5, -47.76)
+scale = Vector3(5, 3.9, 0.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="MouthGrille0" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-2, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille1" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-1, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille2" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille3" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(1, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="MouthGrille4" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(2, 3.5, -47.68)
+scale = Vector3(0.17, 4, 0.15)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Crown" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 6.4, -48.3)
+scale = Vector3(9, 0.7, 3)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Chimney" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 9, -50.8)
+scale = Vector3(1.1, 12, 1.1)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ChimneyBand" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(0, 12, -50.8)
+scale = Vector3(1.22, 0.35, 1.22)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Pier0" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-18, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp0" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-18, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier1" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-10, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp1" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(-10, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier2" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(10, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp2" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(10, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Pier3" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(18, 3, -47.975)
+scale = Vector3(1, 5.52, 0.035)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="PierLamp3" type="MeshInstance3D" parent="EastFurnace"]
+position = Vector3(18, 3.72, -47.94)
+scale = Vector3(0.12, 2.64, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="FurnaceLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 6, -18)
+light_color = Color(1, 0.28, 0.06, 1)
+light_energy = 5.5
+omni_range = 34
+
+[node name="DeckLightWest" type="OmniLight3D" parent="."]
+position = Vector3(-28, 6.5, 4)
+light_color = Color(1, 0.62, 0.27, 1)
+light_energy = 3.2
+omni_range = 32
+
+[node name="DeckLightEast" type="OmniLight3D" parent="."]
+position = Vector3(28, 6.5, 4)
+light_color = Color(1, 0.62, 0.27, 1)
+light_energy = 3.2
+omni_range = 32
+
+[node name="LadleLightWest" type="OmniLight3D" parent="."]
+position = Vector3(-42, 4.5, 0)
+light_color = Color(1, 0.3, 0.07, 1)
+light_energy = 3.5
+omni_range = 20
+
+[node name="LadleLightEast" type="OmniLight3D" parent="."]
+position = Vector3(42, 4.5, 0)
+light_color = Color(1, 0.3, 0.07, 1)
+light_energy = 3.5
+omni_range = 20
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+position = Vector3(0, 1, 4)
+
+[node name="Obstacles" type="Node3D" parent="."]
+
+[node name="CrucibleNW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-20, 1.7, -10)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrucibleNW"]
+shape = SubResource("shape_cyl_1p6_3p4")
+
+[node name="Plinth" type="MeshInstance3D" parent="Obstacles/CrucibleNW"]
+position = Vector3(0, -1.525, 0)
+scale = Vector3(1.6, 0.35, 1.6)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="Obstacles/CrucibleNW"]
+position = Vector3(0, 0.1, 0)
+scale = Vector3(1.5, 3.2, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="GlowBand" type="MeshInstance3D" parent="Obstacles/CrucibleNW"]
+position = Vector3(0, -0.5, 0)
+scale = Vector3(1.56, 0.07, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="HeatBand" type="MeshInstance3D" parent="Obstacles/CrucibleNW"]
+position = Vector3(0, 0.6, 0)
+scale = Vector3(1.56, 0.26, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Rim" type="MeshInstance3D" parent="Obstacles/CrucibleNW"]
+position = Vector3(0, 1.57, 0)
+scale = Vector3(1.58, 0.26, 1.58)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="CrucibleNE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(20, 1.7, -10)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrucibleNE"]
+shape = SubResource("shape_cyl_1p6_3p4")
+
+[node name="Plinth" type="MeshInstance3D" parent="Obstacles/CrucibleNE"]
+position = Vector3(0, -1.525, 0)
+scale = Vector3(1.6, 0.35, 1.6)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="Obstacles/CrucibleNE"]
+position = Vector3(0, 0.1, 0)
+scale = Vector3(1.5, 3.2, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="GlowBand" type="MeshInstance3D" parent="Obstacles/CrucibleNE"]
+position = Vector3(0, -0.5, 0)
+scale = Vector3(1.56, 0.07, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="HeatBand" type="MeshInstance3D" parent="Obstacles/CrucibleNE"]
+position = Vector3(0, 0.6, 0)
+scale = Vector3(1.56, 0.26, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Rim" type="MeshInstance3D" parent="Obstacles/CrucibleNE"]
+position = Vector3(0, 1.57, 0)
+scale = Vector3(1.58, 0.26, 1.58)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="CrucibleSW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-20, 1.7, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrucibleSW"]
+shape = SubResource("shape_cyl_1p6_3p4")
+
+[node name="Plinth" type="MeshInstance3D" parent="Obstacles/CrucibleSW"]
+position = Vector3(0, -1.525, 0)
+scale = Vector3(1.6, 0.35, 1.6)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="Obstacles/CrucibleSW"]
+position = Vector3(0, 0.1, 0)
+scale = Vector3(1.5, 3.2, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="GlowBand" type="MeshInstance3D" parent="Obstacles/CrucibleSW"]
+position = Vector3(0, -0.5, 0)
+scale = Vector3(1.56, 0.07, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="HeatBand" type="MeshInstance3D" parent="Obstacles/CrucibleSW"]
+position = Vector3(0, 0.6, 0)
+scale = Vector3(1.56, 0.26, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Rim" type="MeshInstance3D" parent="Obstacles/CrucibleSW"]
+position = Vector3(0, 1.57, 0)
+scale = Vector3(1.58, 0.26, 1.58)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="CrucibleSE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(20, 1.7, 12)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/CrucibleSE"]
+shape = SubResource("shape_cyl_1p6_3p4")
+
+[node name="Plinth" type="MeshInstance3D" parent="Obstacles/CrucibleSE"]
+position = Vector3(0, -1.525, 0)
+scale = Vector3(1.6, 0.35, 1.6)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="Obstacles/CrucibleSE"]
+position = Vector3(0, 0.1, 0)
+scale = Vector3(1.5, 3.2, 1.5)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="GlowBand" type="MeshInstance3D" parent="Obstacles/CrucibleSE"]
+position = Vector3(0, -0.5, 0)
+scale = Vector3(1.56, 0.07, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="HeatBand" type="MeshInstance3D" parent="Obstacles/CrucibleSE"]
+position = Vector3(0, 0.6, 0)
+scale = Vector3(1.56, 0.26, 1.56)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="Rim" type="MeshInstance3D" parent="Obstacles/CrucibleSE"]
+position = Vector3(0, 1.57, 0)
+scale = Vector3(1.58, 0.26, 1.58)
+mesh = SubResource("cylinder")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="ColumnNW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-36, 3.5, -13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ColumnNW"]
+shape = SubResource("shape_box_1p6_7_1p6")
+
+[node name="Web" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 7, 1.5)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="FlangeWest" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(-0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FlangeEast" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="BasePlate" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(0, -3.35, 0)
+scale = Vector3(1.6, 0.3, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="LampNorth" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(0, 1.2, -0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="LampSouth" type="MeshInstance3D" parent="Obstacles/ColumnNW"]
+position = Vector3(0, 1.2, 0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="ColumnNE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(36, 3.5, -13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ColumnNE"]
+shape = SubResource("shape_box_1p6_7_1p6")
+
+[node name="Web" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 7, 1.5)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="FlangeWest" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(-0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FlangeEast" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="BasePlate" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(0, -3.35, 0)
+scale = Vector3(1.6, 0.3, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="LampNorth" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(0, 1.2, -0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="LampSouth" type="MeshInstance3D" parent="Obstacles/ColumnNE"]
+position = Vector3(0, 1.2, 0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="ColumnSW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-36, 3.5, 13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ColumnSW"]
+shape = SubResource("shape_box_1p6_7_1p6")
+
+[node name="Web" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 7, 1.5)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="FlangeWest" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(-0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FlangeEast" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="BasePlate" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(0, -3.35, 0)
+scale = Vector3(1.6, 0.3, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="LampNorth" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(0, 1.2, -0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="LampSouth" type="MeshInstance3D" parent="Obstacles/ColumnSW"]
+position = Vector3(0, 1.2, 0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="ColumnSE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(36, 3.5, 13)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/ColumnSE"]
+shape = SubResource("shape_box_1p6_7_1p6")
+
+[node name="Web" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(0, 0, 0)
+scale = Vector3(0.5, 7, 1.5)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="FlangeWest" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(-0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="FlangeEast" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(0.675, 0, 0)
+scale = Vector3(0.25, 7, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="BasePlate" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(0, -3.35, 0)
+scale = Vector3(1.6, 0.3, 1.6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="LampNorth" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(0, 1.2, -0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="LampSouth" type="MeshInstance3D" parent="Obstacles/ColumnSE"]
+position = Vector3(0, 1.2, 0.78)
+scale = Vector3(0.1, 2.4, 0.04)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_accent")
+
+[node name="IngotStackW" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(-9, 1.3, -15)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/IngotStackW"]
+shape = SubResource("shape_box_4_2p6_2p4")
+
+[node name="Pallet" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(0, -1.15, 0)
+scale = Vector3(4, 0.3, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Layer0" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(0, -0.625, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer1" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(0, 0.125, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer2" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(0, 0.875, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="StrapWest" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(-1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="StrapEast" type="MeshInstance3D" parent="Obstacles/IngotStackW"]
+position = Vector3(1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="IngotStackE" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(9, 1.3, -15)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/IngotStackE"]
+shape = SubResource("shape_box_4_2p6_2p4")
+
+[node name="Pallet" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(0, -1.15, 0)
+scale = Vector3(4, 0.3, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Layer0" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(0, -0.625, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer1" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(0, 0.125, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer2" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(0, 0.875, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="StrapWest" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(-1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="StrapEast" type="MeshInstance3D" parent="Obstacles/IngotStackE"]
+position = Vector3(1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="IngotStackS" type="StaticBody3D" parent="Obstacles"]
+position = Vector3(0, 1.3, 18)
+
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/IngotStackS"]
+shape = SubResource("shape_box_4_2p6_2p4")
+
+[node name="Pallet" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(0, -1.15, 0)
+scale = Vector3(4, 0.3, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_dark")
+
+[node name="Layer0" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(0, -0.625, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer1" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(0, 0.125, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="Layer2" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(0, 0.875, 0)
+scale = Vector3(3.8, 0.7, 2.2)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="StrapWest" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(-1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")
+
+[node name="StrapEast" type="MeshInstance3D" parent="Obstacles/IngotStackS"]
+position = Vector3(1.2, 0, 0)
+scale = Vector3(0.08, 2.58, 2.4)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_glow")

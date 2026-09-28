@@ -1,0 +1,142 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+
+[sub_resource type="StandardMaterial3D" id="Shell"]
+albedo_color = Color(0.52, 0.19, 0.065, 1)
+metallic = 0.55
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Steel"]
+albedo_color = Color(0.12, 0.15, 0.19, 1)
+metallic = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Dark"]
+albedo_color = Color(0.045, 0.035, 0.035, 1)
+
+[sub_resource type="StandardMaterial3D" id="Glow"]
+shading_mode = 0
+albedo_color = Color(1, 0.48, 0.08, 1)
+
+[sub_resource type="StandardMaterial3D" id="Trace"]
+shading_mode = 0
+albedo_color = Color(1, 0.77, 0.28, 1)
+
+[sub_resource type="StandardMaterial3D" id="Hit"]
+shading_mode = 0
+albedo_color = Color(1, 0.25, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="Receiver"]
+size = Vector3(0.36, 0.22, 0.4)
+
+[sub_resource type="CylinderMesh" id="Barrel"]
+top_radius = 0.085
+bottom_radius = 0.085
+height = 0.48
+radial_segments = 10
+
+[sub_resource type="CylinderMesh" id="Muzzle"]
+top_radius = 0.065
+bottom_radius = 0.065
+height = 0.014
+radial_segments = 10
+
+[sub_resource type="BoxMesh" id="Grip"]
+size = Vector3(0.2, 0.13, 0.25)
+
+[sub_resource type="BoxMesh" id="Stripe"]
+size = Vector3(0.03, 0.025, 0.25)
+
+[sub_resource type="SphereMesh" id="Flash"]
+radius = 0.14
+height = 0.28
+radial_segments = 8
+rings = 4
+
+[node name="Scatter" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
+position = Vector3(0.31, -0.3, -0.62)
+script = ExtResource("1_view")
+muzzle = NodePath("Flash")
+flash = NodePath("Flash")
+flash_light = NodePath("Light")
+trace_material = SubResource("Trace")
+impact_material = SubResource("Glow")
+target_impact_material = SubResource("Hit")
+shot_cue = &"scatter"
+recoil_distance = 0.19
+recoil_angle = 0.18
+trace_width = 0.018
+trace_duration = 0.065
+flash_duration = 0.075
+
+[node name="Receiver" type="MeshInstance3D" parent="."]
+mesh = SubResource("Receiver")
+material_override = SubResource("Shell")
+cast_shadow = 0
+
+[node name="LeftBarrel" type="MeshInstance3D" parent="."]
+position = Vector3(-0.09, 0, -0.36)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Barrel")
+material_override = SubResource("Steel")
+cast_shadow = 0
+
+[node name="RightBarrel" type="MeshInstance3D" parent="."]
+position = Vector3(0.09, 0, -0.36)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Barrel")
+material_override = SubResource("Steel")
+cast_shadow = 0
+
+[node name="LeftBore" type="MeshInstance3D" parent="."]
+position = Vector3(-0.09, 0, -0.605)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Muzzle")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="RightBore" type="MeshInstance3D" parent="."]
+position = Vector3(0.09, 0, -0.605)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Muzzle")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="Pump" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.11, -0.34)
+mesh = SubResource("Grip")
+material_override = SubResource("Shell")
+cast_shadow = 0
+
+[node name="Stock" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.12, 0.16)
+rotation = Vector3(-0.3, 0, 0)
+mesh = SubResource("Grip")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="LeftStrip" type="MeshInstance3D" parent="."]
+position = Vector3(-0.09, 0.12, -0.02)
+mesh = SubResource("Stripe")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="RightStrip" type="MeshInstance3D" parent="."]
+position = Vector3(0.09, 0.12, -0.02)
+mesh = SubResource("Stripe")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="Flash" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.7)
+mesh = SubResource("Flash")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="Light" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.72)
+light_color = Color(1, 0.55, 0.15, 1)
+light_energy = 2.5
+omni_range = 3.5

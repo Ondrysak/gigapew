@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"nanite_weave"
+display_name = "Nanite Weave"
+description = "Regenerate 0.4 health per second."
+level_descriptions = PackedStringArray("Regenerate 0.4 health per second.", "Regenerate 0.8 health per second.", "Regenerate 1.2 health per second.", "Regenerate 1.6 health per second.", "Regenerate 2.0 health per second.")
+max_level = 5
+weight = 0.9
+accent_color = Color(0.45, 1.0, 0.75, 1)
+regen_per_second = 0.4

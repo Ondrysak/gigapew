@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/scatter.tscn" id="2_view"]
+
+[resource]
+script = ExtResource("1_definition")
+display_name = "Scatter"
+description = "Seven-pellet burst / close-range shove"
+damage = 14
+fire_interval = 0.65
+range_meters = 24.0
+pellet_count = 7
+spread_degrees = 5.0
+knockback = 12.0
+view_scene = ExtResource("2_view")

@@ -1,0 +1,139 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_steel"]
+albedo_color = Color(0.19, 0.25, 0.32, 1)
+metallic = 0.65
+roughness = 0.36
+
+[sub_resource type="StandardMaterial3D" id="Mat_dark"]
+albedo_color = Color(0.035, 0.055, 0.075, 1)
+metallic = 0.4
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Mat_energy"]
+shading_mode = 0
+albedo_color = Color(0.12, 0.95, 0.91, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_amber"]
+shading_mode = 0
+albedo_color = Color(1, 0.59, 0.16, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_trace"]
+shading_mode = 0
+albedo_color = Color(0.4, 1, 0.95, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+albedo_color = Color(1, 0.8, 0.4, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hit"]
+shading_mode = 0
+albedo_color = Color(1, 0.3, 0.55, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_body"]
+size = Vector3(0.23, 0.19, 0.46)
+
+[sub_resource type="BoxMesh" id="Mesh_rail"]
+size = Vector3(0.12, 0.045, 0.4)
+
+[sub_resource type="BoxMesh" id="Mesh_grip"]
+size = Vector3(0.13, 0.23, 0.15)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.38
+radial_segments = 8
+
+[sub_resource type="BoxMesh" id="Mesh_cell"]
+size = Vector3(0.018, 0.065, 0.26)
+
+[sub_resource type="CylinderMesh" id="Mesh_muzzle"]
+top_radius = 0.085
+bottom_radius = 0.085
+height = 0.09
+radial_segments = 8
+
+[sub_resource type="SphereMesh" id="Mesh_flash"]
+radius = 0.07
+height = 0.25
+radial_segments = 8
+rings = 4
+
+[node name="Pulse" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
+position = Vector3(0.32, -0.28, -0.62)
+script = ExtResource("1_view")
+muzzle = NodePath("MuzzleFlash")
+flash = NodePath("MuzzleFlash")
+flash_light = NodePath("MuzzleLight")
+trace_material = SubResource("Mat_trace")
+impact_material = SubResource("Mat_impact")
+target_impact_material = SubResource("Mat_hit")
+
+[node name="Receiver" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="TopRail" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.115, -0.035)
+mesh = SubResource("Mesh_rail")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="Grip" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.15, 0.12)
+rotation = Vector3(-0.2, 0, 0)
+mesh = SubResource("Mesh_grip")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="Barrel" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -0.37)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="MuzzleRing" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -0.52)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_muzzle")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="EnergyLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-0.122, 0, -0.03)
+mesh = SubResource("Mesh_cell")
+material_override = SubResource("Mat_energy")
+cast_shadow = 0
+
+[node name="EnergyRight" type="MeshInstance3D" parent="."]
+position = Vector3(0.122, 0, -0.03)
+mesh = SubResource("Mesh_cell")
+material_override = SubResource("Mat_energy")
+cast_shadow = 0
+
+[node name="Sight" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.148, -0.13)
+scale = Vector3(0.23, 0.3, 0.09)
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_amber")
+cast_shadow = 0
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.64)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_flash")
+material_override = SubResource("Mat_amber")
+cast_shadow = 0
+
+[node name="MuzzleLight" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0, -0.68)
+light_color = Color(0.3, 1, 0.91, 1)
+light_energy = 1.7
+omni_range = 3.0

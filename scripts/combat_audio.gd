@@ -2,15 +2,19 @@ class_name CombatAudio
 extends Node
 
 const SAMPLE_RATE := 22050
+const VICTORY_NOTES := [0, 4, 7, 12]
+
+## Supply recorded sounds per cue in the Inspector to replace the default synth.
+@export var sound_overrides: Dictionary[StringName, AudioStream] = {}
 
 var _voices: Dictionary = {}
 
 func _ready() -> void:
 	# Small original synthesized cues: no downloads or runtime audio streaming.
-	for cue in [&"shot", &"hit", &"kill", &"hurt", &"jump", &"land", &"victory", &"death"]:
+	for cue in [&"shot", &"scatter", &"rail", &"hit", &"kill", &"hurt", &"jump", &"land", &"victory", &"death"]:
 		var voice := AudioStreamPlayer.new()
-		voice.stream = _make_cue(cue)
-		voice.volume_db = -10.0 if cue == &"shot" else -14.0
+		voice.stream = sound_overrides[cue] if sound_overrides.get(cue) != null else _make_cue(cue)
+		voice.volume_db = -10.0 if cue in [&"shot", &"scatter", &"rail"] else -14.0
 		voice.max_polyphony = 3
 		add_child(voice)
 		_voices[cue] = voice
@@ -22,6 +26,8 @@ func play_cue(cue: StringName) -> void:
 func _make_cue(cue: StringName) -> AudioStreamWAV:
 	var duration := 0.16
 	match cue:
+		&"scatter": duration = 0.3
+		&"rail": duration = 0.34
 		&"hit": duration = 0.075
 		&"kill": duration = 0.25
 		&"hurt": duration = 0.23
@@ -44,6 +50,12 @@ func _make_cue(cue: StringName) -> AudioStreamWAV:
 			&"shot":
 				phase += TAU * lerpf(175.0, 42.0, sqrt(progress)) / SAMPLE_RATE
 				sample = sin(phase) * exp(-t * 23.0) * 0.7 + noise * exp(-t * 65.0) * 0.65
+			&"scatter":
+				phase += TAU * lerpf(110.0, 30.0, sqrt(progress)) / SAMPLE_RATE
+				sample = sin(phase) * exp(-t * 12.0) * 0.72 + noise * exp(-t * 29.0) * 0.55
+			&"rail":
+				phase += TAU * lerpf(1900.0, 140.0, sqrt(progress)) / SAMPLE_RATE
+				sample = (sin(phase) * 0.52 + sin(phase * 1.51) * 0.2) * exp(-t * 10.0) + noise * exp(-t * 100.0) * 0.3
 			&"hit":
 				sample = (sin(TAU * 1350.0 * t) * 0.55 + noise * 0.25) * exp(-t * 65.0)
 			&"kill":
@@ -58,7 +70,7 @@ func _make_cue(cue: StringName) -> AudioStreamWAV:
 				sample = (sin(TAU * 52.0 * t) * 0.65 + noise * 0.2) * exp(-t * 35.0)
 			&"victory":
 				var note := mini(3, int(progress * 4.0))
-				var frequency := 440.0 * pow(2.0, float([0, 4, 7, 12][note]) / 12.0)
+				var frequency := 440.0 * pow(2.0, float(VICTORY_NOTES[note]) / 12.0)
 				phase += TAU * frequency / SAMPLE_RATE
 				sample = (sin(phase) + sin(phase * 2.0) * 0.2) * 0.4 * sin(PI * fmod(progress * 4.0, 1.0))
 			&"death":
