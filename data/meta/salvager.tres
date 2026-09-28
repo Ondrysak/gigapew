@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+resource_multiplier = 0.08
+id = &"salvager"
+display_name = "Salvager"
+description = "Better sorting rigs: +8% yield from every resource per level."
+accent_color = Color(1, 0.88, 0.4, 1)
+costs = PackedInt32Array(70, 140, 220, 340, 450)
+currency = &"gold"

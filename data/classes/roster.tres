@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ClassRoster" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_roster.gd" id="1_roster"]
+[ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="2_class"]
+[ext_resource type="Resource" path="res://data/classes/scout.tres" id="3_scout"]
+[ext_resource type="Resource" path="res://data/classes/gunner.tres" id="4_gunner"]
+[ext_resource type="Resource" path="res://data/classes/driller.tres" id="5_driller"]
+[ext_resource type="Resource" path="res://data/classes/engineer.tres" id="6_engineer"]
+
+[resource]
+script = ExtResource("1_roster")
+classes = Array[ExtResource("2_class")]([ExtResource("3_scout"), ExtResource("4_gunner"), ExtResource("5_driller"), ExtResource("6_engineer")])

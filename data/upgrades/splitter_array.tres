@@ -6,8 +6,8 @@
 script = ExtResource("1_definition")
 id = &"splitter_array"
 display_name = "Splitter Array"
-description = "+1 drone, mortar shell, arc jump and nova echo (total +1)."
-level_descriptions = PackedStringArray("+1 drone, mortar shell, arc jump and nova echo (total +1).", "+1 drone, mortar shell, arc jump and nova echo (total +2).", "+1 drone, mortar shell, arc jump and nova echo (total +3).")
+description = "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +1)."
+level_descriptions = PackedStringArray("+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +1).", "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +2).", "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +3).")
 max_level = 3
 weight = 0.6
 accent_color = Color(1.0, 0.8, 0.25, 1)

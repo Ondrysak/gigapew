@@ -5,6 +5,7 @@ extends Node3D
 @export var muzzle: Node3D
 @export var flash: GeometryInstance3D
 @export var flash_light: Light3D
+## Tracer line material; leave empty to draw no tracers (e.g. flame weapons).
 @export var trace_material: Material
 @export var impact_material: Material
 @export var target_impact_material: Material
@@ -14,11 +15,45 @@ extends Node3D
 @export var shot_sound: AudioStream
 @export var hit_sound: AudioStream
 @export var kill_sound: AudioStream
+## Built-in SynthCue used when shot_sound is empty; empty falls back to shot_cue.
+@export var synth_shot: StringName
+@export var shot_volume_db := -10.0
 @export var recoil_distance := 0.11
 @export var recoil_angle := 0.09
 @export var trace_width := 0.014
 @export var trace_duration := 0.045
 @export var flash_duration := 0.045
+
+@export_group("Spin")
+## Optional node spun about its local Z axis while the gun spins up.
+@export var spinner: Node3D
+## Radians per second at full spin.
+@export var spin_speed := 38.0
+## Looping sound whose pitch and volume follow the spin.
+@export var spin_sound: AudioStream
+@export var synth_spin: StringName
+@export var spin_volume_db := -15.0
+
+@export_group("Flame")
+## Material for puffs launched along each ray; empty disables puffs.
+@export var puff_material: Material
+@export var puff_pool_size := 48
+@export var puff_lifetime := 0.3
+@export var puff_start_size := 0.06
+@export var puff_end_size := 0.8
+## Puffs shrink so their surface stays at least this far from the camera.
+@export var puff_camera_clearance := 0.45
+
+@export_group("Blast")
+## Hidden node authored at radius 1; pooled for explosive shots.
+@export var blast_template: Node3D
+@export var blast_pool_size := 6
+@export var blast_duration := 0.26
+## Visual radius as a fraction of the damage radius.
+@export var blast_visual_scale := 0.75
+## Blasts whose flash would reach within this distance of the camera skip the
+## flash (damage still applies), so point-blank shots never white out the view.
+@export var min_view_clearance := 1.0
 
 var _rest: Vector3
 var _recoil := 0.0
@@ -33,17 +68,34 @@ var _impacts: Array[MeshInstance3D] = []
 var _shot_audio: AudioStreamPlayer
 var _hit_audio: AudioStreamPlayer
 var _kill_audio: AudioStreamPlayer
+var _spin_audio: AudioStreamPlayer
+var _spin := 0.0
+var _camera: Camera3D
+var _puffs: Array[MeshInstance3D] = []
+var _puff_from := PackedVector3Array()
+var _puff_to := PackedVector3Array()
+var _puff_age := PackedFloat32Array()
+var _puff_next := 0
+var _blasts: Array[Node3D] = []
+var _blast_times := PackedFloat32Array()
+var _blast_radii := PackedFloat32Array()
 
 func _ready() -> void:
 	_rest = position
-	_shot_audio = _make_audio(shot_sound)
+	_shot_audio = _make_audio(shot_sound if shot_sound != null else SynthCue.make(synth_shot))
+	_shot_audio.volume_db = shot_volume_db
 	_hit_audio = _make_audio(hit_sound)
 	_kill_audio = _make_audio(kill_sound)
+	var hum := spin_sound if spin_sound != null else SynthCue.make(synth_spin)
+	if hum != null:
+		_spin_audio = _make_audio(hum)
+		_spin_audio.max_polyphony = 1
 
 func _make_audio(stream: AudioStream) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.stream = stream
 	player.max_polyphony = 4
+	player.bus = &"SFX"
 	add_child(player)
 	return player
 
@@ -51,27 +103,55 @@ func prepare(pellet_count: int) -> void:
 	# Allocate once for this definition's maximum rays, never during firing.
 	var trace_mesh := BoxMesh.new()
 	trace_mesh.size = Vector3(trace_width, trace_width, 1.0)
-	var impact_mesh := SphereMesh.new()
-	impact_mesh.radius = 1.0
-	impact_mesh.height = 2.0
-	impact_mesh.radial_segments = 8
-	impact_mesh.rings = 4
+	var impact_mesh := _sphere_mesh(8, 4)
 	for index in range(pellet_count):
-		var trace := MeshInstance3D.new()
-		trace.mesh = trace_mesh
-		trace.material_override = trace_material
-		trace.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(trace)
-		trace.top_level = true
-		trace.hide()
-		_traces.append(trace)
+		if trace_material != null:
+			var trace := MeshInstance3D.new()
+			trace.mesh = trace_mesh
+			trace.material_override = trace_material
+			_add_world_visual(trace)
+			_traces.append(trace)
 		var impact := MeshInstance3D.new()
 		impact.mesh = impact_mesh
-		impact.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(impact)
-		impact.top_level = true
-		impact.hide()
+		_add_world_visual(impact)
 		_impacts.append(impact)
+	if puff_material != null:
+		var puff_mesh := _sphere_mesh(10, 5)
+		for index in range(puff_pool_size):
+			var puff := MeshInstance3D.new()
+			puff.mesh = puff_mesh
+			puff.material_override = puff_material
+			_add_world_visual(puff)
+			_puffs.append(puff)
+		_puff_from.resize(puff_pool_size)
+		_puff_to.resize(puff_pool_size)
+		_puff_age.resize(puff_pool_size)
+		_puff_age.fill(-1.0)
+	if blast_template != null:
+		blast_template.hide()
+		for index in range(blast_pool_size):
+			var blast := blast_template.duplicate() as Node3D
+			add_child(blast)
+			blast.top_level = true
+			blast.hide()
+			_blasts.append(blast)
+		_blast_times.resize(blast_pool_size)
+		_blast_times.fill(0.0)
+		_blast_radii.resize(blast_pool_size)
+
+func _sphere_mesh(segments: int, rings: int) -> SphereMesh:
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.0
+	mesh.height = 2.0
+	mesh.radial_segments = segments
+	mesh.rings = rings
+	return mesh
+
+func _add_world_visual(visual: MeshInstance3D) -> void:
+	visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(visual)
+	visual.top_level = true
+	visual.hide()
 
 func aim(relative: Vector2) -> void:
 	_sway += relative * 0.00012
@@ -79,6 +159,20 @@ func aim(relative: Vector2) -> void:
 
 func land(falling_speed: float) -> void:
 	_landing_dip = minf(-falling_speed * 0.006, 0.055)
+
+## Spin-up progress 0..1 of a spinning gun (drives the spinner and its hum).
+func set_spin(ratio: float) -> void:
+	_spin = ratio
+	if _spin_audio == null:
+		return
+	if ratio <= 0.02:
+		if _spin_audio.playing:
+			_spin_audio.stop()
+		return
+	_spin_audio.pitch_scale = lerpf(0.45, 1.25, ratio)
+	_spin_audio.volume_db = spin_volume_db + linear_to_db(clampf(ratio * 1.5, 0.05, 1.0))
+	if not _spin_audio.playing:
+		_spin_audio.play()
 
 func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool) -> void:
 	var blend := 1.0 - exp(-18.0 * delta)
@@ -88,7 +182,9 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	if active and grounded:
 		_stride += delta * 12.0 * speed_ratio
 	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio
-	position = _rest + bob + Vector3(-_sway.x, _sway.y - _landing_dip, _recoil * recoil_distance)
+	# A spinning gun hums with a slight shake.
+	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
+	position = _rest + bob + buzz + Vector3(-_sway.x, _sway.y - _landing_dip, _recoil * recoil_distance)
 	rotation.x = _recoil * recoil_angle
 	rotation.z = -lateral_speed * 0.002
 	if not active:
@@ -97,7 +193,8 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 func _process(delta: float) -> void:
 	_flash_time = maxf(0.0, _flash_time - delta)
 	flash.visible = _flash_time > 0.0
-	flash_light.visible = flash.visible
+	if flash_light != null:
+		flash_light.visible = flash.visible
 	_trace_time = maxf(0.0, _trace_time - delta)
 	_impact_time = maxf(0.0, _impact_time - delta)
 	for trace in _traces:
@@ -108,6 +205,12 @@ func _process(delta: float) -> void:
 			impact.hide()
 		elif impact.visible:
 			impact.scale = Vector3.ONE * maxf(0.001, _impact_time * 0.9)
+	if spinner != null and _spin > 0.0:
+		spinner.rotation.z = fmod(spinner.rotation.z + spin_speed * _spin * delta, TAU)
+	if not _puffs.is_empty():
+		_update_puffs(delta)
+	if not _blasts.is_empty():
+		_update_blasts(delta)
 
 func begin_shot(sound: CombatAudio) -> void:
 	_play(_shot_audio, sound, shot_cue)
@@ -122,18 +225,41 @@ func begin_shot(sound: CombatAudio) -> void:
 
 func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_enemy: bool) -> void:
 	var start := muzzle.global_position
-	if start.distance_squared_to(end) > 0.01:
+	if index < _traces.size() and start.distance_squared_to(end) > 0.01:
 		var trace := _traces[index]
 		trace.global_position = (start + end) * 0.5
 		trace.global_basis = Basis.looking_at(end - start)
 		trace.scale = Vector3(1.0, 1.0, start.distance_to(end))
 		trace.show()
+	if not _puffs.is_empty():
+		_launch_puff(start, end)
 	if hit_surface:
 		var impact := _impacts[index]
 		impact.global_position = end + normal * 0.035
 		impact.material_override = target_impact_material if hit_enemy else impact_material
 		impact.scale = Vector3.ONE * 0.117
 		impact.show()
+
+## Explosion flash at `at` for a blast of damage radius `radius`.
+func show_blast(at: Vector3, radius: float) -> void:
+	if _blasts.is_empty():
+		return
+	var visual_radius := radius * blast_visual_scale
+	if _view_camera() != null and _camera.global_position.distance_to(at) < visual_radius + min_view_clearance:
+		return
+	var slot := 0
+	for index in range(_blasts.size()):
+		if _blast_times[index] <= 0.0:
+			slot = index
+			break
+		if _blast_times[index] < _blast_times[slot]:
+			slot = index
+	var blast := _blasts[slot]
+	blast.global_position = at
+	blast.scale = Vector3.ONE * visual_radius * 0.3
+	blast.show()
+	_blast_times[slot] = blast_duration
+	_blast_radii[slot] = visual_radius
 
 func confirm_hit(killed: bool, sound: CombatAudio) -> void:
 	_play(_kill_audio if killed else _hit_audio, sound, kill_cue if killed else hit_cue)
@@ -143,3 +269,56 @@ func _play(player: AudioStreamPlayer, fallback: CombatAudio, cue: StringName) ->
 		player.play()
 	else:
 		fallback.play_cue(cue)
+
+func _view_camera() -> Camera3D:
+	if _camera == null or not is_instance_valid(_camera):
+		_camera = get_viewport().get_camera_3d()
+	return _camera
+
+func _launch_puff(start: Vector3, end: Vector3) -> void:
+	var slot := _puff_next
+	_puff_next = (_puff_next + 1) % _puffs.size()
+	_puff_from[slot] = start
+	_puff_to[slot] = end
+	_puff_age[slot] = 0.0
+
+func _update_puffs(delta: float) -> void:
+	var camera := _view_camera()
+	for index in range(_puffs.size()):
+		var age := _puff_age[index]
+		if age < 0.0:
+			continue
+		var puff := _puffs[index]
+		age += delta
+		if age >= puff_lifetime:
+			_puff_age[index] = -1.0
+			puff.hide()
+			continue
+		_puff_age[index] = age
+		var t := age / puff_lifetime
+		# Fast out of the nozzle, lingering and rising at the far end.
+		var travel := 1.0 - (1.0 - t) * (1.0 - t)
+		var at := _puff_from[index].lerp(_puff_to[index], travel) + Vector3.UP * (t * t * 0.7)
+		var size := lerpf(puff_start_size, puff_end_size, sqrt(t)) * (1.0 - t * t * t * t)
+		if camera != null:
+			size = minf(size, maxf(0.0, camera.global_position.distance_to(at) - puff_camera_clearance) * 0.7)
+		if size < 0.01:
+			puff.hide()
+			continue
+		puff.global_position = at
+		puff.scale = Vector3.ONE * size
+		puff.show()
+
+func _update_blasts(delta: float) -> void:
+	for index in range(_blasts.size()):
+		if _blast_times[index] <= 0.0:
+			continue
+		_blast_times[index] -= delta
+		var blast := _blasts[index]
+		if _blast_times[index] <= 0.0:
+			blast.hide()
+			continue
+		var progress := 1.0 - _blast_times[index] / blast_duration
+		# Snap out to full radius, then collapse as the flash fades.
+		var size := sin(minf(progress * 1.6, 1.0) * PI * 0.5) * (1.0 - progress * progress * 0.7)
+		blast.scale = Vector3.ONE * maxf(size, 0.02) * _blast_radii[index]

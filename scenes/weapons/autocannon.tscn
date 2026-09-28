@@ -1,0 +1,208 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_olive"]
+albedo_color = Color(0.3, 0.33, 0.2, 1)
+metallic = 0.55
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="Mat_steel"]
+albedo_color = Color(0.16, 0.17, 0.19, 1)
+metallic = 0.8
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="Mat_dark"]
+albedo_color = Color(0.035, 0.035, 0.04, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+shading_mode = 0
+albedo_color = Color(1, 0.52, 0.12, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_trace"]
+shading_mode = 0
+albedo_color = Color(1, 0.62, 0.22, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+albedo_color = Color(1, 0.8, 0.45, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hit"]
+shading_mode = 0
+albedo_color = Color(1, 0.35, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.85, 0.5, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="Mat_blast"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.4, 0.08, 0.5)
+
+[sub_resource type="BoxMesh" id="Mesh_receiver"]
+size = Vector3(0.27, 0.25, 0.46)
+
+[sub_resource type="BoxMesh" id="Mesh_shroud"]
+size = Vector3(0.17, 0.17, 0.2)
+
+[sub_resource type="BoxMesh" id="Mesh_brake"]
+size = Vector3(0.21, 0.1, 0.13)
+
+[sub_resource type="BoxMesh" id="Mesh_strip"]
+size = Vector3(0.025, 0.03, 0.3)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.058
+bottom_radius = 0.07
+height = 0.5
+radial_segments = 10
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_drum"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.13
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_bore"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.012
+radial_segments = 10
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_flash"]
+radius = 0.16
+height = 0.32
+radial_segments = 10
+rings = 5
+
+[sub_resource type="SphereMesh" id="Mesh_blast"]
+radius = 1.0
+height = 2.0
+radial_segments = 16
+rings = 8
+
+[node name="Autocannon" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "blast_template")]
+position = Vector3(0.32, -0.32, -0.6)
+script = ExtResource("1_view")
+muzzle = NodePath("MuzzleFlash")
+flash = NodePath("MuzzleFlash")
+flash_light = NodePath("MuzzleLight")
+trace_material = SubResource("Mat_trace")
+impact_material = SubResource("Mat_impact")
+target_impact_material = SubResource("Mat_hit")
+synth_shot = &"autocannon"
+shot_volume_db = -7.0
+recoil_distance = 0.26
+recoil_angle = 0.24
+trace_width = 0.034
+trace_duration = 0.07
+flash_duration = 0.07
+blast_template = NodePath("BlastTemplate")
+blast_pool_size = 6
+blast_duration = 0.26
+blast_visual_scale = 0.8
+min_view_clearance = 1.0
+
+[node name="Receiver" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_receiver")
+material_override = SubResource("Mat_olive")
+cast_shadow = 0
+
+[node name="Shroud" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.01, -0.31)
+mesh = SubResource("Mesh_shroud")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="Barrel" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.01, -0.52)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="Brake" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.01, -0.8)
+mesh = SubResource("Mesh_brake")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="Bore" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.01, -0.868)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Mesh_bore")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="Drum" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.19, -0.04)
+rotation = Vector3(0, 0, 1.570796)
+mesh = SubResource("Mesh_drum")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="DrumCap" type="MeshInstance3D" parent="."]
+position = Vector3(0.07, -0.19, -0.04)
+rotation = Vector3(0, 0, 1.570796)
+scale = Vector3(0.6, 0.1, 0.6)
+mesh = SubResource("Mesh_drum")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="StripLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-0.14, 0.06, -0.02)
+mesh = SubResource("Mesh_strip")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="StripRight" type="MeshInstance3D" parent="."]
+position = Vector3(0.14, 0.06, -0.02)
+mesh = SubResource("Mesh_strip")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="Stock" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.06, 0.28)
+scale = Vector3(0.7, 0.75, 0.35)
+mesh = SubResource("Mesh_receiver")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0.01, -0.98)
+mesh = SubResource("Mesh_flash")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="MuzzleLight" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0.01, -1.0)
+light_color = Color(1, 0.55, 0.18, 1)
+light_energy = 3.0
+omni_range = 4.5
+
+[node name="BlastTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(0.55, 0.55, 0.55)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Shock" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(1, 0.6, 1)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_blast")
+cast_shadow = 0

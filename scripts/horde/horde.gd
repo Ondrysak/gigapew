@@ -66,6 +66,9 @@ var _timer := PackedFloat32Array()
 var _cooldown := PackedFloat32Array()
 var _phase := PackedFloat32Array()
 var _death := PackedFloat32Array()
+## Movement factor while slowed (1 = normal) and seconds of slow remaining.
+var _slow := PackedFloat32Array()
+var _slow_time := PackedFloat32Array()
 var _stamp := PackedInt32Array()
 var _cell_of := PackedInt32Array()
 var _query_id := 0
@@ -137,6 +140,9 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_cooldown.resize(CAPACITY)
 	_phase.resize(CAPACITY)
 	_death.resize(CAPACITY)
+	_slow.resize(CAPACITY)
+	_slow.fill(1.0)
+	_slow_time.resize(CAPACITY)
 	_pos.resize(CAPACITY)
 	_knock.resize(CAPACITY)
 	_aim.resize(CAPACITY)
@@ -273,6 +279,8 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	_max_hp[slot] = _hp[slot]
 	_flash[slot] = 0.0
 	_cooldown[slot] = _rng.randf_range(0.5, definition.attack_cooldown)
+	_slow[slot] = 1.0
+	_slow_time[slot] = 0.0
 	_phase[slot] = _rng.randf() * TAU
 	_yaw[slot] = _rng.randf() * TAU
 	_active[_active_count] = slot
@@ -313,6 +321,16 @@ func clear() -> void:
 	_shot_count = 0
 
 # ---------------------------------------------------------------- queries
+
+## Slows an enemy's movement (including charges) to `factor` for `duration`
+## seconds. The strongest active slow wins; the longest duration is kept.
+func slow(index: int, factor: float, duration: float) -> void:
+	if not is_alive(index):
+		return
+	if _slow_time[index] <= 0.0:
+		_slow[index] = 1.0
+	_slow[index] = minf(_slow[index], clampf(factor, 0.0, 1.0))
+	_slow_time[index] = maxf(_slow_time[index], duration)
 
 func is_alive(index: int) -> bool:
 	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
@@ -601,6 +619,9 @@ func _physics_process(delta: float) -> void:
 					_end_charge(i, type)
 			if distance < reach and _mode[i] != Mode.CHARGE:
 				move = Vector2.ZERO
+		if _slow_time[i] > 0.0:
+			_slow_time[i] -= delta
+			move *= _slow[i]
 		p += (move + _knock[i]) * delta + _separation(i, p, radius)
 		_knock[i] -= _knock[i] * knock_decay
 		var clamped := _constrain(p, radius)
@@ -819,20 +840,22 @@ func _draw_type(type: int) -> void:
 	for a in _active_count:
 		var slot := _active[a]
 		if _type[slot] == type and _state[slot] == ALIVE:
-			k = _write_instance(buffer, k, slot, scale, scale, 0.0)
+			k = _write_instance(buffer, k, slot, scale, scale, _flash[slot])
 	for d in _dying_count:
 		var slot := _dying[d]
 		if _type[slot] == type:
 			var left := _death[slot] / DEATH_TIME
 			# Collapse inward: slight widen on impact, then shrink away to nothing.
 			var widen := 1.0 + 0.15 * sin(left * PI)
-			k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.0)
+			# Dying bodies glow faintly and fade with their collapse; mass kills
+			# must not paint the view white.
+			k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.35 * left)
 	if multimesh.instance_count > 0:
 		RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
 	multimesh.visible_instance_count = k / 16
 	_buffers[type] = buffer
 
-func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, _unused: float) -> int:
+func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, flash: float) -> int:
 	var yaw := _yaw[slot]
 	var c := cos(yaw)
 	var s := sin(yaw)
@@ -855,10 +878,10 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[k + 9] = 0.0
 	buffer[k + 10] = c * scale_xz
 	buffer[k + 11] = p.y
-	buffer[k + 12] = _flash[slot]
+	buffer[k + 12] = flash
 	buffer[k + 13] = telegraph
 	buffer[k + 14] = _phase[slot]
-	buffer[k + 15] = 0.0
+	buffer[k + 15] = (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
 	return k + 16
 
 func _draw_projectiles() -> void:

@@ -1,0 +1,171 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/seismic_charge.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_casing"]
+albedo_color = Color(0.22, 0.2, 0.18, 1)
+metallic = 0.6
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_hazard"]
+albedo_color = Color(0.95, 0.55, 0.1, 1)
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_light"]
+shading_mode = 0
+albedo_color = Color(1, 0.35, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.45, 0.1, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="Mat_marker_fill"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.35, 0.08, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shock"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.55, 0.15, 0.85)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.8, 0.45, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_pillar"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.45, 0.12, 0.45)
+
+[sub_resource type="CylinderMesh" id="Mesh_casing"]
+top_radius = 0.09
+bottom_radius = 0.09
+height = 0.22
+radial_segments = 10
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_band"]
+top_radius = 0.1
+bottom_radius = 0.1
+height = 0.05
+radial_segments = 10
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_light"]
+radius = 0.045
+height = 0.09
+radial_segments = 8
+rings = 4
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.94
+outer_radius = 1.0
+rings = 48
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_disc"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 0.01
+radial_segments = 32
+rings = 1
+
+[sub_resource type="TorusMesh" id="Mesh_shock"]
+inner_radius = 0.78
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[sub_resource type="SphereMesh" id="Mesh_core"]
+radius = 1.0
+height = 2.0
+radial_segments = 16
+rings = 8
+
+[sub_resource type="CylinderMesh" id="Mesh_pillar"]
+top_radius = 0.15
+bottom_radius = 0.4
+height = 4.0
+radial_segments = 12
+rings = 1
+
+[node name="SeismicCharge" type="Node3D" node_paths=PackedStringArray("charge", "marker", "shock_template", "flash_template")]
+script = ExtResource("1_ability")
+display_name = "Seismic Charge"
+description = "Lob a demolition charge up to 22 m. It lands, then detonates: massive damage, huge shove."
+base_cooldown = 12.0
+accent_color = Color(1, 0.48, 0.14, 1)
+synth_activate = &"seismic_throw"
+charge = NodePath("Charge")
+marker = NodePath("Marker")
+shock_template = NodePath("ShockTemplate")
+flash_template = NodePath("FlashTemplate")
+
+[node name="Charge" type="Node3D" parent="."]
+visible = false
+
+[node name="Casing" type="MeshInstance3D" parent="Charge"]
+mesh = SubResource("Mesh_casing")
+material_override = SubResource("Mat_casing")
+cast_shadow = 0
+
+[node name="Band" type="MeshInstance3D" parent="Charge"]
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_hazard")
+cast_shadow = 0
+
+[node name="Beacon" type="MeshInstance3D" parent="Charge"]
+position = Vector3(0, 0.12, 0)
+mesh = SubResource("Mesh_light")
+material_override = SubResource("Mat_light")
+cast_shadow = 0
+
+[node name="Marker" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="Marker"]
+scale = Vector3(1, 0.3, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="Fill" type="MeshInstance3D" parent="Marker"]
+mesh = SubResource("Mesh_disc")
+material_override = SubResource("Mat_marker_fill")
+cast_shadow = 0
+
+[node name="ShockTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="ShockTemplate"]
+scale = Vector3(1, 0.8, 1)
+mesh = SubResource("Mesh_shock")
+material_override = SubResource("Mat_shock")
+cast_shadow = 0
+
+[node name="FlashTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="FlashTemplate"]
+mesh = SubResource("Mesh_core")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Pillar" type="MeshInstance3D" parent="FlashTemplate"]
+position = Vector3(0, 2, 0)
+mesh = SubResource("Mesh_pillar")
+material_override = SubResource("Mat_pillar")
+cast_shadow = 0

@@ -1,0 +1,186 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/auto/sentry_weapon.gd" id="1_weapon"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_frame"]
+albedo_color = Color(0.22, 0.24, 0.2, 1)
+metallic = 0.55
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_plate"]
+albedo_color = Color(0.85, 0.68, 0.16, 1)
+metallic = 0.3
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+shading_mode = 0
+albedo_color = Color(0.55, 1, 0.35, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_tracer"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.7, 1, 0.4, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="Mat_spark"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.8, 1, 0.5, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.95, 0.55, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="Mat_blast"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.7, 0.9, 0.15, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shock"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.55, 1, 0.35, 0.7)
+
+[sub_resource type="BoxMesh" id="Mesh_leg"]
+size = Vector3(0.06, 0.6, 0.06)
+
+[sub_resource type="CylinderMesh" id="Mesh_column"]
+top_radius = 0.1
+bottom_radius = 0.14
+height = 0.55
+radial_segments = 10
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_head"]
+size = Vector3(0.36, 0.24, 0.42)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.045
+bottom_radius = 0.055
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_visor"]
+size = Vector3(0.28, 0.05, 0.02)
+
+[sub_resource type="BoxMesh" id="Mesh_tracer"]
+size = Vector3(0.035, 0.035, 1)
+
+[sub_resource type="SphereMesh" id="Mesh_sphere"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="TorusMesh" id="Mesh_shock"]
+inner_radius = 0.9
+outer_radius = 1.0
+rings = 40
+ring_segments = 3
+
+[node name="Sentry" type="Node3D" node_paths=PackedStringArray("turret_template", "tracer_template", "spark_template", "blast_template", "shock_template")]
+script = ExtResource("1_weapon")
+base_damage = 7.0
+base_cooldown = 7.0
+cooldown_per_level = 0.06
+min_cooldown = 2.0
+cue = &"land"
+cue_interval = 0.2
+turret_template = NodePath("TurretTemplate")
+tracer_template = NodePath("TracerTemplate")
+spark_template = NodePath("SparkTemplate")
+blast_template = NodePath("BlastTemplate")
+shock_template = NodePath("ShockTemplate")
+
+[node name="TurretTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="LegA" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0, 0.26, -0.18)
+rotation = Vector3(0.45, 0, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="LegB" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0.16, 0.26, 0.09)
+rotation = Vector3(0.45, -2.094395, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="LegC" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(-0.16, 0.26, 0.09)
+rotation = Vector3(0.45, 2.094395, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="Column" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0, 0.45, 0)
+mesh = SubResource("Mesh_column")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="Head" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0, 0.85, 0)
+mesh = SubResource("Mesh_head")
+material_override = SubResource("Mat_plate")
+cast_shadow = 0
+
+[node name="Barrel" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0, 0.85, -0.38)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="Visor" type="MeshInstance3D" parent="TurretTemplate"]
+position = Vector3(0, 0.9, -0.215)
+mesh = SubResource("Mesh_visor")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="TracerTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_tracer")
+material_override = SubResource("Mat_tracer")
+cast_shadow = 0
+
+[node name="SparkTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_sphere")
+material_override = SubResource("Mat_spark")
+cast_shadow = 0
+
+[node name="BlastTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(0.5, 0.5, 0.5)
+mesh = SubResource("Mesh_sphere")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Shock" type="MeshInstance3D" parent="BlastTemplate"]
+scale = Vector3(1, 0.55, 1)
+mesh = SubResource("Mesh_sphere")
+material_override = SubResource("Mat_blast")
+cast_shadow = 0
+
+[node name="ShockTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_shock")
+material_override = SubResource("Mat_shock")
+cast_shadow = 0

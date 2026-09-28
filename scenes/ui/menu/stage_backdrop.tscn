@@ -1,0 +1,87 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/stage_backdrop.gd" id="1_backdrop"]
+[ext_resource type="PackedScene" path="res://scenes/levels/yard.tscn" id="2_world"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/grunt.tscn" id="3_grunt"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/runner.tscn" id="4_runner"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/spitter.tscn" id="5_spitter"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/tank.tscn" id="6_tank"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/models/dreadnought.tscn" id="7_dreadnought"]
+
+[node name="StageBackdrop" type="Node3D" node_paths=PackedStringArray("camera", "crowd")]
+script = ExtResource("1_backdrop")
+camera = NodePath("Camera")
+crowd = NodePath("Crowd")
+march_range = Vector2(-30, 30)
+
+[node name="World" parent="." instance=ExtResource("2_world")]
+
+[node name="Sentinel" parent="." instance=ExtResource("7_dreadnought")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, -5)
+
+[node name="SentinelGlow" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, -2)
+light_color = Color(1, 0.3, 0.55, 1)
+light_energy = 2.2
+omni_range = 14.0
+
+[node name="Crowd" type="Node3D" parent="."]
+
+[node name="Spitter0" parent="Crowd" instance=ExtResource("5_spitter")]
+position = Vector3(-5.86, 0, -30.98)
+
+[node name="Grunt1" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(3.69, 0, -25.88)
+
+[node name="Runner2" parent="Crowd" instance=ExtResource("4_runner")]
+position = Vector3(-7.32, 0, -24.00)
+
+[node name="Tank3" parent="Crowd" instance=ExtResource("6_tank")]
+position = Vector3(6.29, 0, -18.93)
+
+[node name="Grunt4" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(-3.14, 0, -15.52)
+
+[node name="Grunt5" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(4.89, 0, -12.47)
+
+[node name="Runner6" parent="Crowd" instance=ExtResource("4_runner")]
+position = Vector3(-3.65, 0, -10.85)
+
+[node name="Grunt7" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(8.68, 0, -7.13)
+
+[node name="Spitter8" parent="Crowd" instance=ExtResource("5_spitter")]
+position = Vector3(-6.99, 0, -4.10)
+
+[node name="Grunt9" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(5.48, 0, 0.33)
+
+[node name="Spitter10" parent="Crowd" instance=ExtResource("5_spitter")]
+position = Vector3(-3.25, 0, 3.45)
+
+[node name="Grunt11" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(4.28, 0, 5.61)
+
+[node name="Grunt12" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(-5.88, 0, 10.43)
+
+[node name="Grunt13" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(7.02, 0, 12.89)
+
+[node name="Tank14" parent="Crowd" instance=ExtResource("6_tank")]
+position = Vector3(-8.07, 0, 16.55)
+
+[node name="Runner15" parent="Crowd" instance=ExtResource("4_runner")]
+position = Vector3(4.56, 0, 20.48)
+
+[node name="Grunt16" parent="Crowd" instance=ExtResource("3_grunt")]
+position = Vector3(-6.58, 0, 23.51)
+
+[node name="Runner17" parent="Crowd" instance=ExtResource("4_runner")]
+position = Vector3(8.05, 0, 27.57)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 20)
+current = true
+fov = 62.0

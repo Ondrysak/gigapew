@@ -1,7 +1,8 @@
 class_name AutoWeaponRack
 extends Node3D
 
-## Owns one AutoWeapon per owned WEAPON upgrade and keeps levels in sync.
+## Owns one AutoWeapon per owned WEAPON upgrade and keeps levels and
+## overclocks in sync.
 
 var _player: ArenaPlayer
 var _horde: Horde
@@ -23,6 +24,8 @@ func sync() -> void:
 			weapon = upgrade.weapon_scene.instantiate() as AutoWeapon
 			add_child(weapon)
 			_weapons[upgrade.id] = weapon
+			weapon.overclocked = _run_state.is_overclocked(upgrade)
 			weapon.configure(_player, _horde, _run_state, level)
 		else:
+			weapon.overclocked = _run_state.is_overclocked(upgrade)
 			weapon.set_level(level)

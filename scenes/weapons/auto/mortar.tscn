@@ -25,6 +25,20 @@ blend_mode = 1
 cull_mode = 2
 albedo_color = Color(1, 0.42, 0.08, 0.55)
 
+[sub_resource type="StandardMaterial3D" id="Mat_shock"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.55, 0.15, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_marker"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.3, 0.1, 0.55)
+
 [sub_resource type="CylinderMesh" id="Mesh_casing"]
 top_radius = 0.08
 bottom_radius = 0.1
@@ -44,12 +58,38 @@ height = 2.0
 radial_segments = 16
 rings = 8
 
-[node name="Mortar" type="Node3D" node_paths=PackedStringArray("shell_template", "blast_template")]
+[sub_resource type="TorusMesh" id="Mesh_shock"]
+inner_radius = 0.9
+outer_radius = 1.0
+rings = 40
+ring_segments = 3
+
+[sub_resource type="TorusMesh" id="Mesh_marker"]
+inner_radius = 0.95
+outer_radius = 1.0
+rings = 32
+ring_segments = 3
+
+[sub_resource type="BoxMesh" id="Mesh_tick"]
+size = Vector3(0.3, 0.02, 0.05)
+
+[sub_resource type="CylinderMesh" id="Mesh_dot"]
+top_radius = 0.08
+bottom_radius = 0.08
+height = 0.02
+radial_segments = 12
+rings = 1
+
+[node name="Mortar" type="Node3D" node_paths=PackedStringArray("shell_template", "blast_template", "shock_template", "marker_template")]
 script = ExtResource("1_weapon")
 base_damage = 22.0
 base_cooldown = 2.2
+cue = &"scatter"
+cue_interval = 0.15
 shell_template = NodePath("ShellTemplate")
 blast_template = NodePath("BlastTemplate")
+shock_template = NodePath("ShockTemplate")
+marker_template = NodePath("MarkerTemplate")
 
 [node name="ShellTemplate" type="Node3D" parent="."]
 visible = false
@@ -79,4 +119,50 @@ cast_shadow = 0
 scale = Vector3(1, 0.6, 1)
 mesh = SubResource("Mesh_blast")
 material_override = SubResource("Mat_blast")
+cast_shadow = 0
+
+[node name="ShockTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_shock")
+material_override = SubResource("Mat_shock")
+cast_shadow = 0
+
+[node name="MarkerTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="MarkerTemplate"]
+scale = Vector3(1, 0.2, 1)
+mesh = SubResource("Mesh_marker")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="TickE" type="MeshInstance3D" parent="MarkerTemplate"]
+position = Vector3(0.8, 0, 0)
+mesh = SubResource("Mesh_tick")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="TickW" type="MeshInstance3D" parent="MarkerTemplate"]
+position = Vector3(-0.8, 0, 0)
+mesh = SubResource("Mesh_tick")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="TickN" type="MeshInstance3D" parent="MarkerTemplate"]
+position = Vector3(0, 0, -0.8)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Mesh_tick")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="TickS" type="MeshInstance3D" parent="MarkerTemplate"]
+position = Vector3(0, 0, 0.8)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Mesh_tick")
+material_override = SubResource("Mat_marker")
+cast_shadow = 0
+
+[node name="Dot" type="MeshInstance3D" parent="MarkerTemplate"]
+mesh = SubResource("Mesh_dot")
+material_override = SubResource("Mat_marker")
 cast_shadow = 0

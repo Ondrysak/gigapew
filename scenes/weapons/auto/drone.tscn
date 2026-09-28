@@ -22,6 +22,13 @@ blend_mode = 1
 cull_mode = 2
 albedo_color = Color(0.35, 1, 0.95, 0.9)
 
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.5, 1, 0.95, 0.7)
+
 [sub_resource type="SphereMesh" id="Mesh_body"]
 radius = 0.13
 height = 0.22
@@ -37,15 +44,29 @@ ring_segments = 4
 [sub_resource type="BoxMesh" id="Mesh_eye"]
 size = Vector3(0.07, 0.04, 0.05)
 
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.02
+bottom_radius = 0.025
+height = 0.16
+radial_segments = 6
+rings = 1
+
 [sub_resource type="BoxMesh" id="Mesh_tracer"]
 size = Vector3(0.03, 0.03, 1)
 
-[node name="Drone" type="Node3D" node_paths=PackedStringArray("drone_template", "tracer_template")]
+[sub_resource type="SphereMesh" id="Mesh_impact"]
+radius = 1.0
+height = 2.0
+radial_segments = 8
+rings = 4
+
+[node name="Drone" type="Node3D" node_paths=PackedStringArray("drone_template", "tracer_template", "impact_template")]
 script = ExtResource("1_weapon")
 base_damage = 9.0
 base_cooldown = 0.75
 drone_template = NodePath("DroneTemplate")
 tracer_template = NodePath("TracerTemplate")
+impact_template = NodePath("ImpactTemplate")
 
 [node name="DroneTemplate" type="Node3D" parent="."]
 visible = false
@@ -66,8 +87,21 @@ mesh = SubResource("Mesh_eye")
 material_override = SubResource("Mat_eye")
 cast_shadow = 0
 
+[node name="Barrel" type="MeshInstance3D" parent="DroneTemplate"]
+position = Vector3(0, -0.04, -0.16)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_hull")
+cast_shadow = 0
+
 [node name="TracerTemplate" type="MeshInstance3D" parent="."]
 visible = false
 mesh = SubResource("Mesh_tracer")
 material_override = SubResource("Mat_tracer")
+cast_shadow = 0
+
+[node name="ImpactTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_impact")
+material_override = SubResource("Mat_impact")
 cast_shadow = 0

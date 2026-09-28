@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
@@ -11,6 +11,13 @@
 [ext_resource type="Resource" path="res://data/stages/foundry.tres" id="9_foundry"]
 [ext_resource type="Resource" path="res://data/stages/reactor.tres" id="10_reactor"]
 [ext_resource type="Resource" path="res://data/upgrades/pool.tres" id="11_pool"]
+[ext_resource type="PackedScene" path="res://scenes/mining/mining_tool.tscn" id="12_tool"]
+[ext_resource type="PackedScene" path="res://scenes/mining/deposit_field.tscn" id="13_deposits"]
+[ext_resource type="Script" path="res://scripts/data/resource_definition.gd" id="14_resource"]
+[ext_resource type="Resource" path="res://data/resources/gold.tres" id="15_gold"]
+[ext_resource type="Resource" path="res://data/resources/shard.tres" id="16_shard"]
+[ext_resource type="Resource" path="res://data/resources/crystal.tres" id="17_crystal"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="18_pause"]
 
 [node name="Game" type="Node3D"]
 script = ExtResource("1_game")
@@ -18,10 +25,16 @@ campaign = Array[ExtResource("7_stage")]([ExtResource("8_yard"), ExtResource("9_
 player_scene = ExtResource("2_player")
 horde_scene = ExtResource("3_horde")
 pickup_scene = ExtResource("4_pickups")
+mining_tool_scene = ExtResource("12_tool")
+deposit_field_scene = ExtResource("13_deposits")
 upgrade_pool = ExtResource("11_pool")
+resources = Array[ExtResource("14_resource")]([ExtResource("15_gold"), ExtResource("16_shard"), ExtResource("17_crystal")])
+boss_reward = ExtResource("16_shard")
 
 [node name="Level" type="Node3D" parent="."]
 
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 
 [node name="LevelUp" parent="." instance=ExtResource("6_level_up")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("18_pause")]

@@ -1,0 +1,222 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/main_menu.gd" id="1_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/stage_backdrop.tscn" id="2_backdrop"]
+[ext_resource type="Theme" path="res://scenes/ui/menu/menu_theme.tres" id="3_theme"]
+[ext_resource type="Shader" path="res://shaders/crt_overlay.gdshader" id="4_crt"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/menu_logo.tscn" id="5_logo"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/currency_bar.tscn" id="6_currency"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/class_select_screen.tscn" id="7_class_select"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/armory_screen.tscn" id="8_armory"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/records_screen.tscn" id="9_records"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/settings_screen.tscn" id="10_settings"]
+
+[sub_resource type="Gradient" id="Gradient_shade"]
+colors = PackedColorArray(0, 0.005, 0.012, 0.9, 0, 0.005, 0.012, 0)
+
+[sub_resource type="GradientTexture2D" id="Texture_shade"]
+gradient = SubResource("Gradient_shade")
+width = 256
+height = 4
+fill_to = Vector2(1, 0)
+
+[sub_resource type="ShaderMaterial" id="Material_crt"]
+shader = ExtResource("4_crt")
+shader_parameter/scanline_count = 320.0
+shader_parameter/scanline_strength = 0.1
+shader_parameter/vignette_strength = 0.65
+shader_parameter/sweep_strength = 0.04
+shader_parameter/sweep_speed = 0.09
+shader_parameter/glitch = 0.0
+shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
+
+[node name="MainMenu" type="Node" node_paths=PackedStringArray("home", "play_button", "armory_button", "records_button", "settings_button", "quit_button", "operator_label", "class_select", "armory", "records", "settings", "screen_dim", "fade")]
+script = ExtResource("1_menu")
+home = NodePath("UI/Root/Home")
+play_button = NodePath("UI/Root/Home/Buttons/Play")
+armory_button = NodePath("UI/Root/Home/Buttons/Armory")
+records_button = NodePath("UI/Root/Home/Buttons/Records")
+settings_button = NodePath("UI/Root/Home/Buttons/Settings")
+quit_button = NodePath("UI/Root/Home/Buttons/Quit")
+operator_label = NodePath("UI/Root/Home/Operator")
+class_select = NodePath("UI/Root/ClassSelect")
+armory = NodePath("UI/Root/Armory")
+records = NodePath("UI/Root/Records")
+settings = NodePath("UI/Root/Settings")
+screen_dim = NodePath("UI/Root/ScreenDim")
+fade = NodePath("UI/Root/Fade")
+
+[node name="StageBackdrop" parent="." instance=ExtResource("2_backdrop")]
+orbit_radius = 21.0
+orbit_height = 4.5
+orbit_speed = 0.05
+orbit_angle = 0.9
+look_height = 1.6
+march_speed = 1.3
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("3_theme")
+
+[node name="CRT" type="ColorRect" parent="UI/Root"]
+material = SubResource("Material_crt")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ScreenDim" type="ColorRect" parent="UI/Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.004, 0.01, 0.02, 0.62)
+
+[node name="Home" type="Control" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Shade" type="TextureRect" parent="UI/Root/Home"]
+layout_mode = 1
+anchor_right = 0.6
+anchor_bottom = 1.0
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("Texture_shade")
+expand_mode = 1
+
+[node name="Logo" parent="UI/Root/Home" instance=ExtResource("5_logo")]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 40.0
+offset_right = 924.0
+offset_bottom = 240.0
+scale = Vector2(0.62, 0.62)
+
+[node name="Buttons" type="VBoxContainer" parent="UI/Root/Home"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 64.0
+offset_top = -110.0
+offset_right = 424.0
+offset_bottom = 220.0
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="Play" type="Button" parent="UI/Root/Home/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "DEPLOY"
+alignment = 0
+
+[node name="Armory" type="Button" parent="UI/Root/Home/Buttons"]
+layout_mode = 2
+text = "ARMORY"
+alignment = 0
+
+[node name="Records" type="Button" parent="UI/Root/Home/Buttons"]
+layout_mode = 2
+text = "RECORDS"
+alignment = 0
+
+[node name="Settings" type="Button" parent="UI/Root/Home/Buttons"]
+layout_mode = 2
+text = "SETTINGS"
+alignment = 0
+
+[node name="Quit" type="Button" parent="UI/Root/Home/Buttons"]
+layout_mode = 2
+text = "QUIT"
+alignment = 0
+
+[node name="CurrencyBar" parent="UI/Root/Home" instance=ExtResource("6_currency")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -520.0
+offset_top = 36.0
+offset_right = -48.0
+offset_bottom = 72.0
+grow_horizontal = 0
+
+[node name="Operator" type="Label" parent="UI/Root/Home"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 64.0
+offset_top = -64.0
+offset_right = 864.0
+offset_bottom = -32.0
+grow_vertical = 0
+theme_type_variation = &"SectionLabel"
+theme_override_font_sizes/font_size = 16
+text = "OPERATOR"
+vertical_alignment = 1
+
+[node name="Hint" type="Label" parent="UI/Root/Home"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -520.0
+offset_top = -64.0
+offset_right = -48.0
+offset_bottom = -32.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_type_variation = &"DimLabel"
+text = "ARROWS / MOUSE  ·  ENTER SELECT  ·  ESC BACK"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ClassSelect" parent="UI/Root" instance=ExtResource("7_class_select")]
+visible = false
+layout_mode = 1
+
+[node name="Armory" parent="UI/Root" instance=ExtResource("8_armory")]
+visible = false
+layout_mode = 1
+
+[node name="Records" parent="UI/Root" instance=ExtResource("9_records")]
+visible = false
+layout_mode = 1
+
+[node name="Settings" parent="UI/Root" instance=ExtResource("10_settings")]
+visible = false
+layout_mode = 1
+
+[node name="Fade" type="ColorRect" parent="UI/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)

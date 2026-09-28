@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/flamethrower.tscn" id="2_view"]
+
+[resource]
+script = ExtResource("1_definition")
+display_name = "Flamethrower"
+description = "Short-range torrent / burns through the pack"
+damage = 5
+fire_interval = 0.07
+range_meters = 10.0
+pellet_count = 6
+spread_degrees = 11.0
+jitter_degrees = 2.5
+knockback = 1.5
+pierce = 3
+view_scene = ExtResource("2_view")

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="MetaPool" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_pool.gd" id="1_pool"]
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="2_definition"]
+[ext_resource type="Resource" path="res://data/meta/vitality.tres" id="3_vitality"]
+[ext_resource type="Resource" path="res://data/meta/firepower.tres" id="4_firepower"]
+[ext_resource type="Resource" path="res://data/meta/agility.tres" id="5_agility"]
+[ext_resource type="Resource" path="res://data/meta/magnetism.tres" id="6_magnetism"]
+[ext_resource type="Resource" path="res://data/meta/prospector.tres" id="7_prospector"]
+[ext_resource type="Resource" path="res://data/meta/salvager.tres" id="8_salvager"]
+[ext_resource type="Resource" path="res://data/meta/scholar.tres" id="9_scholar"]
+[ext_resource type="Resource" path="res://data/meta/plating.tres" id="10_plating"]
+
+[resource]
+script = ExtResource("1_pool")
+upgrades = Array[ExtResource("2_definition")]([ExtResource("3_vitality"), ExtResource("4_firepower"), ExtResource("5_agility"), ExtResource("6_magnetism"), ExtResource("7_prospector"), ExtResource("8_salvager"), ExtResource("9_scholar"), ExtResource("10_plating")])

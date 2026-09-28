@@ -1,0 +1,13 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/currency_bar.gd" id="1_bar"]
+[ext_resource type="Script" path="res://scripts/data/resource_definition.gd" id="2_definition"]
+[ext_resource type="Resource" path="res://data/resources/gold.tres" id="3_gold"]
+[ext_resource type="Resource" path="res://data/resources/shard.tres" id="4_shard"]
+
+[node name="CurrencyBar" type="HBoxContainer"]
+mouse_filter = 2
+theme_override_constants/separation = 28
+alignment = 2
+script = ExtResource("1_bar")
+currencies = Array[ExtResource("2_definition")]([ExtResource("3_gold"), ExtResource("4_shard")])

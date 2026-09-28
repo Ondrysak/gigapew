@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
+[ext_resource type="Resource" path="res://data/weapons/flamethrower.tres" id="3_flamethrower"]
+[ext_resource type="Resource" path="res://data/weapons/scatter.tres" id="4_scatter"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/seismic_charge.tscn" id="5_ability"]
+
+[resource]
+script = ExtResource("1_class")
+damage_multiplier = 0.05
+mining_multiplier = 1.5
+id = &"driller"
+display_name = "Driller"
+tagline = "Burn the swarm. Crack the rock. Bank the loot."
+description = "Flamethrower and Scatter, +5% damage and +150% mining power. Seismic Charge lobs a demolition charge that erupts under the crowd."
+accent_color = Color(1, 0.48, 0.14, 1)
+starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_flamethrower"), ExtResource("4_scatter")])
+ability_scene = ExtResource("5_ability")
+unlock_cost = 10
+unlock_currency = &"shard"

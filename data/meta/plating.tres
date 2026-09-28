@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+armor = 0.5
+id = &"plating"
+display_name = "Plating"
+description = "Ablative underlayer: +0.5 armor per level."
+accent_color = Color(0.75, 0.82, 0.9, 1)
+costs = PackedInt32Array(60, 120, 200, 320, 450)
+currency = &"gold"

@@ -1,0 +1,112 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/bulwark.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_shell"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.72, 0.2, 0.09)
+
+[sub_resource type="StandardMaterial3D" id="Mat_band"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.8, 0.3, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shock"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.75, 0.25, 0.8)
+
+[sub_resource type="SphereMesh" id="Mesh_shell"]
+radius = 1.6
+height = 3.2
+radial_segments = 24
+rings = 12
+
+[sub_resource type="TorusMesh" id="Mesh_band"]
+inner_radius = 1.5
+outer_radius = 1.58
+rings = 40
+ring_segments = 6
+
+[sub_resource type="BoxMesh" id="Mesh_plate"]
+size = Vector3(0.28, 0.16, 0.03)
+
+[sub_resource type="TorusMesh" id="Mesh_shock"]
+inner_radius = 0.82
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[node name="Bulwark" type="Node3D" node_paths=PackedStringArray("bubble", "shock_template")]
+script = ExtResource("1_ability")
+display_name = "Bulwark"
+description = "Slam down a shield dome: 4 s of total immunity, and the shockwave hurls the horde back."
+base_cooldown = 20.0
+accent_color = Color(1, 0.74, 0.22, 1)
+synth_activate = &"bulwark"
+activate_volume_db = -4.0
+bubble = NodePath("Bubble")
+shock_template = NodePath("ShockTemplate")
+
+[node name="Bubble" type="Node3D" parent="."]
+position = Vector3(0, 0.4, 0)
+
+[node name="Shell" type="MeshInstance3D" parent="Bubble"]
+mesh = SubResource("Mesh_shell")
+material_override = SubResource("Mat_shell")
+cast_shadow = 0
+
+[node name="Waist" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, -0.85, 0)
+scale = Vector3(0.84, 1, 0.84)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="Base" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, -1.2, 0)
+scale = Vector3(0.62, 1, 0.62)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="PlateA" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, -0.7, -1.35)
+mesh = SubResource("Mesh_plate")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="PlateB" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(1.17, -0.7, 0.675)
+rotation = Vector3(0, 2.094395, 0)
+mesh = SubResource("Mesh_plate")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="PlateC" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(-1.17, -0.7, 0.675)
+rotation = Vector3(0, -2.094395, 0)
+mesh = SubResource("Mesh_plate")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="Glow" type="OmniLight3D" parent="Bubble"]
+light_color = Color(1, 0.72, 0.25, 1)
+light_energy = 1.4
+omni_range = 5.0
+
+[node name="ShockTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="ShockTemplate"]
+scale = Vector3(1, 0.6, 1)
+mesh = SubResource("Mesh_shock")
+material_override = SubResource("Mat_shock")
+cast_shadow = 0

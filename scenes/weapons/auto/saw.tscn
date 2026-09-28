@@ -1,0 +1,140 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/auto/saw_weapon.gd" id="1_weapon"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_steel"]
+albedo_color = Color(0.72, 0.74, 0.78, 1)
+metallic = 0.85
+roughness = 0.25
+
+[sub_resource type="StandardMaterial3D" id="Mat_hub"]
+albedo_color = Color(0.18, 0.18, 0.2, 1)
+metallic = 0.5
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_edge"]
+shading_mode = 0
+albedo_color = Color(1, 0.5, 0.18, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_blur"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.45, 0.15, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="Mat_spark"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.75, 0.3, 0.85)
+
+[sub_resource type="CylinderMesh" id="Mesh_disc"]
+top_radius = 0.34
+bottom_radius = 0.34
+height = 0.035
+radial_segments = 20
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_hub"]
+top_radius = 0.09
+bottom_radius = 0.09
+height = 0.08
+radial_segments = 10
+rings = 1
+
+[sub_resource type="TorusMesh" id="Mesh_edge"]
+inner_radius = 0.31
+outer_radius = 0.36
+rings = 24
+ring_segments = 3
+
+[sub_resource type="BoxMesh" id="Mesh_tooth"]
+size = Vector3(0.13, 0.03, 0.13)
+
+[sub_resource type="CylinderMesh" id="Mesh_blur"]
+top_radius = 0.48
+bottom_radius = 0.48
+height = 0.01
+radial_segments = 20
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_spark"]
+size = Vector3(2, 0.12, 0.12)
+
+[node name="SawOrbit" type="Node3D" node_paths=PackedStringArray("blade_template", "spark_template")]
+script = ExtResource("1_weapon")
+base_damage = 7.0
+base_cooldown = 0.5
+cooldown_per_level = 0.05
+min_cooldown = 0.15
+blade_template = NodePath("BladeTemplate")
+spark_template = NodePath("SparkTemplate")
+
+[node name="BladeTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Disc" type="MeshInstance3D" parent="BladeTemplate"]
+mesh = SubResource("Mesh_disc")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="Hub" type="MeshInstance3D" parent="BladeTemplate"]
+mesh = SubResource("Mesh_hub")
+material_override = SubResource("Mat_hub")
+cast_shadow = 0
+
+[node name="Edge" type="MeshInstance3D" parent="BladeTemplate"]
+scale = Vector3(1, 0.5, 1)
+mesh = SubResource("Mesh_edge")
+material_override = SubResource("Mat_edge")
+cast_shadow = 0
+
+[node name="ToothA" type="MeshInstance3D" parent="BladeTemplate"]
+position = Vector3(0.38, 0, 0)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_tooth")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="ToothB" type="MeshInstance3D" parent="BladeTemplate"]
+position = Vector3(-0.38, 0, 0)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_tooth")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="ToothC" type="MeshInstance3D" parent="BladeTemplate"]
+position = Vector3(0, 0, 0.38)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_tooth")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="ToothD" type="MeshInstance3D" parent="BladeTemplate"]
+position = Vector3(0, 0, -0.38)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_tooth")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="Blur" type="MeshInstance3D" parent="BladeTemplate"]
+mesh = SubResource("Mesh_blur")
+material_override = SubResource("Mat_blur")
+cast_shadow = 0
+
+[node name="SparkTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="StreakA" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0.5, 0.35)
+mesh = SubResource("Mesh_spark")
+material_override = SubResource("Mat_spark")
+cast_shadow = 0
+
+[node name="StreakB" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, -0.9, -0.3)
+mesh = SubResource("Mesh_spark")
+material_override = SubResource("Mat_spark")
+cast_shadow = 0

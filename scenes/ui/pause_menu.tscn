@@ -1,0 +1,141 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/pause_menu.gd" id="1_pause"]
+[ext_resource type="Theme" path="res://scenes/ui/menu/menu_theme.tres" id="2_theme"]
+[ext_resource type="Shader" path="res://shaders/crt_overlay.gdshader" id="3_crt"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/settings_screen.tscn" id="4_settings"]
+
+[sub_resource type="ShaderMaterial" id="Material_crt"]
+shader = ExtResource("3_crt")
+shader_parameter/scanline_count = 320.0
+shader_parameter/scanline_strength = 0.1
+shader_parameter/vignette_strength = 0.7
+shader_parameter/sweep_strength = 0.04
+shader_parameter/sweep_speed = 0.09
+shader_parameter/glitch = 0.0
+shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
+
+[node name="PauseMenu" type="CanvasLayer" node_paths=PackedStringArray("main_panel", "resume_button", "settings_button", "abandon_button", "confirm_box", "confirm_abandon_button", "cancel_abandon_button", "settings")]
+process_mode = 3
+layer = 40
+visible = false
+script = ExtResource("1_pause")
+main_panel = NodePath("Root/Main")
+resume_button = NodePath("Root/Main/Panel/Rows/Resume")
+settings_button = NodePath("Root/Main/Panel/Rows/Settings")
+abandon_button = NodePath("Root/Main/Panel/Rows/Abandon")
+confirm_box = NodePath("Root/Main/Panel/Rows/Confirm")
+confirm_abandon_button = NodePath("Root/Main/Panel/Rows/Confirm/Buttons/ConfirmAbandon")
+cancel_abandon_button = NodePath("Root/Main/Panel/Rows/Confirm/Buttons/Cancel")
+settings = NodePath("Root/Settings")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+
+[node name="Dim" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.004, 0.01, 0.02, 0.74)
+
+[node name="CRT" type="ColorRect" parent="Root"]
+material = SubResource("Material_crt")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Main" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/Main"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="Rows" type="VBoxContainer" parent="Root/Main/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 44
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "RUN SUSPENDED  ·  ESC TO RESUME"
+horizontal_alignment = 1
+
+[node name="Separator" type="HSeparator" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+
+[node name="Resume" type="Button" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "RESUME"
+alignment = 0
+
+[node name="Settings" type="Button" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+text = "SETTINGS"
+alignment = 0
+
+[node name="Abandon" type="Button" parent="Root/Main/Panel/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.5, 1)
+theme_override_colors/font_hover_color = Color(1, 0.75, 0.6, 1)
+text = "ABANDON RUN"
+alignment = 0
+
+[node name="Confirm" type="VBoxContainer" parent="Root/Main/Panel/Rows"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Question" type="Label" parent="Root/Main/Panel/Rows/Confirm"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.55, 1)
+text = "Abandon this run? Resources not yet banked are lost."
+autowrap_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Root/Main/Panel/Rows/Confirm"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ConfirmAbandon" type="Button" parent="Root/Main/Panel/Rows/Confirm/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"AccentButton"
+theme_override_font_sizes/font_size = 20
+text = "ABANDON"
+
+[node name="Cancel" type="Button" parent="Root/Main/Panel/Rows/Confirm/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "CANCEL"
+
+[node name="Settings" parent="Root" instance=ExtResource("4_settings")]
+visible = false
+layout_mode = 1

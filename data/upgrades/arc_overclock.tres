@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Resource" path="res://data/upgrades/arc.tres" id="2_target"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"arc_overclock"
+display_name = "Forked Arc"
+description = "A side bolt forks off every struck enemy and leaps 2 more times."
+kind = 2
+max_level = 1
+weight = 3.0
+accent_color = Color(1.0, 0.84, 0.3, 1)
+overclock_target = ExtResource("2_target")

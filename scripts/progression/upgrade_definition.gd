@@ -1,10 +1,11 @@
 class_name UpgradeDefinition
-extends Resource
+extends StatModifier
 
-## One level-up choice. STAT upgrades add their modifier fields to RunState
-## once per owned level; WEAPON upgrades grant and level an AutoWeapon scene.
+## One level-up choice. STAT upgrades add their inherited modifier fields to
+## RunState once per owned level; WEAPON upgrades grant and level an AutoWeapon;
+## OVERCLOCK upgrades change how their target weapon behaves once it is maxed.
 
-enum Kind { STAT, WEAPON }
+enum Kind { STAT, WEAPON, OVERCLOCK }
 
 @export var id: StringName
 @export var display_name := ""
@@ -26,24 +27,13 @@ enum Kind { STAT, WEAPON }
 @export var accent_color := Color(0.1, 0.85, 0.9)
 @export var icon: Texture2D
 
-@export_group("Stat Modifiers Per Level")
-@export var damage_multiplier := 0.0
-@export var fire_rate_multiplier := 0.0
-@export var move_speed_multiplier := 0.0
-@export var max_health_bonus := 0
-@export var regen_per_second := 0.0
-@export var pickup_radius := 0.0
-@export var pierce_bonus := 0
-@export var area_multiplier := 0.0
-## Added to RunState.cooldown_multiplier; negative values fire faster.
-@export var cooldown_multiplier := 0.0
-@export var armor := 0.0
-@export var xp_multiplier := 0.0
-@export var projectile_bonus := 0
-
 @export_group("Weapon")
 ## Root must be an AutoWeapon.
 @export var weapon_scene: PackedScene
+
+@export_group("Overclock")
+## WEAPON upgrade this overclock modifies; offered once that weapon is maxed.
+@export var overclock_target: UpgradeDefinition
 
 ## Text for the level reached after taking this upgrade (1-based).
 func describe(level: int) -> String:

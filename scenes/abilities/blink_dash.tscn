@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/blink_dash.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_streak"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.35, 0.95, 1, 0.85)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.3, 0.9, 1, 0.7)
+
+[sub_resource type="BoxMesh" id="Mesh_streak"]
+size = Vector3(0.022, 0.022, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.86
+outer_radius = 1.0
+rings = 32
+ring_segments = 6
+
+[node name="BlinkDash" type="Node3D" node_paths=PackedStringArray("streak_template", "ring_template")]
+script = ExtResource("1_ability")
+display_name = "Blink Dash"
+description = "Blink 9 m through the swarm. Untouchable mid-dash; everything in the lane gets bowled aside."
+base_cooldown = 6.0
+accent_color = Color(0.3, 0.95, 1, 1)
+synth_activate = &"blink"
+streak_template = NodePath("StreakTemplate")
+ring_template = NodePath("RingTemplate")
+
+[node name="StreakTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_streak")
+material_override = SubResource("Mat_streak")
+cast_shadow = 0
+
+[node name="RingTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="RingTemplate"]
+scale = Vector3(1, 0.4, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0

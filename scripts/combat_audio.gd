@@ -16,6 +16,7 @@ func _ready() -> void:
 		voice.stream = sound_overrides[cue] if sound_overrides.get(cue) != null else _make_cue(cue)
 		voice.volume_db = -10.0 if cue in [&"shot", &"scatter", &"rail"] else -14.0
 		voice.max_polyphony = 3
+		voice.bus = &"SFX"
 		add_child(voice)
 		_voices[cue] = voice
 

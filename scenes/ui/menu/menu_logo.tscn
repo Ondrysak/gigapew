@@ -1,0 +1,80 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/menu_logo.gd" id="1_logo"]
+
+[node name="Logo" type="Control" node_paths=PackedStringArray("title_label", "ghost_labels", "underline", "subtitle_label")]
+custom_minimum_size = Vector2(900, 200)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 900.0
+offset_bottom = 200.0
+mouse_filter = 2
+script = ExtResource("1_logo")
+title_label = NodePath("Title")
+ghost_labels = [NodePath("GhostCyan"), NodePath("GhostMagenta")]
+underline = NodePath("Underline")
+subtitle_label = NodePath("Subtitle")
+
+[node name="GhostCyan" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0.45)
+layout_mode = 0
+offset_right = 900.0
+offset_bottom = 130.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1, 0.95, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0)
+theme_override_font_sizes/font_size = 104
+text = "KAKABOOMBOOM"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GhostMagenta" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0.45)
+layout_mode = 0
+offset_right = 900.0
+offset_bottom = 130.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.15, 0.55, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0)
+theme_override_font_sizes/font_size = 104
+text = "KAKABOOMBOOM"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 0
+offset_right = 900.0
+offset_bottom = 130.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.9, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.55, 0.62, 1)
+theme_override_colors/font_shadow_color = Color(0.1, 0.9, 1, 0.35)
+theme_override_constants/outline_size = 10
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_constants/shadow_outline_size = 28
+theme_override_font_sizes/font_size = 104
+text = "KAKABOOMBOOM"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Underline" type="ColorRect" parent="."]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 132.0
+offset_right = 750.0
+offset_bottom = 137.0
+mouse_filter = 2
+color = Color(1, 0.55, 0.16, 1)
+
+[node name="Subtitle" type="Label" parent="."]
+layout_mode = 0
+offset_top = 146.0
+offset_right = 900.0
+offset_bottom = 186.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.45, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 20
+text = "H O R D E   S U P P R E S S I O N   D I V I S I O N"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/combat_feedback.gd" id="2_feedback"]
@@ -52,6 +52,16 @@ corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="Bar_supply"]
+bg_color = Color(1, 0.42, 0.18, 1)
+
+[sub_resource type="StyleBoxFlat" id="Bar_ability"]
+bg_color = Color(0.3, 0.95, 0.85, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -147,6 +157,89 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(0.3, 1, 0.78, 1)
 theme_override_font_sizes/font_size = 22
 text = "LV 1"
+
+[node name="ClassName" type="Label" parent="."]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = -214.0
+offset_right = 285.0
+offset_bottom = -192.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "SCOUT"
+
+[node name="Resources" type="HBoxContainer" parent="."]
+offset_left = 30.0
+offset_top = 104.0
+offset_right = 560.0
+offset_bottom = 128.0
+mouse_filter = 2
+theme_override_constants/separation = 22
+
+[node name="Supply" type="Control" parent="."]
+offset_left = 30.0
+offset_top = 132.0
+offset_right = 250.0
+offset_bottom = 152.0
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="Supply"]
+offset_right = 70.0
+offset_bottom = 20.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.55, 0.3, 1)
+theme_override_font_sizes/font_size = 11
+text = "SUPPLY"
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Supply"]
+anchor_right = 1.0
+offset_left = 62.0
+offset_top = 6.0
+offset_bottom = 14.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_supply")
+max_value = 60.0
+show_percentage = false
+
+[node name="Ability" type="Control" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -104.0
+offset_right = 170.0
+offset_bottom = -64.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Name" type="Label" parent="Ability"]
+anchor_right = 1.0
+offset_bottom = 24.0
+mouse_filter = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 17
+text = "Q   ABILITY"
+horizontal_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="Ability"]
+anchor_right = 1.0
+offset_left = 40.0
+offset_top = 28.0
+offset_right = -40.0
+offset_bottom = 34.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_ability")
+max_value = 1.0
+value = 1.0
+show_percentage = false
 
 [node name="HealthCaption" type="Label" parent="."]
 anchor_top = 1.0
@@ -264,7 +357,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 13
-text = "WASD MOVE  /  SPACE JUMP  /  LMB FIRE  /  1 2 3 OR WHEEL SELECT WEAPON\nESC CURSOR  /  ENTER NEXT STAGE AFTER BOSS  /  R NEW RUN AFTER DEATH"
+text = "WASD MOVE  /  SPACE JUMP  /  LMB FIRE  /  RMB MINE  /  Q ABILITY  /  1 2 3 OR WHEEL WEAPON\nESC PAUSE  /  ENTER NEXT STAGE AFTER BOSS"
 autowrap_mode = 2
 
 [node name="Message" type="Label" parent="."]
@@ -273,8 +366,8 @@ anchor_left = 0.12
 anchor_top = 0.5
 anchor_right = 0.88
 anchor_bottom = 0.5
-offset_top = -130.0
-offset_bottom = 130.0
+offset_top = -150.0
+offset_bottom = 150.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.84, 0.97, 1, 1)
 theme_override_constants/line_spacing = 18

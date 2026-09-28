@@ -9,6 +9,13 @@ blend_mode = 1
 cull_mode = 2
 albedo_color = Color(0.62, 0.8, 1, 0.95)
 
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.3, 0.45, 1, 0.3)
+
 [sub_resource type="StandardMaterial3D" id="Mat_spark"]
 shading_mode = 0
 transparency = 1
@@ -19,27 +26,57 @@ albedo_color = Color(0.85, 0.95, 1, 0.8)
 [sub_resource type="BoxMesh" id="Mesh_bolt"]
 size = Vector3(0.05, 0.05, 1)
 
+[sub_resource type="BoxMesh" id="Mesh_glow"]
+size = Vector3(0.16, 0.16, 1)
+
 [sub_resource type="SphereMesh" id="Mesh_spark"]
-radius = 0.2
-height = 0.4
+radius = 1.0
+height = 2.0
 radial_segments = 8
 rings = 4
+
+[sub_resource type="BoxMesh" id="Mesh_star"]
+size = Vector3(2.4, 0.12, 0.12)
 
 [node name="Arc" type="Node3D" node_paths=PackedStringArray("segment_template", "spark_template")]
 script = ExtResource("1_weapon")
 base_damage = 12.0
 base_cooldown = 1.3
+cue = &"hit"
+cue_interval = 0.3
 segment_template = NodePath("SegmentTemplate")
 spark_template = NodePath("SparkTemplate")
 
-[node name="SegmentTemplate" type="MeshInstance3D" parent="."]
+[node name="SegmentTemplate" type="Node3D" parent="."]
 visible = false
+
+[node name="Core" type="MeshInstance3D" parent="SegmentTemplate"]
 mesh = SubResource("Mesh_bolt")
 material_override = SubResource("Mat_bolt")
 cast_shadow = 0
 
-[node name="SparkTemplate" type="MeshInstance3D" parent="."]
+[node name="Glow" type="MeshInstance3D" parent="SegmentTemplate"]
+mesh = SubResource("Mesh_glow")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="SparkTemplate" type="Node3D" parent="."]
 visible = false
+
+[node name="Core" type="MeshInstance3D" parent="SparkTemplate"]
+scale = Vector3(0.45, 0.45, 0.45)
 mesh = SubResource("Mesh_spark")
+material_override = SubResource("Mat_spark")
+cast_shadow = 0
+
+[node name="StarA" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0, 0.7)
+mesh = SubResource("Mesh_star")
+material_override = SubResource("Mat_spark")
+cast_shadow = 0
+
+[node name="StarB" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0, -0.7)
+mesh = SubResource("Mesh_star")
 material_override = SubResource("Mat_spark")
 cast_shadow = 0

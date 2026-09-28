@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
+[ext_resource type="Resource" path="res://data/weapons/minigun.tres" id="3_minigun"]
+[ext_resource type="Resource" path="res://data/weapons/autocannon.tres" id="4_autocannon"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/bulwark.tscn" id="5_ability"]
+
+[resource]
+script = ExtResource("1_class")
+move_speed_multiplier = -0.05
+max_health_bonus = 30
+armor = 1.0
+id = &"gunner"
+display_name = "Gunner"
+tagline = "Plant your feet. Hold the trigger. Never stop."
+description = "Minigun and Autocannon, +30 max health and +1 armor at the cost of 5% speed. Bulwark drops an invulnerable dome and a shockwave that throws the horde off you."
+accent_color = Color(1, 0.74, 0.22, 1)
+starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_minigun"), ExtResource("4_autocannon")])
+ability_scene = ExtResource("5_ability")
+unlock_cost = 6
+unlock_currency = &"shard"

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
+[ext_resource type="Resource" path="res://data/weapons/pulse.tres" id="3_pulse"]
+[ext_resource type="Resource" path="res://data/weapons/autocannon.tres" id="4_autocannon"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/overdrive.tscn" id="5_ability"]
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="6_upgrade"]
+[ext_resource type="Resource" path="res://data/upgrades/sentry.tres" id="7_sentry"]
+
+[resource]
+script = ExtResource("1_class")
+cooldown_multiplier = -0.1
+id = &"engineer"
+display_name = "Engineer"
+tagline = "Let the machines do the killing."
+description = "Pulse and Autocannon, deploys with a Sentry turret and 10% faster auto-weapon recharge. Overdrive overclocks every gadget you own for a burst of pure automated carnage."
+accent_color = Color(0.5, 1, 0.38, 1)
+starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_autocannon")])
+starting_upgrades = Array[ExtResource("6_upgrade")]([ExtResource("7_sentry")])
+ability_scene = ExtResource("5_ability")
+unlock_cost = 14
+unlock_currency = &"shard"

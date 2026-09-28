@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"overclock"
-display_name = "Trigger Overclock"
+display_name = "Hair Trigger"
 description = "Main gun fires 12% faster (total +12%)."
 level_descriptions = PackedStringArray("Main gun fires 12% faster (total +12%).", "Main gun fires 12% faster (total +24%).", "Main gun fires 12% faster (total +36%).", "Main gun fires 12% faster (total +48%).", "Main gun fires 12% faster (total +60%).")
 max_level = 5

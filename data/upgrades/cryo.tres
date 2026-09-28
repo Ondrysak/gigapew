@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/auto/cryo.tscn" id="2_weapon"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"cryo"
+display_name = "Cryo Field"
+description = "A frost aura pulses around you, damaging enemies within 5 m and slowing them by 55%."
+level_descriptions = PackedStringArray("A frost aura pulses around you, damaging enemies within 5 m and slowing them by 55%.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.")
+kind = 1
+max_level = 5
+weight = 1.3
+accent_color = Color(0.55, 0.85, 1.0, 1)
+weapon_scene = ExtResource("2_weapon")
