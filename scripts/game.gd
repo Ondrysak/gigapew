@@ -161,7 +161,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.ability_scene = Profile.equipped_ability_scene(class_definition)
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
-	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player)
+	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"))
 	var tool := mining_tool_scene.instantiate() as MiningTool
 	player.camera.add_child(tool)
 	tool.setup(player, run_state)

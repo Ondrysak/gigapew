@@ -4,7 +4,11 @@ extends RefCounted
 ## Shared pathfinding for the whole horde: a breadth-first distance map from
 ## the target over the horde grid, turned into one "downhill" direction per
 ## cell. Thousands of enemies route around walls and through doorways for the
-## cost of one grid pass per update.
+## cost of one grid pass per update. Cliff edges are blocked cells, so paths
+## between levels run over ramps; cell heights pick the target's level.
+
+## Height difference beyond which a cell is on another level.
+const LEVEL_GAP := 1.0
 
 var _width := 0
 var _height := 0
@@ -14,16 +18,19 @@ var _passable := PackedByteArray()
 var _distance := PackedInt32Array()
 var _direction := PackedVector2Array()
 var _queue := PackedInt32Array()
+var _heights := PackedFloat32Array()
 var _target_cell := -1
 
 ## `is_blocked(cell_rect: Rect2) -> bool` decides which cells are walls; it is
 ## given each cell's square (slightly shrunk) so thin walls anywhere in a cell,
-## including on cell borders, still block.
-func setup(width: int, height: int, origin: Vector2, cell_size: float, is_blocked: Callable) -> void:
+## including on cell borders, still block. `cell_heights` is the ground height
+## at each cell centre.
+func setup(width: int, height: int, origin: Vector2, cell_size: float, is_blocked: Callable, cell_heights: PackedFloat32Array) -> void:
 	_width = width
 	_height = height
 	_origin = origin
 	_cell_size = cell_size
+	_heights = cell_heights
 	var cells := width * height
 	_passable.resize(cells)
 	_distance.resize(cells)
@@ -38,13 +45,19 @@ func setup(width: int, height: int, origin: Vector2, cell_size: float, is_blocke
 func is_passable(cell: int) -> bool:
 	return cell >= 0 and cell < _passable.size() and _passable[cell] == 1
 
-## Unit direction toward the target from `cell`; zero at the target cell or
-## where the target is unreachable (callers then steer straight at it).
-func direction_at(cell: int) -> Vector2:
-	return _direction[cell]
+## Unit direction toward the target from `cell` for a body with feet at `y`;
+## zero at the target cell or where it is unreachable (callers then steer
+## straight at it). Bodies in blocked cells (against walls or at cliff edges)
+## slide toward the best open neighbour on their own level.
+func direction_at(cell: int, y: float) -> Vector2:
+	if _passable[cell] == 1:
+		return _direction[cell]
+	return _escape(cell, y)
 
-func update(target: Vector2) -> void:
-	var start := _nearest_passable(_cell_of(target))
+## `target_y` is the target's feet height: the start cell is the nearest open
+## cell on that level, so a player at a deck edge is not approached from below.
+func update(target: Vector2, target_y: float) -> void:
+	var start := _nearest_passable(_cell_of(target), target_y)
 	if start < 0:
 		_direction.fill(Vector2.ZERO)
 		return
@@ -69,7 +82,7 @@ func update(target: Vector2) -> void:
 		if z < _height - 1:
 			tail = _visit(cell + _width, next, tail)
 	for cell in _passable.size():
-		_direction[cell] = _downhill(cell) if _passable[cell] == 1 else _escape(cell)
+		_direction[cell] = _downhill(cell) if _passable[cell] == 1 else Vector2.ZERO
 
 func _visit(cell: int, next: int, tail: int) -> int:
 	if _passable[cell] == 1 and _distance[cell] < 0:
@@ -105,9 +118,10 @@ func _downhill(cell: int) -> Vector2:
 				best_step = Vector2i(dx, dz)
 	return Vector2(best_step).normalized()
 
-# Bodies pressed against walls sit in blocked cells: steer them toward the
-# best open neighbour so they slide along the wall instead of into it.
-func _escape(cell: int) -> Vector2:
+# Bodies pressed against walls or cliff edges sit in blocked cells: steer them
+# toward the best open neighbour on their level so they slide along the edge
+# instead of into it (or up a cliff).
+func _escape(cell: int, y: float) -> Vector2:
 	var x := cell % _width
 	var z := cell / _width
 	var best := -1
@@ -118,7 +132,10 @@ func _escape(cell: int) -> Vector2:
 			var nz := z + dz
 			if (dx == 0 and dz == 0) or nx < 0 or nz < 0 or nx >= _width or nz >= _height:
 				continue
-			var d := _distance[nz * _width + nx]
+			var neighbor := nz * _width + nx
+			if absf(_heights[neighbor] - y) > LEVEL_GAP:
+				continue
+			var d := _distance[neighbor]
 			if d >= 0 and (best < 0 or d < best):
 				best = d
 				best_step = Vector2i(dx, dz)
@@ -129,9 +146,11 @@ func _cell_of(point: Vector2) -> int:
 	var z := clampi(int((point.y - _origin.y) / _cell_size), 0, _height - 1)
 	return z * _width + x
 
-func _nearest_passable(cell: int) -> int:
-	if _passable[cell] == 1:
+# Nearest open cell to `cell`, preferring one on the target's level.
+func _nearest_passable(cell: int, y: float) -> int:
+	if _passable[cell] == 1 and absf(_heights[cell] - y) <= LEVEL_GAP:
 		return cell
+	var fallback := -1
 	var x := cell % _width
 	var z := cell / _width
 	for ring in range(1, 4):
@@ -139,6 +158,15 @@ func _nearest_passable(cell: int) -> int:
 			for dx in range(-ring, ring + 1):
 				var nx := x + dx
 				var nz := z + dz
-				if nx >= 0 and nz >= 0 and nx < _width and nz < _height and _passable[nz * _width + nx] == 1:
-					return nz * _width + nx
-	return -1
+				if nx < 0 or nz < 0 or nx >= _width or nz >= _height:
+					continue
+				var n := nz * _width + nx
+				if _passable[n] != 1:
+					continue
+				if absf(_heights[n] - y) <= LEVEL_GAP:
+					return n
+				if fallback < 0:
+					fallback = n
+	if fallback < 0 and _passable[cell] == 1:
+		return cell
+	return fallback

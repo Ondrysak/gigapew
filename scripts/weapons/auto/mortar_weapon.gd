@@ -129,7 +129,7 @@ func _fire_salvo() -> bool:
 			continue
 		var target := _hits[_rng.randi_range(0, found - 1)]
 		var land := horde.enemy_position(target)
-		land.y = 0.0
+		land.y = horde.ground_height(Vector2(land.x, land.z))
 		_launch(index, 1, origin, land, flight_time, arc_height, -salvo_interval * queued)
 		queued += 1
 	return queued > 0

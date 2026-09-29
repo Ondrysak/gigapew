@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3]
+[gd_scene load_steps=41 format=3]
 
 [ext_resource type="Shader" path="res://shaders/reactor_floor.gdshader" id="floor_shader"]
 [ext_resource type="Script" path="res://scenes/levels/yard/module_batch.gd" id="module_batch"]
@@ -83,6 +83,44 @@ height = 8
 
 [sub_resource type="BoxShape3D" id="shape_box_3_3p2_3"]
 size = Vector3(3, 3.2, 3)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_3p4_14"]
+size = Vector3(6, 3.4, 14)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_3p4_8"]
+size = Vector3(6, 3.4, 8)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_4p2_6"]
+size = Vector3(6, 4.2, 6)
+
+[sub_resource type="BoxShape3D" id="shape_elev_10_2p6_10"]
+size = Vector3(10, 2.6, 10)
+
+[sub_resource type="BoxShape3D" id="shape_elev_8_1p8_10"]
+size = Vector3(8, 1.8, 10)
+
+[sub_resource type="BoxShape3D" id="shape_elev_12_2p6_10"]
+size = Vector3(12, 2.6, 10)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_3p39_12p4193"]
+size = Vector3(6, 3.39, 12.4193)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_1p07_3p1048"]
+size = Vector3(6, 1.07, 3.1048)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_2p62_9p3145"]
+size = Vector3(6, 2.62, 9.3145)
+
+[sub_resource type="BoxShape3D" id="shape_elev_6_1p85_6p2097"]
+size = Vector3(6, 1.85, 6.2097)
+
+[sub_resource type="BoxMesh" id="elev_glow_box"]
+material = SubResource("mat_accent")
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="elev_tread_box"]
+material = SubResource("mat_dark")
+size = Vector3(1, 1, 1)
 
 [node name="Reactor" type="Node3D"]
 
@@ -3571,6 +3609,271 @@ scale = Vector3(3.01, 0.06, 3.01)
 mesh = SubResource("box")
 surface_material_override/0 = SubResource("mat_accent")
 
+[node name="Elevation" type="Node3D" parent="."]
+
+[node name="DeckNEFront" type="StaticBody3D" parent="Elevation"]
+position = Vector3(31, 1.5, -27)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/DeckNEFront"]
+shape = SubResource("shape_elev_6_3p4_14")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/DeckNEFront"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(6, 3.1, 14)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/DeckNEFront"]
+position = Vector3(0, 1.55, 0)
+scale = Vector3(6.08, 0.3, 14.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="DeckNEBack" type="StaticBody3D" parent="Elevation"]
+position = Vector3(25, 1.5, -30)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/DeckNEBack"]
+shape = SubResource("shape_elev_6_3p4_8")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/DeckNEBack"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(6, 3.1, 8)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/DeckNEBack"]
+position = Vector3(0, 1.55, 0)
+scale = Vector3(6.08, 0.3, 8.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="OverlookNE" type="StaticBody3D" parent="Elevation"]
+position = Vector3(25, 1.9, -23)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/OverlookNE"]
+shape = SubResource("shape_elev_6_4p2_6")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/OverlookNE"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(6, 3.9, 6)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/OverlookNE"]
+position = Vector3(0, 1.95, 0)
+scale = Vector3(6.08, 0.3, 6.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="DeckNW" type="StaticBody3D" parent="Elevation"]
+position = Vector3(-29, 1.1, -29)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/DeckNW"]
+shape = SubResource("shape_elev_10_2p6_10")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/DeckNW"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(10, 2.3, 10)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/DeckNW"]
+position = Vector3(0, 1.15, 0)
+scale = Vector3(10.08, 0.3, 10.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="MezzanineNW" type="StaticBody3D" parent="Elevation"]
+position = Vector3(-20, 0.7, -29)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/MezzanineNW"]
+shape = SubResource("shape_elev_8_1p8_10")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/MezzanineNW"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(8, 1.5, 10)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/MezzanineNW"]
+position = Vector3(0, 0.75, 0)
+scale = Vector3(8.08, 0.3, 10.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="DeckSW" type="StaticBody3D" parent="Elevation"]
+position = Vector3(-28, 1.1, 29)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/DeckSW"]
+shape = SubResource("shape_elev_12_2p6_10")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/DeckSW"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(12, 2.3, 10)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/DeckSW"]
+position = Vector3(0, 1.15, 0)
+scale = Vector3(12.08, 0.3, 10.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="DeckSE" type="StaticBody3D" parent="Elevation"]
+position = Vector3(29, 1.1, 29)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/DeckSE"]
+shape = SubResource("shape_elev_10_2p6_10")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/DeckSE"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(10, 2.3, 10)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/DeckSE"]
+position = Vector3(0, 1.15, 0)
+scale = Vector3(10.08, 0.3, 10.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="MezzanineSE" type="StaticBody3D" parent="Elevation"]
+position = Vector3(20, 0.7, 29)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/MezzanineSE"]
+shape = SubResource("shape_elev_8_1p8_10")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/MezzanineSE"]
+position = Vector3(0, -0.15, 0)
+scale = Vector3(8, 1.5, 10)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_wall")
+
+[node name="Coping" type="MeshInstance3D" parent="Elevation/MezzanineSE"]
+position = Vector3(0, 0.75, 0)
+scale = Vector3(8.08, 0.3, 10.08)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampNE" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(0, -0.257663, -0.966235, 0, 0.966235, -0.257663, 1, 0, 0, 16.436738, -0.037768, -31)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampNE"]
+shape = SubResource("shape_elev_6_3p39_12p4193")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampNE"]
+scale = Vector3(6, 3.39, 12.41934)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampOverlookNE" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(-1, 0, 0, 0, 0.966235, -0.257663, 0, -0.257663, -0.966235, 25, 3.083064, -27.36215)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampOverlookNE"]
+shape = SubResource("shape_elev_6_1p07_3p1048")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampOverlookNE"]
+scale = Vector3(6, 1.07, 3.104835)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampNW" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(1, 0, 0, 0, 0.966235, -0.257663, 0, 0.257663, 0.966235, -29, -0.065768, -19.837538)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampNW"]
+shape = SubResource("shape_elev_6_2p62_9p3145")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampNW"]
+scale = Vector3(6, 2.62, 9.314505)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampMezzanineNW" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(1, 0, 0, 0, 0.966235, -0.257663, 0, 0.257663, 0.966235, -19, -0.093767, -21.238338)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampMezzanineNW"]
+shape = SubResource("shape_elev_6_1p85_6p2097")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampMezzanineNW"]
+scale = Vector3(6, 1.85, 6.20967)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampSWNorth" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(-1, 0, 0, 0, 0.966235, -0.257663, 0, -0.257663, -0.966235, -25, -0.065768, 19.837538)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampSWNorth"]
+shape = SubResource("shape_elev_6_2p62_9p3145")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampSWNorth"]
+scale = Vector3(6, 2.62, 9.314505)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampSWEast" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(0, 0.257663, 0.966235, 0, 0.966235, -0.257663, -1, 0, 0, -17.837538, -0.065768, 31)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampSWEast"]
+shape = SubResource("shape_elev_6_2p62_9p3145")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampSWEast"]
+scale = Vector3(6, 2.62, 9.314505)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampSE" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(-1, 0, 0, 0, 0.966235, -0.257663, 0, -0.257663, -0.966235, 29, -0.065768, 19.837538)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampSE"]
+shape = SubResource("shape_elev_6_2p62_9p3145")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampSE"]
+scale = Vector3(6, 2.62, 9.314505)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="RampMezzanineSE" type="StaticBody3D" parent="Elevation"]
+transform = Transform3D(-1, 0, 0, 0, 0.966235, -0.257663, 0, -0.257663, -0.966235, 19, -0.093767, 21.238338)
+
+[node name="Collision" type="CollisionShape3D" parent="Elevation/RampMezzanineSE"]
+shape = SubResource("shape_elev_6_1p85_6p2097")
+
+[node name="Body" type="MeshInstance3D" parent="Elevation/RampMezzanineSE"]
+scale = Vector3(6, 1.85, 6.20967)
+mesh = SubResource("box")
+surface_material_override/0 = SubResource("mat_steel")
+
+[node name="ElevationDressing" type="Node3D" parent="."]
+
+[node name="DeckPlates" type="Node3D" parent="ElevationDressing"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_plate")
+transforms = Array[Transform3D]([Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 1.1083, 31, 3.212, -31.4333), Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 1.1083, 31, 3.212, -27), Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 1.1083, 31, 3.212, -22.5667), Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 0.9125, 25, 3.212, -31.825), Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 0.9125, 25, 3.212, -28.175), Transform3D(1.325, 0, 0, 0, 1, 0, 0, 0, 1.325, 25, 4.012, -23), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, -31.325, 2.412, -31.325), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, -31.325, 2.412, -26.675), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, -26.675, 2.412, -31.325), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, -26.675, 2.412, -26.675), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, -21.825, 1.612, -31.325), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, -21.825, 1.612, -26.675), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, -18.175, 1.612, -31.325), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, -18.175, 1.612, -26.675), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -31.7667, 2.412, 26.675), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -31.7667, 2.412, 31.325), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -28, 2.412, 26.675), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -28, 2.412, 31.325), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -24.2333, 2.412, 26.675), Transform3D(0.9417, 0, 0, 0, 1, 0, 0, 0, 1.1625, -24.2333, 2.412, 31.325), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, 26.675, 2.412, 26.675), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, 26.675, 2.412, 31.325), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, 31.325, 2.412, 26.675), Transform3D(1.1625, 0, 0, 0, 1, 0, 0, 0, 1.1625, 31.325, 2.412, 31.325), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, 18.175, 1.612, 26.675), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, 18.175, 1.612, 31.325), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, 21.825, 1.612, 26.675), Transform3D(0.9125, 0, 0, 0, 1, 0, 0, 0, 1.1625, 21.825, 1.612, 31.325)])
+
+[node name="EdgeGlow" type="Node3D" parent="ElevationDressing"]
+script = ExtResource("module_batch")
+mesh = SubResource("elev_glow_box")
+transforms = Array[Transform3D]([Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 14, 34.025, 2.78, -27), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 13.76, 33.82, 3.206, -27), Transform3D(6, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 31, 2.78, -34.025), Transform3D(5.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 31, 3.206, -33.82), Transform3D(6, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 31, 2.78, -19.975), Transform3D(5.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 31, 3.206, -20.18), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 2, 21.975, 2.78, -27), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 1.76, 22.18, 3.206, -27), Transform3D(6, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 25, 2.78, -34.025), Transform3D(5.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 25, 3.206, -33.82), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 6, 21.975, 3.58, -23), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 5.76, 22.18, 4.006, -23), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 6, 28.025, 3.58, -23), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 5.76, 27.82, 4.006, -23), Transform3D(6, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 25, 3.58, -19.975), Transform3D(5.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 25, 4.006, -20.18), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, -34.025, 1.98, -29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, -33.82, 2.406, -29), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, -23.975, 1.98, -29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, -24.18, 2.406, -29), Transform3D(10, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -29, 1.98, -34.025), Transform3D(9.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -29, 2.406, -33.82), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -33, 1.98, -23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -33, 2.406, -24.18), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -25, 1.98, -23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -25, 2.406, -24.18), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, -15.975, 1.18, -29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, -16.18, 1.606, -29), Transform3D(8, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -20, 1.18, -34.025), Transform3D(7.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -20, 1.606, -33.82), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -23, 1.18, -23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -23, 1.606, -24.18), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, -34.025, 1.98, 29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, -33.82, 2.406, 29), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 4, -21.975, 1.98, 26), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 3.76, -22.18, 2.406, 26), Transform3D(6, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -31, 1.98, 23.975), Transform3D(5.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -31, 2.406, 24.18), Transform3D(12, 0, 0, 0, 0.08, 0, 0, 0, 0.05, -28, 1.98, 34.025), Transform3D(11.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, -28, 2.406, 33.82), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, 23.975, 1.98, 29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, 24.18, 2.406, 29), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, 34.025, 1.98, 29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, 33.82, 2.406, 29), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 25, 1.98, 23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 25, 2.406, 24.18), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 33, 1.98, 23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 33, 2.406, 24.18), Transform3D(10, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 29, 1.98, 34.025), Transform3D(9.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 29, 2.406, 33.82), Transform3D(0.05, 0, 0, 0, 0.08, 0, 0, 0, 10, 15.975, 1.18, 29), Transform3D(0.12, 0, 0, 0, 0.012, 0, 0, 0, 9.76, 16.18, 1.606, 29), Transform3D(2, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 23, 1.18, 23.975), Transform3D(1.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 23, 1.606, 24.18), Transform3D(8, 0, 0, 0, 0.08, 0, 0, 0, 0.05, 20, 1.18, 34.025), Transform3D(7.76, 0, 0, 0, 0.012, 0, 0, 0, 0.12, 20, 1.606, 33.82), Transform3D(0, -0.0031, -12, 0, 0.0116, -3.2, 0.12, 0, 0, 15.9985, 1.6058, -33.8), Transform3D(0, -0.0206, -12, 0, 0.0773, -3.2, 0.05, 0, 0, 16.0361, 1.4647, -34.025), Transform3D(0, -0.0031, -12, 0, 0.0116, -3.2, 0.12, 0, 0, 15.9985, 1.6058, -28.2), Transform3D(0, -0.0206, -12, 0, 0.0773, -3.2, 0.05, 0, 0, 16.0361, 1.4647, -27.975), Transform3D(-0.12, 0, 0, 0, 0.0116, -0.8, 0, -0.0031, -3, 27.8, 3.6058, -27.5015), Transform3D(-0.05, 0, 0, 0, 0.0773, -0.8, 0, -0.0206, -3, 28.025, 3.4647, -27.4639), Transform3D(-0.12, 0, 0, 0, 0.0116, -0.8, 0, -0.0031, -3, 22.2, 3.6058, -27.5015), Transform3D(-0.05, 0, 0, 0, 0.0773, -0.8, 0, -0.0206, -3, 21.975, 3.4647, -27.4639), Transform3D(0.12, 0, 0, 0, 0.0116, -2.4, 0, 0.0031, 9, -31.8, 1.2058, -19.4985), Transform3D(0.05, 0, 0, 0, 0.0773, -2.4, 0, 0.0206, 9, -32.025, 1.0647, -19.5361), Transform3D(0.12, 0, 0, 0, 0.0116, -2.4, 0, 0.0031, 9, -26.2, 1.2058, -19.4985), Transform3D(0.05, 0, 0, 0, 0.0773, -2.4, 0, 0.0206, 9, -25.975, 1.0647, -19.5361), Transform3D(0.12, 0, 0, 0, 0.0116, -1.6, 0, 0.0031, 6, -21.8, 0.8058, -20.9985), Transform3D(0.05, 0, 0, 0, 0.0773, -1.6, 0, 0.0206, 6, -22.025, 0.6647, -21.0361), Transform3D(0.12, 0, 0, 0, 0.0116, -1.6, 0, 0.0031, 6, -16.2, 0.8058, -20.9985), Transform3D(0.05, 0, 0, 0, 0.0773, -1.6, 0, 0.0206, 6, -15.975, 0.6647, -21.0361), Transform3D(-0.12, 0, 0, 0, 0.0116, -2.4, 0, -0.0031, -9, -22.2, 1.2058, 19.4985), Transform3D(-0.05, 0, 0, 0, 0.0773, -2.4, 0, -0.0206, -9, -21.975, 1.0647, 19.5361), Transform3D(-0.12, 0, 0, 0, 0.0116, -2.4, 0, -0.0031, -9, -27.8, 1.2058, 19.4985), Transform3D(-0.05, 0, 0, 0, 0.0773, -2.4, 0, -0.0206, -9, -28.025, 1.0647, 19.5361), Transform3D(0, 0.0031, 9, 0, 0.0116, -2.4, -0.12, 0, 0, -17.4985, 1.2058, 33.8), Transform3D(0, 0.0206, 9, 0, 0.0773, -2.4, -0.05, 0, 0, -17.5361, 1.0647, 34.025), Transform3D(0, 0.0031, 9, 0, 0.0116, -2.4, -0.12, 0, 0, -17.4985, 1.2058, 28.2), Transform3D(0, 0.0206, 9, 0, 0.0773, -2.4, -0.05, 0, 0, -17.5361, 1.0647, 27.975), Transform3D(-0.12, 0, 0, 0, 0.0116, -2.4, 0, -0.0031, -9, 31.8, 1.2058, 19.4985), Transform3D(-0.05, 0, 0, 0, 0.0773, -2.4, 0, -0.0206, -9, 32.025, 1.0647, 19.5361), Transform3D(-0.12, 0, 0, 0, 0.0116, -2.4, 0, -0.0031, -9, 26.2, 1.2058, 19.4985), Transform3D(-0.05, 0, 0, 0, 0.0773, -2.4, 0, -0.0206, -9, 25.975, 1.0647, 19.5361), Transform3D(-0.12, 0, 0, 0, 0.0116, -1.6, 0, -0.0031, -6, 21.8, 0.8058, 20.9985), Transform3D(-0.05, 0, 0, 0, 0.0773, -1.6, 0, -0.0206, -6, 22.025, 0.6647, 21.0361), Transform3D(-0.12, 0, 0, 0, 0.0116, -1.6, 0, -0.0031, -6, 16.2, 0.8058, 20.9985), Transform3D(-0.05, 0, 0, 0, 0.0773, -1.6, 0, -0.0206, -6, 15.975, 0.6647, 21.0361)])
+cast_shadow = 0
+
+[node name="RampTreads" type="Node3D" parent="ElevationDressing"]
+script = ExtResource("module_batch")
+mesh = SubResource("elev_tread_box")
+transforms = Array[Transform3D]([Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 10.7231, 0.199, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 12.1725, 0.5855, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 13.6218, 0.972, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 15.0712, 1.3585, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 16.5205, 1.745, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 17.9699, 2.1315, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 19.4192, 2.518, -31), Transform3D(0, -0.0031, -0.2319, 0, 0.0116, -0.0618, 5.1, 0, 0, 20.8686, 2.9045, -31), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 25, 3.399, -28.2769), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 25, 3.7855, -26.8275), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 0.199, -15.7231), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 0.5855, -17.1725), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 0.972, -18.6218), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 1.3585, -20.0712), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 1.745, -21.5205), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -29, 2.1315, -22.9699), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -19, 0.199, -18.7231), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -19, 0.5855, -20.1725), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -19, 0.972, -21.6218), Transform3D(5.1, 0, 0, 0, 0.0116, -0.0618, 0, 0.0031, 0.2319, -19, 1.3585, -23.0712), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 0.199, 15.7231), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 0.5855, 17.1725), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 0.972, 18.6218), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 1.3585, 20.0712), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 1.745, 21.5205), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, -25, 2.1315, 22.9699), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -13.7231, 0.199, 31), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -15.1725, 0.5855, 31), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -16.6218, 0.972, 31), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -18.0712, 1.3585, 31), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -19.5205, 1.745, 31), Transform3D(0, 0.0031, 0.2319, 0, 0.0116, -0.0618, -5.1, 0, 0, -20.9699, 2.1315, 31), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 0.199, 15.7231), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 0.5855, 17.1725), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 0.972, 18.6218), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 1.3585, 20.0712), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 1.745, 21.5205), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 29, 2.1315, 22.9699), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 19, 0.199, 18.7231), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 19, 0.5855, 20.1725), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 19, 0.972, 21.6218), Transform3D(-5.1, 0, 0, 0, 0.0116, -0.0618, 0, -0.0031, -0.2319, 19, 1.3585, 23.0712)])
+cast_shadow = 0
+
+[node name="OverlookLight" type="OmniLight3D" parent="ElevationDressing"]
+position = Vector3(25, 6.4, -23)
+light_color = Color(0.19, 0.92, 0.86, 1)
+light_energy = 1.6
+omni_range = 13
+
+[node name="SouthwestDeckLight" type="OmniLight3D" parent="ElevationDressing"]
+position = Vector3(-28, 5.6, 29)
+light_color = Color(0.65, 0.33, 1, 1)
+light_energy = 1.6
+omni_range = 12
+
 [node name="KitContainment" type="Node3D" parent="."]
 
 [node name="PartitionCrown" type="Node3D" parent="KitContainment"]
@@ -3586,7 +3889,7 @@ transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.33, 0
 [node name="ContainmentLandingPlates" type="Node3D" parent="KitContainment"]
 script = ExtResource("module_batch")
 source = ExtResource("kit_plate")
-transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.035, -14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.035, -14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.035, 14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.035, 14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0.035, -25), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0.035, -25), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0.035, 25), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0.035, 25)])
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.035, -14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.035, -14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.035, 14), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.035, 14)])
 
 [node name="ScolitexGrowths" type="Node3D" parent="KitContainment"]
 
@@ -3627,16 +3930,16 @@ transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 20.33, 9, 8.42)
 [node name="Hazards" type="Node3D" parent="."]
 
 [node name="BarrelNorthWest" parent="Hazards" instance=ExtResource("hz_barrel")]
-position = Vector3(-25, 0, -26)
+position = Vector3(-31, 2.4, -31)
 
 [node name="BarrelNorthEast" parent="Hazards" instance=ExtResource("hz_barrel")]
-position = Vector3(25, 0, -26)
+position = Vector3(32, 3.2, -32)
 
 [node name="BarrelSouthWest" parent="Hazards" instance=ExtResource("hz_barrel")]
-position = Vector3(-25, 0, 26)
+position = Vector3(-25, 2.4, 26)
 
 [node name="BarrelSouthEast" parent="Hazards" instance=ExtResource("hz_barrel")]
-position = Vector3(25, 0, 26)
+position = Vector3(31, 2.4, 31)
 
 [node name="BarrelWest" parent="Hazards" instance=ExtResource("hz_barrel")]
 position = Vector3(-30, 0, 13)
@@ -3678,16 +3981,16 @@ position = Vector3(-9, 0, -34)
 position = Vector3(9, 0, 34)
 
 [node name="MineNorthWest" parent="Hazards" instance=ExtResource("hz_mine")]
-position = Vector3(-30, 0, -24)
+position = Vector3(-29, 2.4, -26)
 
 [node name="MineNorthEast" parent="Hazards" instance=ExtResource("hz_mine")]
-position = Vector3(30, 0, -24)
+position = Vector3(30, 3.2, -24)
 
 [node name="MineSouthWest" parent="Hazards" instance=ExtResource("hz_mine")]
-position = Vector3(-30, 0, 24)
+position = Vector3(-30, 2.4, 26)
 
 [node name="MineSouthEast" parent="Hazards" instance=ExtResource("hz_mine")]
-position = Vector3(30, 0, 24)
+position = Vector3(29, 2.4, 26)
 
 [node name="MineSouthRing" parent="Hazards" instance=ExtResource("hz_mine")]
 position = Vector3(-14, 0, 25)

@@ -236,6 +236,7 @@ func _physics_process(delta: float) -> void:
 		_dash_time -= delta
 	else:
 		_move(delta)
+	_stay_in_arena()
 
 	if _view == null:
 		return
@@ -255,6 +256,26 @@ func _physics_process(delta: float) -> void:
 		var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
 		_fire_cooldown += interval / maxf(0.1, rate)
 		_shoot()
+
+## Grapples and dashes from raised decks can clear the perimeter walls; the
+## player never leaves the stage's play area.
+func _stay_in_arena() -> void:
+	if horde == null:
+		return
+	var area := horde.play_area.grow(-0.35)
+	if not area.has_area():
+		return
+	var at := global_position
+	var x := clampf(at.x, area.position.x, area.end.x)
+	var z := clampf(at.z, area.position.y, area.end.y)
+	if x != at.x:
+		velocity.x = 0.0
+		_dash_velocity.x = 0.0
+	if z != at.z:
+		velocity.z = 0.0
+		_dash_velocity.z = 0.0
+	if x != at.x or z != at.z:
+		global_position = Vector3(x, at.y, z)
 
 func _dash() -> void:
 	velocity = _dash_velocity

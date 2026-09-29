@@ -45,9 +45,12 @@ var _color := PackedColorArray()
 var _hits_this_frame := 0
 var _deaths_this_frame := 0
 var _rng := RandomNumberGenerator.new()
+# Owning horde: debris lands on its heightfield (decks, ramps).
+var _horde: Horde
 
 func _ready() -> void:
 	_rng.randomize()
+	_horde = get_parent() as Horde
 	var meshes: Array[Mesh] = [spark_mesh, debris_mesh, goo_mesh, splat_mesh]
 	var materials: Array[Material] = [spark_material, debris_material, goo_material, splat_material]
 	var total := 0
@@ -108,7 +111,7 @@ func burst_death(definition: HordeEnemyDefinition, at: Vector3) -> void:
 	if definition.faction == HordeEnemyDefinition.Faction.ALIEN:
 		for n in pieces + 2:
 			_emit(GOO, at, _spray(4.5 * reach, 4.0), 0.8, _rng.randf_range(0.07, 0.13) * reach, color)
-		_emit(SPLAT, Vector3(at.x, 0.02, at.z), Vector3.ZERO, 1.4, definition.radius * 1.6, color.darkened(0.25))
+		_emit(SPLAT, Vector3(at.x, at.y - definition.height * 0.5 + 0.02, at.z), Vector3.ZERO, 1.4, definition.radius * 1.6, color.darkened(0.25))
 	else:
 		for n in pieces + 3:
 			_emit(SPARK, at, _spray(8.0 * reach, 5.0), _rng.randf_range(0.25, 0.45), 0.05, color)
@@ -167,10 +170,11 @@ func _update(kind: int, delta: float) -> void:
 		if kind != SPLAT:
 			v.y -= GRAVITY * delta
 			p += v * delta
-			if p.y < 0.03:
+			var ground := 0.03 + (_horde.ground_height(Vector2(p.x, p.z)) if _horde != null else 0.0)
+			if p.y < ground:
 				if kind == DEBRIS:
 					# Bounce, then skid to rest.
-					p.y = 0.03
+					p.y = ground
 					v = Vector3(v.x * 0.5, -v.y * 0.3, v.z * 0.5) if v.y < -1.0 else Vector3(v.x * 0.9, 0.0, v.z * 0.9)
 				else:
 					continue

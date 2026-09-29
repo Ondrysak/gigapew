@@ -2,9 +2,11 @@ class_name Horde
 extends Node3D
 
 ## Data-oriented crowd of up to CAPACITY enemies. No per-enemy nodes or physics
-## bodies: positions live in packed arrays on the XZ floor plane, crowding uses
-## a uniform grid, and each enemy type draws as one MultiMesh. Weapons query
-## enemies through raycast/query_radius/nearest and damage them by index.
+## bodies: positions live in packed arrays on the XZ plane with a feet height
+## from a heightfield (the world's Elevation decks and ramps), crowding uses a
+## uniform grid, and each enemy type draws as one MultiMesh. Enemies walk up
+## ramps, drop off ledges and cannot climb cliffs. Weapons query enemies
+## through raycast/query_radius/nearest and damage them by index.
 
 signal enemy_killed(definition: HordeEnemyDefinition, position: Vector3)
 signal boss_spawned(definition: HordeEnemyDefinition)
@@ -139,7 +141,29 @@ var _flow_timer := 0.0
 const FLOW_INTERVAL := 0.2
 ## Within this distance enemies ignore the flow field and close in directly.
 const DIRECT_RANGE := 5.0
+## Heightfield sample spacing (m), built from the world's `Elevation` boxes.
+const HEIGHT_STEP := 0.5
+## Tallest step enemies walk up; higher steps are cliffs they can only drop off.
+const CLIMB := 0.3
+## Extra rise allowed per metre travelled, so ramps up to ~30 degrees stay walkable.
+const CLIMB_SLOPE := 0.6
+const FALL_GRAVITY := 22.0
+## Vertical gap beyond which an enemy counts as on another level than the player.
+const LEVEL_GAP := 1.0
+## With the player this close below, enemies walk straight off ledges at them.
+const DROP_RANGE := 14.0
 var _rng := RandomNumberGenerator.new()
+# Ground height per HEIGHT_STEP sample (row-major), and per-slot feet height.
+var _heights := PackedFloat32Array()
+var _heights_w := 1
+var _heights_h := 1
+## Horde cells whose ground and neighbourhood are all at floor level (fast path).
+var _cell_flat := PackedByteArray()
+var _y := PackedFloat32Array()
+var _vy := PackedFloat32Array()
+# Ground height of the last _walkable result (avoids a second lookup).
+var _step_ground := 0.0
+var _cell_center := PackedVector2Array()
 
 var _shot_pos := PackedVector3Array()
 var _shot_vel := PackedVector3Array()
@@ -153,7 +177,9 @@ var _candidate_index := PackedInt32Array()
 var _candidate_t := PackedFloat32Array()
 var _scratch := PackedInt32Array()
 
-func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer) -> void:
+## `elevation` (optional) holds StaticBody3D decks and ramps, each with one
+## BoxShape3D; their top faces become walkable ground for the horde.
+func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer, elevation: Node = null) -> void:
 	target = player
 	_area = area
 	_rng.randomize()
@@ -177,6 +203,10 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_slow.fill(1.0)
 	_slow_time.resize(CAPACITY)
 	_pos.resize(CAPACITY)
+	_y.resize(CAPACITY)
+	_y.fill(0.0)
+	_vy.resize(CAPACITY)
+	_vy.fill(0.0)
 	_knock.resize(CAPACITY)
 	_aim.resize(CAPACITY)
 	_active.resize(CAPACITY)
@@ -198,7 +228,14 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	for definition in definitions:
 		_register(definition, bounds)
 	_read_obstacles(obstacles)
-	_flow.setup(_grid_w, _grid_h, _area.position, CELL, _rect_blocked)
+	_read_elevation(elevation)
+	_cell_center.resize(_cells)
+	var cell_heights := PackedFloat32Array()
+	cell_heights.resize(_cells)
+	for cell in _cells:
+		_cell_center[cell] = _area.position + (Vector2(cell % _grid_w, cell / _grid_w) + Vector2(0.5, 0.5)) * CELL
+		cell_heights[cell] = ground_height(_cell_center[cell])
+	_flow.setup(_grid_w, _grid_h, _area.position, CELL, _rect_blocked, cell_heights)
 	_shot_pos.resize(MAX_PROJECTILES)
 	_shot_vel.resize(MAX_PROJECTILES)
 	_shot_life.resize(MAX_PROJECTILES)
@@ -330,6 +367,105 @@ func _read_obstacles(root: Node) -> void:
 		_cell_obstacle_items.append_array(buckets[cell])
 	_cell_obstacle_start[_cells] = total
 
+# Heightfield from the top faces of the Elevation boxes (a vertical ray against
+# each oriented box), then marks horde cells that are plain floor.
+func _read_elevation(root: Node) -> void:
+	_heights_w = maxi(2, ceili(_area.size.x / HEIGHT_STEP))
+	_heights_h = maxi(2, ceili(_area.size.y / HEIGHT_STEP))
+	_heights.resize(_heights_w * _heights_h)
+	_heights.fill(0.0)
+	if root != null:
+		for body in root.get_children():
+			if not body is StaticBody3D:
+				continue
+			for child in body.get_children():
+				var collider := child as CollisionShape3D
+				if collider != null and collider.shape is BoxShape3D:
+					_rasterise_box(collider.global_transform, (collider.shape as BoxShape3D).size * 0.5)
+	# A flat cell has no raised sample within one sample of it, so lookups there
+	# can skip interpolation entirely.
+	var per := roundi(CELL / HEIGHT_STEP)
+	_cell_flat.resize(_cells)
+	for cell in _cells:
+		var cx := cell % _grid_w
+		var cz := cell / _grid_w
+		var flat := 1
+		for sz in range(maxi(0, cz * per - 1), mini(_heights_h, (cz + 1) * per + 1)):
+			for sx in range(maxi(0, cx * per - 1), mini(_heights_w, (cx + 1) * per + 1)):
+				if _heights[sz * _heights_w + sx] != 0.0:
+					flat = 0
+		_cell_flat[cell] = flat
+
+func _rasterise_box(box: Transform3D, half: Vector3) -> void:
+	var bounds := box * AABB(-half, half * 2.0)
+	var x0 := clampi(floori((bounds.position.x - _area.position.x) / HEIGHT_STEP), 0, _heights_w - 1)
+	var x1 := clampi(floori((bounds.end.x - _area.position.x) / HEIGHT_STEP), 0, _heights_w - 1)
+	var z0 := clampi(floori((bounds.position.z - _area.position.y) / HEIGHT_STEP), 0, _heights_h - 1)
+	var z1 := clampi(floori((bounds.end.z - _area.position.y) / HEIGHT_STEP), 0, _heights_h - 1)
+	var inverse := box.affine_inverse()
+	var down := inverse.basis * Vector3.DOWN
+	var top := bounds.end.y + 1.0
+	for sz in range(z0, z1 + 1):
+		for sx in range(x0, x1 + 1):
+			var start := inverse * Vector3(_area.position.x + (sx + 0.5) * HEIGHT_STEP, top, _area.position.y + (sz + 0.5) * HEIGHT_STEP)
+			# Slab test in box space; the parameter stays in world metres.
+			var enter := 0.0
+			var leave := INF
+			for axis in 3:
+				var d := down[axis]
+				if absf(d) < 0.000001:
+					if absf(start[axis]) > half[axis]:
+						leave = -1.0
+				else:
+					var t0 := (-half[axis] - start[axis]) / d
+					var t1 := (half[axis] - start[axis]) / d
+					enter = maxf(enter, minf(t0, t1))
+					leave = minf(leave, maxf(t0, t1))
+			if enter <= leave:
+				var index := sz * _heights_w + sx
+				_heights[index] = maxf(_heights[index], top - enter)
+
+## Walkable ground height at `xz`: interpolated along ramps, exact at cliffs.
+func ground_height(xz: Vector2) -> float:
+	if _cell_flat.is_empty():
+		return 0.0
+	var local := xz - _area.position
+	if _cell_flat[clampi(int(local.y / CELL), 0, _grid_h - 1) * _grid_w + clampi(int(local.x / CELL), 0, _grid_w - 1)] == 1:
+		return 0.0
+	var fx := local.x / HEIGHT_STEP - 0.5
+	var fz := local.y / HEIGHT_STEP - 0.5
+	var ix := clampi(floori(fx), 0, _heights_w - 2)
+	var iz := clampi(floori(fz), 0, _heights_h - 2)
+	var tx := clampf(fx - ix, 0.0, 1.0)
+	var tz := clampf(fz - iz, 0.0, 1.0)
+	var k := iz * _heights_w + ix
+	var a := _heights[k]
+	var b := _heights[k + 1]
+	var c := _heights[k + _heights_w]
+	var d := _heights[k + _heights_w + 1]
+	if maxf(maxf(a, b), maxf(c, d)) - minf(minf(a, b), minf(c, d)) > CLIMB:
+		if tz >= 0.5:
+			return d if tx >= 0.5 else c
+		return b if tx >= 0.5 else a
+	return lerpf(lerpf(a, b, tx), lerpf(c, d, tx), tz)
+
+# True when the ground inside `rect` contains a cliff enemies cannot walk up.
+func _rect_rough(rect: Rect2) -> bool:
+	var x0 := clampi(floori((rect.position.x - _area.position.x) / HEIGHT_STEP), 0, _heights_w - 1)
+	var x1 := clampi(floori((rect.end.x - _area.position.x) / HEIGHT_STEP), 0, _heights_w - 1)
+	var z0 := clampi(floori((rect.position.y - _area.position.y) / HEIGHT_STEP), 0, _heights_h - 1)
+	var z1 := clampi(floori((rect.end.y - _area.position.y) / HEIGHT_STEP), 0, _heights_h - 1)
+	for sz in range(z0, z1 + 1):
+		for sx in range(x0, x1 + 1):
+			var k := sz * _heights_w + sx
+			var h := _heights[k]
+			if (sx > 0 and absf(_heights[k - 1] - h) > CLIMB) \
+					or (sx < _heights_w - 1 and absf(_heights[k + 1] - h) > CLIMB) \
+					or (sz > 0 and absf(_heights[k - _heights_w] - h) > CLIMB) \
+					or (sz < _heights_h - 1 and absf(_heights[k + _heights_w] - h) > CLIMB):
+				return true
+	return false
+
 func _cell_x(x: float) -> int:
 	return clampi(int((x - _area.position.x) / CELL), 0, _grid_w - 1)
 
@@ -351,6 +487,8 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	_type[slot] = type
 	_mode[slot] = Mode.SEEK
 	_pos[slot] = xz
+	_y[slot] = ground_height(xz)
+	_vy[slot] = 0.0
 	_knock[slot] = Vector2.ZERO
 	_hp[slot] = definition.max_health * health_multiplier
 	_max_hp[slot] = _hp[slot]
@@ -388,8 +526,10 @@ func is_blocked(xz: Vector2, radius: float) -> bool:
 			return true
 	return false
 
-# True when any obstacle overlaps `rect` (used to rasterise the flow field).
+# True when any obstacle or cliff overlaps `rect` (used to rasterise the flow field).
 func _rect_blocked(rect: Rect2) -> bool:
+	if _rect_rough(rect):
+		return true
 	var center := rect.get_center()
 	var cell := _cell_z(center.y) * _grid_w + _cell_x(center.x)
 	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
@@ -437,7 +577,7 @@ func enemy_health_fraction(index: int) -> float:
 
 func enemy_position(index: int) -> Vector3:
 	var p := _pos[index]
-	return Vector3(p.x, _t_height[_type[index]] * 0.5, p.y)
+	return Vector3(p.x, _y[index] + _t_height[_type[index]] * 0.5, p.y)
 
 func get_definition(index: int) -> HordeEnemyDefinition:
 	return _defs[_type[index]]
@@ -451,17 +591,21 @@ func query_radius(center: Vector3, radius: float, out: PackedInt32Array) -> int:
 		for cx in range(_cell_x(c.x - reach), _cell_x(c.x + reach) + 1):
 			var cell := cz * _grid_w + cx
 			for k in range(_cell_start[cell], _cell_start[cell + 1]):
-				count = _collect_in_radius(_cell_items[k], c, radius, out, count)
+				count = _collect_in_radius(_cell_items[k], c, center.y, radius, out, count)
 	for slot in _big:
-		count = _collect_in_radius(slot, c, radius, out, count)
+		count = _collect_in_radius(slot, c, center.y, radius, out, count)
 	return count
 
-func _collect_in_radius(slot: int, c: Vector2, radius: float, out: PackedInt32Array, count: int) -> int:
+# Discs in XZ, skipping bodies on a clearly different level than `cy`.
+func _collect_in_radius(slot: int, c: Vector2, cy: float, radius: float, out: PackedInt32Array, count: int) -> int:
 	if _state[slot] != ALIVE or _stamp[slot] == _query_id:
 		return count
 	_stamp[slot] = _query_id
 	var r := radius + _t_radius[_type[slot]]
 	if (_pos[slot] - c).length_squared() > r * r:
+		return count
+	var half := _t_height[_type[slot]] * 0.5
+	if absf(_y[slot] + half - cy) > radius + half + LEVEL_GAP:
 		return count
 	if count >= out.size():
 		out.resize(maxi(16, out.size() * 2))
@@ -605,13 +749,14 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 		return candidates
 	var y_enter := origin.y + direction.y * t
 	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
-	var height := _t_height[type] + hit_headroom
-	if minf(y_enter, y_exit) > height or maxf(y_enter, y_exit) < 0.0:
+	var base := _y[slot]
+	var top := base + _t_height[type] + hit_headroom
+	if minf(y_enter, y_exit) > top or maxf(y_enter, y_exit) < base:
 		return candidates
-	if y_enter > height and direction.y < 0.0:
-		t = (height - origin.y) / direction.y
-	elif y_enter < 0.0 and direction.y > 0.0:
-		t = -origin.y / direction.y
+	if y_enter > top and direction.y < 0.0:
+		t = (top - origin.y) / direction.y
+	elif y_enter < base and direction.y > 0.0:
+		t = (base - origin.y) / direction.y
 	if candidates >= _candidate_t.size():
 		_candidate_t.resize(candidates * 2)
 		_candidate_index.resize(candidates * 2)
@@ -690,7 +835,7 @@ func _physics_process(delta: float) -> void:
 	_flow_timer -= delta
 	if _flow_timer <= 0.0 and is_instance_valid(target):
 		_flow_timer = FLOW_INTERVAL
-		_flow.update(Vector2(target.global_position.x, target.global_position.z))
+		_flow.update(Vector2(target.global_position.x, target.global_position.z), target.global_position.y - 0.9)
 	var chasing := is_instance_valid(target) and target.active
 	var player := Vector2.ZERO
 	var player_y := 0.0
@@ -700,6 +845,10 @@ func _physics_process(delta: float) -> void:
 	var contact := 0.0
 	var knock_decay := minf(1.0, 7.0 * delta)
 	var turn := minf(1.0, 10.0 * delta)
+	var origin := _area.position
+	var inverse_cell := 1.0 / CELL
+	var last_x := _grid_w - 1
+	var last_z := _grid_h - 1
 	for a in _active_count:
 		var i := _active[a]
 		var type := _type[i]
@@ -710,12 +859,26 @@ func _physics_process(delta: float) -> void:
 		var radius := _t_radius[type]
 		var reach := radius + PLAYER_RADIUS
 		var move := Vector2.ZERO
-		# Far away: follow the flow field around walls; close: go straight in.
+		var rise := player_y - _y[i]
+		# Follow the flow field (around walls, up ramps) unless close on the same
+		# level, or with the player below within DROP_RANGE: then go straight in,
+		# walking off ledges and falling.
 		var route := direction
-		if distance > DIRECT_RANGE:
-			var flow := _flow.direction_at(_cell_of[i])
+		var straight := (distance <= DIRECT_RANGE and rise <= LEVEL_GAP) or (rise < -LEVEL_GAP and distance <= DROP_RANGE)
+		if not straight:
+			var cell := _cell_of[i]
+			var flow := _flow.direction_at(cell, _y[i])
 			if flow != Vector2.ZERO:
-				route = (flow + direction * 0.25).normalized()
+				# Drift toward the cell's centre line (sideways only): obstacles can
+				# poke into a cell's edge, and a body there would push straight into
+				# the face. A slight pull toward the player smooths crowds on one
+				# level; with the player up on a deck it drags bodies into corners.
+				var offset := _cell_center[cell] - p
+				var side := Vector2(-flow.y, flow.x)
+				var steer := flow + side * (side.dot(offset) * 0.5)
+				if rise <= LEVEL_GAP:
+					steer += direction * 0.25
+				route = steer.normalized()
 		var face := route
 		if _flash[i] > 0.0:
 			_flash[i] = maxf(0.0, _flash[i] - delta / FLASH_TIME)
@@ -723,7 +886,7 @@ func _physics_process(delta: float) -> void:
 			move = _steer(i, type, route, direction, distance, delta)
 			if _mode[i] == Mode.CHARGE:
 				face = _aim[i]
-			var touching := distance < reach + 0.15 and player_y < _t_height[type] and player_y > -1.9
+			var touching := distance < reach + 0.15 and rise < _t_height[type] and rise > -1.9
 			if touching:
 				contact += _t_contact[type]
 				if _mode[i] == Mode.CHARGE:
@@ -737,6 +900,19 @@ func _physics_process(delta: float) -> void:
 		p += (move + _knock[i]) * delta + _separation(i, p, radius)
 		_knock[i] -= _knock[i] * knock_decay
 		var clamped := _constrain(p, radius)
+		var feet := _y[i]
+		var landing := clampi(int((clamped.y - origin.y) * inverse_cell), 0, last_z) * _grid_w \
+				+ clampi(int((clamped.x - origin.x) * inverse_cell), 0, last_x)
+		# Floor to plain floor (most of the crowd) needs no height work.
+		if feet != 0.0 or _cell_flat[landing] == 0:
+			clamped = _walkable(i, _pos[i], clamped)
+			# Walk up ramps at once; fall off ledges under gravity.
+			if feet > _step_ground + 0.001:
+				_vy[i] -= FALL_GRAVITY * delta
+				_y[i] = maxf(_step_ground, feet + _vy[i] * delta)
+			else:
+				_y[i] = _step_ground
+				_vy[i] = 0.0
 		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p):
 			_end_charge(i, type)
 		_pos[i] = clamped
@@ -748,6 +924,23 @@ func _physics_process(delta: float) -> void:
 	if chasing and contact > 0.0 and _contact_timer <= 0.0:
 		_contact_timer = contact_tick
 		target.take_damage(ceili(minf(contact, contact_cap)))
+
+## Accepts a move unless it climbs a cliff; then slides along one axis or stays.
+func _walkable(i: int, from: Vector2, to: Vector2) -> Vector2:
+	var limit := _y[i] + CLIMB + from.distance_to(to) * CLIMB_SLOPE
+	_step_ground = ground_height(to)
+	if _step_ground <= limit:
+		return to
+	var slide := Vector2(to.x, from.y)
+	_step_ground = ground_height(slide)
+	if _step_ground <= limit:
+		return slide
+	slide = Vector2(from.x, to.y)
+	_step_ground = ground_height(slide)
+	if _step_ground <= limit:
+		return slide
+	_step_ground = ground_height(from)
+	return from
 
 ## `route` is the path direction (flow field); `direct` points straight at the
 ## player and is used for aiming attacks and backing off.
@@ -796,6 +989,7 @@ func _end_charge(i: int, type: int) -> void:
 func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 	var push := Vector2.ZERO
 	var checks := 0
+	var feet := _y[i]
 	var cell := _cell_of[i]
 	var cx := cell % _grid_w
 	var cz := cell / _grid_w
@@ -809,7 +1003,8 @@ func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 				var away := p - _pos[j]
 				var d2 := away.length_squared()
 				var reach := radius + _t_radius[_type[j]]
-				if d2 < reach * reach:
+				# Bodies on another level (deck above, floor below) never shove.
+				if d2 < reach * reach and absf(feet - _y[j]) <= LEVEL_GAP:
 					if d2 < 0.000001:
 						away = Vector2(float(i & 7) - 3.5, float(j & 7) - 3.5)
 						d2 = away.length_squared()
@@ -892,7 +1087,7 @@ func _fire(i: int, type: int) -> void:
 	if _shot_count >= MAX_PROJECTILES or not is_instance_valid(target):
 		return
 	var definition := _defs[type]
-	var from := Vector3(_pos[i].x, _t_height[type] * 0.7, _pos[i].y)
+	var from := Vector3(_pos[i].x, _y[i] + _t_height[type] * 0.7, _pos[i].y)
 	var aim := target.global_position + Vector3(0.0, 0.2, 0.0) - from
 	_shot_pos[_shot_count] = from
 	_shot_vel[_shot_count] = aim.normalized() * definition.projectile_speed
@@ -914,7 +1109,7 @@ func _update_projectiles(delta: float) -> void:
 		if p.distance_squared_to(closest) < hit_reach * hit_reach:
 			target.take_damage(ceili(_shot_damage[s]))
 			continue
-		if life <= 0.0 or p.y < 0.0 or is_blocked(Vector2(p.x, p.z), 0.0):
+		if life <= 0.0 or p.y < ground_height(Vector2(p.x, p.z)) or is_blocked(Vector2(p.x, p.z), 0.0):
 			continue
 		_shot_pos[n] = p
 		_shot_vel[n] = _shot_vel[s]
@@ -1011,7 +1206,7 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[k + 4] = 0.0
 	buffer[k + 5] = scale_y
 	buffer[k + 6] = 0.0
-	buffer[k + 7] = 0.0
+	buffer[k + 7] = _y[slot]
 	buffer[k + 8] = -s * scale_xz
 	buffer[k + 9] = 0.0
 	buffer[k + 10] = c * scale_xz

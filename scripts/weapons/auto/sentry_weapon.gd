@@ -131,6 +131,7 @@ func _deploy() -> void:
 		if _count > 1:
 			var angle := turn + TAU * float(k) / float(_count)
 			at += Vector3(cos(angle), 0.0, sin(angle)) * deploy_spread
+		at.y = horde.ground_height(Vector2(at.x, at.z))
 		var slot := _free_slot()
 		if _life[slot] > 0.0:
 			_expire(slot)
