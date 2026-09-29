@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/perks/scavenger.tscn" id="2_perk"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"scavenger"
+display_name = "Scavenger"
+description = "Kills have a 6% chance to salvage a Cinder Crystal. Bosses always yield 10."
+level_descriptions = PackedStringArray("Kills have a 6% chance to salvage a Cinder Crystal. Bosses always yield 10.", "Kills have a 10% chance to salvage a Cinder Crystal. Bosses always yield 10.", "Kills have a 15% chance to salvage a Cinder Crystal. Bosses always yield 10.")
+kind = 3
+max_level = 3
+weight = 1.0
+accent_color = Color(1, 0.36, 0.78, 1)
+perk_scene = ExtResource("2_perk")

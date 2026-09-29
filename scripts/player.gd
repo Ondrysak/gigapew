@@ -8,6 +8,8 @@ signal hit_confirmed(killed: bool)
 signal weapon_changed(definition: WeaponDefinition, index: int)
 ## Emitted after the class ability activates successfully.
 signal ability_used(ability: ActiveAbility)
+## A main-gun shot landed at least one critical hit (first critical target).
+signal critical_hit(at: Vector3)
 
 const SPEED := 9.5
 const JUMP_SPEED := 6.5
@@ -61,6 +63,8 @@ var _hit_slots := PackedInt32Array()
 var _hit_damage := PackedFloat32Array()
 var _hit_count := 0
 var _blast_points := PackedVector3Array()
+var _blast_damage := PackedFloat32Array()
+var _death_guards: Array[Callable] = []
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -88,6 +92,7 @@ func _ready() -> void:
 			directions.append(Vector3(cos(angle) * radius, sin(angle) * radius, -1.0).normalized())
 		_directions.append(directions)
 	_blast_points.resize(max_pellets)
+	_blast_damage.resize(max_pellets)
 	select_weapon(selected_weapon)
 	if ability_scene != null:
 		var node := ability_scene.instantiate()
@@ -296,6 +301,7 @@ func _shoot() -> void:
 	var directions := _directions[selected_weapon]
 	var explosive := definition.explosion_radius > 0.0
 	var alive_before := horde.alive_count if horde != null else 0
+	var critical_at := Vector3.INF
 	_query.from = origin
 	for pellet in range(definition.pellet_count):
 		var local := roll * directions[pellet]
@@ -313,8 +319,16 @@ func _shoot() -> void:
 		var hits := 0
 		if horde != null:
 			hits = horde.raycast(origin, direction, reach, pierce + 1, _hits, _distances)
+		# Crits roll per pellet; the exposure zone scales per enemy.
+		var pellet_damage := shot_damage
+		if run_state != null and run_state.roll_critical():
+			pellet_damage *= run_state.crit_multiplier
+			if hits > 0 and critical_at == Vector3.INF:
+				critical_at = horde.enemy_position(_hits[0])
 		for n in hits:
-			_add_hit(_hits[n], shot_damage)
+			var slot := _hits[n]
+			var exposure := run_state.exposure_scale(horde.enemy_position(slot)) if run_state != null else 1.0
+			_add_hit(slot, pellet_damage * exposure)
 		# The trace ends at the last enemy it stopped in, else at the wall.
 		var stopped := hits > pierce
 		var end := origin + direction * (_distances[hits - 1] if stopped else reach)
@@ -322,9 +336,13 @@ func _shoot() -> void:
 			var collider: Object = wall["collider"]
 			if collider != null and collider.has_method(&"take_mining_damage"):
 				collider.take_mining_damage(mining)
+			# Shootable world objects (explosive barrels, switches) take the full shot.
+			if collider != null and collider.has_method(&"take_hit"):
+				collider.take_hit(shot_damage, wall["position"])
 		_view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), hits > 0)
 		if explosive:
 			_blast_points[pellet] = end
+			_blast_damage[pellet] = pellet_damage
 	# Each enemy takes one combined hit per shot so pellets never double-kill.
 	var confirmed := _hit_count > 0
 	for n in _hit_count:
@@ -333,13 +351,15 @@ func _shoot() -> void:
 		for pellet in range(definition.pellet_count):
 			var at := _blast_points[pellet]
 			if horde != null and horde.damage_radius(at, definition.explosion_radius, \
-					shot_damage * definition.explosion_damage_fraction, definition.explosion_knockback) > 0:
+					_blast_damage[pellet] * definition.explosion_damage_fraction, definition.explosion_knockback) > 0:
 				confirmed = true
 			_view.show_blast(at, definition.explosion_radius)
 	if confirmed:
 		var killed := horde.alive_count < alive_before
 		hit_confirmed.emit(killed)
 		_view.confirm_hit(killed, sound)
+	if critical_at != Vector3.INF:
+		critical_hit.emit(critical_at)
 
 func _add_hit(slot: int, amount: float) -> void:
 	for n in _hit_count:
@@ -353,11 +373,22 @@ func _add_hit(slot: int, amount: float) -> void:
 	_hit_damage[_hit_count] = amount
 	_hit_count += 1
 
+## Registers a callable returning true to survive a lethal hit at 1 HP
+## (e.g. the Last Stand perk). Guards are asked in registration order.
+func add_death_guard(guard: Callable) -> void:
+	if not _death_guards.has(guard):
+		_death_guards.append(guard)
+
+func remove_death_guard(guard: Callable) -> void:
+	_death_guards.erase(guard)
+
 func take_damage(amount: int) -> void:
 	if not active or amount <= 0 or _invulnerable > 0.0:
 		return
 	var armor := run_state.armor if run_state != null else 0.0
 	health = maxi(0, health - maxi(1, amount - int(armor)))
+	if health == 0 and _survives_lethal_hit():
+		health = 1
 	health_changed.emit(health, max_health)
 	sound.play_cue(&"hurt")
 	if health == 0:
@@ -366,3 +397,9 @@ func take_damage(amount: int) -> void:
 		_dash_time = 0.0
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		died.emit()
+
+func _survives_lethal_hit() -> bool:
+	for guard in _death_guards:
+		if guard.is_valid() and guard.call():
+			return true
+	return false

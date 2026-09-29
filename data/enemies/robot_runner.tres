@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_runner/robot_runner.glb" id="2_model"]
+[ext_resource type="Resource" path="res://assets/monsters/robot_runner/robot_runner_vat.tres" id="3_vat"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Quad Runner"
+behavior = 0
+max_health = 7.0
+speed = 7.5
+radius = 0.3
+height = 0.9
+mass = 0.7
+contact_damage = 1.0
+xp_value = 1
+faction = 0
+fx_color = Color(0.25, 0.92, 1, 1)
+model_scene = ExtResource("2_model")
+bob_amplitude = 0.015
+bob_speed = 13.0
+flash_color = Color(0.85, 1, 1, 1)
+telegraph_color = Color(0.2, 1, 0.95, 1)
+tint = Color(0.8, 0.97, 1, 1)
+rim_color = Color(0.1, 0.85, 1, 0.32)
+vertex_animation = ExtResource("3_vat")
+move_clip = &"move"
+attack_clip = &"attack"
+death_clip = &"death"
+move_clip_speed = 7.5

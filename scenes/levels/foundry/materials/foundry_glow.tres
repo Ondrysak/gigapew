@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "FoundryGlow"
+shading_mode = 0
+albedo_color = Color(1, 0.62, 0.16, 1)

@@ -1,0 +1,50 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/horde/horde_fx.gd" id="1_fx"]
+
+[sub_resource type="BoxMesh" id="SparkMesh"]
+
+[sub_resource type="StandardMaterial3D" id="SparkMaterial"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="DebrisMesh"]
+
+[sub_resource type="StandardMaterial3D" id="DebrisMaterial"]
+vertex_color_use_as_albedo = true
+metallic = 0.7
+roughness = 0.45
+
+[sub_resource type="SphereMesh" id="GooMesh"]
+radius = 0.5
+height = 1.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="GooMaterial"]
+vertex_color_use_as_albedo = true
+roughness = 0.15
+rim_enabled = true
+rim = 0.6
+
+[sub_resource type="CylinderMesh" id="SplatMesh"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 1.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="SplatMaterial"]
+vertex_color_use_as_albedo = true
+roughness = 0.2
+
+[node name="HordeFx" type="Node3D"]
+script = ExtResource("1_fx")
+spark_mesh = SubResource("SparkMesh")
+spark_material = SubResource("SparkMaterial")
+debris_mesh = SubResource("DebrisMesh")
+debris_material = SubResource("DebrisMaterial")
+goo_mesh = SubResource("GooMesh")
+goo_material = SubResource("GooMaterial")
+splat_mesh = SubResource("SplatMesh")
+splat_material = SubResource("SplatMaterial")

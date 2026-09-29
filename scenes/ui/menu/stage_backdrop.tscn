@@ -1,17 +1,27 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menu/stage_backdrop.gd" id="1_backdrop"]
 [ext_resource type="PackedScene" path="res://scenes/levels/yard.tscn" id="2_world"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/models/grunt.tscn" id="3_grunt"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/models/runner.tscn" id="4_runner"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/models/spitter.tscn" id="5_spitter"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/models/tank.tscn" id="6_tank"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/models/dreadnought.tscn" id="7_dreadnought"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_grunt/robot_grunt.glb" id="3_grunt"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_runner/robot_runner.glb" id="4_runner"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_spitter/robot_spitter.glb" id="5_spitter"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_tank/robot_tank.glb" id="6_tank"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_boss/robot_boss.glb" id="7_dreadnought"]
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="8_def"]
+[ext_resource type="Resource" path="res://data/enemies/robot_grunt.tres" id="9_grunt_def"]
+[ext_resource type="Resource" path="res://data/enemies/robot_runner.tres" id="10_runner_def"]
+[ext_resource type="Resource" path="res://data/enemies/robot_spitter.tres" id="11_spitter_def"]
+[ext_resource type="Resource" path="res://data/enemies/robot_tank.tres" id="12_tank_def"]
+[ext_resource type="Resource" path="res://data/enemies/robot_boss.tres" id="13_boss_def"]
+[ext_resource type="Shader" path="res://shaders/horde_enemy_vat.gdshader" id="14_vat_shader"]
 
-[node name="StageBackdrop" type="Node3D" node_paths=PackedStringArray("camera", "crowd")]
+[node name="StageBackdrop" type="Node3D" node_paths=PackedStringArray("camera", "crowd", "sentinel")]
 script = ExtResource("1_backdrop")
 camera = NodePath("Camera")
 crowd = NodePath("Crowd")
+sentinel = NodePath("Sentinel")
+monster_definitions = Array[ExtResource("8_def")]([ExtResource("9_grunt_def"), ExtResource("10_runner_def"), ExtResource("11_spitter_def"), ExtResource("12_tank_def"), ExtResource("13_boss_def")])
+vat_shader = ExtResource("14_vat_shader")
 march_range = Vector2(-30, 30)
 
 [node name="World" parent="." instance=ExtResource("2_world")]

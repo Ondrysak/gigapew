@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/momentum_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.36, 0.78, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_line"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.6, 0.9, 0.55)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.93
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="Mesh_line"]
+size = Vector3(0.7, 0.02, 0.03)
+
+[node name="Momentum" type="Node3D" node_paths=PackedStringArray("aura")]
+script = ExtResource("1_perk")
+aura = NodePath("Aura")
+
+[node name="Aura" type="Node3D" parent="."]
+visible = false
+
+[node name="FootRing" type="MeshInstance3D" parent="Aura"]
+position = Vector3(0, -0.84, 0)
+scale = Vector3(0.9, 0.3, 0.9)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="LineA" type="MeshInstance3D" parent="Aura"]
+position = Vector3(0, -0.7, -1.0)
+mesh = SubResource("Mesh_line")
+material_override = SubResource("Mat_line")
+cast_shadow = 0
+
+[node name="LineB" type="MeshInstance3D" parent="Aura"]
+position = Vector3(0.866, -0.55, 0.5)
+rotation = Vector3(0, -2.094395, 0)
+mesh = SubResource("Mesh_line")
+material_override = SubResource("Mat_line")
+cast_shadow = 0
+
+[node name="LineC" type="MeshInstance3D" parent="Aura"]
+position = Vector3(-0.866, -0.4, 0.5)
+rotation = Vector3(0, 2.094395, 0)
+mesh = SubResource("Mesh_line")
+material_override = SubResource("Mat_line")
+cast_shadow = 0

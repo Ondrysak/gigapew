@@ -1,0 +1,45 @@
+{
+ "id": "robot_grunt",
+ "source_vertices": 886,
+ "columns": 708,
+ "texture": [
+  708,
+  80
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Idle",
+   "start": 0,
+   "frames": 67,
+   "fps": 20.099999999999998,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 67,
+   "frames": 13,
+   "fps": 19.999999205271436,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "MI_Enemies"
+ ],
+ "textures": {
+  "T_Enemies_BaseColor.png": [
+   1024,
+   1024
+  ],
+  "T_Enemies_Normal": [
+   1024,
+   1024
+  ],
+  "T_Enemies_ORM": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 886
+}

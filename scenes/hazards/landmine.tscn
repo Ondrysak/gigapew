@@ -1,0 +1,133 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hazards/landmine.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_scifi_essentials/Prop_Mine.gltf" id="2"]
+
+[sub_resource type="StandardMaterial3D" id="idle"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.32, 0.06, 1)
+emission_enabled = true
+emission = Color(1, 0.3, 0.04, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="StandardMaterial3D" id="armed"]
+shading_mode = 0
+albedo_color = Color(0.08, 1, 0.45, 1)
+emission_enabled = true
+emission = Color(0.05, 1, 0.35, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="ring_mat"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.15, 0.95, 0.45, 0.38)
+emission_enabled = true
+emission = Color(0.1, 0.65, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="blast_mat"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.7, 0.2, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="scorch_mat"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.06, 0.04, 0.02, 0.65)
+
+[sub_resource type="SphereMesh" id="sphere"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="TorusMesh" id="torus"]
+inner_radius = 0.97
+outer_radius = 1.0
+rings = 48
+ring_segments = 4
+
+[sub_resource type="PlaneMesh" id="scorch_mesh"]
+size = Vector2(2.5, 2.5)
+
+[sub_resource type="QuadMesh" id="quad"]
+size = Vector2(0.16, 0.16)
+
+[node name="Landmine" type="Node3D" node_paths=PackedStringArray("model", "lamp", "range_ring", "blast_template", "shock_template", "embers", "smoke", "scorch") groups=["hazard"]]
+script = ExtResource("1")
+model = NodePath("Model")
+lamp = NodePath("Model/Lamp")
+lamp_idle_material = SubResource("idle")
+lamp_armed_material = SubResource("armed")
+range_ring = NodePath("RangeRing")
+blast_template = NodePath("BlastTemplate")
+shock_template = NodePath("ShockTemplate")
+embers = NodePath("Embers")
+smoke = NodePath("Smoke")
+scorch = NodePath("Scorch")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Prop" parent="Model" instance=ExtResource("2")]
+
+[node name="Lamp" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.24, 0)
+mesh = SubResource("sphere")
+material_override = SubResource("idle")
+scale = Vector3(0.17, 0.1, 0.17)
+cast_shadow = 0
+
+[node name="RangeRing" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0.022, 0)
+mesh = SubResource("torus")
+material_override = SubResource("ring_mat")
+cast_shadow = 0
+
+[node name="BlastTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("sphere")
+material_override = SubResource("blast_mat")
+cast_shadow = 0
+
+[node name="ShockTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("torus")
+material_override = SubResource("blast_mat")
+cast_shadow = 0
+
+[node name="Embers" type="CPUParticles3D" parent="."]
+position = Vector3(0, 0.3, 0)
+emitting = false
+amount = 26
+lifetime = 0.8
+one_shot = true
+explosiveness = 1.0
+mesh = SubResource("quad")
+material_override = SubResource("blast_mat")
+direction = Vector3(0, 1, 0)
+spread = 80.0
+gravity = Vector3(0, -12, 0)
+initial_velocity_min = 4.0
+initial_velocity_max = 9.0
+
+[node name="Smoke" type="CPUParticles3D" parent="."]
+position = Vector3(0, 0.3, 0)
+emitting = false
+amount = 12
+lifetime = 1.6
+one_shot = true
+explosiveness = 0.85
+mesh = SubResource("quad")
+material_override = SubResource("scorch_mat")
+direction = Vector3(0, 1, 0)
+spread = 45.0
+gravity = Vector3(0, 1, 0)
+initial_velocity_min = 1.0
+initial_velocity_max = 2.0
+
+[node name="Scorch" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0.012, 0)
+mesh = SubResource("scorch_mesh")
+material_override = SubResource("scorch_mat")
+cast_shadow = 0

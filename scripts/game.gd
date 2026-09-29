@@ -158,7 +158,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.run_state = run_state
 	player.horde = horde
 	player.weapons = class_definition.starting_weapons
-	player.ability_scene = class_definition.ability_scene
+	player.ability_scene = Profile.equipped_ability_scene(class_definition)
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
 	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player)
@@ -180,6 +180,10 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	director.name = "Director"
 	_round.add_child(director)
 	director.setup(horde, stage.schedule, player)
+	# Level hazards (barrels, consoles, vents...) stay inert until given the round.
+	for hazard in get_tree().get_nodes_in_group(&"hazard"):
+		if world.is_ancestor_of(hazard):
+			hazard.setup(horde, player, run_state)
 
 	hud.show_stage(stage, index, campaign.size())
 	player.health_changed.connect(hud.set_health)

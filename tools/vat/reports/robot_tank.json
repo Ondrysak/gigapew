@@ -1,0 +1,53 @@
+{
+ "id": "robot_tank",
+ "source_vertices": 3204,
+ "columns": 1350,
+ "texture": [
+  1350,
+  60
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Walk",
+   "start": 0,
+   "frames": 33,
+   "fps": 19.8,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 33,
+   "frames": 6,
+   "fps": 18.749998323619515,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "TurnOff",
+   "start": 39,
+   "frames": 21,
+   "fps": 20.0,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "MI_Enemies_Large"
+ ],
+ "textures": {
+  "T_Enemies_Large_BaseColor": [
+   1024,
+   1024
+  ],
+  "T_Enemies_Large_Normal": [
+   1024,
+   1024
+  ],
+  "T_Enemies_Large_ORM": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 3204
+}

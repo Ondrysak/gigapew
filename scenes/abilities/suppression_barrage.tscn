@@ -1,0 +1,76 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/suppression_barrage.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.75, 0.4, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_pillar"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.55, 0.2, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="Mat_scorch"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.5, 0.18, 0.75)
+
+[sub_resource type="SphereMesh" id="Mesh_core"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="CylinderMesh" id="Mesh_pillar"]
+top_radius = 0.08
+bottom_radius = 0.3
+height = 4.0
+radial_segments = 8
+rings = 1
+
+[sub_resource type="TorusMesh" id="Mesh_scorch"]
+inner_radius = 0.8
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[node name="SuppressionBarrage" type="Node3D" node_paths=PackedStringArray("flash_template", "scorch_template")]
+script = ExtResource("1_ability")
+display_name = "Suppression Barrage"
+description = "Call in a barrage: 30 shells hammer three rings around you (4, 7 and 10 m), each blasting 55 damage over 2.6 m and knocking enemies back."
+base_cooldown = 16.0
+accent_color = Color(1, 0.6, 0.25, 1)
+synth_activate = &"autocannon"
+flash_template = NodePath("FlashTemplate")
+scorch_template = NodePath("ScorchTemplate")
+
+[node name="FlashTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="FlashTemplate"]
+mesh = SubResource("Mesh_core")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Pillar" type="MeshInstance3D" parent="FlashTemplate"]
+position = Vector3(0, 2, 0)
+mesh = SubResource("Mesh_pillar")
+material_override = SubResource("Mat_pillar")
+cast_shadow = 0
+
+[node name="ScorchTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="ScorchTemplate"]
+scale = Vector3(1, 0.5, 1)
+mesh = SubResource("Mesh_scorch")
+material_override = SubResource("Mat_scorch")
+cast_shadow = 0

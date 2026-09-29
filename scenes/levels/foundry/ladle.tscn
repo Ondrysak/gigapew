@@ -1,0 +1,56 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_dark.tres" id="mat_dark"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_steel.tres" id="mat_steel"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_glow.tres" id="mat_glow"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_accent.tres" id="mat_accent"]
+
+[sub_resource type="BoxMesh" id="box"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="CylinderMesh" id="cylinder"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 20
+rings = 1
+
+[node name="Ladle" type="Node3D"]
+
+[node name="Trolley" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.4, 0, 0, 0, 0.4, 0, 0, 0, 1.6, 0, -0.2, 0)
+mesh = SubResource("box")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="CableL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.05, 0, 0, 0, 0.7, 0, 0, 0, 0.05, -0.55, -0.55, 0)
+mesh = SubResource("box")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="CableR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.05, 0, 0, 0, 0.7, 0, 0, 0, 0.05, 0.55, -0.55, 0)
+mesh = SubResource("box")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="Bail" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.3, 0, 0, 0, 0.1, 0, 0, 0, 0.12, 0, -0.95, 0)
+mesh = SubResource("box")
+surface_material_override/0 = ExtResource("mat_steel")
+
+[node name="Bucket" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.95, 0, 0, 0, 1, 0, 0, 0, 0.95, 0, -1.45, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_steel")
+
+[node name="Melt" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.85, 0, 0, 0, 0.06, 0, 0, 0, 0.85, 0, -0.97, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_glow")
+
+[node name="Lip" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.97, 0, 0, 0, 0.08, 0, 0, 0, 0.97, 0, -1.9, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_accent")

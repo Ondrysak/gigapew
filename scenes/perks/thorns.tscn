@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/thorns_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.36, 0.78, 0.85)
+
+[sub_resource type="StandardMaterial3D" id="Mat_spike"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.55, 0.85, 0.9)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.9
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="Mesh_spike"]
+size = Vector3(0.4, 0.06, 0.05)
+
+[node name="Thorns" type="Node3D" node_paths=PackedStringArray("ring_template")]
+script = ExtResource("1_perk")
+ring_template = NodePath("RingTemplate")
+
+[node name="RingTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(0, 0.05, 0)
+scale = Vector3(1, 0.4, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="SpikeA" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(1.12, 0.05, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeB" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(0.792, 0.05, 0.792)
+rotation = Vector3(0, -0.785398, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeC" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(0, 0.05, 1.12)
+rotation = Vector3(0, -1.570796, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeD" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(-0.792, 0.05, 0.792)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeE" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(-1.12, 0.05, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeF" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(-0.792, 0.05, -0.792)
+rotation = Vector3(0, -0.785398, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeG" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(0, 0.05, -1.12)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0
+
+[node name="SpikeH" type="MeshInstance3D" parent="RingTemplate"]
+position = Vector3(0.792, 0.05, -0.792)
+rotation = Vector3(0, 0.785398, 0)
+mesh = SubResource("Mesh_spike")
+material_override = SubResource("Mat_spike")
+cast_shadow = 0

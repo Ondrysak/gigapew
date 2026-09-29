@@ -1,0 +1,26 @@
+{
+ "id": "alien_tank",
+ "source_vertices": 1844,
+ "columns": 1844,
+ "texture": [
+  1844,
+  67
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Alien_Idle",
+   "start": 0,
+   "frames": 67,
+   "fps": 20.099999999999998,
+   "loop": true
+  }
+ ],
+ "materials": [
+  "M_Alien_Orange",
+  "M_Alien_Cyan",
+  "M_Alien_Eyes"
+ ],
+ "textures": {},
+ "rest_vertices": 1844
+}

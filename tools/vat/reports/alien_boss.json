@@ -1,0 +1,25 @@
+{
+ "id": "alien_boss",
+ "source_vertices": 1046,
+ "columns": 1046,
+ "texture": [
+  1046,
+  67
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Alien_Idle",
+   "start": 0,
+   "frames": 67,
+   "fps": 19.90099122647906,
+   "loop": true
+  }
+ ],
+ "materials": [
+  "M_Alien_Eyes",
+  "M_Alien_Body_Blue"
+ ],
+ "textures": {},
+ "rest_vertices": 1046
+}

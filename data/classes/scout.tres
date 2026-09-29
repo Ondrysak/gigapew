@@ -1,10 +1,12 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/pulse.tres" id="3_pulse"]
 [ext_resource type="Resource" path="res://data/weapons/rail.tres" id="4_rail"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/blink_dash.tscn" id="5_ability"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/recon_flare.tscn" id="6_alt"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/grapple_vault.tscn" id="7_alt"]
 
 [resource]
 script = ExtResource("1_class")
@@ -17,5 +19,7 @@ description = "Pulse carbine and Rail beam, 12% faster legs and a wider pickup r
 accent_color = Color(0.3, 0.95, 1, 1)
 starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_rail")])
 ability_scene = ExtResource("5_ability")
+alternate_abilities = Array[PackedScene]([ExtResource("6_alt"), ExtResource("7_alt")])
+alternate_ability_costs = PackedInt32Array(3, 5)
 unlock_cost = 0
 unlock_currency = &"shard"

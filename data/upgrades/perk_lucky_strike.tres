@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/perks/lucky_strike.tscn" id="2_perk"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"lucky_strike"
+display_name = "Lucky Strike"
+description = "Main-gun hits have an 8% chance to crit for x1.75 damage."
+level_descriptions = PackedStringArray("Main-gun hits have an 8% chance to crit for x1.75 damage.", "Main-gun hits have a 16% chance to crit for x2 damage.", "Main-gun hits have a 24% chance to crit for x2.25 damage.")
+kind = 3
+max_level = 3
+weight = 1.0
+accent_color = Color(1, 0.36, 0.78, 1)
+perk_scene = ExtResource("2_perk")
+crit_chance = 0.08
+crit_multiplier = 0.25

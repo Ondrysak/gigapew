@@ -1,0 +1,199 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hazards/turret_console.gd" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+albedo_color = Color(0.14, 0.22, 0.26, 1)
+metallic = 0.7
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="screen_mat"]
+shading_mode = 0
+albedo_color = Color(0.1, 0.45, 0.65, 1)
+emission_enabled = true
+emission = Color(0.05, 0.5, 0.8, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="StandardMaterial3D" id="idle_mat"]
+shading_mode = 0
+albedo_color = Color(0.2, 0.65, 1, 1)
+emission_enabled = true
+emission = Color(0.12, 0.55, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="active_mat"]
+shading_mode = 0
+albedo_color = Color(0.15, 1, 0.4, 1)
+emission_enabled = true
+emission = Color(0.08, 1, 0.3, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="StandardMaterial3D" id="cooldown_mat"]
+shading_mode = 0
+albedo_color = Color(1, 0.3, 0.12, 1)
+emission_enabled = true
+emission = Color(1, 0.22, 0.08, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="tracer_mat"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+albedo_color = Color(0.5, 1, 0.75, 0.9)
+emission_enabled = true
+emission = Color(0.2, 1, 0.5, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="BoxMesh" id="console_mesh"]
+size = Vector3(0.8, 1.2, 0.55)
+
+[sub_resource type="BoxShape3D" id="console_shape"]
+size = Vector3(0.8, 1.2, 0.55)
+
+[sub_resource type="BoxMesh" id="screen_mesh"]
+size = Vector3(0.64, 0.48, 0.03)
+
+[sub_resource type="CylinderMesh" id="pedestal_mesh"]
+top_radius = 0.35
+bottom_radius = 0.48
+height = 0.8
+
+[sub_resource type="CylinderShape3D" id="turret_shape"]
+radius = 0.45
+height = 0.8
+
+[sub_resource type="SphereMesh" id="head_mesh"]
+radius = 0.34
+height = 0.68
+
+[sub_resource type="BoxMesh" id="barrel_mesh"]
+size = Vector3(0.12, 0.12, 0.8)
+
+[sub_resource type="BoxMesh" id="beam_mesh"]
+size = Vector3(0.055, 0.04, 1)
+
+[sub_resource type="SphereMesh" id="spark_mesh"]
+radius = 0.5
+height = 1.0
+
+[node name="TurretConsole" type="Node3D" node_paths=PackedStringArray("turret", "head", "muzzle_group", "interact_point", "prompt", "status_lights", "cable", "cable_start", "console_body", "turret_body", "tracer_template", "spark_template") groups=["hazard"]]
+script = ExtResource("1")
+turret = NodePath("Turret")
+head = NodePath("Turret/Head")
+muzzle_group = NodePath("Turret/Head/Muzzles")
+interact_point = NodePath("InteractPoint")
+prompt = NodePath("Prompt")
+status_lights = NodePath("StatusLights")
+idle_material = SubResource("idle_mat")
+active_material = SubResource("active_mat")
+cooldown_material = SubResource("cooldown_mat")
+cable = NodePath("Cable")
+cable_start = NodePath("CableStart")
+console_body = NodePath("ConsoleBody")
+turret_body = NodePath("Turret/Body")
+tracer_template = NodePath("TracerTemplate")
+spark_template = NodePath("SparkTemplate")
+
+[node name="ConsoleBody" type="StaticBody3D" parent="."]
+
+[node name="Collider" type="CollisionShape3D" parent="ConsoleBody"]
+position = Vector3(0, 0.6, 0)
+shape = SubResource("console_shape")
+
+[node name="Housing" type="MeshInstance3D" parent="ConsoleBody"]
+position = Vector3(0, 0.6, 0)
+mesh = SubResource("console_mesh")
+material_override = SubResource("body_mat")
+
+[node name="Screen" type="MeshInstance3D" parent="ConsoleBody"]
+position = Vector3(0, 0.85, 0.29)
+mesh = SubResource("screen_mesh")
+material_override = SubResource("screen_mat")
+cast_shadow = 0
+
+[node name="StatusLights" type="Node3D" parent="."]
+
+[node name="LightLeft" type="MeshInstance3D" parent="StatusLights"]
+position = Vector3(-0.25, 1.12, 0.29)
+mesh = SubResource("spark_mesh")
+scale = Vector3(0.12, 0.12, 0.05)
+material_override = SubResource("idle_mat")
+cast_shadow = 0
+
+[node name="LightRight" type="MeshInstance3D" parent="StatusLights"]
+position = Vector3(0.25, 1.12, 0.29)
+mesh = SubResource("spark_mesh")
+scale = Vector3(0.12, 0.12, 0.05)
+material_override = SubResource("idle_mat")
+cast_shadow = 0
+
+[node name="InteractPoint" type="Marker3D" parent="."]
+position = Vector3(0, 0.85, 0.4)
+
+[node name="Prompt" type="Label3D" parent="."]
+visible = false
+position = Vector3(0, 1.65, 0.2)
+billboard = 1
+pixel_size = 0.003
+font_size = 38
+outline_size = 8
+text = "[E] ACTIVATE TURRET"
+
+[node name="CableStart" type="Marker3D" parent="."]
+position = Vector3(0.3, 0.02, 0)
+
+[node name="Cable" type="MeshInstance3D" parent="."]
+mesh = SubResource("beam_mesh")
+material_override = SubResource("screen_mat")
+cast_shadow = 0
+
+[node name="Turret" type="Node3D" parent="."]
+position = Vector3(2, 0, 0)
+
+[node name="Body" type="StaticBody3D" parent="Turret"]
+
+[node name="Collider" type="CollisionShape3D" parent="Turret/Body"]
+position = Vector3(0, 0.4, 0)
+shape = SubResource("turret_shape")
+
+[node name="Pedestal" type="MeshInstance3D" parent="Turret/Body"]
+position = Vector3(0, 0.4, 0)
+mesh = SubResource("pedestal_mesh")
+material_override = SubResource("body_mat")
+
+[node name="Head" type="Node3D" parent="Turret"]
+position = Vector3(0, 0.98, 0)
+
+[node name="Dome" type="MeshInstance3D" parent="Turret/Head"]
+mesh = SubResource("head_mesh")
+material_override = SubResource("body_mat")
+
+[node name="BarrelLeft" type="MeshInstance3D" parent="Turret/Head"]
+position = Vector3(-0.17, -0.04, -0.53)
+mesh = SubResource("barrel_mesh")
+material_override = SubResource("body_mat")
+
+[node name="BarrelRight" type="MeshInstance3D" parent="Turret/Head"]
+position = Vector3(0.17, -0.04, -0.53)
+mesh = SubResource("barrel_mesh")
+material_override = SubResource("body_mat")
+
+[node name="Muzzles" type="Node3D" parent="Turret/Head"]
+
+[node name="Left" type="Marker3D" parent="Turret/Head/Muzzles"]
+position = Vector3(-0.17, -0.04, -0.94)
+
+[node name="Right" type="Marker3D" parent="Turret/Head/Muzzles"]
+position = Vector3(0.17, -0.04, -0.94)
+
+[node name="TracerTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("beam_mesh")
+material_override = SubResource("tracer_mat")
+cast_shadow = 0
+
+[node name="SparkTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("spark_mesh")
+material_override = SubResource("tracer_mat")
+cast_shadow = 0

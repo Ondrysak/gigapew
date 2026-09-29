@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/abilities/overdrive.tscn" id="5_ability"]
 [ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="6_upgrade"]
 [ext_resource type="Resource" path="res://data/upgrades/sentry.tres" id="7_sentry"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/platform_turret.tscn" id="8_alt"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/repair_drone.tscn" id="9_alt"]
 
 [resource]
 script = ExtResource("1_class")
@@ -19,5 +21,7 @@ accent_color = Color(0.5, 1, 0.38, 1)
 starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_autocannon")])
 starting_upgrades = Array[ExtResource("6_upgrade")]([ExtResource("7_sentry")])
 ability_scene = ExtResource("5_ability")
+alternate_abilities = Array[PackedScene]([ExtResource("8_alt"), ExtResource("9_alt")])
+alternate_ability_costs = PackedInt32Array(6, 8)
 unlock_cost = 14
 unlock_currency = &"shard"

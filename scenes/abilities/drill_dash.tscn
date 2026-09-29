@@ -1,0 +1,156 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/drill_dash.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_bit"]
+albedo_color = Color(0.55, 0.5, 0.45, 1)
+metallic = 0.85
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_flute"]
+albedo_color = Color(1, 0.62, 0.2, 1)
+metallic = 0.5
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.62, 0.2, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_debris"]
+shading_mode = 0
+albedo_color = Color(0.45, 0.28, 0.14, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ember"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.55, 0.15, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.6, 0.2, 0.8)
+
+[sub_resource type="CylinderMesh" id="Mesh_cone"]
+top_radius = 0.0
+bottom_radius = 0.32
+height = 0.9
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_flute"]
+size = Vector3(0.05, 0.05, 0.7)
+
+[sub_resource type="CylinderMesh" id="Mesh_collar"]
+top_radius = 0.36
+bottom_radius = 0.36
+height = 0.12
+radial_segments = 12
+rings = 1
+
+[sub_resource type="TorusMesh" id="Mesh_glow"]
+inner_radius = 0.38
+outer_radius = 0.5
+rings = 24
+ring_segments = 4
+
+[sub_resource type="BoxMesh" id="Mesh_debris"]
+size = Vector3(0.14, 0.11, 0.16)
+
+[sub_resource type="BoxMesh" id="Mesh_ember"]
+size = Vector3(0.06, 0.06, 0.06)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.8
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[node name="DrillDash" type="Node3D" node_paths=PackedStringArray("drill", "drill_bit", "debris_template", "ring_template")]
+script = ExtResource("1_ability")
+display_name = "Drill Dash"
+description = "Burrow 14 m forward, untouchable. The drill grinds everything in its path for 80 damage, then you erupt for 50 damage in a 4 m blast."
+base_cooldown = 11.0
+accent_color = Color(1, 0.62, 0.2, 1)
+synth_activate = &"spin"
+drill = NodePath("Drill")
+drill_bit = NodePath("Drill/Bit")
+debris_template = NodePath("DebrisTemplate")
+ring_template = NodePath("RingTemplate")
+
+[node name="Drill" type="Node3D" parent="."]
+visible = false
+position = Vector3(0, -0.35, -0.95)
+
+[node name="Collar" type="MeshInstance3D" parent="Drill"]
+position = Vector3(0, 0, 0.3)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_collar")
+material_override = SubResource("Mat_flute")
+cast_shadow = 0
+
+[node name="Glow" type="MeshInstance3D" parent="Drill"]
+position = Vector3(0, 0, 0.22)
+rotation = Vector3(-1.570796, 0, 0)
+scale = Vector3(1, 0.4, 1)
+mesh = SubResource("Mesh_glow")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="Bit" type="Node3D" parent="Drill"]
+
+[node name="Cone" type="MeshInstance3D" parent="Drill/Bit"]
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_cone")
+material_override = SubResource("Mat_bit")
+cast_shadow = 0
+
+[node name="FluteA" type="MeshInstance3D" parent="Drill/Bit"]
+position = Vector3(0, 0.17, 0.05)
+rotation = Vector3(0.35, 0, 0.4)
+mesh = SubResource("Mesh_flute")
+material_override = SubResource("Mat_flute")
+cast_shadow = 0
+
+[node name="FluteB" type="MeshInstance3D" parent="Drill/Bit"]
+position = Vector3(0.147, -0.085, 0.05)
+rotation = Vector3(-0.175, -0.303, 0.4)
+mesh = SubResource("Mesh_flute")
+material_override = SubResource("Mat_flute")
+cast_shadow = 0
+
+[node name="FluteC" type="MeshInstance3D" parent="Drill/Bit"]
+position = Vector3(-0.147, -0.085, 0.05)
+rotation = Vector3(-0.175, 0.303, 0.4)
+mesh = SubResource("Mesh_flute")
+material_override = SubResource("Mat_flute")
+cast_shadow = 0
+
+[node name="DebrisTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Chunk" type="MeshInstance3D" parent="DebrisTemplate"]
+mesh = SubResource("Mesh_debris")
+material_override = SubResource("Mat_debris")
+cast_shadow = 0
+
+[node name="Ember" type="MeshInstance3D" parent="DebrisTemplate"]
+position = Vector3(0.05, 0.06, 0)
+mesh = SubResource("Mesh_ember")
+material_override = SubResource("Mat_ember")
+cast_shadow = 0
+
+[node name="RingTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="RingTemplate"]
+scale = Vector3(1, 0.6, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0

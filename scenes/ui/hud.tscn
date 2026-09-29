@@ -357,7 +357,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 13
-text = "WASD MOVE  /  SPACE JUMP  /  LMB FIRE  /  RMB MINE  /  Q ABILITY  /  1 2 3 OR WHEEL WEAPON\nESC PAUSE  /  ENTER NEXT STAGE AFTER BOSS"
+text = "WASD MOVE  /  SPACE JUMP  /  LMB FIRE  /  RMB MINE  /  Q ABILITY  /  E INTERACT  /  1 2 3 OR WHEEL WEAPON\nESC PAUSE  /  ENTER NEXT STAGE AFTER BOSS  /  SHOOT BARRELS AND VALVES"
 autowrap_mode = 2
 
 [node name="Message" type="Label" parent="."]

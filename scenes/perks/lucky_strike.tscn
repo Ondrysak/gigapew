@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/lucky_strike_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ray"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.82, 0.3, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.95, 0.65, 0.9)
+
+[sub_resource type="BoxMesh" id="Mesh_ray"]
+size = Vector3(1, 0.05, 0.05)
+
+[sub_resource type="SphereMesh" id="Mesh_core"]
+radius = 0.14
+height = 0.28
+radial_segments = 8
+rings = 4
+
+[node name="LuckyStrike" type="Node3D" node_paths=PackedStringArray("spark_template")]
+script = ExtResource("1_perk")
+spark_template = NodePath("SparkTemplate")
+
+[node name="SparkTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="SparkTemplate"]
+mesh = SubResource("Mesh_core")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="RayX" type="MeshInstance3D" parent="SparkTemplate"]
+mesh = SubResource("Mesh_ray")
+material_override = SubResource("Mat_ray")
+cast_shadow = 0
+
+[node name="RayY" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0, 1.570796)
+mesh = SubResource("Mesh_ray")
+material_override = SubResource("Mat_ray")
+cast_shadow = 0
+
+[node name="RayZ" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Mesh_ray")
+material_override = SubResource("Mat_ray")
+cast_shadow = 0
+
+[node name="RayDiagA" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0, 0.785398)
+scale = Vector3(0.7, 1, 1)
+mesh = SubResource("Mesh_ray")
+material_override = SubResource("Mat_ray")
+cast_shadow = 0
+
+[node name="RayDiagB" type="MeshInstance3D" parent="SparkTemplate"]
+rotation = Vector3(0, 0, -0.785398)
+scale = Vector3(0.7, 1, 1)
+mesh = SubResource("Mesh_ray")
+material_override = SubResource("Mat_ray")
+cast_shadow = 0

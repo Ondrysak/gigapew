@@ -1,0 +1,53 @@
+{
+ "id": "robot_boss",
+ "source_vertices": 4981,
+ "columns": 5116,
+ "texture": [
+  4096,
+  252
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Walk",
+   "start": 0,
+   "frames": 17,
+   "fps": 20.4,
+   "loop": true
+  },
+  {
+   "name": "idle",
+   "action": "Idle",
+   "start": 17,
+   "frames": 67,
+   "fps": 20.099999999999998,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Punch",
+   "start": 84,
+   "frames": 12,
+   "fps": 19.41176416139703,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 96,
+   "frames": 30,
+   "fps": 20.232559485716674,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "George_Texture"
+ ],
+ "textures": {
+  "George_Texture": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 4981
+}

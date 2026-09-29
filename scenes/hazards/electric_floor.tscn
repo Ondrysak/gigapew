@@ -1,0 +1,82 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hazards/electric_floor.gd" id="1"]
+[ext_resource type="Shader" path="res://shaders/electric_floor.gdshader" id="2"]
+
+[sub_resource type="ShaderMaterial" id="plate_mat"]
+shader = ExtResource("2")
+
+[sub_resource type="StandardMaterial3D" id="arc_mat"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+albedo_color = Color(0.6, 0.9, 1, 0.9)
+emission_enabled = true
+emission = Color(0.3, 0.75, 1, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="StandardMaterial3D" id="metal"]
+albedo_color = Color(0.14, 0.2, 0.25, 1)
+metallic = 0.8
+
+[sub_resource type="PlaneMesh" id="plane"]
+size = Vector2(1, 1)
+
+[sub_resource type="BoxMesh" id="arc_mesh"]
+size = Vector3(0.045, 0.045, 1)
+
+[sub_resource type="SphereMesh" id="spark_mesh"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="CylinderMesh" id="post_mesh"]
+top_radius = 0.08
+bottom_radius = 0.11
+height = 0.22
+
+[node name="ElectricFloor" type="Node3D" node_paths=PackedStringArray("plate", "corners", "arc_template", "spark_template") groups=["hazard"]]
+script = ExtResource("1")
+plate = NodePath("Plate")
+corners = NodePath("Corners")
+arc_template = NodePath("ArcTemplate")
+spark_template = NodePath("SparkTemplate")
+
+[node name="Plate" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.015, 0)
+mesh = SubResource("plane")
+material_override = SubResource("plate_mat")
+cast_shadow = 0
+
+[node name="Corners" type="Node3D" parent="."]
+
+[node name="NearLeft" type="MeshInstance3D" parent="Corners"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("post_mesh")
+material_override = SubResource("metal")
+
+[node name="NearRight" type="MeshInstance3D" parent="Corners"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("post_mesh")
+material_override = SubResource("metal")
+
+[node name="FarLeft" type="MeshInstance3D" parent="Corners"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("post_mesh")
+material_override = SubResource("metal")
+
+[node name="FarRight" type="MeshInstance3D" parent="Corners"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("post_mesh")
+material_override = SubResource("metal")
+
+[node name="ArcTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("arc_mesh")
+material_override = SubResource("arc_mat")
+cast_shadow = 0
+
+[node name="SparkTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("spark_mesh")
+material_override = SubResource("arc_mat")
+cast_shadow = 0

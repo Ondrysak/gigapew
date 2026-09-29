@@ -1,0 +1,36 @@
+BAKED MONSTER SOURCE LICENSES — CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+robot_grunt, robot_runner, robot_tank:
+  Sci-Fi Essentials Kit (Standard), Quaternius (@Quaternius)
+  https://quaternius.com/packs/scifiessentialskit.html
+  Original license: ../kakaboomboom-downloads/essentials/License_Standard.txt
+  License in that pack: CC0 1.0 Universal, Public Domain Dedication.
+
+robot_spitter, robot_boss:
+  Animated Mech Pack, Quaternius (@Quaternius)
+  https://quaternius.com/packs/animatedmech.html
+  Original license: ../kakaboomboom-downloads/mech/License.txt
+  License in that pack: CC0 1.0 Universal, Public Domain Dedication.
+
+alien_runner:
+  Animated Alien, Quaternius (@Quaternius)
+  https://quaternius.com/packs/animatedalien.html
+  Original license: ../kakaboomboom-downloads/alien/License.txt
+  License in that pack: CC0 1.0 Universal, Public Domain Dedication.
+
+alien_spitter, alien_tank, alien_boss:
+  Modular Sci-Fi MegaKit (Standard), Quaternius (@Quaternius)
+  https://quaternius.com/packs/modularscifimegakit.html
+  Original license: ../kakaboomboom-downloads/megakit/Modular SciFi MegaKit[Standard]/License_Standard.txt
+  License in that pack: CC0 1.0 Universal, Public Domain Dedication.
+
+alien_grunt:
+  Alien Bug Animated, CDmir
+  https://opengameart.org/content/alien-bug-animated
+  License shown on source page: CC0 1.0 Universal.
+  Downloaded archive has no separate license file; source page is the license record.
+
+The models, baked animation textures and embedded diffuse/normal/ORM maps in
+these directories are transformed outputs of those sources. Original download
+archives are not redistributed. Bake instructions: tools/vat/README.md.

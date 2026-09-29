@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_glow.tres" id="mat_glow"]
+
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Prop_Vent_Big.gltf" id="2_Prop_Vent_Big"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_heat.tres" id="mat_heat"]
+
+[sub_resource type="PlaneMesh" id="plane"]
+size = Vector2(1, 1)
+
+[node name="HeatVent" type="Node3D"]
+
+[node name="Glow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.8, 0, 0, 0, 1, 0, 0, 0, 0.85, 0, 0.012, 0)
+mesh = SubResource("plane")
+surface_material_override/0 = ExtResource("mat_glow")
+
+[node name="Grate" parent="." instance=ExtResource("2_Prop_Vent_Big")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0)
+
+[node name="Halo" type="MeshInstance3D" parent="."]
+transform = Transform3D(4.5, 0, 0, 0, 1, 0, 0, 0, 3.2, 0, 0.02, 0)
+mesh = SubResource("plane")
+surface_material_override/0 = ExtResource("mat_heat")

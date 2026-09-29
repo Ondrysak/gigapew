@@ -1,0 +1,157 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/recon_flare.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+shading_mode = 0
+albedo_color = Color(0.9, 1, 0.97, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_halo"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.6, 1, 0.9, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.7, 1, 0.92, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="Mat_fill"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.55, 1, 0.9, 0.07)
+
+[sub_resource type="StandardMaterial3D" id="Mat_sweep"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.75, 1, 0.95, 0.45)
+
+[sub_resource type="StandardMaterial3D" id="Mat_beam"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.6, 1, 0.92, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="Mat_beam_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.85, 1, 0.97, 0.55)
+
+[sub_resource type="SphereMesh" id="Mesh_body"]
+radius = 0.09
+height = 0.18
+radial_segments = 10
+rings = 5
+
+[sub_resource type="SphereMesh" id="Mesh_halo"]
+radius = 0.3
+height = 0.6
+radial_segments = 12
+rings = 6
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.96
+outer_radius = 1.0
+rings = 64
+ring_segments = 4
+
+[sub_resource type="TorusMesh" id="Mesh_sweep"]
+inner_radius = 0.9
+outer_radius = 1.0
+rings = 64
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_disc"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 0.01
+radial_segments = 40
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_beam"]
+top_radius = 0.05
+bottom_radius = 0.35
+height = 14.0
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_beam_core"]
+top_radius = 0.02
+bottom_radius = 0.08
+height = 14.0
+radial_segments = 8
+rings = 1
+
+[node name="ReconFlare" type="Node3D" node_paths=PackedStringArray("flare", "zone", "zone_ring", "sweep")]
+script = ExtResource("1_ability")
+display_name = "Recon Flare"
+description = "Fire a flare up to 30 m that lights a 9 m zone for 6 s. Enemies inside are marked and slowed, and take +50% main-gun damage."
+base_cooldown = 14.0
+accent_color = Color(0.75, 1, 0.95, 1)
+synth_activate = &"seismic_throw"
+flare = NodePath("Flare")
+zone = NodePath("Zone")
+zone_ring = NodePath("Zone/Ring")
+sweep = NodePath("Zone/Sweep")
+
+[node name="Flare" type="Node3D" parent="."]
+visible = false
+
+[node name="Body" type="MeshInstance3D" parent="Flare"]
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_body")
+cast_shadow = 0
+
+[node name="Halo" type="MeshInstance3D" parent="Flare"]
+mesh = SubResource("Mesh_halo")
+material_override = SubResource("Mat_halo")
+cast_shadow = 0
+
+[node name="Glow" type="OmniLight3D" parent="Flare"]
+position = Vector3(0, 0.4, 0)
+light_color = Color(0.75, 1, 0.95, 1)
+light_energy = 1.6
+omni_range = 9.0
+
+[node name="Zone" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="Zone"]
+scale = Vector3(9, 1, 9)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="Fill" type="MeshInstance3D" parent="Zone/Ring"]
+mesh = SubResource("Mesh_disc")
+material_override = SubResource("Mat_fill")
+cast_shadow = 0
+
+[node name="Sweep" type="MeshInstance3D" parent="Zone"]
+scale = Vector3(0.3, 1, 0.3)
+mesh = SubResource("Mesh_sweep")
+material_override = SubResource("Mat_sweep")
+cast_shadow = 0
+
+[node name="Beam" type="MeshInstance3D" parent="Zone"]
+position = Vector3(0, 7, 0)
+mesh = SubResource("Mesh_beam")
+material_override = SubResource("Mat_beam")
+cast_shadow = 0
+
+[node name="BeamCore" type="MeshInstance3D" parent="Zone"]
+position = Vector3(0, 7, 0)
+mesh = SubResource("Mesh_beam_core")
+material_override = SubResource("Mat_beam_core")
+cast_shadow = 0

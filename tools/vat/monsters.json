@@ -1,0 +1,139 @@
+{
+	"downloads": "../kakaboomboom-downloads",
+	"output": "assets/monsters",
+	"fps": 20,
+	"max_texture_size": 1024,
+	"monsters": {
+		"robot_grunt": {
+			"source": "essentials/glTF/Enemy_EyeDrone.gltf",
+			"decimate": 0.16,
+			"fit": "height",
+			"size": 0.75,
+			"lift": 0.3,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Idle", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false}
+			]
+		},
+		"robot_runner": {
+			"source": "essentials/glTF/Enemy_QuadShell.gltf",
+			"decimate": 0.055,
+			"fit": "footprint",
+			"size": 1.25,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Run", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "TurnOff", "loop": false}
+			]
+		},
+		"robot_spitter": {
+			"source": "mech/Textured/glTF/Leela.gltf",
+			"decimate": 0.4,
+			"fit": "height",
+			"size": 1.9,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "idle", "action": "Idle", "loop": true},
+				{"name": "attack", "action": "Shoot", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
+			]
+		},
+		"robot_tank": {
+			"source": "essentials/glTF/Enemy_Trilobite.gltf",
+			"decimate": 0.1,
+			"fit": "footprint",
+			"size": 2.5,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "TurnOff", "loop": false}
+			]
+		},
+		"robot_boss": {
+			"source": "mech/Textured/glTF/George.gltf",
+			"decimate": 0.5,
+			"fit": "height",
+			"size": 5.2,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "idle", "action": "Idle", "loop": true},
+				{"name": "attack", "action": "Punch", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
+			]
+		},
+		"alien_grunt": {
+			"source": "bug/alien-bug.glb",
+			"decimate": 1.0,
+			"fit": "footprint",
+			"size": 0.95,
+			"yaw": 180,
+			"clips": [
+				{"name": "move", "action": "Run", "loop": true},
+				{"name": "idle", "action": "Idle", "loop": true},
+				{"name": "attack", "action": "Attack.000", "loop": false}
+			]
+		},
+		"alien_runner": {
+			"source": "alien/FBX/Alien.fbx",
+			"decimate": 0.45,
+			"smooth": true,
+			"fit": "height",
+			"size": 1.3,
+			"yaw": 180,
+			"materials": {
+				"Eyes": {"emission": [0.5, 1.0, 0.2], "emission_strength": 2.0}
+			},
+			"clips": [
+				{"name": "move", "action": "Alien_Run", "loop": true},
+				{"name": "idle", "action": "Alien_Idle", "loop": true},
+				{"name": "attack", "action": "Alien_Punch", "loop": false},
+				{"name": "death", "action": "Alien_Death", "loop": false}
+			]
+		},
+		"alien_spitter": {
+			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Oculichrysalis.gltf",
+			"decimate": 0.4,
+			"fit": "height",
+			"size": 1.8,
+			"yaw": 180,
+			"materials": {
+				"M_Alien_Eyes": {"emission": [1.0, 0.85, 0.2], "emission_strength": 2.5}
+			},
+			"clips": [
+				{"name": "move", "action": "Alien_Idle", "loop": true}
+			]
+		},
+		"alien_tank": {
+			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Scolitex.gltf",
+			"decimate": 0.3,
+			"fit": "footprint",
+			"size": 2.5,
+			"yaw": 180,
+			"materials": {
+				"M_Alien_Eyes": {"emission": [1.0, 0.25, 0.1], "emission_strength": 2.5}
+			},
+			"clips": [
+				{"name": "move", "action": "Alien_Idle", "loop": true}
+			]
+		},
+		"alien_boss": {
+			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Cyclop.gltf",
+			"decimate": 1.0,
+			"fit": "height",
+			"size": 5.0,
+			"yaw": 180,
+			"materials": {
+				"M_Alien_Body_Blue": {"color": [0.42, 0.08, 0.36]},
+				"M_Alien_Eyes": {"emission": [0.4, 1.0, 0.3], "emission_strength": 3.0}
+			},
+			"clips": [
+				{"name": "move", "action": "Alien_Idle", "loop": true}
+			]
+		}
+	}
+}

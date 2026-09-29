@@ -31,6 +31,8 @@ func show_offer(upgrade: UpgradeDefinition, current_level: int, key: int) -> voi
 	key_label.text = "[%d]" % key
 	if upgrade.kind == UpgradeDefinition.Kind.WEAPON:
 		kind_label.text = "AUTO WEAPON"
+	elif upgrade.kind == UpgradeDefinition.Kind.PERK:
+		kind_label.text = "PERK"
 	elif upgrade.repeatable:
 		kind_label.text = "SUPPLY"
 	else:

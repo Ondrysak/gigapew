@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/vampiric_rounds_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.4, 1, 0.5, 0.85)
+
+[sub_resource type="StandardMaterial3D" id="Mat_halo"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.25, 0.9, 0.4, 0.3)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.92
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[sub_resource type="TorusMesh" id="Mesh_halo"]
+inner_radius = 0.7
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[node name="VampiricRounds" type="Node3D" node_paths=PackedStringArray("pulse_template")]
+script = ExtResource("1_perk")
+pulse_template = NodePath("PulseTemplate")
+
+[node name="PulseTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="PulseTemplate"]
+position = Vector3(0, 0.05, 0)
+scale = Vector3(1, 0.4, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="Halo" type="MeshInstance3D" parent="PulseTemplate"]
+position = Vector3(0, 0.04, 0)
+scale = Vector3(1, 0.15, 1)
+mesh = SubResource("Mesh_halo")
+material_override = SubResource("Mat_halo")
+cast_shadow = 0

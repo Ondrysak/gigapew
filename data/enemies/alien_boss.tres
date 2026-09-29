@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://assets/monsters/alien_boss/alien_boss.glb" id="2_model"]
+[ext_resource type="Resource" path="res://assets/monsters/alien_boss/alien_boss_vat.tres" id="3_vat"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Cyclop Queen"
+behavior = 2
+max_health = 2500.0
+speed = 3.0
+radius = 1.8
+height = 4.2
+mass = 25.0
+contact_damage = 10.0
+xp_value = 150
+is_boss = true
+attack_cooldown = 5.0
+telegraph_duration = 1.1
+charge_range = 16.0
+charge_speed = 16.0
+charge_duration = 1.0
+faction = 1
+fx_color = Color(0.8, 0.28, 0.88, 1)
+model_scene = ExtResource("2_model")
+bob_amplitude = 0.035
+bob_speed = 2.0
+sway_amplitude = 0.045
+flash_color = Color(0.95, 0.85, 1, 1)
+telegraph_color = Color(1, 0.18, 0.12, 1)
+tint = Color(0.92, 0.78, 1, 1)
+rim_color = Color(0.9, 0.25, 0.8, 0.58)
+vertex_animation = ExtResource("3_vat")
+move_clip = &"move"
+move_clip_speed = 3.0

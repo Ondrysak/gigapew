@@ -1,0 +1,241 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/platform_turret.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_frame"]
+albedo_color = Color(0.2, 0.22, 0.21, 1)
+metallic = 0.7
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_plate"]
+albedo_color = Color(0.4, 0.75, 0.3, 1)
+metallic = 0.4
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_barrel"]
+albedo_color = Color(0.12, 0.12, 0.13, 1)
+metallic = 0.85
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_sensor"]
+shading_mode = 0
+albedo_color = Color(0.55, 1, 0.45, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_warning"]
+shading_mode = 0
+albedo_color = Color(1, 0.2, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_flash"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.85, 0.45, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="Mat_tracer"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.7, 1, 0.5, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shock"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.5, 1, 0.4, 0.8)
+
+[sub_resource type="CylinderMesh" id="Mesh_base"]
+top_radius = 0.42
+bottom_radius = 0.55
+height = 0.3
+radial_segments = 10
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_leg"]
+size = Vector3(0.14, 0.1, 0.9)
+
+[sub_resource type="CylinderMesh" id="Mesh_column"]
+top_radius = 0.16
+bottom_radius = 0.2
+height = 0.55
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_housing"]
+size = Vector3(0.62, 0.36, 0.7)
+
+[sub_resource type="BoxMesh" id="Mesh_shield"]
+size = Vector3(0.74, 0.44, 0.08)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.06
+bottom_radius = 0.07
+height = 0.9
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_sensor"]
+radius = 0.05
+height = 0.1
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="Mesh_flash_core"]
+radius = 0.14
+height = 0.28
+radial_segments = 8
+rings = 4
+
+[sub_resource type="BoxMesh" id="Mesh_flash_spike"]
+size = Vector3(0.5, 0.05, 0.02)
+
+[sub_resource type="BoxMesh" id="Mesh_tracer"]
+size = Vector3(0.05, 0.05, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_shock"]
+inner_radius = 0.82
+outer_radius = 1.0
+rings = 40
+ring_segments = 6
+
+[node name="PlatformTurret" type="Node3D" node_paths=PackedStringArray("turret", "turret_yaw", "turret_pitch", "muzzle", "muzzle_flash", "warning_lights", "tracer_template", "shock_template")]
+script = ExtResource("1_ability")
+display_name = "Platform Turret"
+description = "Drop a heavy turret where you aim (up to 8 m); its landing hits for 40. For 15 s it fires piercing tracers at the nearest enemy within 24 m: 28 damage each, 8 shots a second, through 3 enemies."
+base_cooldown = 22.0
+accent_color = Color(0.5, 1, 0.4, 1)
+synth_activate = &"seismic_throw"
+turret = NodePath("Turret")
+turret_yaw = NodePath("Turret/Yaw")
+turret_pitch = NodePath("Turret/Yaw/Pitch")
+muzzle = NodePath("Turret/Yaw/Pitch/Muzzle")
+muzzle_flash = NodePath("Turret/Yaw/Pitch/Muzzle/Flash")
+warning_lights = NodePath("Turret/Lights")
+tracer_template = NodePath("TracerTemplate")
+shock_template = NodePath("ShockTemplate")
+
+[node name="Turret" type="Node3D" parent="."]
+visible = false
+
+[node name="Base" type="MeshInstance3D" parent="Turret"]
+position = Vector3(0, 0.15, 0)
+mesh = SubResource("Mesh_base")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="LegA" type="MeshInstance3D" parent="Turret"]
+position = Vector3(0, 0.05, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Mat_plate")
+cast_shadow = 0
+
+[node name="LegB" type="MeshInstance3D" parent="Turret"]
+position = Vector3(0, 0.05, 0)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Mesh_leg")
+material_override = SubResource("Mat_plate")
+cast_shadow = 0
+
+[node name="Column" type="MeshInstance3D" parent="Turret"]
+position = Vector3(0, 0.55, 0)
+mesh = SubResource("Mesh_column")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="Yaw" type="Node3D" parent="Turret"]
+position = Vector3(0, 0.95, 0)
+
+[node name="Housing" type="MeshInstance3D" parent="Turret/Yaw"]
+mesh = SubResource("Mesh_housing")
+material_override = SubResource("Mat_plate")
+cast_shadow = 0
+
+[node name="Pitch" type="Node3D" parent="Turret/Yaw"]
+position = Vector3(0, 0.05, -0.2)
+
+[node name="Shield" type="MeshInstance3D" parent="Turret/Yaw/Pitch"]
+position = Vector3(0, 0, -0.18)
+mesh = SubResource("Mesh_shield")
+material_override = SubResource("Mat_frame")
+cast_shadow = 0
+
+[node name="BarrelL" type="MeshInstance3D" parent="Turret/Yaw/Pitch"]
+position = Vector3(-0.1, 0, -0.55)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_barrel")
+cast_shadow = 0
+
+[node name="BarrelR" type="MeshInstance3D" parent="Turret/Yaw/Pitch"]
+position = Vector3(0.1, 0, -0.55)
+rotation = Vector3(-1.570796, 0, 0)
+mesh = SubResource("Mesh_barrel")
+material_override = SubResource("Mat_barrel")
+cast_shadow = 0
+
+[node name="Sensor" type="MeshInstance3D" parent="Turret/Yaw/Pitch"]
+position = Vector3(0, 0.2, -0.24)
+mesh = SubResource("Mesh_sensor")
+material_override = SubResource("Mat_sensor")
+cast_shadow = 0
+
+[node name="Muzzle" type="Node3D" parent="Turret/Yaw/Pitch"]
+position = Vector3(0, 0, -1.02)
+
+[node name="Flash" type="Node3D" parent="Turret/Yaw/Pitch/Muzzle"]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="Turret/Yaw/Pitch/Muzzle/Flash"]
+scale = Vector3(1, 1, 1.8)
+mesh = SubResource("Mesh_flash_core")
+material_override = SubResource("Mat_flash")
+cast_shadow = 0
+
+[node name="SpikeA" type="MeshInstance3D" parent="Turret/Yaw/Pitch/Muzzle/Flash"]
+mesh = SubResource("Mesh_flash_spike")
+material_override = SubResource("Mat_flash")
+cast_shadow = 0
+
+[node name="SpikeB" type="MeshInstance3D" parent="Turret/Yaw/Pitch/Muzzle/Flash"]
+rotation = Vector3(0, 0, 1.570796)
+mesh = SubResource("Mesh_flash_spike")
+material_override = SubResource("Mat_flash")
+cast_shadow = 0
+
+[node name="Lights" type="Node3D" parent="Turret"]
+visible = false
+
+[node name="LampA" type="MeshInstance3D" parent="Turret/Lights"]
+position = Vector3(0.36, 0.34, 0)
+mesh = SubResource("Mesh_sensor")
+material_override = SubResource("Mat_warning")
+cast_shadow = 0
+
+[node name="LampB" type="MeshInstance3D" parent="Turret/Lights"]
+position = Vector3(-0.36, 0.34, 0)
+mesh = SubResource("Mesh_sensor")
+material_override = SubResource("Mat_warning")
+cast_shadow = 0
+
+[node name="LampC" type="MeshInstance3D" parent="Turret/Lights"]
+position = Vector3(0, 1.22, 0)
+mesh = SubResource("Mesh_sensor")
+material_override = SubResource("Mat_warning")
+cast_shadow = 0
+
+[node name="TracerTemplate" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("Mesh_tracer")
+material_override = SubResource("Mat_tracer")
+cast_shadow = 0
+
+[node name="ShockTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="ShockTemplate"]
+scale = Vector3(1, 0.6, 1)
+mesh = SubResource("Mesh_shock")
+material_override = SubResource("Mat_shock")
+cast_shadow = 0

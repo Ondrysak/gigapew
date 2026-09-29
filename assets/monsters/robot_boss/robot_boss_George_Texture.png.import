@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://7bro4fb3vc7d"
+path="res://.godot/imported/robot_boss_George_Texture.png-37fe89f41afa26f12e484fe50b823580.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "a6d8e71e2abe540afbf5a080bfc519fe"
+}
+
+[deps]
+
+source_file="res://assets/monsters/robot_boss/robot_boss_George_Texture.png"
+dest_files=["res://.godot/imported/robot_boss_George_Texture.png-37fe89f41afa26f12e484fe50b823580.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

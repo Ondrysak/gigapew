@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" path="res://scripts/data/spawn_schedule.gd" id="1_schedule"]
 [ext_resource type="Script" path="res://scripts/data/spawn_wave.gd" id="2_wave"]
-[ext_resource type="Resource" path="res://data/enemies/dreadnought.tres" id="3_dreadnought"]
-[ext_resource type="Resource" path="res://data/enemies/grunt.tres" id="4_grunt"]
-[ext_resource type="Resource" path="res://data/enemies/runner.tres" id="5_runner"]
-[ext_resource type="Resource" path="res://data/enemies/spitter.tres" id="6_spitter"]
-[ext_resource type="Resource" path="res://data/enemies/tank.tres" id="7_tank"]
+[ext_resource type="Resource" path="res://data/enemies/robot_boss.tres" id="3_dreadnought"]
+[ext_resource type="Resource" path="res://data/enemies/robot_grunt.tres" id="4_grunt"]
+[ext_resource type="Resource" path="res://data/enemies/robot_runner.tres" id="5_runner"]
+[ext_resource type="Resource" path="res://data/enemies/robot_spitter.tres" id="6_spitter"]
+[ext_resource type="Resource" path="res://data/enemies/robot_tank.tres" id="7_tank"]
 
 [sub_resource type="Resource" id="Wave_1"]
 script = ExtResource("2_wave")

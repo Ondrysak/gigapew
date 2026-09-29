@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_spitter/robot_spitter.glb" id="2_model"]
+[ext_resource type="Resource" path="res://assets/monsters/robot_spitter/robot_spitter_vat.tres" id="3_vat"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Leela Artillery"
+behavior = 1
+max_health = 30.0
+speed = 3.0
+radius = 0.4
+height = 1.6
+mass = 1.2
+contact_damage = 1.0
+xp_value = 3
+preferred_range = 13.0
+attack_range = 22.0
+attack_cooldown = 3.2
+telegraph_duration = 0.7
+projectile_damage = 3.0
+projectile_speed = 9.0
+faction = 0
+fx_color = Color(1, 0.6, 0.2, 1)
+model_scene = ExtResource("2_model")
+bob_amplitude = 0.015
+bob_speed = 4.0
+flash_color = Color(0.85, 1, 1, 1)
+telegraph_color = Color(1, 0.48, 0.05, 1)
+rim_color = Color(0.15, 0.7, 1, 0.32)
+vertex_animation = ExtResource("3_vat")
+move_clip = &"move"
+idle_clip = &"idle"
+attack_clip = &"attack"
+death_clip = &"death"
+move_clip_speed = 3.0

@@ -12,6 +12,8 @@ static func entries(modifier: StatModifier, scale := 1.0) -> Array[Dictionary]:
 	_percent(result, modifier.damage_multiplier * scale, "damage")
 	_percent(result, modifier.fire_rate_multiplier * scale, "fire rate")
 	_percent(result, modifier.move_speed_multiplier * scale, "move speed")
+	_percent(result, modifier.crit_chance * scale, "critical chance")
+	_flat(result, modifier.crit_multiplier * scale, "× critical damage", "%+.2f")
 	_flat(result, modifier.max_health_bonus * scale, "max health", "%+d")
 	_flat(result, modifier.regen_per_second * scale, "HP/s regen", "%+.1f")
 	_flat(result, modifier.armor * scale, "armor", "%+.1f")

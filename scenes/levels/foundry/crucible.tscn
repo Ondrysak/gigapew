@@ -1,0 +1,58 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_dark.tres" id="mat_dark"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_steel.tres" id="mat_steel"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_glow.tres" id="mat_glow"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_accent.tres" id="mat_accent"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_heat.tres" id="mat_heat"]
+
+[sub_resource type="CylinderMesh" id="cylinder"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 20
+rings = 1
+
+[sub_resource type="PlaneMesh" id="plane"]
+size = Vector2(1, 1)
+
+[node name="Crucible" type="Node3D"]
+
+[node name="Plinth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.6, 0, 0, 0, 0.35, 0, 0, 0, 1.6, 0, 0.175, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 3.2, 0, 0, 0, 1.5, 0, 1.8, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_steel")
+
+[node name="GlowBand" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.56, 0, 0, 0, 0.07, 0, 0, 0, 1.56, 0, 1.2, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_glow")
+
+[node name="HeatBand" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.56, 0, 0, 0, 0.26, 0, 0, 0, 1.56, 0, 2.3, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_accent")
+
+[node name="Rim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.58, 0, 0, 0, 0.26, 0, 0, 0, 1.58, 0, 3.27, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="Melt" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.35, 0, 0, 0, 0.1, 0, 0, 0, 1.35, 0, 3.36, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_glow")
+
+[node name="FloorGlow" type="MeshInstance3D" parent="."]
+transform = Transform3D(7, 0, 0, 0, 1, 0, 0, 0, 7, 0, 0.03, 0)
+mesh = SubResource("plane")
+surface_material_override/0 = ExtResource("mat_heat")

@@ -1,6 +1,19 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Shader" path="res://shaders/yard_floor.gdshader" id="floor_shader"]
+[ext_resource type="Script" path="res://scenes/levels/yard/module_batch.gd" id="module_batch"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/WallAstra_Straight_Flat.gltf" id="kit_wall"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/TopCables_Straight.gltf" id="kit_cables"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Column_Astra.gltf" id="kit_column"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Prop_Light_Floor.gltf" id="kit_light"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Prop_Crate4.gltf" id="kit_crate"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Prop_PipeHolder.gltf" id="kit_pipes"]
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Platform_CenterPlate.gltf" id="kit_plate"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/explosive_barrel.tscn" id="hz_barrel"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/electric_floor.tscn" id="hz_electric"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/turret_console.tscn" id="hz_console"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/flame_vent.tscn" id="hz_vent"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/landmine.tscn" id="hz_mine"]
 
 [sub_resource type="ShaderMaterial" id="Material_floor"]
 shader = ExtResource("floor_shader")
@@ -3933,3 +3946,93 @@ position = Vector3(0, -1.05, 0)
 scale = Vector3(2.61, 0.07, 7.01)
 mesh = SubResource("Mesh_unit")
 surface_material_override/0 = SubResource("Material_amber")
+
+[node name="KitArchitecture" type="Node3D" parent="."]
+
+[node name="RaisedWallModules" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_wall")
+transforms = Array[Transform3D]([Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -24, 4.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -20, 4.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 20, 4.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 24, 4.5, -30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -24, 4.5, 30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -20, 4.5, 30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 20, 4.5, 30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 24, 4.5, 30), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4.5, -24), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4.5, -20), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4.5, 20), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 4.5, 24), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 4.5, -24), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 4.5, -20), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 4.5, 20), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 4.5, 24)])
+
+[node name="CableCrown" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_cables")
+transforms = Array[Transform3D]([Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -24, 2.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -20, 2.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 20, 2.5, -30), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 24, 2.5, -30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -24, 2.5, 30), Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 24, 2.5, 30), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 2.5, -24), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 2.5, 24), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 2.5, -24), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 30, 2.5, 24)])
+
+[node name="PillarCladding" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_column")
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, -16), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -16, 0, 16), Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 16, 0, -16), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 16)])
+
+[node name="LandingPlates" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_plate")
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.035, -26), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.035, -26), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0.035, 26), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0.035, 26)])
+
+[node name="GuideLamps" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_light")
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, -24), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, -24), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, 24), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, 24)])
+
+[node name="StackedKitCrates" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_crate")
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, -21), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 2.8, 21), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 2.8, -3), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 22, 2.8, 3)])
+
+[node name="ContainerPipework" type="Node3D" parent="KitArchitecture"]
+script = ExtResource("module_batch")
+source = ExtResource("kit_pipes")
+transforms = Array[Transform3D]([Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 2.9, 13), Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 26, 2.9, -13)])
+
+[node name="Hazards" type="Node3D" parent="."]
+
+[node name="BarrelNW" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(-25, 0, -22)
+
+[node name="BarrelNE" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(25, 0, -22)
+
+[node name="BarrelSW" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(-25, 0, 22)
+
+[node name="BarrelSE" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(25, 0, 22)
+
+[node name="BarrelNorthLane" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(-10, 0, -29)
+
+[node name="BarrelSouthLane" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(10, 0, 29)
+
+[node name="BarrelEastGate" parent="Hazards" instance=ExtResource("hz_barrel")]
+position = Vector3(25, 0, 0)
+
+[node name="ShockPadNorth" parent="Hazards" instance=ExtResource("hz_electric")]
+position = Vector3(-10, 0, -23)
+size = Vector2(6, 4)
+
+[node name="ShockPadSouth" parent="Hazards" instance=ExtResource("hz_electric")]
+position = Vector3(10, 0, 23)
+size = Vector2(6, 4)
+
+[node name="TurretWest" parent="Hazards" instance=ExtResource("hz_console")]
+position = Vector3(-28, 0, 0)
+
+[node name="FlameVentWest" parent="Hazards" instance=ExtResource("hz_vent")]
+position = Vector3(-29, 0, 14)
+
+[node name="FlameVentEast" parent="Hazards" instance=ExtResource("hz_vent")]
+rotation = Vector3(0, 3.1415927, 0)
+position = Vector3(29, 0, -14)
+
+[node name="MineNorthWest" parent="Hazards" instance=ExtResource("hz_mine")]
+position = Vector3(-19, 0, -26)
+
+[node name="MineSouthEast" parent="Hazards" instance=ExtResource("hz_mine")]
+position = Vector3(19, 0, 26)
+
+[node name="MineEast" parent="Hazards" instance=ExtResource("hz_mine")]
+position = Vector3(26, 0, 13)
+
+[node name="MineWest" parent="Hazards" instance=ExtResource("hz_mine")]
+position = Vector3(-26, 0, -12)

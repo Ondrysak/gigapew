@@ -1,0 +1,52 @@
+{
+ "id": "alien_runner",
+ "source_vertices": 869,
+ "columns": 869,
+ "texture": [
+  869,
+  167
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "AlienArmature|AlienArmature|Alien_Run",
+   "start": 0,
+   "frames": 18,
+   "fps": 20.571428571428573,
+   "loop": true
+  },
+  {
+   "name": "idle",
+   "action": "AlienArmature|AlienArmature|Alien_Idle",
+   "start": 18,
+   "frames": 83,
+   "fps": 19.919999999999998,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "AlienArmature|AlienArmature|Alien_Punch",
+   "start": 101,
+   "frames": 19,
+   "fps": 19.636363636363637,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "AlienArmature|AlienArmature|Alien_Death",
+   "start": 120,
+   "frames": 47,
+   "fps": 20.072727272727274,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "Main",
+  "Stripe",
+  "Eyes",
+  "Nails",
+  "White"
+ ],
+ "textures": {},
+ "rest_vertices": 869
+}

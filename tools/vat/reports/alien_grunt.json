@@ -1,0 +1,53 @@
+{
+ "id": "alien_grunt",
+ "source_vertices": 700,
+ "columns": 700,
+ "texture": [
+  700,
+  49
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Run",
+   "start": 0,
+   "frames": 8,
+   "fps": 19.2,
+   "loop": true
+  },
+  {
+   "name": "idle",
+   "action": "Idle",
+   "start": 8,
+   "frames": 32,
+   "fps": 19.692307692307693,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack.000",
+   "start": 40,
+   "frames": 9,
+   "fps": 19.2,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "Bug"
+ ],
+ "textures": {
+  "bug-d": [
+   512,
+   512
+  ],
+  "bug-n": [
+   512,
+   512
+  ],
+  "bug-rought": [
+   512,
+   512
+  ]
+ },
+ "rest_vertices": 700
+}

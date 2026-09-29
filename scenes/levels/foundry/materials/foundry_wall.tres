@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "FoundryWall"
+albedo_color = Color(0.14, 0.115, 0.09, 1)
+metallic = 0.7
+roughness = 0.55

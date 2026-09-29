@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/chain_reaction_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.62, 0.4, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.36, 0.78, 0.8)
+
+[sub_resource type="SphereMesh" id="Mesh_core"]
+radius = 0.55
+height = 1.1
+radial_segments = 12
+rings = 6
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.86
+outer_radius = 1.0
+rings = 32
+ring_segments = 4
+
+[node name="ChainReaction" type="Node3D" node_paths=PackedStringArray("flash_template")]
+script = ExtResource("1_perk")
+flash_template = NodePath("FlashTemplate")
+
+[node name="FlashTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Core" type="MeshInstance3D" parent="FlashTemplate"]
+mesh = SubResource("Mesh_core")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Ring" type="MeshInstance3D" parent="FlashTemplate"]
+scale = Vector3(1, 0.3, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0

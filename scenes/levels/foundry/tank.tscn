@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_dark.tres" id="mat_dark"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_steel.tres" id="mat_steel"]
+
+[ext_resource type="Material" path="res://scenes/levels/foundry/materials/foundry_accent.tres" id="mat_accent"]
+
+[ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Column_Pipes.gltf" id="4_Column_Pipes"]
+
+[sub_resource type="CylinderMesh" id="cylinder"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 20
+rings = 1
+
+[node name="Tank" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.5, 0, 0, 0, 0.4, 0, 0, 0, 1.5, 0, 0.2, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.35, 0, 0, 0, 3.8, 0, 0, 0, 1.35, 0, 2.2, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_steel")
+
+[node name="BandLow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.38, 0, 0, 0, 0.12, 0, 0, 0, 1.38, 0, 1.3, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_accent")
+
+[node name="BandHigh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.38, 0, 0, 0, 0.12, 0, 0, 0, 1.38, 0, 3.4, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_accent")
+
+[node name="Cap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.1, 0, 0, 0, 0.3, 0, 0, 0, 1.1, 0, 4.25, 0)
+mesh = SubResource("cylinder")
+surface_material_override/0 = ExtResource("mat_dark")
+
+[node name="Riser" parent="." instance=ExtResource("4_Column_Pipes")]
+transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 0, 0)

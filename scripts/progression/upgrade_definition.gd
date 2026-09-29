@@ -3,9 +3,11 @@ extends StatModifier
 
 ## One level-up choice. STAT upgrades add their inherited modifier fields to
 ## RunState once per owned level; WEAPON upgrades grant and level an AutoWeapon;
-## OVERCLOCK upgrades change how their target weapon behaves once it is maxed.
+## OVERCLOCK upgrades change how their target weapon behaves once it is maxed;
+## PERK upgrades grant and level a PerkEffect (plus any inherited stat fields)
+## without using a weapon slot.
 
-enum Kind { STAT, WEAPON, OVERCLOCK }
+enum Kind { STAT, WEAPON, OVERCLOCK, PERK }
 
 @export var id: StringName
 @export var display_name := ""
@@ -34,6 +36,10 @@ enum Kind { STAT, WEAPON, OVERCLOCK }
 @export_group("Overclock")
 ## WEAPON upgrade this overclock modifies; offered once that weapon is maxed.
 @export var overclock_target: UpgradeDefinition
+
+@export_group("Perk")
+## Root must be a PerkEffect; optional for stat-only perks.
+@export var perk_scene: PackedScene
 
 ## Text for the level reached after taking this upgrade (1-based).
 func describe(level: int) -> String:

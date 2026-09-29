@@ -1,0 +1,53 @@
+{
+ "id": "robot_runner",
+ "source_vertices": 2020,
+ "columns": 794,
+ "texture": [
+  794,
+  31
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Run",
+   "start": 0,
+   "frames": 13,
+   "fps": 19.5,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 13,
+   "frames": 8,
+   "fps": 21.0,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "TurnOff",
+   "start": 21,
+   "frames": 10,
+   "fps": 19.28571461414805,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "MI_Enemies"
+ ],
+ "textures": {
+  "T_Enemies_BaseColor.png": [
+   1024,
+   1024
+  ],
+  "T_Enemies_Normal": [
+   1024,
+   1024
+  ],
+  "T_Enemies_ORM": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 2020
+}

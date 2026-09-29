@@ -14,6 +14,10 @@ signal boss_killed
 const CAPACITY := 4096
 const CELL := 2.0
 const DEATH_TIME := 0.22
+## Final fraction of an animated death spent shrinking away.
+const DEATH_FADE := 0.3
+## Extra distance at which melee enemies play their attack clip on the player.
+const CONTACT_ANIMATION_MARGIN := 0.35
 const FLASH_TIME := 0.12
 const PLAYER_RADIUS := 0.4
 const MAX_NEIGHBOR_CHECKS := 8
@@ -25,6 +29,10 @@ enum { FREE, ALIVE, DYING }
 enum Mode { SEEK, WINDUP, CHARGE }
 
 @export var enemy_shader: Shader
+## Used for definitions with a vertex_animation (see HordeVertexAnimation).
+@export var animated_enemy_shader: Shader
+## HordeFx scene instanced at setup for hit sparks and death bursts; optional.
+@export var fx_scene: PackedScene
 @export var projectile_mesh: Mesh
 @export var projectile_material: Material
 @export var projectile_radius := 0.22
@@ -51,6 +59,25 @@ var _t_scale := PackedFloat32Array()
 var _t_boss := PackedByteArray()
 var _renderers: Array[MultiMeshInstance3D] = []
 var _buffers: Array[PackedFloat32Array] = []
+
+# Rendering: per-type animation setup (clip ids index the _clip_* arrays; -1 = none).
+var _t_stride := PackedInt32Array()
+var _t_death_time := PackedFloat32Array()
+var _t_move_ref := PackedFloat32Array()
+var _t_clip_move := PackedInt32Array()
+var _t_clip_idle := PackedInt32Array()
+var _t_clip_attack := PackedInt32Array()
+var _t_clip_death := PackedInt32Array()
+var _clip_count := PackedFloat32Array()
+var _clip_fps := PackedFloat32Array()
+var _clip_start := PackedFloat32Array()
+var _clip_loop := PackedFloat32Array()
+# Rendering: per-slot animation playback.
+var _anim_clip := PackedInt32Array()
+var _anim_frame := PackedFloat32Array()
+var _anim_speed := PackedFloat32Array()
+var _anim_prev := PackedVector2Array()
+var _fx: HordeFx
 
 var _state := PackedInt32Array()
 var _type := PackedInt32Array()
@@ -106,6 +133,12 @@ var _cell_obstacle_start := PackedInt32Array()
 var _cell_obstacle_items := PackedInt32Array()
 
 var _contact_timer := 0.0
+## Pathfinding shared by every enemy; rebuilt every FLOW_INTERVAL seconds.
+var _flow := HordeFlowField.new()
+var _flow_timer := 0.0
+const FLOW_INTERVAL := 0.2
+## Within this distance enemies ignore the flow field and close in directly.
+const DIRECT_RANGE := 5.0
 var _rng := RandomNumberGenerator.new()
 
 var _shot_pos := PackedVector3Array()
@@ -161,9 +194,11 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_candidate_index.resize(64)
 	_candidate_t.resize(64)
 	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
+	_setup_rendering()
 	for definition in definitions:
 		_register(definition, bounds)
 	_read_obstacles(obstacles)
+	_flow.setup(_grid_w, _grid_h, _area.position, CELL, _rect_blocked)
 	_shot_pos.resize(MAX_PROJECTILES)
 	_shot_vel.resize(MAX_PROJECTILES)
 	_shot_life.resize(MAX_PROJECTILES)
@@ -194,10 +229,40 @@ func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	_t_contact.append(definition.contact_damage)
 	_t_scale.append(definition.model_scale)
 	_t_boss.append(1 if definition.is_boss else 0)
+	_register_renderer(definition, bounds)
+
+func _setup_rendering() -> void:
+	_anim_clip.resize(CAPACITY)
+	_anim_clip.fill(-1)
+	_anim_frame.resize(CAPACITY)
+	_anim_speed.resize(CAPACITY)
+	_anim_prev.resize(CAPACITY)
+	if fx_scene != null and _fx == null:
+		_fx = fx_scene.instantiate() as HordeFx
+		add_child(_fx)
+		enemy_killed.connect(_fx.burst_death)
+
+func _register_renderer(definition: HordeEnemyDefinition, bounds: AABB) -> void:
+	var animation := definition.vertex_animation
+	var animated := animation != null
+	var stride := 20 if animated else 16
+	_t_stride.append(stride)
+	_t_move_ref.append(maxf(0.1, definition.move_clip_speed * definition.model_scale))
+	var move := _add_clip(animation, definition.move_clip) if animated else -1
+	if animated and move < 0:
+		push_warning("%s: move clip '%s' missing; using the first clip" % [definition.display_name, definition.move_clip])
+		move = _add_clip(animation, animation.clips[0].name)
+	_t_clip_move.append(move)
+	_t_clip_idle.append(_add_clip(animation, definition.idle_clip) if animated else -1)
+	_t_clip_attack.append(_add_clip(animation, definition.attack_clip) if animated else -1)
+	var death := _add_clip(animation, definition.death_clip) if animated else -1
+	_t_clip_death.append(death)
+	_t_death_time.append(maxf(0.1, definition.death_duration) if death >= 0 else DEATH_TIME)
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.use_custom_data = true
-	multimesh.mesh = HordeMeshBaker.bake(definition, enemy_shader)
+	multimesh.use_colors = animated
+	multimesh.mesh = HordeMeshBaker.bake(definition, enemy_shader, animated_enemy_shader)
 	multimesh.instance_count = 64
 	multimesh.visible_instance_count = 0
 	var renderer := MultiMeshInstance3D.new()
@@ -208,8 +273,20 @@ func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	add_child(renderer)
 	_renderers.append(renderer)
 	var buffer := PackedFloat32Array()
-	buffer.resize(64 * 16)
+	buffer.resize(64 * stride)
 	_buffers.append(buffer)
+
+# Appends `clip_name` of `animation` to the clip tables; returns its id or -1.
+func _add_clip(animation: HordeVertexAnimation, clip_name: StringName) -> int:
+	var index := animation.find_clip(clip_name)
+	if index < 0:
+		return -1
+	var clip := animation.clips[index]
+	_clip_start.append(clip.start_frame)
+	_clip_count.append(maxi(1, clip.frame_count))
+	_clip_fps.append(clip.fps)
+	_clip_loop.append(1.0 if clip.loop else 0.0)
+	return _clip_start.size() - 1
 
 func _read_obstacles(root: Node) -> void:
 	if root != null:
@@ -292,6 +369,7 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 		_boss_index = slot
 		boss_spawned.emit(definition)
 		boss_health_changed.emit(_hp[slot], _max_hp[slot])
+	_reset_animation(slot)
 	return slot
 
 ## True when a disc at xz would overlap an obstacle or leave the play area.
@@ -307,6 +385,22 @@ func is_blocked(xz: Vector2, radius: float) -> bool:
 			if delta.length() < half.x + radius:
 				return true
 		elif absf(delta.x) < half.x + radius and absf(delta.y) < half.y + radius:
+			return true
+	return false
+
+# True when any obstacle overlaps `rect` (used to rasterise the flow field).
+func _rect_blocked(rect: Rect2) -> bool:
+	var center := rect.get_center()
+	var cell := _cell_z(center.y) * _grid_w + _cell_x(center.x)
+	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
+		var o := _cell_obstacle_items[k]
+		var c := _obstacle_center[o]
+		var half := _obstacle_half[o]
+		if _obstacle_circle[o] == 1:
+			var closest := Vector2(clampf(c.x, rect.position.x, rect.end.x), clampf(c.y, rect.position.y, rect.end.y))
+			if closest.distance_squared_to(c) < half.x * half.x:
+				return true
+		elif Rect2(c - half, half * 2.0).intersects(rect):
 			return true
 	return false
 
@@ -546,6 +640,8 @@ func damage(index: int, amount: float, knockback := Vector3.ZERO) -> bool:
 	if index == _boss_index:
 		boss_health_changed.emit(maxf(0.0, _hp[index]), _max_hp[index])
 	if _hp[index] > 0.0:
+		if _fx != null:
+			_fx.burst_hit(_defs[_type[index]], enemy_position(index))
 		return false
 	var definition := _defs[_type[index]]
 	var at := enemy_position(index)
@@ -572,7 +668,7 @@ func damage_radius(center: Vector3, radius: float, amount: float, knockback_stre
 
 func _begin_death(slot: int) -> void:
 	_state[slot] = DYING
-	_death[slot] = DEATH_TIME
+	_death[slot] = _t_death_time[_type[slot]]
 	_flash[slot] = 1.0
 	_dying[_dying_count] = slot
 	_dying_count += 1
@@ -585,6 +681,10 @@ func _begin_death(slot: int) -> void:
 
 func _physics_process(delta: float) -> void:
 	_rebuild_grid()
+	_flow_timer -= delta
+	if _flow_timer <= 0.0 and is_instance_valid(target):
+		_flow_timer = FLOW_INTERVAL
+		_flow.update(Vector2(target.global_position.x, target.global_position.z))
 	var chasing := is_instance_valid(target) and target.active
 	var player := Vector2.ZERO
 	var player_y := 0.0
@@ -604,11 +704,17 @@ func _physics_process(delta: float) -> void:
 		var radius := _t_radius[type]
 		var reach := radius + PLAYER_RADIUS
 		var move := Vector2.ZERO
-		var face := direction
+		# Far away: follow the flow field around walls; close: go straight in.
+		var route := direction
+		if distance > DIRECT_RANGE:
+			var flow := _flow.direction_at(_cell_of[i])
+			if flow != Vector2.ZERO:
+				route = (flow + direction * 0.25).normalized()
+		var face := route
 		if _flash[i] > 0.0:
 			_flash[i] = maxf(0.0, _flash[i] - delta / FLASH_TIME)
 		if chasing:
-			move = _steer(i, type, direction, distance, delta)
+			move = _steer(i, type, route, direction, distance, delta)
 			if _mode[i] == Mode.CHARGE:
 				face = _aim[i]
 			var touching := distance < reach + 0.15 and player_y < _t_height[type] and player_y > -1.9
@@ -637,7 +743,9 @@ func _physics_process(delta: float) -> void:
 		_contact_timer = contact_tick
 		target.take_damage(ceili(minf(contact, contact_cap)))
 
-func _steer(i: int, type: int, direction: Vector2, distance: float, delta: float) -> Vector2:
+## `route` is the path direction (flow field); `direct` points straight at the
+## player and is used for aiming attacks and backing off.
+func _steer(i: int, type: int, route: Vector2, direct: Vector2, distance: float, delta: float) -> Vector2:
 	var definition := _defs[type]
 	var behavior := _t_behavior[type]
 	_cooldown[i] = maxf(0.0, _cooldown[i] - delta)
@@ -651,7 +759,7 @@ func _steer(i: int, type: int, direction: Vector2, distance: float, delta: float
 					_mode[i] = Mode.SEEK
 				else:
 					_mode[i] = Mode.CHARGE
-					_aim[i] = direction
+					_aim[i] = direct
 					_timer[i] = definition.charge_duration
 			return Vector2.ZERO
 		Mode.CHARGE:
@@ -659,10 +767,10 @@ func _steer(i: int, type: int, direction: Vector2, distance: float, delta: float
 			if _timer[i] <= 0.0:
 				_mode[i] = Mode.SEEK
 			return _aim[i] * definition.charge_speed
-	var move := direction * _t_speed[type]
+	var move := route * _t_speed[type]
 	if behavior == HordeEnemyDefinition.Behavior.RANGED:
 		if distance < definition.preferred_range - 1.5:
-			move = -direction * _t_speed[type] * 0.7
+			move = -direct * _t_speed[type] * 0.7
 		elif distance < definition.preferred_range + 1.5:
 			move = Vector2.ZERO
 		if _cooldown[i] <= 0.0 and distance <= definition.attack_range:
@@ -811,17 +919,22 @@ func _update_projectiles(delta: float) -> void:
 
 # ---------------------------------------------------------------- rendering
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	var player := Vector2(INF, INF)
+	if is_instance_valid(target):
+		player = Vector2(target.global_position.x, target.global_position.z)
 	for type in _defs.size():
-		_draw_type(type)
+		_draw_type(type, delta, player)
 	_draw_projectiles()
 
-func _draw_type(type: int) -> void:
+func _draw_type(type: int, delta: float, player: Vector2) -> void:
 	var renderer := _renderers[type]
 	var multimesh := renderer.multimesh
 	var buffer := _buffers[type]
 	# Detach from the array so writes do not copy-on-write the shared data.
 	_buffers[type] = PackedFloat32Array()
+	var stride := _t_stride[type]
+	var animated := stride == 20
 	var needed := 0
 	for a in _active_count:
 		if _type[_active[a]] == type and _state[_active[a]] == ALIVE:
@@ -834,28 +947,47 @@ func _draw_type(type: int) -> void:
 		while capacity < needed:
 			capacity *= 2
 		multimesh.instance_count = mini(capacity, CAPACITY)
-		buffer.resize(multimesh.instance_count * 16)
+		buffer.resize(multimesh.instance_count * stride)
 	var scale := _t_scale[type]
+	var reach := _t_radius[type] + PLAYER_RADIUS + CONTACT_ANIMATION_MARGIN
+	var reach2 := reach * reach
 	var k := 0
 	for a in _active_count:
 		var slot := _active[a]
 		if _type[slot] == type and _state[slot] == ALIVE:
-			k = _write_instance(buffer, k, slot, scale, scale, _flash[slot])
+			k = _write_instance(buffer, k, slot, scale, scale, _flash[slot], stride)
+			if animated:
+				_animate(buffer, k - 8, slot, type, delta, _pos[slot].distance_squared_to(player) < reach2)
+	var death_clip := _t_clip_death[type]
+	var duration := _t_death_time[type]
 	for d in _dying_count:
 		var slot := _dying[d]
-		if _type[slot] == type:
-			var left := _death[slot] / DEATH_TIME
-			# Collapse inward: slight widen on impact, then shrink away to nothing.
-			var widen := 1.0 + 0.15 * sin(left * PI)
-			# Dying bodies glow faintly and fade with their collapse; mass kills
-			# must not paint the view white.
-			k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.35 * left)
+		if _type[slot] != type:
+			continue
+		var left := _death[slot] / duration
+		if death_clip >= 0:
+			# Play the death clip over most of the time, then shrink away quickly.
+			var fade := clampf(left / DEATH_FADE, 0.02, 1.0)
+			k = _write_instance(buffer, k, slot, scale * fade, scale * fade, 0.35 * left * left, stride)
+			var progress := minf(1.0, (1.0 - left) / (1.0 - DEATH_FADE))
+			_write_clip(buffer, k - 8, death_clip, progress * (_clip_count[death_clip] - 1.0), 0.0)
+			continue
+		# Collapse inward: slight widen on impact, then shrink away to nothing.
+		var widen := 1.0 + 0.15 * sin(left * PI)
+		# Dying bodies glow faintly and fade with their collapse; mass kills
+		# must not paint the view white.
+		k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.35 * left, stride)
+		if animated:
+			# Freeze the pose the enemy died in.
+			var clip := _anim_clip[slot] if _anim_clip[slot] >= 0 else _t_clip_move[type]
+			_write_clip(buffer, k - 8, clip, _anim_frame[slot], _clip_loop[clip])
 	if multimesh.instance_count > 0:
 		RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
-	multimesh.visible_instance_count = k / 16
+	multimesh.visible_instance_count = k / stride
 	_buffers[type] = buffer
 
-func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, flash: float) -> int:
+# Writes transform and INSTANCE_CUSTOM; for stride 20 the caller fills COLOR at k + 12.
+func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, flash: float, stride: int) -> int:
 	var yaw := _yaw[slot]
 	var c := cos(yaw)
 	var s := sin(yaw)
@@ -878,11 +1010,59 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[k + 9] = 0.0
 	buffer[k + 10] = c * scale_xz
 	buffer[k + 11] = p.y
-	buffer[k + 12] = flash
-	buffer[k + 13] = telegraph
-	buffer[k + 14] = _phase[slot]
-	buffer[k + 15] = (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
-	return k + 16
+	var custom := k + stride - 4
+	buffer[custom] = flash
+	buffer[custom + 1] = telegraph
+	buffer[custom + 2] = _phase[slot]
+	buffer[custom + 3] = (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
+	return k + stride
+
+func _reset_animation(slot: int) -> void:
+	_anim_clip[slot] = -1
+	_anim_prev[slot] = _pos[slot]
+	_anim_speed[slot] = _t_speed[_type[slot]]
+
+# Picks and advances the clip of a living animated enemy and writes its COLOR.
+# Gait playback follows the measured ground speed; windups play the attack clip
+# timed to the telegraph, charges and melee contact loop it.
+func _animate(buffer: PackedFloat32Array, at: int, slot: int, type: int, delta: float, touching: bool) -> void:
+	var p := _pos[slot]
+	var moved := minf(p.distance_to(_anim_prev[slot]) / maxf(delta, 0.0001), 40.0)
+	_anim_prev[slot] = p
+	var speed := _anim_speed[slot] + (moved - _anim_speed[slot]) * minf(1.0, delta * 6.0)
+	_anim_speed[slot] = speed
+	var attack := _t_clip_attack[type]
+	var mode := _mode[slot]
+	if attack >= 0 and mode == Mode.WINDUP:
+		var progress := clampf(1.0 - _timer[slot] / maxf(0.001, _defs[type].telegraph_duration), 0.0, 1.0)
+		_anim_clip[slot] = attack
+		_anim_frame[slot] = progress * (_clip_count[attack] - 1.0)
+		_write_clip(buffer, at, attack, _anim_frame[slot], 0.0)
+		return
+	var clip := _t_clip_move[type]
+	var rate := 1.0
+	if attack >= 0 and (mode == Mode.CHARGE or touching):
+		clip = attack
+	else:
+		var reference := _t_move_ref[type]
+		rate = clampf(speed / reference, 0.5, 3.0)
+		var idle := _t_clip_idle[type]
+		if idle >= 0 and speed < reference * 0.15:
+			clip = idle
+			rate = 1.0
+	var count := _clip_count[clip]
+	if clip != _anim_clip[slot]:
+		_anim_clip[slot] = clip
+		# Gait clips start at a per-enemy offset so crowds do not march in step.
+		_anim_frame[slot] = 0.0 if clip == attack else _phase[slot] / TAU * count
+	_anim_frame[slot] = fmod(_anim_frame[slot] + delta * _clip_fps[clip] * rate, count)
+	_write_clip(buffer, at, clip, _anim_frame[slot], 1.0)
+
+func _write_clip(buffer: PackedFloat32Array, at: int, clip: int, frame: float, loop: float) -> void:
+	buffer[at] = frame
+	buffer[at + 1] = _clip_start[clip]
+	buffer[at + 2] = _clip_count[clip]
+	buffer[at + 3] = loop
 
 func _draw_projectiles() -> void:
 	var buffer := _shot_buffer

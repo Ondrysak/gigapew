@@ -1,0 +1,53 @@
+{
+ "id": "robot_spitter",
+ "source_vertices": 1847,
+ "columns": 1671,
+ "texture": [
+  1671,
+  154
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Walk",
+   "start": 0,
+   "frames": 21,
+   "fps": 20.16,
+   "loop": true
+  },
+  {
+   "name": "idle",
+   "action": "Idle",
+   "start": 21,
+   "frames": 83,
+   "fps": 19.919999999999998,
+   "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Shoot",
+   "start": 104,
+   "frames": 13,
+   "fps": 19.2,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 117,
+   "frames": 37,
+   "fps": 20.093023255813954,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "Leela_Texture"
+ ],
+ "textures": {
+  "Leela_Texture": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 1847
+}

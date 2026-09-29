@@ -26,3 +26,7 @@ extends Resource
 @export var ability_cooldown_multiplier := 0.0
 ## Extra yield from every mined or dropped resource.
 @export var resource_multiplier := 0.0
+## Chance (0..1) that a hit is critical.
+@export var crit_chance := 0.0
+## Added to the critical-hit damage factor (base x1.5).
+@export var crit_multiplier := 0.0

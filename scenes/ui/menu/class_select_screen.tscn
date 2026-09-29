@@ -1,10 +1,11 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menu/class_select_screen.gd" id="1_select"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/class_card.tscn" id="2_card"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/currency_bar.tscn" id="3_currency"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/ability_option.tscn" id="4_option"]
 
-[node name="ClassSelect" type="Control" node_paths=PackedStringArray("card_row", "currency_bar", "accent_bar", "name_label", "tagline_label", "description_label", "weapons_label", "ability_name_label", "ability_description_label", "stats_label", "action_button", "status_label", "back_button")]
+[node name="ClassSelect" type="Control" node_paths=PackedStringArray("card_row", "currency_bar", "accent_bar", "name_label", "tagline_label", "description_label", "weapons_label", "ability_option_row", "ability_name_label", "ability_description_label", "ability_action_button", "stats_label", "action_button", "status_label", "back_button")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,8 +22,11 @@ name_label = NodePath("Margin/Rows/Detail/Rows/Columns/Left/Name")
 tagline_label = NodePath("Margin/Rows/Detail/Rows/Columns/Left/Tagline")
 description_label = NodePath("Margin/Rows/Detail/Rows/Columns/Left/Description")
 weapons_label = NodePath("Margin/Rows/Detail/Rows/Columns/Left/Weapons")
-ability_name_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityName")
+ability_option_scene = ExtResource("4_option")
+ability_option_row = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityOptions")
+ability_name_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader/AbilityName")
 ability_description_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityDescription")
+ability_action_button = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader/AbilityAction")
 stats_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/Stats")
 action_button = NodePath("Margin/Rows/Footer/Action")
 status_label = NodePath("Margin/Rows/Footer/Status")
@@ -134,13 +138,30 @@ theme_override_constants/separation = 6
 [node name="AbilityTitle" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "ACTIVE ABILITY  [Q]"
+text = "ACTIVE ABILITY  [Q]  ·  PICK ONE"
 
-[node name="AbilityName" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
+[node name="AbilityOptions" type="HBoxContainer" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AbilityHeader" type="HBoxContainer" parent="Margin/Rows/Detail/Rows/Columns/Right"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AbilityName" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.6, 1, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "ABILITY"
+text_overrun_behavior = 3
+
+[node name="AbilityAction" type="Button" parent="Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 15
+text = "EQUIPPED"
 
 [node name="AbilityDescription" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 custom_minimum_size = Vector2(300, 0)

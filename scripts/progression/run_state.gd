@@ -21,7 +21,10 @@ var xp_required := 0
 var pending_level_ups := 0
 ## Upgrade id -> owned level.
 var upgrade_levels: Dictionary = {}
+## WEAPON upgrades in pick order (limited to MAX_WEAPONS).
 var owned_weapons: Array[UpgradeDefinition] = []
+## PERK upgrades in pick order; they never use weapon slots.
+var owned_perks: Array[UpgradeDefinition] = []
 
 var damage_multiplier := 1.0
 ## Higher fires the main gun faster.
@@ -44,6 +47,10 @@ var ability_cooldown_multiplier := 1.0
 var resource_multiplier := 1.0
 ## Temporary auto-weapon recharge factor set by abilities (1 = none).
 var cooldown_boost := 1.0
+## Chance (0..1) that a hit is critical.
+var crit_chance := 0.0
+## Damage factor of a critical hit.
+var crit_multiplier := 1.5
 
 ## Resource id -> amount collected and not yet banked.
 var resources: Dictionary = {}
@@ -56,9 +63,17 @@ var _resource_remainder: Dictionary = {}
 
 var _definitions: Dictionary = {}
 var _xp_remainder := 0.0
+# Short-lived modifiers (abilities, conditional perks), each counted once.
+var _temporary: Array[StatModifier] = []
+# One exposure zone at a time (e.g. Recon Flare): hits inside deal extra damage.
+var _exposure_center := Vector2.ZERO
+var _exposure_radius := 0.0
+var _exposure_bonus := 0.0
+var _rng := RandomNumberGenerator.new()
 
 func _init() -> void:
 	xp_required = required_for(level)
+	_rng.randomize()
 
 static func required_for(p_level: int) -> int:
 	return 5 + p_level * 4 + roundi(pow(float(p_level), 1.4))
@@ -120,6 +135,16 @@ func add_resource(definition: ResourceDefinition, amount: int) -> void:
 			level_up_ready.emit()
 		supply_changed.emit(supply, supply_required)
 
+## Spends collected (unbanked) resources, e.g. crystals for a console.
+## Returns false and spends nothing when the run holds too few.
+func spend_resource(id: StringName, amount: int) -> bool:
+	var held := int(resources.get(id, 0))
+	if amount < 0 or held < amount:
+		return false
+	resources[id] = held - amount
+	resources_changed.emit(id, resources[id])
+	return true
+
 ## Removes and returns the banked-type resources collected so far,
 ## scaled by `fraction` (rounded down), e.g. 0.5 on death.
 func take_bankable(banked_ids: Array[StringName], fraction: float) -> Dictionary:
@@ -141,6 +166,8 @@ func apply_upgrade(upgrade: UpgradeDefinition) -> void:
 	upgrade_levels[upgrade.id] = level_of(upgrade) + 1
 	if upgrade.kind == UpgradeDefinition.Kind.WEAPON and not owned_weapons.has(upgrade):
 		owned_weapons.append(upgrade)
+	elif upgrade.kind == UpgradeDefinition.Kind.PERK and not owned_perks.has(upgrade):
+		owned_perks.append(upgrade)
 	_recompute()
 
 func roll_offers(pool: UpgradePool, count: int, rng: RandomNumberGenerator) -> Array[UpgradeDefinition]:
@@ -177,6 +204,48 @@ func is_overclocked(target: UpgradeDefinition) -> bool:
 		if upgrade.kind == UpgradeDefinition.Kind.OVERCLOCK and upgrade.overclock_target != null and upgrade.overclock_target.id == target.id:
 			return true
 	return false
+
+## Adds a modifier counted once until removed (ability boosts, conditional
+## perks). max_health_bonus in temporary modifiers is ignored by the player.
+func add_temporary_modifier(modifier: StatModifier) -> void:
+	if modifier != null and not _temporary.has(modifier):
+		_temporary.append(modifier)
+		_recompute()
+
+func remove_temporary_modifier(modifier: StatModifier) -> void:
+	if _temporary.has(modifier):
+		_temporary.erase(modifier)
+		_recompute()
+
+## Re-derives stats after a registered temporary modifier's fields changed.
+func refresh_modifiers() -> void:
+	_recompute()
+
+## Marks a floor zone: hits on enemies inside deal (1 + bonus) damage.
+func set_exposure_zone(center: Vector3, radius: float, bonus: float) -> void:
+	_exposure_center = Vector2(center.x, center.z)
+	_exposure_radius = maxf(0.0, radius)
+	_exposure_bonus = bonus
+
+func clear_exposure_zone() -> void:
+	_exposure_radius = 0.0
+	_exposure_bonus = 0.0
+
+## Damage factor from the exposure zone for a hit at `at` (1 outside).
+func exposure_scale(at: Vector3) -> float:
+	if _exposure_radius <= 0.0:
+		return 1.0
+	var offset := Vector2(at.x, at.z) - _exposure_center
+	return 1.0 + _exposure_bonus if offset.length_squared() <= _exposure_radius * _exposure_radius else 1.0
+
+## Rolls crit_chance once.
+func roll_critical() -> bool:
+	return crit_chance > 0.0 and _rng.randf() < crit_chance
+
+## Per-hit damage factor for weapons: exposure zone times a crit roll.
+func hit_scale(at: Vector3) -> float:
+	var scale := exposure_scale(at)
+	return scale * crit_multiplier if roll_critical() else scale
 
 func _is_eligible(upgrade: UpgradeDefinition) -> bool:
 	if level_of(upgrade) >= upgrade.max_level:
@@ -228,10 +297,14 @@ func _recompute() -> void:
 	mining_multiplier = 1.0
 	ability_cooldown_multiplier = 1.0
 	resource_multiplier = 1.0
+	crit_chance = 0.0
+	crit_multiplier = 1.5
 	for index in _permanent.size():
 		_add_modifier(_permanent[index], _permanent_stacks[index])
 	for id in upgrade_levels:
 		_add_modifier(_definitions[id], int(upgrade_levels[id]))
+	for modifier in _temporary:
+		_add_modifier(modifier, 1)
 	damage_multiplier = maxf(damage_multiplier, 0.1)
 	fire_rate_multiplier = maxf(fire_rate_multiplier, 0.1)
 	move_speed_multiplier = maxf(move_speed_multiplier, 0.1)
@@ -241,6 +314,8 @@ func _recompute() -> void:
 	mining_multiplier = maxf(mining_multiplier, 0.1)
 	ability_cooldown_multiplier = maxf(ability_cooldown_multiplier, 0.25)
 	resource_multiplier = maxf(resource_multiplier, 0.0)
+	crit_chance = clampf(crit_chance, 0.0, 1.0)
+	crit_multiplier = maxf(crit_multiplier, 1.0)
 
 func _add_modifier(modifier: StatModifier, stacks: int) -> void:
 	damage_multiplier += modifier.damage_multiplier * stacks
@@ -258,3 +333,5 @@ func _add_modifier(modifier: StatModifier, stacks: int) -> void:
 	mining_multiplier += modifier.mining_multiplier * stacks
 	ability_cooldown_multiplier += modifier.ability_cooldown_multiplier * stacks
 	resource_multiplier += modifier.resource_multiplier * stacks
+	crit_chance += modifier.crit_chance * stacks
+	crit_multiplier += modifier.crit_multiplier * stacks

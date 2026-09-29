@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/perks/thorns.tscn" id="2_perk"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"thorns"
+display_name = "Thorns"
+description = "Enemies touching you take 8 damage every 0.35 s and are shoved back. Taking damage lashes out for 16 damage in 2.5 m."
+level_descriptions = PackedStringArray("Enemies touching you take 8 damage every 0.35 s and are shoved back. Taking damage lashes out for 16 damage in 2.5 m.", "Enemies touching you take 14 damage every 0.35 s and are shoved back. Taking damage lashes out for 28 damage in 2.5 m.", "Enemies touching you take 22 damage every 0.35 s and are shoved back. Taking damage lashes out for 44 damage in 2.5 m.")
+kind = 3
+max_level = 3
+weight = 1.0
+accent_color = Color(1, 0.36, 0.78, 1)
+perk_scene = ExtResource("2_perk")

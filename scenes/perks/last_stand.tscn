@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/perks/last_stand_perk.gd" id="1_perk"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_shell"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.22, 0.18, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_band"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.78, 0.3, 0.7)
+
+[sub_resource type="SphereMesh" id="Mesh_shell"]
+radius = 1.6
+height = 3.2
+radial_segments = 24
+rings = 12
+
+[sub_resource type="TorusMesh" id="Mesh_band"]
+inner_radius = 1.5
+outer_radius = 1.58
+rings = 40
+ring_segments = 4
+
+[node name="LastStand" type="Node3D" node_paths=PackedStringArray("bubble")]
+script = ExtResource("1_perk")
+bubble = NodePath("Bubble")
+
+[node name="Bubble" type="Node3D" parent="."]
+visible = false
+
+[node name="Shell" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, 0.3, 0)
+mesh = SubResource("Mesh_shell")
+material_override = SubResource("Mat_shell")
+cast_shadow = 0
+
+[node name="BandA" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, 0.3, 0)
+rotation = Vector3(0.6, 0, 0)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="BandB" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, 0.3, 0)
+rotation = Vector3(-0.6, 0, 0)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_band")
+cast_shadow = 0
+
+[node name="FootRing" type="MeshInstance3D" parent="Bubble"]
+position = Vector3(0, -0.84, 0)
+scale = Vector3(0.6, 0.3, 0.6)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_band")
+cast_shadow = 0

@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="HordeVertexAnimation" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation.gd" id="1_vat"]
+[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation_clip.gd" id="2_clip"]
+[ext_resource type="Texture2D" path="res://assets/monsters/robot_boss/robot_boss_positions.exr" id="3_positions"]
+[ext_resource type="Texture2D" path="res://assets/monsters/robot_boss/robot_boss_normals.exr" id="4_normals"]
+
+[sub_resource type="Resource" id="Clip_0"]
+script = ExtResource("2_clip")
+name = &"move"
+start_frame = 0
+frame_count = 17
+fps = 20.4
+loop = true
+
+[sub_resource type="Resource" id="Clip_1"]
+script = ExtResource("2_clip")
+name = &"idle"
+start_frame = 17
+frame_count = 67
+fps = 20.1
+loop = true
+
+[sub_resource type="Resource" id="Clip_2"]
+script = ExtResource("2_clip")
+name = &"attack"
+start_frame = 84
+frame_count = 12
+fps = 19.4118
+loop = false
+
+[sub_resource type="Resource" id="Clip_3"]
+script = ExtResource("2_clip")
+name = &"death"
+start_frame = 96
+frame_count = 30
+fps = 20.2326
+loop = false
+
+[resource]
+script = ExtResource("1_vat")
+positions = ExtResource("3_positions")
+normals = ExtResource("4_normals")
+vertex_count = 5116
+clips = Array[ExtResource("2_clip")]([SubResource("Clip_0"), SubResource("Clip_1"), SubResource("Clip_2"), SubResource("Clip_3")])

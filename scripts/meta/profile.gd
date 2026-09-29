@@ -1,9 +1,10 @@
 extends Node
 
 ## Persistent player profile (autoload `Profile`): currencies, class unlocks,
-## permanent upgrade levels, records and settings. Stored as JSON in
-## user://profile.json and saved after every mutation. A missing, corrupt or
-## incompatible file resets to defaults (a corrupt file is kept as .bak).
+## ability unlocks and loadouts, permanent upgrade levels, records and
+## settings. Stored as JSON in user://profile.json and saved after every
+## mutation. A missing, corrupt or incompatible file resets to defaults (a
+## corrupt file is kept as .bak); keys missing from older saves keep defaults.
 
 signal currency_changed(id: StringName, amount: int)
 ## Emitted after any saved change (currency, unlock, upgrade, record, setting).
@@ -56,6 +57,10 @@ var settings: Dictionary = {}
 var _currencies: Dictionary = {}
 var _unlocked_classes: Dictionary = {}
 var _meta_levels: Dictionary = {}
+# "class_id/ability_key" -> true for bought alternate abilities.
+var _unlocked_abilities: Dictionary = {}
+# class_id -> ability_key of the equipped ability (missing = class default).
+var _equipped_abilities: Dictionary = {}
 var _loading := false
 
 func _ready() -> void:
@@ -126,6 +131,56 @@ func selected_class() -> ClassDefinition:
 		if is_class_unlocked(definition):
 			return definition
 	return roster.find(selected_class_id)
+
+# --- class abilities ----------------------------------------------------------
+
+## True for the class default and for bought alternates.
+func is_ability_unlocked(definition: ClassDefinition, scene: PackedScene) -> bool:
+	if definition == null or scene == null or not definition.ability_options().has(scene):
+		return false
+	return definition.ability_cost(scene) <= 0 or _unlocked_abilities.has(_ability_slot(definition, scene))
+
+func can_afford_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
+	return definition != null and currency(definition.ability_unlock_currency) >= definition.ability_cost(scene)
+
+## Spends the ability's cost (class must be unlocked); returns true when the
+## ability is (now) unlocked.
+func unlock_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
+	if definition == null or scene == null or not definition.ability_options().has(scene):
+		return false
+	if is_ability_unlocked(definition, scene):
+		return true
+	if not is_class_unlocked(definition) or not can_afford_ability(definition, scene):
+		return false
+	_unlocked_abilities[_ability_slot(definition, scene)] = true
+	# spend() saves, so the unlock is written together with the payment.
+	spend(definition.ability_unlock_currency, definition.ability_cost(scene))
+	return true
+
+## Makes an unlocked ability the one the class deploys with.
+func equip_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
+	if not is_ability_unlocked(definition, scene):
+		return false
+	var key := String(ClassDefinition.ability_key(scene))
+	if _equipped_abilities.get(String(definition.id), "") != key:
+		_equipped_abilities[String(definition.id)] = key
+		_mutated()
+	return true
+
+## The class's equipped ability; falls back to definition.ability_scene when
+## nothing (or something no longer available) is equipped.
+func equipped_ability_scene(definition: ClassDefinition) -> PackedScene:
+	if definition == null:
+		return null
+	var key := StringName(str(_equipped_abilities.get(String(definition.id), "")))
+	if key != &"":
+		for scene in definition.ability_options():
+			if ClassDefinition.ability_key(scene) == key and is_ability_unlocked(definition, scene):
+				return scene
+	return definition.ability_scene
+
+func _ability_slot(definition: ClassDefinition, scene: PackedScene) -> String:
+	return "%s/%s" % [definition.id, ClassDefinition.ability_key(scene)]
 
 # --- permanent upgrades ------------------------------------------------------
 
@@ -230,6 +285,8 @@ func save() -> void:
 		"currencies": _currencies,
 		"unlocked_classes": _unlocked_classes.keys(),
 		"meta_levels": _meta_levels,
+		"unlocked_abilities": _unlocked_abilities.keys(),
+		"equipped_abilities": _equipped_abilities,
 		"records": records,
 		"settings": settings,
 	}
@@ -275,6 +332,15 @@ func _apply_data(data: Dictionary) -> void:
 		for id in unlocked:
 			_unlocked_classes[str(id)] = true
 	var levels: Variant = data.get("meta_levels", {})
+	# Saves from before ability loadouts lack these keys: defaults stay.
+	var abilities: Variant = data.get("unlocked_abilities", [])
+	if abilities is Array:
+		for slot in abilities:
+			_unlocked_abilities[str(slot)] = true
+	var equipped: Variant = data.get("equipped_abilities", {})
+	if equipped is Dictionary:
+		for key in equipped:
+			_equipped_abilities[str(key)] = str(equipped[key])
 	if levels is Dictionary:
 		for key in levels:
 			_meta_levels[str(key)] = maxi(int(_number(levels[key])), 0)
@@ -300,6 +366,8 @@ func _reset() -> void:
 	_currencies.clear()
 	_unlocked_classes.clear()
 	_meta_levels.clear()
+	_unlocked_abilities.clear()
+	_equipped_abilities.clear()
 	records = DEFAULT_RECORDS.duplicate()
 	settings = DEFAULT_SETTINGS.duplicate()
 

@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/grapple_vault.gd" id="1_ability"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_line"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.45, 0.85, 1, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ring"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.4, 0.8, 1, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_dust"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.55, 0.75, 0.9, 0.35)
+
+[sub_resource type="StandardMaterial3D" id="Mat_dust_core"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.8, 0.92, 1, 0.5)
+
+[sub_resource type="BoxMesh" id="Mesh_line"]
+size = Vector3(0.03, 0.03, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.8
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[sub_resource type="SphereMesh" id="Mesh_dust"]
+radius = 1.0
+height = 2.0
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="Mesh_dust_core"]
+radius = 0.55
+height = 1.1
+radial_segments = 12
+rings = 6
+
+[node name="GrappleVault" type="Node3D" node_paths=PackedStringArray("line", "ring_template", "dust_template")]
+script = ExtResource("1_ability")
+display_name = "Grapple Vault"
+description = "Grapple up and over the swarm, untouchable for 0.5 s, then slam down: the landing shockwave hits everything within 5.5 m for heavy damage and hurls it back."
+base_cooldown = 9.0
+accent_color = Color(0.4, 0.8, 1, 1)
+synth_activate = &"blink"
+line = NodePath("Line")
+ring_template = NodePath("RingTemplate")
+dust_template = NodePath("DustTemplate")
+
+[node name="Line" type="Node3D" parent="."]
+visible = false
+
+[node name="Cable" type="MeshInstance3D" parent="Line"]
+position = Vector3(0, 0, -0.5)
+mesh = SubResource("Mesh_line")
+material_override = SubResource("Mat_line")
+cast_shadow = 0
+
+[node name="RingTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Ring" type="MeshInstance3D" parent="RingTemplate"]
+scale = Vector3(1, 0.5, 1)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_ring")
+cast_shadow = 0
+
+[node name="DustTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="Puff" type="MeshInstance3D" parent="DustTemplate"]
+mesh = SubResource("Mesh_dust")
+material_override = SubResource("Mat_dust")
+cast_shadow = 0
+
+[node name="Core" type="MeshInstance3D" parent="DustTemplate"]
+mesh = SubResource("Mesh_dust_core")
+material_override = SubResource("Mat_dust_core")
+cast_shadow = 0

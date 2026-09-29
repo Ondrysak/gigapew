@@ -102,6 +102,10 @@ mine={
 "deadzone": 0.2,
 "events": [Object(InputEventMouseButton,"button_index":2)]
 }
+interact={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":69)]
+}
 
 [rendering]
 

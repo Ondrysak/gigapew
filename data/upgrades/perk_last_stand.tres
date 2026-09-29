@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/perks/last_stand.tscn" id="2_perk"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"last_stand"
+display_name = "Last Stand"
+description = "Once per stage, a lethal hit leaves you at 1 HP with 3 s of invulnerability and hurls nearby enemies away."
+level_descriptions = PackedStringArray("Once per stage, a lethal hit leaves you at 1 HP with 3 s of invulnerability and hurls nearby enemies away.", "Once per stage, survive a lethal hit at 11 HP with 4 s of invulnerability and hurl nearby enemies away.", "Twice per stage, survive a lethal hit at 21 HP with 4 s of invulnerability and hurl nearby enemies away.")
+kind = 3
+max_level = 3
+weight = 1.0
+accent_color = Color(1, 0.36, 0.78, 1)
+perk_scene = ExtResource("2_perk")

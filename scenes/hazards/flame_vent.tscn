@@ -1,0 +1,152 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hazards/flame_vent.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/hazards/hazard_hitbox.gd" id="2"]
+[ext_resource type="Shader" path="res://shaders/flame_lane.gdshader" id="3"]
+
+[sub_resource type="ShaderMaterial" id="lane_mat"]
+shader = ExtResource("3")
+
+[sub_resource type="StandardMaterial3D" id="metal"]
+albedo_color = Color(0.18, 0.22, 0.25, 1)
+metallic = 0.7
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="hot"]
+shading_mode = 0
+albedo_color = Color(1, 0.34, 0.06, 1)
+emission_enabled = true
+emission = Color(1, 0.28, 0.02, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="StandardMaterial3D" id="fire"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+vertex_color_use_as_albedo = true
+billboard_mode = 3
+albedo_color = Color(1, 0.55, 0.12, 0.85)
+
+[sub_resource type="Gradient" id="fire_gradient"]
+offsets = PackedFloat32Array(0, 0.35, 1)
+colors = PackedColorArray(1, 0.84, 0.3, 0, 1, 0.4, 0.08, 0.95, 0.7, 0.08, 0.02, 0)
+
+[sub_resource type="BoxMesh" id="base_mesh"]
+size = Vector3(1.2, 0.2, 0.9)
+
+[sub_resource type="BoxShape3D" id="base_shape"]
+size = Vector3(1.2, 0.2, 0.9)
+
+[sub_resource type="CylinderMesh" id="valve_mesh"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 0.08
+
+[sub_resource type="SphereShape3D" id="valve_shape"]
+radius = 0.25
+
+[sub_resource type="PlaneMesh" id="lane_mesh"]
+size = Vector2(1, 1)
+center_offset = Vector3(0, 0, -0.5)
+
+[sub_resource type="SphereMesh" id="glow_mesh"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="QuadMesh" id="flame_mesh"]
+size = Vector2(0.55, 0.9)
+
+[node name="FlameVent" type="Node3D" node_paths=PackedStringArray("valve_hitbox", "interact_point", "valve_wheel", "prompt", "flames", "lane_marker", "pilot", "nozzle_glow") groups=["hazard"]]
+script = ExtResource("1")
+valve_hitbox = NodePath("ValveHitbox")
+interact_point = NodePath("InteractPoint")
+valve_wheel = NodePath("ValveWheel")
+prompt = NodePath("Prompt")
+flames = NodePath("Flames")
+lane_marker = NodePath("LaneMarker")
+pilot = NodePath("Pilot")
+nozzle_glow = NodePath("NozzleGlow")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="Collider" type="CollisionShape3D" parent="Body"]
+position = Vector3(0, 0.11, 0)
+shape = SubResource("base_shape")
+
+[node name="Housing" type="MeshInstance3D" parent="Body"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("base_mesh")
+material_override = SubResource("metal")
+
+[node name="Nozzle" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.24, -0.35)
+mesh = SubResource("valve_mesh")
+rotation = Vector3(1.5708, 0, 0)
+material_override = SubResource("metal")
+
+[node name="ValveHitbox" type="StaticBody3D" parent="."]
+script = ExtResource("2")
+
+[node name="Shape" type="CollisionShape3D" parent="ValveHitbox"]
+position = Vector3(0, 0.45, 0.3)
+shape = SubResource("valve_shape")
+
+[node name="ValveWheel" type="Node3D" parent="."]
+position = Vector3(0, 0.45, 0.3)
+rotation = Vector3(1.5708, 0, 0)
+
+[node name="Wheel" type="MeshInstance3D" parent="ValveWheel"]
+mesh = SubResource("valve_mesh")
+material_override = SubResource("hot")
+
+[node name="InteractPoint" type="Marker3D" parent="."]
+position = Vector3(0, 0.45, 0.3)
+
+[node name="Prompt" type="Label3D" parent="."]
+visible = false
+position = Vector3(0, 1.45, 0)
+billboard = 1
+pixel_size = 0.003
+font_size = 38
+outline_size = 8
+text = "[E] OPEN FUEL VALVE"
+
+[node name="LaneMarker" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.026, 0)
+mesh = SubResource("lane_mesh")
+material_override = SubResource("lane_mat")
+cast_shadow = 0
+
+[node name="Pilot" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.25, -0.48)
+mesh = SubResource("glow_mesh")
+scale = Vector3(0.12, 0.12, 0.12)
+material_override = SubResource("hot")
+cast_shadow = 0
+
+[node name="NozzleGlow" type="MeshInstance3D" parent="."]
+visible = false
+position = Vector3(0, 0.29, -0.5)
+mesh = SubResource("glow_mesh")
+scale = Vector3(0.2, 0.2, 0.2)
+material_override = SubResource("hot")
+cast_shadow = 0
+
+[node name="Flames" type="CPUParticles3D" parent="."]
+position = Vector3(0, 0.3, -6)
+emitting = false
+amount = 160
+lifetime = 0.42
+mesh = SubResource("flame_mesh")
+material_override = SubResource("fire")
+cast_shadow = 0
+emission_shape = 1
+emission_box_extents = Vector3(1.15, 0.04, 5.7)
+direction = Vector3(0, 0.65, -1)
+spread = 22.0
+gravity = Vector3(0, 0.5, 0)
+initial_velocity_min = 7.0
+initial_velocity_max = 14.0
+scale_amount_min = 0.5
+scale_amount_max = 1.3
+color_ramp = SubResource("fire_gradient")
