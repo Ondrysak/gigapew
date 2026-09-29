@@ -4,10 +4,10 @@ extends StatModifier
 ## One level-up choice. STAT upgrades add their inherited modifier fields to
 ## RunState once per owned level; WEAPON upgrades grant and level an AutoWeapon;
 ## OVERCLOCK upgrades change how their target weapon behaves once it is maxed;
-## PERK upgrades grant and level a PerkEffect (plus any inherited stat fields)
-## without using a weapon slot.
+## PERK upgrades grant and level a PerkEffect (plus optional inherited stats);
+## GUN_MOD upgrades alter player-fired shots without occupying an auto-weapon slot.
 
-enum Kind { STAT, WEAPON, OVERCLOCK, PERK }
+enum Kind { STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD }
 
 @export var id: StringName
 @export var display_name := ""

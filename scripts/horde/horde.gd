@@ -429,6 +429,12 @@ func slow(index: int, factor: float, duration: float) -> void:
 func is_alive(index: int) -> bool:
 	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
 
+## Fraction of current health for a live slot, for precise finishing effects.
+func enemy_health_fraction(index: int) -> float:
+	if not is_alive(index):
+		return 0.0
+	return _hp[index] / maxf(1.0, _max_hp[index])
+
 func enemy_position(index: int) -> Vector3:
 	var p := _pos[index]
 	return Vector3(p.x, _t_height[_type[index]] * 0.5, p.y)

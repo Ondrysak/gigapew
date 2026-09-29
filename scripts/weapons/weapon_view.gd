@@ -65,6 +65,7 @@ var _trace_time := 0.0
 var _impact_time := 0.0
 var _traces: Array[MeshInstance3D] = []
 var _impacts: Array[MeshInstance3D] = []
+var _sparks: Array[MeshInstance3D] = []
 var _shot_audio: AudioStreamPlayer
 var _hit_audio: AudioStreamPlayer
 var _kill_audio: AudioStreamPlayer
@@ -104,6 +105,8 @@ func prepare(pellet_count: int) -> void:
 	var trace_mesh := BoxMesh.new()
 	trace_mesh.size = Vector3(trace_width, trace_width, 1.0)
 	var impact_mesh := _sphere_mesh(8, 4)
+	var spark_mesh := BoxMesh.new()
+	spark_mesh.size = Vector3(0.018, 0.16, 0.018)
 	for index in range(pellet_count):
 		if trace_material != null:
 			var trace := MeshInstance3D.new()
@@ -115,6 +118,12 @@ func prepare(pellet_count: int) -> void:
 		impact.mesh = impact_mesh
 		_add_world_visual(impact)
 		_impacts.append(impact)
+		# Two short crossed streaks at the actual contact point, reused per ray.
+		for arm in 2:
+			var spark := MeshInstance3D.new()
+			spark.mesh = spark_mesh
+			_add_world_visual(spark)
+			_sparks.append(spark)
 	if puff_material != null:
 		var puff_mesh := _sphere_mesh(10, 5)
 		for index in range(puff_pool_size):
@@ -207,6 +216,11 @@ func _process(delta: float) -> void:
 			impact.scale = Vector3.ONE * maxf(0.001, _impact_time * 0.9)
 	if spinner != null and _spin > 0.0:
 		spinner.rotation.z = fmod(spinner.rotation.z + spin_speed * _spin * delta, TAU)
+	for spark in _sparks:
+		if _impact_time == 0.0:
+			spark.hide()
+		elif spark.visible:
+			spark.scale = Vector3.ONE * maxf(0.001, _impact_time * 7.7)
 	if not _puffs.is_empty():
 		_update_puffs(delta)
 	if not _blasts.is_empty():
@@ -222,23 +236,37 @@ func begin_shot(sound: CombatAudio) -> void:
 		trace.hide()
 	for impact in _impacts:
 		impact.hide()
+	for spark in _sparks:
+		spark.hide()
 
 func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_enemy: bool) -> void:
 	var start := muzzle.global_position
-	if index < _traces.size() and start.distance_squared_to(end) > 0.01:
+	var ray := end - start
+	var orientation := muzzle.global_basis
+	if ray.length_squared() > 0.0001:
+		orientation = Basis.looking_at(ray, Vector3.RIGHT if absf(ray.normalized().y) > 0.98 else Vector3.UP)
+	if index < _traces.size() and ray.length_squared() > 0.01:
 		var trace := _traces[index]
 		trace.global_position = (start + end) * 0.5
-		trace.global_basis = Basis.looking_at(end - start)
-		trace.scale = Vector3(1.0, 1.0, start.distance_to(end))
+		trace.global_basis = orientation
+		trace.scale = Vector3(1.0, 1.0, ray.length())
 		trace.show()
 	if not _puffs.is_empty():
 		_launch_puff(start, end)
 	if hit_surface:
 		var impact := _impacts[index]
-		impact.global_position = end + normal * 0.035
+		var surface_normal := orientation.z if hit_enemy else normal
+		impact.global_position = end + surface_normal * (0.09 if hit_enemy else 0.035)
 		impact.material_override = target_impact_material if hit_enemy else impact_material
 		impact.scale = Vector3.ONE * 0.117
 		impact.show()
+		for arm in 2:
+			var spark := _sparks[index * 2 + arm]
+			spark.global_position = end + surface_normal * 0.07
+			spark.global_basis = orientation.rotated(orientation.z, PI * (0.25 if arm == 0 else -0.25))
+			spark.material_override = target_impact_material if hit_enemy else impact_material
+			spark.scale = Vector3.ONE
+			spark.show()
 
 ## Explosion flash at `at` for a blast of damage radius `radius`.
 func show_blast(at: Vector3, radius: float) -> void:
@@ -261,14 +289,18 @@ func show_blast(at: Vector3, radius: float) -> void:
 	_blast_times[slot] = blast_duration
 	_blast_radii[slot] = visual_radius
 
-func confirm_hit(killed: bool, sound: CombatAudio) -> void:
-	_play(_kill_audio if killed else _hit_audio, sound, kill_cue if killed else hit_cue)
+func confirm_hit(killed: bool, sound: CombatAudio, chain: int) -> void:
+	var pitch := 1.0 + 0.045 * float(mini(chain, 7))
+	_play(_kill_audio if killed else _hit_audio, sound, kill_cue if killed else hit_cue, pitch)
+	if killed:
+		_recoil = maxf(_recoil, 1.15)
 
-func _play(player: AudioStreamPlayer, fallback: CombatAudio, cue: StringName) -> void:
+func _play(player: AudioStreamPlayer, fallback: CombatAudio, cue: StringName, pitch: float = 1.0) -> void:
 	if player.stream != null:
+		player.pitch_scale = pitch
 		player.play()
 	else:
-		fallback.play_cue(cue)
+		fallback.play_cue(cue, pitch)
 
 func _view_camera() -> Camera3D:
 	if _camera == null or not is_instance_valid(_camera):

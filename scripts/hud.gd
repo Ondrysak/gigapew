@@ -33,6 +33,8 @@ extends CanvasLayer
 var _last_health := 0
 var _resource_labels: Dictionary = {}
 var _resource_names: Dictionary = {}
+var _weapon_description := ""
+var _weapon_mods := ""
 
 ## Builds one counter per banked resource, styled by its definition.
 func setup_resources(definitions: Array[ResourceDefinition]) -> void:
@@ -124,13 +126,29 @@ func set_boss_health(current: float, maximum: float) -> void:
 
 func set_weapon(definition: WeaponDefinition, index: int) -> void:
 	weapon_label.text = "[%d] %s" % [index + 1, definition.display_name.to_upper()]
-	weapon_detail.text = definition.description
+	_weapon_description = definition.description
+	weapon_detail.text = _weapon_description + ("\n" + _weapon_mods if not _weapon_mods.is_empty() else "")
+
+## Show currently installed main-gun mods below the selected gun.
+func set_weapon_mods(state: RunState) -> void:
+	_weapon_mods = ""
+	if state.upgrade_levels.get(&"mod_quickdraw", 0) > 0:
+		_weapon_mods += "QUICKDRAW"
+	if state.upgrade_levels.get(&"mod_longshot", 0) > 0:
+		_weapon_mods += "  /  LONGSHOT"
+	if state.upgrade_levels.get(&"mod_executioner", 0) > 0:
+		_weapon_mods += "  /  EXECUTIONER"
+	_weapon_mods = _weapon_mods.trim_prefix("  /  ")
+	weapon_detail.text = _weapon_description + ("\n" + _weapon_mods if not _weapon_mods.is_empty() else "")
 
 func show_shot() -> void:
 	feedback.show_shot()
 
 func show_hit(killed: bool) -> void:
 	feedback.show_hit(killed)
+
+func show_combo(hits: int, bonus: float) -> void:
+	feedback.show_combo(hits, bonus)
 
 func finish_stage(victory: bool, final_stage: bool, summary: String, banked: String) -> void:
 	feedback.terminal = true

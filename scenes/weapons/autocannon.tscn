@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
 
@@ -78,6 +78,9 @@ bottom_radius = 0.04
 height = 0.012
 radial_segments = 10
 rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_feed_link"]
+size = Vector3(0.065, 0.065, 0.05)
 
 [sub_resource type="SphereMesh" id="Mesh_flash"]
 radius = 0.16
@@ -176,6 +179,81 @@ position = Vector3(0, -0.06, 0.28)
 scale = Vector3(0.7, 0.75, 0.35)
 mesh = SubResource("Mesh_receiver")
 material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="RearPistolGrip" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.24, 0.15)
+rotation = Vector3(-0.2, 0, 0)
+scale = Vector3(0.5, 0.9, 0.32)
+mesh = SubResource("Mesh_receiver")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="LeftHeatShield" type="MeshInstance3D" parent="."]
+position = Vector3(-0.13, 0.065, -0.34)
+scale = Vector3(0.37, 0.55, 1.0)
+mesh = SubResource("Mesh_shroud")
+material_override = SubResource("Mat_olive")
+cast_shadow = 0
+
+[node name="RightHeatShield" type="MeshInstance3D" parent="."]
+position = Vector3(0.13, 0.065, -0.34)
+scale = Vector3(0.37, 0.55, 1.0)
+mesh = SubResource("Mesh_shroud")
+material_override = SubResource("Mat_olive")
+cast_shadow = 0
+
+[node name="LeftVent" type="MeshInstance3D" parent="."]
+position = Vector3(-0.17, 0.065, -0.34)
+scale = Vector3(0.2, 0.8, 0.57)
+mesh = SubResource("Mesh_strip")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="RightVent" type="MeshInstance3D" parent="."]
+position = Vector3(0.17, 0.065, -0.34)
+scale = Vector3(0.2, 0.8, 0.57)
+mesh = SubResource("Mesh_strip")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="FeedPort" type="MeshInstance3D" parent="."]
+position = Vector3(-0.16, -0.1, -0.06)
+scale = Vector3(0.48, 0.62, 0.65)
+mesh = SubResource("Mesh_shroud")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="FeedLinkRear" type="MeshInstance3D" parent="."]
+position = Vector3(-0.215, -0.13, 0.03)
+mesh = SubResource("Mesh_feed_link")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="FeedLinkMiddle" type="MeshInstance3D" parent="."]
+position = Vector3(-0.225, -0.15, -0.04)
+mesh = SubResource("Mesh_feed_link")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="FeedLinkFront" type="MeshInstance3D" parent="."]
+position = Vector3(-0.21, -0.16, -0.11)
+mesh = SubResource("Mesh_feed_link")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="BrakeLeftPort" type="MeshInstance3D" parent="."]
+position = Vector3(-0.107, 0.015, -0.8)
+scale = Vector3(0.2, 0.75, 0.25)
+mesh = SubResource("Mesh_brake")
+material_override = SubResource("Mat_glow")
+cast_shadow = 0
+
+[node name="BrakeRightPort" type="MeshInstance3D" parent="."]
+position = Vector3(0.107, 0.015, -0.8)
+scale = Vector3(0.2, 0.75, 0.25)
+mesh = SubResource("Mesh_brake")
+material_override = SubResource("Mat_glow")
 cast_shadow = 0
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="."]

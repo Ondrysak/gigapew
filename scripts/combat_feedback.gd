@@ -8,6 +8,7 @@ const HIT_DIRECTIONS := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector
 @export var kill_color := Color(1.0, 0.68, 0.25)
 @export var damage_color := Color(1.0, 0.13, 0.25)
 @export var confirmation_text := "TARGET DOWN"
+@export var combo_color := Color(1.0, 0.78, 0.36)
 
 var aiming := true
 var terminal := false
@@ -16,6 +17,10 @@ var _hit := 0.0
 var _damage := 0.0
 var _kill := 0.0
 var _lethal_hit := false
+var _combo_hits := 0
+var _combo_time := 0.0
+var _chain_pulse := 0.0
+var _combo_text := ""
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -29,6 +34,10 @@ func reset() -> void:
 	_damage = 0.0
 	_kill = 0.0
 	_lethal_hit = false
+	_combo_hits = 0
+	_combo_time = 0.0
+	_chain_pulse = 0.0
+	_combo_text = ""
 
 func show_shot() -> void:
 	_shot = 1.0
@@ -42,11 +51,20 @@ func show_hit(killed: bool) -> void:
 func show_damage() -> void:
 	_damage = 1.0
 
+func show_combo(hits: int, bonus: float) -> void:
+	_combo_hits = hits
+	_combo_text = "CHAIN %d   +%d%% NEXT SHOT" % [hits, roundi(bonus * 100.0)] if bonus > 0.0 else "CHAIN %d" % hits
+	_combo_time = 2.5 if hits > 0 else 0.0
+	if hits == 3 or hits == 6 or hits == 10:
+		_chain_pulse = 1.0
+
 func _process(delta: float) -> void:
 	_shot = move_toward(_shot, 0.0, delta * 8.0)
 	_hit = maxf(0.0, _hit - delta)
 	_damage = move_toward(_damage, 0.0, delta * 2.8)
 	_kill = maxf(0.0, _kill - delta)
+	_combo_time = maxf(0.0, _combo_time - delta)
+	_chain_pulse = maxf(0.0, _chain_pulse - delta * 3.0)
 	queue_redraw()
 
 func _draw() -> void:
@@ -71,6 +89,12 @@ func _draw() -> void:
 	if _kill > 0.0 and not terminal:
 		var color := Color(kill_color, minf(1.0, _kill * 3.0))
 		_centered_text(confirmation_text, center.y + 52.0, 17, color)
+	if _combo_hits > 0 and _combo_time > 0.0 and not terminal:
+		var color := combo_color if _combo_hits >= 3 else reticle_color
+		_centered_text(_combo_text, center.y + 86.0 - _chain_pulse * 4.0, 17 + int(_chain_pulse * 3.0), color)
+		var width := 140.0 * (_combo_time / 2.5)
+		draw_line(center + Vector2(-70, 99), center + Vector2(70, 99), Color(0.08, 0.16, 0.2, 0.7), 3.0)
+		draw_line(center + Vector2(-70, 99), center + Vector2(-70 + width, 99), color, 3.0)
 	if not aiming and not terminal:
 		_centered_text("CLICK TO CAPTURE AIM", center.y + 70.0, 17, Color(0.65, 0.85, 0.9))
 

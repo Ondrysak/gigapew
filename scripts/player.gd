@@ -5,6 +5,8 @@ signal health_changed(current: int, maximum: int)
 signal died
 signal shot_fired
 signal hit_confirmed(killed: bool)
+## Consecutive direct-hit shots; misses, taking damage or a 2.5 s gap reset it.
+signal combo_changed(hits: int, bonus: float)
 signal weapon_changed(definition: WeaponDefinition, index: int)
 ## Emitted after the class ability activates successfully.
 signal ability_used(ability: ActiveAbility)
@@ -18,6 +20,8 @@ const JUMP_GRACE := 0.12
 const MOUSE_SENSITIVITY := 0.0025
 ## Share of shot damage dealt to mineable colliders (before mining_multiplier).
 const MINING_SHARE := 0.35
+const COMBO_WINDOW := 2.5
+const COMBO_MAX_BONUS := 0.4
 
 ## Main guns in slot order (1 to 3 entries; keys 1/2/3 and the wheel cycle them).
 @export var weapons: Array[WeaponDefinition] = []
@@ -39,6 +43,9 @@ var active := true
 var max_health := 100
 var health := 100
 var _fire_cooldown := 0.0
+var combo_hits := 0
+var _combo_left := 0.0
+var _quickdraw_left := 0.0
 var _waiting_for_fire_release := false
 var _coyote_time := 0.0
 var _jump_buffer := 0.0
@@ -109,6 +116,7 @@ func select_weapon(index: int) -> void:
 		return
 	if _view == _views[index]:
 		return
+	var switching := _view != null
 	if _view != null:
 		_view.set_spin(0.0)
 		_view.hide()
@@ -116,6 +124,8 @@ func select_weapon(index: int) -> void:
 	_view = _views[index]
 	_view.show()
 	_spin = 0.0
+	_quickdraw_left = 1.5 if switching and run_state != null \
+			and run_state.upgrade_levels.get(&"mod_quickdraw", 0) > 0 else 0.0
 	# The outstanding shot cooldown belongs to the player, not the view.
 	weapon_changed.emit(weapons[index], index)
 
@@ -208,6 +218,11 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	_invulnerable = maxf(0.0, _invulnerable - delta)
+	if _combo_left > 0.0:
+		_combo_left -= delta
+		if _combo_left <= 0.0:
+			_reset_combo()
+	_quickdraw_left = maxf(0.0, _quickdraw_left - delta)
 	if run_state != null and run_state.regen_per_second > 0.0 and health < max_health:
 		_regen += run_state.regen_per_second * delta
 		if _regen >= 1.0:
@@ -282,8 +297,14 @@ func _move(delta: float) -> void:
 
 func _shoot() -> void:
 	var definition := weapons[selected_weapon]
-	var shot_damage := definition.damage * (run_state.damage_multiplier if run_state != null else 1.0)
+	var quickdraw := _quickdraw_left > 0.0
+	_quickdraw_left = 0.0 # The first shot spends the capacitor, including misses.
+	var combo_bonus := minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08))
+	var shot_damage := definition.damage * (run_state.damage_multiplier if run_state != null else 1.0) \
+			* (1.0 + combo_bonus) * (1.75 if quickdraw else 1.0)
 	var pierce := definition.pierce + (run_state.pierce_bonus if run_state != null else 0)
+	var longshot: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_longshot", 0)) > 0
+	var executioner: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_executioner", 0)) > 0
 	var mining := shot_damage * MINING_SHARE * (run_state.mining_multiplier if run_state != null else 1.0)
 	_view.begin_shot(sound)
 	shot_fired.emit()
@@ -328,7 +349,12 @@ func _shoot() -> void:
 		for n in hits:
 			var slot := _hits[n]
 			var exposure := run_state.exposure_scale(horde.enemy_position(slot)) if run_state != null else 1.0
-			_add_hit(slot, pellet_damage * exposure)
+			var direct_damage := pellet_damage * exposure
+			if longshot and _distances[n] > 15.0:
+				direct_damage *= 1.4
+			if executioner and horde.enemy_health_fraction(slot) < 0.35:
+				direct_damage *= 1.6
+			_add_hit(slot, direct_damage)
 		# The trace ends at the last enemy it stopped in, else at the wall.
 		var stopped := hits > pierce
 		var end := origin + direction * (_distances[hits - 1] if stopped else reach)
@@ -339,14 +365,14 @@ func _shoot() -> void:
 			# Shootable world objects (explosive barrels, switches) take the full shot.
 			if collider != null and collider.has_method(&"take_hit"):
 				collider.take_hit(shot_damage, wall["position"])
-		_view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), hits > 0)
+		_view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), stopped)
 		if explosive:
 			_blast_points[pellet] = end
 			_blast_damage[pellet] = pellet_damage
 	# Each enemy takes one combined hit per shot so pellets never double-kill.
 	var confirmed := _hit_count > 0
 	for n in _hit_count:
-		horde.damage(_hit_slots[n], _hit_damage[n], forward * definition.knockback)
+		horde.damage(_hit_slots[n], _hit_damage[n], forward * definition.knockback * (1.6 if quickdraw else 1.0))
 	if explosive:
 		for pellet in range(definition.pellet_count):
 			var at := _blast_points[pellet]
@@ -354,12 +380,26 @@ func _shoot() -> void:
 					_blast_damage[pellet] * definition.explosion_damage_fraction, definition.explosion_knockback) > 0:
 				confirmed = true
 			_view.show_blast(at, definition.explosion_radius)
+	if _hit_count > 0:
+		combo_hits += 1 # One beat per direct-hit shot, not per pellet or blast victim.
+		_combo_left = COMBO_WINDOW
+		combo_changed.emit(combo_hits, minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08)))
+	else:
+		_reset_combo()
 	if confirmed:
 		var killed := horde.alive_count < alive_before
 		hit_confirmed.emit(killed)
-		_view.confirm_hit(killed, sound)
+		_view.confirm_hit(killed, sound, combo_hits)
+		add_shake(0.095 if killed else 0.035)
 	if critical_at != Vector3.INF:
 		critical_hit.emit(critical_at)
+
+func _reset_combo() -> void:
+	if combo_hits == 0:
+		return
+	combo_hits = 0
+	_combo_left = 0.0
+	combo_changed.emit(0, 0.0)
 
 func _add_hit(slot: int, amount: float) -> void:
 	for n in _hit_count:
@@ -385,6 +425,7 @@ func remove_death_guard(guard: Callable) -> void:
 func take_damage(amount: int) -> void:
 	if not active or amount <= 0 or _invulnerable > 0.0:
 		return
+	_reset_combo()
 	var armor := run_state.armor if run_state != null else 0.0
 	health = maxi(0, health - maxi(1, amount - int(armor)))
 	if health == 0 and _survives_lethal_hit():

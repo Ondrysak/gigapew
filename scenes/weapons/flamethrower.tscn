@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
 
@@ -169,6 +169,80 @@ cast_shadow = 0
 [node name="Pilot" type="MeshInstance3D" parent="."]
 position = Vector3(0, -0.055, -0.6)
 mesh = SubResource("Mesh_pilot")
+material_override = SubResource("Mat_pilot")
+cast_shadow = 0
+
+[node name="ReserveTank" type="MeshInstance3D" parent="."]
+position = Vector3(0.155, 0.13, 0.04)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.78, 0.82, 0.78)
+mesh = SubResource("Mesh_tank")
+material_override = SubResource("Mat_tank")
+cast_shadow = 0
+
+[node name="ReserveTankBand" type="MeshInstance3D" parent="."]
+position = Vector3(0.155, 0.13, 0.04)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.84, 0.12, 0.84)
+mesh = SubResource("Mesh_tank")
+material_override = SubResource("Mat_hazard")
+cast_shadow = 0
+
+[node name="TankValve" type="MeshInstance3D" parent="."]
+position = Vector3(-0.02, 0.15, 0.245)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.57, 0.18, 0.57)
+mesh = SubResource("Mesh_tank")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="FuelLineRear" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.185, -0.13)
+rotation = Vector3(1.18, 0, 0)
+mesh = SubResource("Mesh_pipe")
+material_override = SubResource("Mat_dark")
+cast_shadow = 0
+
+[node name="FuelLineFront" type="MeshInstance3D" parent="."]
+position = Vector3(0.115, 0.09, -0.38)
+rotation = Vector3(1.25, 0, 0)
+mesh = SubResource("Mesh_pipe")
+material_override = SubResource("Mat_hazard")
+cast_shadow = 0
+
+[node name="LeftHeatGuard" type="MeshInstance3D" parent="."]
+position = Vector3(-0.12, 0.015, -0.34)
+scale = Vector3(0.28, 0.6, 0.8)
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="RightHeatGuard" type="MeshInstance3D" parent="."]
+position = Vector3(0.12, 0.015, -0.34)
+scale = Vector3(0.28, 0.6, 0.8)
+mesh = SubResource("Mesh_body")
+material_override = SubResource("Mat_steel")
+cast_shadow = 0
+
+[node name="LeftHeatStripe" type="MeshInstance3D" parent="."]
+position = Vector3(-0.15, 0.067, -0.34)
+scale = Vector3(0.55, 0.35, 8)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_hazard")
+cast_shadow = 0
+
+[node name="RightHeatStripe" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.067, -0.34)
+scale = Vector3(0.55, 0.35, 8)
+mesh = SubResource("Mesh_band")
+material_override = SubResource("Mat_hazard")
+cast_shadow = 0
+
+[node name="PressureGauge" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.218, -0.075)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.45, 0.1, 0.45)
+mesh = SubResource("Mesh_tank")
 material_override = SubResource("Mat_pilot")
 cast_shadow = 0
 

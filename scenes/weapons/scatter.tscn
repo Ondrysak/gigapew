@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
 
@@ -46,6 +46,12 @@ size = Vector3(0.2, 0.13, 0.25)
 
 [sub_resource type="BoxMesh" id="Stripe"]
 size = Vector3(0.03, 0.025, 0.25)
+
+[sub_resource type="CylinderMesh" id="ShellRound"]
+top_radius = 0.026
+bottom_radius = 0.026
+height = 0.105
+radial_segments = 8
 
 [sub_resource type="SphereMesh" id="Flash"]
 radius = 0.14
@@ -123,6 +129,77 @@ cast_shadow = 0
 
 [node name="RightStrip" type="MeshInstance3D" parent="."]
 position = Vector3(0.09, 0.12, -0.02)
+mesh = SubResource("Stripe")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="LeftBarrelJacket" type="MeshInstance3D" parent="."]
+position = Vector3(-0.17, 0.015, -0.32)
+scale = Vector3(0.26, 0.64, 0.9)
+mesh = SubResource("Receiver")
+material_override = SubResource("Shell")
+cast_shadow = 0
+
+[node name="RightBarrelJacket" type="MeshInstance3D" parent="."]
+position = Vector3(0.17, 0.015, -0.32)
+scale = Vector3(0.26, 0.64, 0.9)
+mesh = SubResource("Receiver")
+material_override = SubResource("Shell")
+cast_shadow = 0
+
+[node name="MuzzleClamp" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.125, -0.54)
+rotation = Vector3(0, 0, 0)
+scale = Vector3(0.9, 0.3, 0.22)
+mesh = SubResource("Receiver")
+material_override = SubResource("Steel")
+cast_shadow = 0
+
+[node name="PumpRibRear" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.176, -0.26)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Stripe")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="PumpRibMiddle" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.176, -0.34)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Stripe")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="PumpRibFront" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.176, -0.42)
+rotation = Vector3(0, 1.570796, 0)
+mesh = SubResource("Stripe")
+material_override = SubResource("Dark")
+cast_shadow = 0
+
+[node name="ShellCarrier" type="MeshInstance3D" parent="."]
+position = Vector3(0.16, 0.016, 0.105)
+scale = Vector3(0.18, 0.48, 0.65)
+mesh = SubResource("Receiver")
+material_override = SubResource("Steel")
+cast_shadow = 0
+
+[node name="ReadyShellRear" type="MeshInstance3D" parent="."]
+position = Vector3(0.21, 0.015, 0.18)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("ShellRound")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="ReadyShellFront" type="MeshInstance3D" parent="."]
+position = Vector3(0.21, 0.015, 0.05)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("ShellRound")
+material_override = SubResource("Glow")
+cast_shadow = 0
+
+[node name="FrontBead" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.171, -0.53)
+scale = Vector3(0.7, 1.0, 0.16)
 mesh = SubResource("Stripe")
 material_override = SubResource("Glow")
 cast_shadow = 0

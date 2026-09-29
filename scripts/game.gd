@@ -190,6 +190,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.died.connect(_on_player_died)
 	player.shot_fired.connect(hud.show_shot)
 	player.hit_confirmed.connect(hud.show_hit)
+	player.combo_changed.connect(hud.show_combo)
 	player.weapon_changed.connect(hud.set_weapon)
 	horde.enemy_killed.connect(_on_enemy_killed)
 	horde.boss_spawned.connect(_on_boss_spawned)
@@ -197,6 +198,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	horde.boss_killed.connect(_on_boss_killed)
 	player.select_weapon(mini(weapon_slot, player.weapons.size() - 1))
 	hud.set_weapon(player.weapons[player.selected_weapon], player.selected_weapon)
+	hud.set_weapon_mods(run_state)
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
 	hud.set_kills(kills)
@@ -246,6 +248,7 @@ func grant_upgrade(upgrade: UpgradeDefinition) -> void:
 	if upgrade.instant_heal > 0:
 		player.heal(upgrade.instant_heal)
 	rack.sync()
+	hud.set_weapon_mods(run_state)
 
 func _on_upgrade_chosen(upgrade: UpgradeDefinition) -> void:
 	if round_state != RoundState.LEVEL_UP:

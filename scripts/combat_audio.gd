@@ -20,8 +20,9 @@ func _ready() -> void:
 		add_child(voice)
 		_voices[cue] = voice
 
-func play_cue(cue: StringName) -> void:
+func play_cue(cue: StringName, pitch: float = 1.0) -> void:
 	var voice: AudioStreamPlayer = _voices[cue]
+	voice.pitch_scale = pitch
 	voice.play()
 
 func _make_cue(cue: StringName) -> AudioStreamWAV:
