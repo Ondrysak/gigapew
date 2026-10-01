@@ -22,6 +22,12 @@ enum Faction { ROBOT, ALIEN }
 @export var xp_value := 1
 @export var is_boss := false
 
+@export_group("Weak Spot")
+## Head or exposed core in model-space metres, before model_scale and yaw.
+@export var weak_spot_offset := Vector3(0.0, 1.15, 0.0)
+## A forgiving sphere around the visible feature; zero disables precision hits.
+@export_range(0.0, 2.0) var weak_spot_radius := 0.22
+
 @export_group("Ranged")
 @export var preferred_range := 12.0
 @export var attack_range := 22.0

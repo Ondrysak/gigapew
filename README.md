@@ -67,9 +67,9 @@ Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) �
 
 | Stage | Length | Crowd cap | Boss health |
 | --- | --- | --- | --- |
-| Training Yard (64 × 64 m) | 3:00 | 700 | 2500 |
-| The Foundry (96 × 52 m) | 4:00 | 1100 | 4000 |
-| Reactor Core (76 × 76 m) | 5:00 | 1600 | 6000 |
+| Training Yard (64 × 64 m) | 3:00 | 700 | 6000 |
+| The Foundry (96 × 52 m) | 4:00 | 1100 | 9600 |
+| Reactor Core (76 × 76 m) | 5:00 | 1600 | 14400 |
 
 Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when surrounded. Enemies path through 4 m or wider doorways and around interior walls; each stage also has shootable explosive barrels, proximity mines, cycling electric floors, crystal-powered turrets and activatable flame vents.
 
@@ -91,6 +91,10 @@ Each class has three Q abilities: its default and two permanent unlocks. On the 
 **Three hands:** the class's first two weapons repeat into three independent slots unless replaced by crafted equipment. All three models and gloved hands are visible. Each hand owns its own weapon definition, pellets, splash radius, damage type, damage, cadence and pierce upgrades; modifying one does not mutate its siblings or authored resources.
 
 **Damage and feedback:** kinetic deals direct damage; fire ignites for four burn ticks over two seconds; frost slows movement to 55% for 1.8 seconds; shock chains 40% damage to up to three nearby enemies. Critical and kill numbers report actual health removed, not overkill. Nearby same-type hits briefly merge to keep crowded fights readable. Recoil is a small, recoverable camera impulse alongside weapon kick, impact sparks, hit sounds and visible target flashes.
+
+**Precision hits (source changes, not yet packaged):** main-gun rays through a visible head or exposed core earn a guaranteed ×3 critical hit, without needing Lucky Strike. Ordinary rolled body crits deal ×2. Precision uses the current crit-damage factor plus one base-damage unit; it never multiplies a random crit again. Lucky Strike therefore improves both rolled crits and aimed hits. Each pierced victim is judged separately; headshots do not amplify splash, burn ticks or chained damage. Weak volumes follow enemy yaw, scale and feet height, and cannot be hit through a world blocker. Kill numbers retain actual damage but no longer say `DOWN`; critical numbers retain `CRIT`.
+
+Spitters now have 180 base health, tanks 420 and bosses 6000; grunt and runner health is unchanged. Schedule multipliers still apply. Against stationary targets with fresh Scout hands, zero random-crit chance and uninterrupted tracked aim, the Yard boss took 9.62 s with body fire versus 3.22 s at its weak spot; the Reactor boss took 23.37 s versus 7.85 s. These controlled checks are not full-campaign balance certification.
 
 **Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes readable, reliable target reactions and coherent presentation. Here, contact feedback precedes restrained camera effects; recoil recovers without aim drift, and there is no global hit-stop in the horde simulation. Firearms use independently authored hard-surface geometry with receivers, barrels, grips, sights, magazines and gloves, cached by weapon kind.
 
@@ -177,6 +181,8 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up) plus a `WeaponView` scene in `scenes/weapons/`. `scripts/weapons/firearm_model.gd` builds original shared meshes once per weapon kind; views reuse impact and tracer meshes per ray. `ArenaPlayer` owns independent hand cooldowns/spin-up, direct-hit chains, gun mods and recoverable camera recoil. `Horde.damage_reported` feeds the fixed `DamageNumbers` label pool with actual health loss.
 - **Auto weapons, perks and gun mods:** `AutoWeapon` subclasses in `scripts/weapons/auto/` and `PerkEffect` subclasses in `scripts/perks/`, granted by `UpgradeDefinition`s (STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD) listed in `data/upgrades/pool.tres`. The `AutoWeaponRack` owns auto weapons and perks; neither perks nor gun mods use an auto-weapon slot.
 - **Horde:** `scripts/horde/horde.gd` runs a data-oriented simulation with one MultiMesh per enemy type, a shared flow field, weapon queries, `slow()`, faction FX and contact tuning. The flow field avoids obstacles and treats cliffs as walls; it routes to the player's level over ramps. Each enemy has a feet height taken from the stage heightfield: it snaps up ramps, falls off ledges and never climbs a step over 0.3 m. Hit tests, blasts, projectiles and contact damage all use that height. Robot and alien stats/animations are in `data/enemies/*.tres`. Meshes are baked from the CC0 models in `assets/monsters/` into shared textured surfaces; `shaders/horde_enemy_vat.gdshader` animates the crowd from position/normal textures and per-instance clip state. `tools/vat/README.md` covers the reproducible Blender bake and source pack licenses. The static shader remains available for other models.
+
+  Enemy `weak_spot_offset` and `weak_spot_radius` author a head/core sphere in model-space metres before `model_scale` and yaw; radius zero disables precision hits. Type-level offsets, squared radii and upper hit bounds are cached once, not allocated per shot.
 - **Mining:** `ResourceDefinition` data lives in `data/resources/`; deposit types are in `data/resources/deposits/`. `DepositGeometry` builds seeded section meshes and matching triangle colliders; `MineralDeposit` owns persistent local health and a conserved integer loot budget. `DepositField` probes placement and spills section loot. `MiningTool` owns the drill and `MiningFeedback`'s ping-pong canvas history. Materials are in `shaders/deposit_crystal.gdshader` and `shaders/mining_history.gdshader`; there are no authored deposit model scenes.
 - **Stages and hazards:** `data/stages/*.tres` select a world, play area and `SpawnSchedule`. A world scene has a `PlayerSpawn`, a floor at y = 0, an `Obstacles` node of box/cylinder colliders (used by horde navigation and deposit placement), an optional `Elevation` node, and a `Hazards` node. `Elevation` holds `StaticBody3D` decks and ramps. Each has exactly one `BoxShape3D`, yawed in multiples of 90°, with ramps also pitched. They are solid down to the floor. The horde rasterises their top faces into a 0.5 m heightfield. Keep ramps ≤ 18°, at least 6 m wide, and flush with the floor and the deck edge (a lip of even a few centimetres stops the player's capsule). Decks must be at least 1.6 m high so their edges read as cliffs, and every deck must be reachable by ramp. `scripts/game.gd` configures every hazard once per round via `setup(horde, player, run_state)`. The five hazard scene/scripts live in `scenes/hazards/` and `scripts/hazards/`; world decoration is composed from CC0 MegaKit modules in `assets/third_party/`.
 - **UI:** the HUD is `scenes/ui/hud.tscn`, level-up cards are `scenes/ui/level_up.tscn`, and the pause menu is `scenes/ui/pause_menu.tscn`. The intro, main menu and its screens are in `scenes/ui/` and `scenes/ui/menu/`, styled by the shared `menu_theme.tres`.
@@ -184,7 +190,7 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 
 Performance: the mixed-faction 1,600-enemy horde was measured in a Godot 4.4.1 headless CPU check (120 frames). On the elevated stages, simulation averaged 7.2 ms per frame on the Yard and 7.5 ms on the Reactor (about 20% of the horde on raised ground); draw preparation took about 2.6 ms. The same check before the heightfield measured 6.1–6.5 ms. GL Compatibility visuals were inspected in an isolated 1280×720 virtual display (Mesa llvmpipe); **60 fps has not been measured on the Radeon GPU**.
 
-Run the nested-blast regression with the editor executable:
+Run the precision-damage and nested-blast regressions with the editor executable:
 
 ```sh
 ~/.local/opt/godot/4.7.2/godot --headless --path . --script tools/check_combat.gd

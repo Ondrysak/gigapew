@@ -68,6 +68,9 @@ var _t_mass := PackedFloat32Array()
 var _t_contact := PackedFloat32Array()
 var _t_scale := PackedFloat32Array()
 var _t_boss := PackedByteArray()
+var _t_weak_offset := PackedVector3Array()
+var _t_weak_radius_squared := PackedFloat32Array()
+var _t_weak_top := PackedFloat32Array()
 var _renderers: Array[MultiMeshInstance3D] = []
 var _buffers: Array[PackedFloat32Array] = []
 
@@ -299,6 +302,11 @@ func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	_t_contact.append(definition.contact_damage)
 	_t_scale.append(definition.model_scale)
 	_t_boss.append(1 if definition.is_boss else 0)
+	var weak_offset := definition.weak_spot_offset * definition.model_scale
+	var weak_radius := definition.weak_spot_radius * definition.model_scale
+	_t_weak_offset.append(weak_offset)
+	_t_weak_radius_squared.append(weak_radius * weak_radius)
+	_t_weak_top.append(weak_offset.y + weak_radius if weak_radius > 0.0 else 0.0)
 	_register_renderer(definition, bounds)
 
 func _setup_rendering() -> void:
@@ -618,6 +626,26 @@ func enemy_position(index: int) -> Vector3:
 func get_definition(index: int) -> HordeEnemyDefinition:
 	return _defs[_type[index]]
 
+## Uses the same feet position, scale and yaw as the rendered enemy.
+func weak_spot_position(index: int) -> Vector3:
+	var offset := _t_weak_offset[_type[index]]
+	var yaw := _yaw[index]
+	var c := cos(yaw)
+	var s := sin(yaw)
+	var p := _pos[index]
+	return Vector3(p.x + offset.x * c + offset.z * s, _y[index] + offset.y, p.y - offset.x * s + offset.z * c)
+
+## A normalized gun ray must intersect the head/core before the world blocker.
+func weak_spot_hit(index: int, origin: Vector3, direction: Vector3, max_distance: float) -> bool:
+	if not is_alive(index):
+		return false
+	var radius_squared := _t_weak_radius_squared[_type[index]]
+	if radius_squared <= 0.0:
+		return false
+	var offset := weak_spot_position(index) - origin
+	var distance := clampf(offset.dot(direction), 0.0, max_distance)
+	return (offset - direction * distance).length_squared() <= radius_squared
+
 func query_radius(center: Vector3, radius: float, out: PackedInt32Array) -> int:
 	_query_id += 1
 	var c := Vector2(center.x, center.z)
@@ -786,7 +814,7 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 	var y_enter := origin.y + direction.y * t
 	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
 	var base := _y[slot]
-	var top := base + _t_height[type] + hit_headroom
+	var top := base + maxf(_t_height[type] + hit_headroom, _t_weak_top[type])
 	if minf(y_enter, y_exit) > top or maxf(y_enter, y_exit) < base:
 		return candidates
 	if y_enter > top and direction.y < 0.0:

@@ -28,5 +28,5 @@ extends Resource
 @export var resource_multiplier := 0.0
 ## Chance (0..1) that a hit is critical.
 @export var crit_chance := 0.0
-## Added to the critical-hit damage factor (base x1.5).
+## Added to the critical-hit damage factor (base x2; head/core adds another x1).
 @export var crit_multiplier := 0.0

@@ -433,9 +433,10 @@ func _shoot(hand: int) -> void:
 		var hits := 0
 		if horde != null:
 			hits = horde.raycast(origin, direction, reach, pierce + 1, _hits, _distances)
-		# Crits roll per pellet; the exposure zone scales per enemy.
+		# Lucky rolls stay per pellet; head/core crits are resolved per pierced enemy.
 		var pellet_damage := shot_damage
 		var critical := run_state != null and run_state.roll_critical()
+		var ray_critical := critical
 		if critical:
 			pellet_damage *= run_state.crit_multiplier
 			if hits > 0 and critical_at == Vector3.INF:
@@ -443,12 +444,20 @@ func _shoot(hand: int) -> void:
 		for n in hits:
 			var slot := _hits[n]
 			var exposure := run_state.exposure_scale(horde.enemy_position(slot)) if run_state != null else 1.0
+			var precision := horde.weak_spot_hit(slot, origin, direction, reach)
+			var hit_critical := critical or precision
+			ray_critical = ray_critical or hit_critical
 			var direct_damage := pellet_damage * exposure
+			if precision:
+				var multiplier := run_state.crit_multiplier if run_state != null else RunState.BASE_CRIT_MULTIPLIER
+				direct_damage = shot_damage * exposure * (multiplier + RunState.WEAK_SPOT_CRIT_BONUS)
+			if hit_critical and critical_at == Vector3.INF:
+				critical_at = origin + direction * _distances[n]
 			if longshot and _distances[n] > 15.0:
 				direct_damage *= 1.4
 			if executioner and horde.enemy_health_fraction(slot) < 0.35:
 				direct_damage *= 1.6
-			_add_hit(slot, direct_damage, critical)
+			_add_hit(slot, direct_damage, hit_critical)
 			var hit_index := _hit_lookup[slot]
 			if _hit_direct[hit_index] == 0:
 				_hit_push[hit_index] += forward * definition.knockback * (1.6 if quickdraw else 1.0)
@@ -464,7 +473,7 @@ func _shoot(hand: int) -> void:
 			# Shootable world objects (explosive barrels, switches) take the full shot.
 			if collider != null and collider.has_method(&"take_hit"):
 				collider.take_hit(shot_damage, wall["position"])
-		view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), stopped, critical)
+		view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), stopped, ray_critical)
 		if explosive:
 			if horde != null:
 				var splash_count := horde.query_radius(end, definition.explosion_radius, _splash_hits)

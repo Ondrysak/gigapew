@@ -111,8 +111,6 @@ func _update_label(slot: int) -> void:
 	var prefix := ""
 	if _critical[slot] != 0:
 		prefix = "CRIT "
-	if _killed[slot] != 0:
-		prefix += "DOWN "
 	var label := _labels[slot]
 	label.text = prefix + number
 	label.add_theme_color_override("font_color", DamageType.color(_kind[slot]))

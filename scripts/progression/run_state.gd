@@ -13,6 +13,9 @@ signal resources_changed(id: StringName, amount: int)
 signal supply_changed(value: int, required: int)
 
 const MAX_WEAPONS := 4
+const BASE_CRIT_MULTIPLIER := 2.0
+## Precision adds one base-damage unit; never stacks a second random multiplier.
+const WEAK_SPOT_CRIT_BONUS := 1.0
 
 var level := 1
 var xp := 0
@@ -55,7 +58,7 @@ var cooldown_boost := 1.0
 ## Chance (0..1) that a hit is critical.
 var crit_chance := 0.0
 ## Damage factor of a critical hit.
-var crit_multiplier := 1.5
+var crit_multiplier := BASE_CRIT_MULTIPLIER
 
 ## Resource id -> amount collected and not yet banked.
 var resources: Dictionary = {}
@@ -338,7 +341,7 @@ func _recompute() -> void:
 	ability_cooldown_multiplier = 1.0
 	resource_multiplier = 1.0
 	crit_chance = 0.0
-	crit_multiplier = 1.5
+	crit_multiplier = BASE_CRIT_MULTIPLIER
 	for index in _permanent.size():
 		_add_modifier(_permanent[index], _permanent_stacks[index])
 	for id in upgrade_levels:

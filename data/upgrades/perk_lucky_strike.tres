@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 id = &"lucky_strike"
 display_name = "Lucky Strike"
-description = "Main-gun hits have an 8% chance to crit for x1.75 damage."
-level_descriptions = PackedStringArray("Main-gun hits have an 8% chance to crit for x1.75 damage.", "Main-gun hits have a 16% chance to crit for x2 damage.", "Main-gun hits have a 24% chance to crit for x2.25 damage.")
+description = "8% rolled crit chance: x2.25 body damage. Aimed head/core hits always deal x3.25."
+level_descriptions = PackedStringArray("8% rolled crit chance: x2.25 body damage. Aimed head/core hits always deal x3.25.", "16% rolled crit chance: x2.5 body damage. Aimed head/core hits always deal x3.5.", "24% rolled crit chance: x2.75 body damage. Aimed head/core hits always deal x3.75.")
 kind = 3
 max_level = 3
 weight = 1.0

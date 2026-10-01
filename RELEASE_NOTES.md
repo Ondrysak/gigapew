@@ -1,3 +1,34 @@
+# Unreleased source changes
+
+- Removed `DOWN` from enemy finisher numbers; actual damage, critical labels and
+  hit/kill feedback remain.
+- Authored head/core weak volumes for all ten enemy types. Main-gun precision
+  hits guarantee ×3 base damage; ordinary rolled crits now deal ×2. Crit-damage
+  upgrades improve both, without multiplying the two critical bonuses together.
+- Weak volumes follow yaw, scale and feet height, including exposed features
+  above the old body bounds. World blockers limit precision hits. Pierced enemies
+  resolve their own critical state; precision does not boost collateral splash.
+- Spitter base health increased to 180, tank health to 420 and boss health to
+  6000, retaining schedule scaling and unchanged grunt/runner health. Lucky
+  Strike cards describe the new body and precision damage factors.
+- `tools/check_combat.gd` passed real-shot regressions for body/head damage,
+  random-crit non-stacking, piercing, splash, wall blocking, elevation, yaw and
+  Lucky Strike, alongside nested-blast coverage.
+- An isolated 1280×720 Mesa llvmpipe run rendered and hit the weak feature on all
+  ten enemy types, inspected boss head/eye alignment, showed a noncritical
+  finisher as its actual damage alone and rendered all three Lucky Strike cards.
+  It exited with code 0.
+- Controlled fresh-Scout held-fire checks against stationary bosses measured
+  body/weak-spot kill times of 9.62/3.22 s (Yard), 15.68/5.13 s (Foundry), and
+  23.37/7.85 s (Reactor), with zero random crit chance and tracked aim.
+  These are controlled comparisons, not full-campaign balance certification.
+- Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
+  exit; rendered smoke runs reported up to 20, and the virtual display still
+  warns about unsupported V-Sync. These changes are not claimed warning-free.
+
+The published 0.3.0 export and archive below have not been rebuilt for these
+source changes.
+
 # Kakaboomboom 0.3.0
 
 Three-hand gunplay, a between-round mineral exchange and persistent base crafting;

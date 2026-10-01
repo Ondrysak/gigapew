@@ -8,10 +8,12 @@
 script = ExtResource("1_def")
 display_name = "George Dreadnought"
 behavior = 2
-max_health = 2500.0
+max_health = 6000.0
 speed = 3.0
 radius = 1.8
 height = 4.2
+weak_spot_offset = Vector3(0, 3.4, -0.3)
+weak_spot_radius = 0.55
 mass = 25.0
 contact_damage = 10.0
 xp_value = 150
