@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/menu_logo.tscn" id="5_logo"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/currency_bar.tscn" id="6_currency"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/class_select_screen.tscn" id="7_class_select"]
-[ext_resource type="PackedScene" path="res://scenes/ui/menu/armory_screen.tscn" id="8_armory"]
+[ext_resource type="PackedScene" path="res://scenes/ui/menu/base.tscn" id="8_base"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/records_screen.tscn" id="9_records"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/settings_screen.tscn" id="10_settings"]
 
@@ -30,17 +30,17 @@ shader_parameter/sweep_speed = 0.09
 shader_parameter/glitch = 0.0
 shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
 
-[node name="MainMenu" type="Node" node_paths=PackedStringArray("home", "play_button", "armory_button", "records_button", "settings_button", "quit_button", "operator_label", "class_select", "armory", "records", "settings", "screen_dim", "fade")]
+[node name="MainMenu" type="Node" node_paths=PackedStringArray("home", "play_button", "base_button", "records_button", "settings_button", "quit_button", "operator_label", "class_select", "base", "records", "settings", "screen_dim", "fade")]
 script = ExtResource("1_menu")
 home = NodePath("UI/Root/Home")
 play_button = NodePath("UI/Root/Home/Buttons/Play")
-armory_button = NodePath("UI/Root/Home/Buttons/Armory")
+base_button = NodePath("UI/Root/Home/Buttons/Base")
 records_button = NodePath("UI/Root/Home/Buttons/Records")
 settings_button = NodePath("UI/Root/Home/Buttons/Settings")
 quit_button = NodePath("UI/Root/Home/Buttons/Quit")
 operator_label = NodePath("UI/Root/Home/Operator")
 class_select = NodePath("UI/Root/ClassSelect")
-armory = NodePath("UI/Root/Armory")
+base = NodePath("UI/Root/Base")
 records = NodePath("UI/Root/Records")
 settings = NodePath("UI/Root/Settings")
 screen_dim = NodePath("UI/Root/ScreenDim")
@@ -131,9 +131,9 @@ theme_override_font_sizes/font_size = 30
 text = "DEPLOY"
 alignment = 0
 
-[node name="Armory" type="Button" parent="UI/Root/Home/Buttons"]
+[node name="Base" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
-text = "ARMORY"
+text = "BASE WORKSHOP"
 alignment = 0
 
 [node name="Records" type="Button" parent="UI/Root/Home/Buttons"]
@@ -199,7 +199,7 @@ vertical_alignment = 1
 visible = false
 layout_mode = 1
 
-[node name="Armory" parent="UI/Root" instance=ExtResource("8_armory")]
+[node name="Base" parent="UI/Root" instance=ExtResource("8_base")]
 visible = false
 layout_mode = 1
 

@@ -1,16 +1,10 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/mining/deposit_field.gd" id="1_field"]
 [ext_resource type="Script" path="res://scripts/mining/deposit_definition.gd" id="2_definition"]
 [ext_resource type="Resource" path="res://data/resources/deposits/gold_vein.tres" id="3_gold"]
 [ext_resource type="Resource" path="res://data/resources/deposits/cinder_cluster.tres" id="4_crystal"]
 [ext_resource type="Resource" path="res://data/resources/deposits/void_shard.tres" id="5_shard"]
-
-[sub_resource type="StandardMaterial3D" id="Mat_flash"]
-transparency = 1
-blend_mode = 1
-shading_mode = 0
-albedo_color = Color(1, 0.93, 0.8, 0.55)
 
 [sub_resource type="BoxMesh" id="Mesh_chip"]
 size = Vector3(0.07, 0.07, 0.07)
@@ -34,7 +28,6 @@ albedo_color = Color(1, 1, 1, 1)
 [node name="DepositField" type="Node3D"]
 script = ExtResource("1_field")
 deposit_types = Array[ExtResource("2_definition")]([ExtResource("3_gold"), ExtResource("4_crystal"), ExtResource("5_shard")])
-hit_flash_material = SubResource("Mat_flash")
 chip_mesh = SubResource("Mesh_chip")
 chip_material = SubResource("Mat_chip")
 default_pickup_mesh = SubResource("Mesh_pickup")

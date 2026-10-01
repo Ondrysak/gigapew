@@ -2,20 +2,68 @@
 
 A first-person horde shooter in the style of Deep Rock Galactic: Survivor. Pick an operator, survive escalating robot and alien swarms, mine walls for loot, choose guns and perks, clear three stages and spend banked currency between runs. Built with Godot's GL Compatibility renderer and CC0 art credited in [CREDITS.md](CREDITS.md); the music is synthesized at runtime. Open `project.godot` and press **F5**, or run `godot --path .`. Verified with Godot 4.4.1 and 4.7.2.
 
+## Linux release
+
+Current game version: **0.3.0**. Downloadable/local release notes are in
+[RELEASE_NOTES.md](RELEASE_NOTES.md).
+
+To play the packaged release:
+
+```sh
+cd export/linux
+sha256sum -c kakaboomboom-0.3.0-linux-x86_64.tar.gz.sha256
+tar -xzf kakaboomboom-0.3.0-linux-x86_64.tar.gz
+cd kakaboomboom-0.3.0-linux-x86_64
+sha256sum -c SHA256SUMS
+./kakaboomboom.x86_64
+```
+
+The executable embeds the game data. Players do not need Godot or the source
+project. Requires Linux x86_64 and an OpenGL 3.3-capable driver. Save data lives in
+`~/.local/share/godot/app_userdata/Kakaboomboom/` by default, not in the game folder.
+
+### Building a release
+
+Use **Godot 4.7.2 stable**, its matching **Linux x86_64 export templates**, Python
+3.11+ and Make. The default executable is
+`~/.local/opt/godot/4.7.2/godot`, deliberately not the older `godot` on PATH.
+Install matching templates through **Editor → Manage Export Templates**; the
+Linux release template must be in
+`${XDG_DATA_HOME:-$HOME/.local/share}/godot/export_templates/4.7.2.stable/`.
+
+```sh
+make release-linux
+# Override only the executable location, not the engine version:
+make release-linux GODOT=/path/to/godot-4.7.2
+```
+
+The rule exports the `linux/x86_64` preset, then writes a versioned `.tar.gz`,
+its SHA-256 sidecar, and an unpacked release under `export/linux/`. Each package
+contains the executable, controls/install documentation, release notes, credits,
+Godot and dependency license notices, `VERSION`, `build-info.json` and
+`SHA256SUMS`. `export/linux/kakaboomboom.x86_64` is also available for direct use.
+Export failures stop packaging; generated builds are ignored by version control.
+
+For future releases, update `application/config/version` in `project.godot` and
+`RELEASE_NOTES.md` before running the rule. The package name, metadata and menu
+version come from that project setting. The rule replaces the artifacts for the
+same version; older versioned releases remain intact.
+
+
 ## Controls
 
 - **WASD** moves; **mouse** aims; **Space** jumps.
-- **Hold LMB** fires your main gun. **1 / 2 / 3** or the **mouse wheel** switches guns. Switching keeps the current shot cooldown.
-- **Hold RMB** drills: it mines mineral deposits and shoves nearby enemies.
+- **Hold LMB** fires all three weapon hands together, each with its own cooldown and spin-up. **1 / 2 / 3** or the **mouse wheel** focuses a hand; focusing does not reset cooldowns.
+- **Hold RMB** drills: aim at a deposit's glowing **◇ weak seam** to cut faster. Sections fracture individually and spill loot; the drill also shoves nearby enemies.
 - **Q** uses your class ability.
 - **E** activates nearby consoles or flame vents while facing them; shoot barrels and vent valves to trigger them. Look for warning lights before crossing electrified floor panels.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
 - **Esc** pauses (Resume, Settings, Abandon Run).
-- **Enter** advances after a boss dies. After death: **R** retries with the same class, **Enter** returns to the menu.
+- **Clear a boss:** choose a hand in the mineral shop, buy upgrades or reroll stock, then **Continue**. After death: **R** retries with the same class, **Enter** returns to the menu.
 
 ## Flow
 
-Intro → main menu (**Deploy**, **Armory**, **Records**, **Settings**) → class and ability select → run. Each stage counts down while the horde escalates. Most enemies spawn behind you; the radar shows the crowd. Yard and Foundry field robots, Reactor fields aliens. Each faction has grunts, runners, spitters, charging tanks and a boss. When the timer ends, the boss arrives while the horde keeps coming. Kill it to clear the stage. Level, upgrades, perks and auto weapons carry into the next stage; health refills.
+Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) → class and ability select → run. The base crafts permanent gear, perks and talents; its Armory tab retains existing permanent stat upgrades. Each stage counts down while the horde escalates. Most enemies spawn behind you; the radar shows the crowd. Yard and Foundry field robots, Reactor fields aliens. Each faction has grunts, runners, spitters, charging tanks and a boss. When the timer ends, the boss arrives while the horde keeps coming. Killing it banks minerals and opens the randomized round shop. Continue carries all three hand upgrades, level-up upgrades, perks and auto weapons into the next stage and refills health. The final shop returns to the base.
 
 | Stage | Length | Crowd cap | Boss health |
 | --- | --- | --- | --- |
@@ -31,14 +79,20 @@ Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when su
 
 | Class | Unlock | Guns | Default ability (Q) | Alternate abilities (Void Shards) | Profile |
 | --- | --- | --- | --- | --- | --- |
-| Scout | free | Pulse, Rail | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
-| Gunner | 6 shards | Minigun, Autocannon | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
-| Driller | 10 shards | Flamethrower, Scatter | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
-| Engineer | 14 shards | Pulse, Autocannon | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
+| Scout | free | Pulse, Rail, Pulse | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
+| Gunner | 6 shards | Minigun, Autocannon, Minigun | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
+| Driller | 10 shards | Flamethrower, Scatter, Flamethrower | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
+| Engineer | 14 shards | Pulse, Autocannon, Pulse | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
 
 Each class has three Q abilities: its default and two permanent unlocks. On the class-select screen, select an ability tile, buy it with Void Shards, then equip it. The equipped choice is saved per class in `user://profile.json`.
 
 **Main guns:** Pulse (fast, pierces 1), Rail (heavy, pierces the whole line), Scatter (7-pellet cone), Minigun (spins up to a shredding rate), Autocannon (explosive rounds), Flamethrower (short-range piercing cone).
+
+**Three hands:** the class's first two weapons repeat into three independent slots unless replaced by crafted equipment. All three models and gloved hands are visible. Each hand owns its own weapon definition, pellets, splash radius, damage type, damage, cadence and pierce upgrades; modifying one does not mutate its siblings or authored resources.
+
+**Damage and feedback:** kinetic deals direct damage; fire ignites for four burn ticks over two seconds; frost slows movement to 55% for 1.8 seconds; shock chains 40% damage to up to three nearby enemies. Critical and kill numbers report actual health removed, not overkill. Nearby same-type hits briefly merge to keep crowded fights readable. Recoil is a small, recoverable camera impulse alongside weapon kick, impact sparks, hit sounds and visible target flashes.
+
+**Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes readable, reliable target reactions and coherent presentation. Here, contact feedback precedes restrained camera effects; recoil recovers without aim drift, and there is no global hit-stop in the horde simulation. Firearms use independently authored hard-surface geometry with receivers, barrels, grips, sights, magazines and gloves, cached by weapon kind.
 
 **Hit chains:** each main-gun shot that directly hits an enemy adds one beat, no matter how many pellets hit. After three consecutive hits, each further shot gains +8% damage per beat, capped at +40%. A miss, taking damage, or 2.5 seconds without another hit breaks the chain; explosions alone do not extend it. The crosshair shows the next shot's bonus and a countdown. Hit-confirmation sounds climb in pitch; hits and kills have brighter impact sparks and stronger recoil.
 
@@ -46,19 +100,68 @@ Each class has three Q abilities: its default and two permanent unlocks. On the 
 
 **Perks** (level-up picks, each to level 3; do not occupy an auto-weapon slot): Chain Reaction (exploding kills), Vampiric Rounds (heal on kills), Adrenaline (fire rate when hurt), Thorns (contact retaliation), Lucky Strike (main-gun critical hits), Momentum (moving damage), Scavenger (bonus crystals) and Last Stand (survive a lethal hit once per stage, more charges at level 3).
 
-**Gun mods** (single-pick level-up cards; no auto-weapon slots): Quickdraw Capacitor gives the first shot within 1.5 s of a weapon swap +75% damage (the charge is spent on a miss); Longshot Optics gives direct hits beyond 15 m +40% damage; Executioner Core gives direct hits on enemies already below 35% health +60% damage. They can be combined, and installed mods appear under the selected gun on the HUD.
+**Gun mods** (single-pick level-up cards; no auto-weapon slots): Quickdraw Capacitor gives the focused hand's first shot within 1.5 s of a focus change +75% damage (the charge is spent on a miss); Longshot Optics gives direct hits beyond 15 m +40% damage; Executioner Core gives direct hits on enemies already below 35% health +60% damage. They can be combined, and installed mods appear under the focused hand on the HUD.
 
 **Stat upgrades:** damage, fire rate, pierce, speed, health, regeneration, armor, pickup radius, auto-weapon area and cooldown, XP, and Splitter Array (extra drones, blades, shells, turrets and rockets). Lucky Strike also adds critical chance and damage to the main gun.
 
 ## Mining and progression
 
-Mineral deposits are embedded in walls and obstacles and respawn over time. Drill them (RMB) or shoot them. Loot pops out and flies to you.
+Minerals grow as large procedural formations on broad walls and obstacles. Each
+seed chooses a hollow geode crown, winding vein or forked cluster with **7–9
+independent sections**, each made from recursively branching crystals. Placement
+reserves a roughly 4.4 × 2.6 × 1.35 m envelope (with size variation), tests full
+surface/floor clearance and keeps formations away from spawn points and narrow
+passages. Deposits respawn over time.
 
-- **Gold**: banked; buys permanent Armory upgrades.
-- **Void Shard**: banked, rare; the boss drops 3; unlocks classes and alternate abilities.
-- **Cinder Crystal**: in-run only; fills the supply meter for free upgrade picks, or powers turret consoles (10 crystals each).
+**Cut, reveal, retarget.** Hold RMB or shoot a section. Damage stays on that
+section when you stop to fight. Its seams brighten as it cracks; breaking it
+removes its actual surface collider and spills part of the deposit's loot
+immediately. There is no whole-deposit shrink animation or final duplicate payout.
+The pre-rolled total is 24–36 Gold, 10–16 Cinder Crystals or 1–2 rare Void Shards.
+Rare deposits can have zero-yield outer sections; the complete formation still
+contains its fixed shard budget.
 
-Banked resources move into your profile at 100% when you clear a stage (loot still on the floor is swept up), and at 50% if you die or abandon the run. The Armory sells eight permanent upgrades (Vitality, Firepower, Agility, Magnetism, Prospector, Salvager, Scholar, Plating), five levels each. Records track best time, kills, level, runs, victories and deepest stage. Everything is saved to `user://profile.json`.
+**Weak seams and resonance.** The glowing tip/◇ cue marks a real physical weak
+seam for **×1.75 cutting damage**. Sustained drilling on the same section builds
+up to **+35% cut rate over 0.65 s**. Releasing, losing contact, changing section or
+pausing resets resonance, but never restores the section's health. The readout
+shows mineral type, local fracture progress, sections remaining and the current
+resonance bonus. Drill pitch, sparks and recoil follow those states.
+
+**Fractal feedback.** Contact injects mineral-coloured branching contours into
+two alternating 384 × 216 history textures. Previous frames rotate, expand and
+fade into translucent echoes; section breaks add a ring pulse. The centre stays
+clear, HUD text is drawn outside the effect, and the history stops after a short
+tail. Pause, death and stage teardown clear it. `MiningTool.feedback_strength`
+controls intensity; zero disables the history effect while retaining the readout.
+
+### Mining design references
+
+- [Deep Rock Galactic's pickaxe](https://deeprockgalactic.wiki.gg/wiki/Pickaxe):
+  progressive extraction and combat-compatible RMB mining (community wiki).
+- [Astroneer developer interview](https://www.gamedeveloper.com/design/what-i-astroneer-i-s-devs-learned-while-leaving-early-access):
+  locally deforming beautiful procedural structures without rebuilding a world.
+- [No Man's Sky: Beyond](https://www.nomanssky.com/beyond-update/):
+  cutting effectiveness communicated through tool state and colour.
+- [Minecraft geodes](https://www.minecraft.net/en-us/article/amethyst-geode):
+  readable geological structures and progressively revealed crystal interiors.
+- [Crystaldive renderer](https://github.com/Ondrysak/crystaldive/blob/main/src/renderer.rs):
+  temporal history, UV warping, injection and decay. The repository has no
+  declared license; this project's geometry and shaders are independently
+  authored mathematical implementations, not copied source.
+
+The weak-seam multiplier, resonance and bounded fractal overlay are this game's
+adaptations, not claims that all the reference games use those exact mechanics.
+
+- **Gold**: banked; buys round-shop stock, base crafting and permanent Armory upgrades.
+- **Void Shard**: banked, rare; the boss drops 3; unlocks classes and alternate abilities and pays for advanced shop/base recipes.
+- **Cinder Crystal**: now banked as well as filling the supply meter for free upgrade picks and powering turret consoles (10 run crystals each).
+
+All three minerals move into your profile at 100% when you clear a stage (loot still on the floor is swept up), and at 50% if you die or abandon the run. Spending run crystals on consoles removes those crystals before banking.
+
+**Round mineral shop:** boss kills pause gameplay and offer randomized stock. Select a hand for projectile, splash, fire/frost/shock conversion, damage, cadence or pierce purchases; armor and health purchases affect the whole run. Paid rerolls replace stock and become more expensive after each refresh. Sold, capped or unaffordable purchases do not debit minerals. Hand selection carries into the next round. These upgrades expire when the run ends.
+
+**Persistent base:** craft armor, weapon blueprints and per-hand gadgets, plus automatically applied perks and ranked talents. Equip one armor set and one crafted weapon/gadget per hand; reset a gun to restore that class's free default. Crafting and equipment persist across runs, including after restarting the game. The Armory tab sells the existing eight permanent upgrades (Vitality, Firepower, Agility, Magnetism, Prospector, Salvager, Scholar, Plating), five levels each. Records track best time, kills, level, runs, victories and deepest stage. Everything is saved to `user://profile.json`; older profiles keep their currencies, unlocks, upgrades, records and settings.
 
 ## Music
 
@@ -68,15 +171,21 @@ The adaptive soundtrack is rendered procedurally on background threads at startu
 
 Gameplay code reads data resources and draws through replaceable scenes and materials. It never refers to mesh names, so a reskin replaces art without touching controllers.
 
-- **Autoloads:** `Profile` (`scripts/meta/profile.gd`) holds persistent currency, unlocks, Armory levels, records and settings. `Music` (`scripts/audio/music_director.gd`, with `music_score.gd` for the arrangement and `music_synth.gd` for synthesis) plays tracks and stingers and follows intensity. Buses are defined in `default_bus_layout.tres`.
-- **Stats:** `StatModifier` (`scripts/data/stat_modifier.gd`) holds the shared additive stat fields. `ClassDefinition`, `MetaUpgradeDefinition` and level-up `UpgradeDefinition` extend it. `RunState` sums the class (×1), Armory upgrades (× purchased level) and level-up upgrades (× stacks).
+- **Autoloads:** `Profile` (`scripts/meta/profile.gd`) holds persistent currency, unlocks, Armory levels, crafting ranks, equipped armor/hand gear, records and settings. Multi-mineral payments validate the entire cost before debiting. `Music` (`scripts/audio/music_director.gd`, with `music_score.gd` for the arrangement and `music_synth.gd` for synthesis) plays tracks and stingers and follows intensity. Buses are defined in `default_bus_layout.tres`.
+- **Stats and economy:** `StatModifier` (`scripts/data/stat_modifier.gd`) holds shared stat fields. `RunState` combines class stats, Armory levels, crafted modifiers and level-up stacks, and owns three `WeaponHand` resources. `RoundShop` generates and purchases run-only stock; `CraftingCatalog` supplies persistent `CraftRecipe` definitions.
 - **Classes and abilities:** `data/classes/*.tres` plus `roster.tres` define the loadout, stats, unlock cost, default `ability_scene` and optional `alternate_abilities` with shard costs. `Profile` remembers each class's equipped ability; abilities extend `ActiveAbility` (`scripts/abilities/`, scenes in `scenes/abilities/`).
-- **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage, cadence, pellets, spread, pierce, knockback, explosion, spin-up) plus a `WeaponView` scene in `scenes/weapons/`. Each first-person model uses reusable primitive parts; the view reuses impact and tracer meshes per ray. `ArenaPlayer` tracks direct-hit chains and resolves the three main-gun mods at shot time.
+- **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up) plus a `WeaponView` scene in `scenes/weapons/`. `scripts/weapons/firearm_model.gd` builds original shared meshes once per weapon kind; views reuse impact and tracer meshes per ray. `ArenaPlayer` owns independent hand cooldowns/spin-up, direct-hit chains, gun mods and recoverable camera recoil. `Horde.damage_reported` feeds the fixed `DamageNumbers` label pool with actual health loss.
 - **Auto weapons, perks and gun mods:** `AutoWeapon` subclasses in `scripts/weapons/auto/` and `PerkEffect` subclasses in `scripts/perks/`, granted by `UpgradeDefinition`s (STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD) listed in `data/upgrades/pool.tres`. The `AutoWeaponRack` owns auto weapons and perks; neither perks nor gun mods use an auto-weapon slot.
 - **Horde:** `scripts/horde/horde.gd` runs a data-oriented simulation with one MultiMesh per enemy type, a shared flow field, weapon queries, `slow()`, faction FX and contact tuning. The flow field avoids obstacles and treats cliffs as walls; it routes to the player's level over ramps. Each enemy has a feet height taken from the stage heightfield: it snaps up ramps, falls off ledges and never climbs a step over 0.3 m. Hit tests, blasts, projectiles and contact damage all use that height. Robot and alien stats/animations are in `data/enemies/*.tres`. Meshes are baked from the CC0 models in `assets/monsters/` into shared textured surfaces; `shaders/horde_enemy_vat.gdshader` animates the crowd from position/normal textures and per-instance clip state. `tools/vat/README.md` covers the reproducible Blender bake and source pack licenses. The static shader remains available for other models.
-- **Mining:** `ResourceDefinition` data lives in `data/resources/`; deposit types are in `data/resources/deposits/`. `DepositField` and `MiningTool` live in `scenes/mining/`; deposit models are in `scenes/mining/models/`.
+- **Mining:** `ResourceDefinition` data lives in `data/resources/`; deposit types are in `data/resources/deposits/`. `DepositGeometry` builds seeded section meshes and matching triangle colliders; `MineralDeposit` owns persistent local health and a conserved integer loot budget. `DepositField` probes placement and spills section loot. `MiningTool` owns the drill and `MiningFeedback`'s ping-pong canvas history. Materials are in `shaders/deposit_crystal.gdshader` and `shaders/mining_history.gdshader`; there are no authored deposit model scenes.
 - **Stages and hazards:** `data/stages/*.tres` select a world, play area and `SpawnSchedule`. A world scene has a `PlayerSpawn`, a floor at y = 0, an `Obstacles` node of box/cylinder colliders (used by horde navigation and deposit placement), an optional `Elevation` node, and a `Hazards` node. `Elevation` holds `StaticBody3D` decks and ramps. Each has exactly one `BoxShape3D`, yawed in multiples of 90°, with ramps also pitched. They are solid down to the floor. The horde rasterises their top faces into a 0.5 m heightfield. Keep ramps ≤ 18°, at least 6 m wide, and flush with the floor and the deck edge (a lip of even a few centimetres stops the player's capsule). Decks must be at least 1.6 m high so their edges read as cliffs, and every deck must be reachable by ramp. `scripts/game.gd` configures every hazard once per round via `setup(horde, player, run_state)`. The five hazard scene/scripts live in `scenes/hazards/` and `scripts/hazards/`; world decoration is composed from CC0 MegaKit modules in `assets/third_party/`.
 - **UI:** the HUD is `scenes/ui/hud.tscn`, level-up cards are `scenes/ui/level_up.tscn`, and the pause menu is `scenes/ui/pause_menu.tscn`. The intro, main menu and its screens are in `scenes/ui/` and `scenes/ui/menu/`, styled by the shared `menu_theme.tres`.
-- **Run flow:** `scripts/game.gd` (`ArenaGame`) builds each stage from data under a fresh `Round` node. It handles level-up and pause states, banks currency into `Profile`, records runs and drives music intensity from crowd density.
+- **Run flow:** `scripts/game.gd` (`ArenaGame`) builds each stage under a fresh `Round` node, carries effective three-hand resources between stages, and handles level-up, pause, the mineral shop and final return to base. It banks all three minerals into `Profile`, records runs and drives music intensity from crowd density.
 
 Performance: the mixed-faction 1,600-enemy horde was measured in a Godot 4.4.1 headless CPU check (120 frames). On the elevated stages, simulation averaged 7.2 ms per frame on the Yard and 7.5 ms on the Reactor (about 20% of the horde on raised ground); draw preparation took about 2.6 ms. The same check before the heightfield measured 6.1–6.5 ms. GL Compatibility visuals were inspected in an isolated 1280×720 virtual display (Mesa llvmpipe); **60 fps has not been measured on the Radeon GPU**.
+
+Run the nested-blast regression with the editor executable:
+
+```sh
+~/.local/opt/godot/4.7.2/godot --headless --path . --script tools/check_combat.gd
+```

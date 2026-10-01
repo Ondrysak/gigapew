@@ -28,12 +28,14 @@ static func drill_loop() -> AudioStreamWAV:
 
 ## One-shot cues: &"clank" (bit on rock), &"thud" (bit on enemy),
 ## &"crunch" (deposit breaks), &"tink" (nugget collected).
+## &"section" adds a short rising crystal beat to a drill section break.
 static func cue(name: StringName) -> AudioStreamWAV:
 	var duration := 0.12
 	match name:
 		&"clank": duration = 0.13
 		&"crunch": duration = 0.5
 		&"tink": duration = 0.1
+		&"section": duration = 0.24
 	var count := int(duration * SAMPLE_RATE)
 	var bytes := PackedByteArray()
 	bytes.resize(count * 2)
@@ -55,6 +57,9 @@ static func cue(name: StringName) -> AudioStreamWAV:
 			&"tink":
 				var frequency := lerpf(1320.0, 1760.0, minf(1.0, progress * 3.0))
 				sample = (sin(TAU * frequency * t) * 0.5 + sin(TAU * frequency * 2.0 * t) * 0.15) * exp(-t * 32.0)
+			&"section":
+				var frequency := lerpf(720.0, 1080.0, minf(1.0, progress * 4.0))
+				sample = (sin(TAU * frequency * t) * 0.42 + sin(TAU * frequency * 1.5 * t) * 0.2) * exp(-t * 16.0) + noise * exp(-t * 45.0) * 0.15
 		# Short fades remove clicks at both edges.
 		sample *= minf(1.0, t * 1000.0) * minf(1.0, (duration - t) * 400.0)
 		bytes.encode_s16(i * 2, int(clampf(sample, -1.0, 1.0) * 32767.0))

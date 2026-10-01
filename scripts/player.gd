@@ -23,7 +23,7 @@ const MINING_SHARE := 0.35
 const COMBO_WINDOW := 2.5
 const COMBO_MAX_BONUS := 0.4
 
-## Main guns in slot order (1 to 3 entries; keys 1/2/3 and the wheel cycle them).
+## Up to three simultaneous guns; selection focuses HUD/shop, not firing.
 @export var weapons: Array[WeaponDefinition] = []
 ## Class ability; the root must be an ActiveAbility. Instanced in _ready.
 @export var ability_scene: PackedScene
@@ -42,7 +42,7 @@ var ability: ActiveAbility
 var active := true
 var max_health := 100
 var health := 100
-var _fire_cooldown := 0.0
+var _fire_cooldowns := PackedFloat32Array()
 var combo_hits := 0
 var _combo_left := 0.0
 var _quickdraw_left := 0.0
@@ -53,15 +53,17 @@ var _regen := 0.0
 var _invulnerable := 0.0
 var _dash_velocity := Vector3.ZERO
 var _dash_time := 0.0
-## Spin-up progress 0..1 of the selected gun.
-var _spin := 0.0
+## Spin progress and recovery belong to each hand, never the focused slot.
+var _spins := PackedFloat32Array()
+var _camera_rest_rotation := Vector3.ZERO
+var _camera_recoil := Vector2.ZERO
 var _trauma := 0.0
 var _shake_clock := 0.0
 var _profile: Node
 var _rng := RandomNumberGenerator.new()
 var _views: Array[WeaponView] = []
 var _directions: Array[PackedVector3Array] = []
-var _view: WeaponView
+var _view_scenes: Array[PackedScene] = []
 var _query: PhysicsRayQueryParameters3D
 var _hits := PackedInt32Array()
 var _distances := PackedFloat32Array()
@@ -69,8 +71,11 @@ var _distances := PackedFloat32Array()
 var _hit_slots := PackedInt32Array()
 var _hit_damage := PackedFloat32Array()
 var _hit_count := 0
-var _blast_points := PackedVector3Array()
-var _blast_damage := PackedFloat32Array()
+var _hit_lookup := PackedInt32Array()
+var _hit_critical := PackedByteArray()
+var _hit_direct := PackedByteArray()
+var _hit_push := PackedVector3Array()
+var _splash_hits := PackedInt32Array()
 var _death_guards: Array[Callable] = []
 
 func _ready() -> void:
@@ -80,27 +85,18 @@ func _ready() -> void:
 	refresh_stats()
 	health = max_health
 	_query = PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 0xFFFFFFFF, [get_rid()])
-	_hit_slots.resize(64)
-	_hit_damage.resize(64)
-	var max_pellets := 1
-	for definition in weapons:
-		max_pellets = maxi(max_pellets, definition.pellet_count)
-		var view := definition.view_scene.instantiate() as WeaponView
-		camera.add_child(view)
-		view.prepare(definition.pellet_count)
-		view.hide()
-		_views.append(view)
-		var directions := PackedVector3Array()
-		directions.append(Vector3.FORWARD)
-		# A center pellet and an even cone ring make every burst reproducible.
-		var radius := tan(deg_to_rad(definition.spread_degrees))
-		for pellet in range(1, definition.pellet_count):
-			var angle := TAU * float(pellet - 1) / float(definition.pellet_count - 1)
-			directions.append(Vector3(cos(angle) * radius, sin(angle) * radius, -1.0).normalized())
-		_directions.append(directions)
-	_blast_points.resize(max_pellets)
-	_blast_damage.resize(max_pellets)
-	select_weapon(selected_weapon)
+	_camera_rest_rotation = camera.rotation
+	_hits.resize(Horde.CAPACITY)
+	_distances.resize(Horde.CAPACITY)
+	_hit_slots.resize(Horde.CAPACITY)
+	_hit_damage.resize(Horde.CAPACITY)
+	_hit_lookup.resize(Horde.CAPACITY)
+	_hit_lookup.fill(-1)
+	_hit_critical.resize(Horde.CAPACITY)
+	_hit_direct.resize(Horde.CAPACITY)
+	_hit_push.resize(Horde.CAPACITY)
+	_splash_hits.resize(Horde.CAPACITY)
+	refresh_weapons()
 	if ability_scene != null:
 		var node := ability_scene.instantiate()
 		ability = node as ActiveAbility
@@ -111,22 +107,80 @@ func _ready() -> void:
 			add_child(ability)
 			ability.setup(self, horde, run_state)
 
+## Refresh effective hand definitions and caches outside the firing path.
+## Cooldowns/spin survive upgrades and changes of focus.
+func refresh_weapons() -> void:
+	if not is_node_ready() and _query == null:
+		return
+	if weapons.size() > 3:
+		weapons.resize(3)
+	while _views.size() > weapons.size():
+		var old := _views.pop_back() as WeaponView
+		if old != null:
+			old.queue_free()
+		_view_scenes.pop_back()
+		_directions.pop_back()
+	_fire_cooldowns.resize(weapons.size())
+	_spins.resize(weapons.size())
+	for slot in range(weapons.size()):
+		var definition := weapons[slot]
+		if slot >= _views.size():
+			_views.append(null)
+			_view_scenes.append(null)
+			var directions := PackedVector3Array()
+			directions.resize(WeaponHand.MAX_PROJECTILES)
+			_directions.append(directions)
+		var scene := definition.view_scene if definition != null else null
+		if _view_scenes[slot] != scene:
+			if _views[slot] != null:
+				_views[slot].queue_free()
+				_views[slot] = null
+			_view_scenes[slot] = scene
+			if scene != null:
+				var node := scene.instantiate()
+				var view := node as WeaponView
+				if view == null:
+					node.free()
+					push_error("Weapon view_scene root must be a WeaponView")
+				else:
+					# Set BEFORE _ready captures the authored resting transform.
+					view.position = Vector3(-0.44, -0.27, -0.66) if slot == 0 \
+							else Vector3(0.44, -0.27, -0.66) if slot == 1 \
+							else Vector3(0.0, -0.35, -0.70)
+					if slot == 2:
+						view.scale *= 0.75
+					camera.add_child(view)
+					view.prepare(WeaponHand.MAX_PROJECTILES)
+					_views[slot] = view
+		if definition == null:
+			continue
+		if _views[slot] != null:
+			_views[slot].configure(definition)
+		var count := _projectile_count(definition)
+		var radius := tan(deg_to_rad(definition.spread_degrees))
+		# Bonus rays on precision guns still diverge enough to read as multishot.
+		if count > definition.pellet_count:
+			radius = maxf(radius, tan(deg_to_rad(1.5)))
+		_directions[slot][0] = Vector3.FORWARD
+		for pellet in range(1, count):
+			var angle := TAU * float(pellet - 1) / float(count - 1)
+			_directions[slot][pellet] = Vector3(cos(angle) * radius, sin(angle) * radius, -1.0).normalized()
+	selected_weapon = clampi(selected_weapon, 0, maxi(0, weapons.size() - 1))
+	if not weapons.is_empty() and weapons[selected_weapon] != null:
+		weapon_changed.emit(weapons[selected_weapon], selected_weapon)
+
+func _projectile_count(definition: WeaponDefinition) -> int:
+	return clampi(definition.pellet_count + (run_state.projectile_bonus if run_state != null else 0), \
+			1, WeaponHand.MAX_PROJECTILES)
+
 func select_weapon(index: int) -> void:
-	if not active or index < 0 or index >= _views.size():
+	if not active or index < 0 or index >= _views.size() or weapons[index] == null:
 		return
-	if _view == _views[index]:
+	if selected_weapon == index:
 		return
-	var switching := _view != null
-	if _view != null:
-		_view.set_spin(0.0)
-		_view.hide()
 	selected_weapon = index
-	_view = _views[index]
-	_view.show()
-	_spin = 0.0
-	_quickdraw_left = 1.5 if switching and run_state != null \
+	_quickdraw_left = 1.5 if run_state != null \
 			and run_state.upgrade_levels.get(&"mod_quickdraw", 0) > 0 else 0.0
-	# The outstanding shot cooldown belongs to the player, not the view.
 	weapon_changed.emit(weapons[index], index)
 
 ## Re-reads run upgrades; keeps current damage taken when max health grows.
@@ -190,8 +244,9 @@ func _input(event: InputEvent) -> void:
 		var sensitivity := _mouse_sensitivity()
 		rotate_y(-event.relative.x * sensitivity)
 		head.rotation.x = clampf(head.rotation.x - event.relative.y * sensitivity, deg_to_rad(-85.0), deg_to_rad(85.0))
-		if _view != null:
-			_view.aim(event.relative)
+		for view in _views:
+			if view != null:
+				view.aim(event.relative)
 
 func _mouse_sensitivity() -> float:
 	if _profile == null:
@@ -203,9 +258,16 @@ func _mouse_sensitivity() -> float:
 
 func _process(delta: float) -> void:
 	var speed_ratio := clampf(Vector2(velocity.x, velocity.z).length() / SPEED, 0.0, 1.0)
-	if _view != null:
-		_view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active)
-		_view.set_spin(_spin if active else 0.0)
+	var mining := active and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and Input.is_action_pressed("mine")
+	for slot in range(_views.size()):
+		var view := _views[slot]
+		if view != null:
+			view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active, mining and slot == 0)
+			view.set_spin(_spins[slot] if active else 0.0)
+	_camera_recoil *= exp(-20.0 * delta)
+	if _camera_recoil.length_squared() < 0.000000001:
+		_camera_recoil = Vector2.ZERO
+	camera.rotation = _camera_rest_rotation + Vector3(_camera_recoil.x, _camera_recoil.y, 0.0)
 	camera.fov = lerpf(camera.fov, 90.0 + speed_ratio * 2.5, 1.0 - exp(-5.0 * delta))
 	_trauma = maxf(0.0, _trauma - delta * 1.8)
 	_shake_clock += delta
@@ -238,24 +300,27 @@ func _physics_process(delta: float) -> void:
 		_move(delta)
 	_stay_in_arena()
 
-	if _view == null:
-		return
-	var definition := weapons[selected_weapon]
 	var trigger := captured and not _waiting_for_fire_release and Input.is_action_pressed("fire")
-	if definition.spin_up_time > 0.0:
-		if trigger:
-			_spin = minf(1.0, _spin + delta / definition.spin_up_time)
-		else:
-			_spin = maxf(0.0, _spin - delta / maxf(0.01, definition.spin_down_time))
-	_fire_cooldown = maxf(-delta, _fire_cooldown - delta)
-	if trigger and _fire_cooldown <= 0.0:
-		var interval := definition.fire_interval
+	for slot in range(weapons.size()):
+		if not active:
+			break # A boss kill may synchronously open the round shop.
+		var definition := weapons[slot]
+		if definition == null or _views[slot] == null:
+			continue
 		if definition.spin_up_time > 0.0:
-			var eased := 1.0 - (1.0 - _spin) * (1.0 - _spin)
-			interval *= lerpf(definition.spin_up_start_multiplier, 1.0, eased)
-		var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
-		_fire_cooldown += interval / maxf(0.1, rate)
-		_shoot()
+			if trigger:
+				_spins[slot] = minf(1.0, _spins[slot] + delta / definition.spin_up_time)
+			else:
+				_spins[slot] = maxf(0.0, _spins[slot] - delta / maxf(0.01, definition.spin_down_time))
+		_fire_cooldowns[slot] = maxf(-delta, _fire_cooldowns[slot] - delta)
+		if trigger and _fire_cooldowns[slot] <= 0.0:
+			var interval := definition.fire_interval
+			if definition.spin_up_time > 0.0:
+				var eased := 1.0 - (1.0 - _spins[slot]) * (1.0 - _spins[slot])
+				interval *= lerpf(definition.spin_up_start_multiplier, 1.0, eased)
+			var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
+			_fire_cooldowns[slot] += maxf(0.01, interval / maxf(0.1, rate))
+			_shoot(slot)
 
 ## Grapples and dashes from raised decks can clear the perimeter walls; the
 ## player never leaves the stage's play area.
@@ -312,14 +377,17 @@ func _move(delta: float) -> void:
 	var falling_speed := velocity.y
 	move_and_slide()
 	if not grounded and is_on_floor() and falling_speed < -3.0:
-		if _view != null:
-			_view.land(falling_speed)
+		for view in _views:
+			if view != null:
+				view.land(falling_speed)
 		sound.play_cue(&"land")
 
-func _shoot() -> void:
-	var definition := weapons[selected_weapon]
-	var quickdraw := _quickdraw_left > 0.0
-	_quickdraw_left = 0.0 # The first shot spends the capacitor, including misses.
+func _shoot(hand: int) -> void:
+	var definition := weapons[hand]
+	var view := _views[hand]
+	var quickdraw := hand == selected_weapon and _quickdraw_left > 0.0
+	if quickdraw:
+		_quickdraw_left = 0.0 # The focused hand spends its capacitor, even on a miss.
 	var combo_bonus := minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08))
 	var shot_damage := definition.damage * (run_state.damage_multiplier if run_state != null else 1.0) \
 			* (1.0 + combo_bonus) * (1.75 if quickdraw else 1.0)
@@ -327,25 +395,29 @@ func _shoot() -> void:
 	var longshot: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_longshot", 0)) > 0
 	var executioner: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_executioner", 0)) > 0
 	var mining := shot_damage * MINING_SHARE * (run_state.mining_multiplier if run_state != null else 1.0)
-	_view.begin_shot(sound)
+	view.begin_shot(sound)
 	shot_fired.emit()
 	if definition.screen_shake > 0.0:
 		add_shake(definition.screen_shake)
+	for n in _hit_count:
+		_hit_lookup[_hit_slots[n]] = -1
 	_hit_count = 0
 	var origin := camera.global_position
 	var aim := camera.global_basis
 	var forward := -aim.z
 	var roll := Basis.IDENTITY
-	if definition.pellet_count > 1 and definition.jitter_degrees > 0.0:
+	var pellet_count := _projectile_count(definition)
+	if pellet_count > 1 and definition.jitter_degrees > 0.0:
 		roll = Basis(Vector3.FORWARD, _rng.randf() * TAU)
 	var jitter := tan(deg_to_rad(definition.jitter_degrees))
 	var space := get_world_3d().direct_space_state
-	var directions := _directions[selected_weapon]
+	var directions := _directions[hand]
 	var explosive := definition.explosion_radius > 0.0
 	var alive_before := horde.alive_count if horde != null else 0
 	var critical_at := Vector3.INF
+	var direct_confirmed := false
 	_query.from = origin
-	for pellet in range(definition.pellet_count):
+	for pellet in range(pellet_count):
 		var local := roll * directions[pellet]
 		if jitter > 0.0:
 			local = (local + Vector3(_rng.randf_range(-jitter, jitter), _rng.randf_range(-jitter, jitter), 0.0)).normalized()
@@ -363,7 +435,8 @@ func _shoot() -> void:
 			hits = horde.raycast(origin, direction, reach, pierce + 1, _hits, _distances)
 		# Crits roll per pellet; the exposure zone scales per enemy.
 		var pellet_damage := shot_damage
-		if run_state != null and run_state.roll_critical():
+		var critical := run_state != null and run_state.roll_critical()
+		if critical:
 			pellet_damage *= run_state.crit_multiplier
 			if hits > 0 and critical_at == Vector3.INF:
 				critical_at = horde.enemy_position(_hits[0])
@@ -375,33 +448,39 @@ func _shoot() -> void:
 				direct_damage *= 1.4
 			if executioner and horde.enemy_health_fraction(slot) < 0.35:
 				direct_damage *= 1.6
-			_add_hit(slot, direct_damage)
+			_add_hit(slot, direct_damage, critical)
+			var hit_index := _hit_lookup[slot]
+			if _hit_direct[hit_index] == 0:
+				_hit_push[hit_index] += forward * definition.knockback * (1.6 if quickdraw else 1.0)
+				_hit_direct[hit_index] = 1
+		direct_confirmed = direct_confirmed or hits > 0
 		# The trace ends at the last enemy it stopped in, else at the wall.
 		var stopped := hits > pierce
 		var end := origin + direction * (_distances[hits - 1] if stopped else reach)
 		if not stopped and not wall.is_empty():
 			var collider: Object = wall["collider"]
 			if collider != null and collider.has_method(&"take_mining_damage"):
-				collider.take_mining_damage(mining)
+				collider.take_mining_damage(mining, wall["position"], int(wall["shape"]))
 			# Shootable world objects (explosive barrels, switches) take the full shot.
 			if collider != null and collider.has_method(&"take_hit"):
 				collider.take_hit(shot_damage, wall["position"])
-		_view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), stopped)
+		view.show_ray(pellet, end, normal, stopped or not wall.is_empty(), stopped, critical)
 		if explosive:
-			_blast_points[pellet] = end
-			_blast_damage[pellet] = pellet_damage
-	# Each enemy takes one combined hit per shot so pellets never double-kill.
+			if horde != null:
+				var splash_count := horde.query_radius(end, definition.explosion_radius, _splash_hits)
+				for n in splash_count:
+					var slot := _splash_hits[n]
+					var away := horde.enemy_position(slot) - end
+					away.y = 0.0
+					var push := away.normalized() * definition.explosion_knockback if away.length_squared() > 0.0001 else Vector3.ZERO
+					_add_hit(slot, pellet_damage * definition.explosion_damage_fraction, critical)
+					_hit_push[_hit_lookup[slot]] += push
+			view.show_blast(end, definition.explosion_radius)
+	# Direct pellets and splash aggregate before any deaths or feedback.
 	var confirmed := _hit_count > 0
 	for n in _hit_count:
-		horde.damage(_hit_slots[n], _hit_damage[n], forward * definition.knockback * (1.6 if quickdraw else 1.0))
-	if explosive:
-		for pellet in range(definition.pellet_count):
-			var at := _blast_points[pellet]
-			if horde != null and horde.damage_radius(at, definition.explosion_radius, \
-					_blast_damage[pellet] * definition.explosion_damage_fraction, definition.explosion_knockback) > 0:
-				confirmed = true
-			_view.show_blast(at, definition.explosion_radius)
-	if _hit_count > 0:
+		horde.damage(_hit_slots[n], _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0)
+	if direct_confirmed:
 		combo_hits += 1 # One beat per direct-hit shot, not per pellet or blast victim.
 		_combo_left = COMBO_WINDOW
 		combo_changed.emit(combo_hits, minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08)))
@@ -410,10 +489,16 @@ func _shoot() -> void:
 	if confirmed:
 		var killed := horde.alive_count < alive_before
 		hit_confirmed.emit(killed)
-		_view.confirm_hit(killed, sound, combo_hits)
+		view.confirm_hit(killed, sound, combo_hits, critical_at != Vector3.INF)
 		add_shake(0.095 if killed else 0.035)
 	if critical_at != Vector3.INF:
 		critical_hit.emit(critical_at)
+	# Camera kick is a bounded temporary child offset, never player/head aim.
+	var kick := deg_to_rad(clampf(definition.recoil_degrees, 0.15, 0.6))
+	_camera_recoil.x = minf(deg_to_rad(0.85), _camera_recoil.x + kick)
+	var side := -1.0 if hand == 0 else 1.0 if hand == 1 else _rng.randf_range(-1.0, 1.0)
+	_camera_recoil.y = clampf(_camera_recoil.y + kick * side * 0.22, -deg_to_rad(0.35), deg_to_rad(0.35))
+	camera.rotation = _camera_rest_rotation + Vector3(_camera_recoil.x, _camera_recoil.y, 0.0)
 
 func _reset_combo() -> void:
 	if combo_hits == 0:
@@ -422,17 +507,20 @@ func _reset_combo() -> void:
 	_combo_left = 0.0
 	combo_changed.emit(0, 0.0)
 
-func _add_hit(slot: int, amount: float) -> void:
-	for n in _hit_count:
-		if _hit_slots[n] == slot:
-			_hit_damage[n] += amount
-			return
-	if _hit_count >= _hit_slots.size():
-		_hit_slots.resize(_hit_count * 2)
-		_hit_damage.resize(_hit_count * 2)
-	_hit_slots[_hit_count] = slot
-	_hit_damage[_hit_count] = amount
-	_hit_count += 1
+func _add_hit(slot: int, amount: float, critical: bool) -> void:
+	var index := _hit_lookup[slot]
+	if index < 0:
+		index = _hit_count
+		_hit_count += 1
+		_hit_lookup[slot] = index
+		_hit_slots[index] = slot
+		_hit_damage[index] = 0.0
+		_hit_critical[index] = 0
+		_hit_push[index] = Vector3.ZERO
+		_hit_direct[index] = 0
+	_hit_damage[index] += amount
+	if critical:
+		_hit_critical[index] = 1
 
 ## Registers a callable returning true to survive a lethal hit at 1 HP
 ## (e.g. the Last Stand perk). Guards are asked in registration order.

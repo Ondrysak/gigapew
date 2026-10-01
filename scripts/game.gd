@@ -6,9 +6,10 @@ extends Node3D
 ## pause and level-up flow, banking of mined currency into the Profile, and
 ## music intensity. Each stage is rebuilt from data under a fresh Round node.
 
-enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, CLEARED, LOST }
+enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST }
 
 const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
+const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 
 @export var campaign: Array[StageDefinition] = []
 @export var player_scene: PackedScene
@@ -50,6 +51,8 @@ var pickups: PickupField
 var deposits: DepositField
 var world: Node3D
 var _round: Node3D
+var round_shop: RoundShopScreen
+var damage_numbers: DamageNumbers
 var _rng := RandomNumberGenerator.new()
 var _banked_ids: Array[StringName] = []
 var _nearby := PackedInt32Array()
@@ -65,14 +68,29 @@ func _ready() -> void:
 	pause_menu.resume_requested.connect(_on_resume)
 	pause_menu.abandon_requested.connect(_on_abandon)
 	hud.setup_resources(resources)
+	var shop_layer := CanvasLayer.new()
+	shop_layer.name = "RoundShopLayer"
+	shop_layer.layer = 20
+	shop_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(shop_layer)
+	round_shop = SHOP_SCENE.instantiate() as RoundShopScreen
+	shop_layer.add_child(round_shop)
+	round_shop.hide()
+	round_shop.continue_requested.connect(_on_shop_continue)
 	_new_run()
 
 func _new_run() -> void:
 	get_tree().paused = false
 	class_definition = Profile.roster.find(Profile.selected_class_id)
 	run_state = RunState.new()
-	run_state.set_permanent_modifiers(class_definition, Profile.meta_levels())
+	var permanent := Profile.meta_levels()
+	permanent.merge(Profile.crafting_modifiers())
+	run_state.set_permanent_modifiers(class_definition, permanent)
+	run_state.initialize_hands(Profile.hand_loadout(class_definition))
+	Profile.apply_hand_gadgets(run_state.hands)
 	for upgrade in class_definition.starting_upgrades:
+		run_state.apply_upgrade(upgrade)
+	for upgrade in Profile.starting_craft_upgrades():
 		run_state.apply_upgrade(upgrade)
 	run_state.xp_changed.connect(hud.set_xp)
 	run_state.level_up_ready.connect(_on_level_up_ready)
@@ -123,12 +141,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_request(_new_run)
 			elif event.is_action_pressed("advance"):
 				_request(_to_menu)
-		RoundState.CLEARED:
-			var final_stage := stage_index + 1 >= campaign.size()
-			if event.is_action_pressed("advance"):
-				_request(_to_menu if final_stage else _load_stage.bind(stage_index + 1, player.selected_weapon))
-			elif final_stage and event.is_action_pressed("restart"):
-				_request(_new_run)
+		RoundState.SHOP:
+			# Shop input belongs to its focused controls; Enter cannot skip stock.
+			return
 
 func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
@@ -140,7 +155,21 @@ func _to_menu() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file(MENU_SCENE)
 
+func _to_base() -> void:
+	get_tree().set_meta(&"open_base", true)
+	_to_menu()
+
+func _on_shop_continue(hand: int) -> void:
+	if round_state != RoundState.SHOP:
+		return
+	round_shop.hide()
+	get_tree().paused = false
+	var final_stage := stage_index + 1 >= campaign.size()
+	_request(_to_base if final_stage else _load_stage.bind(stage_index + 1, hand))
+
 func _load_stage(index: int, weapon_slot: int) -> void:
+	get_tree().paused = false
+	round_shop.hide()
 	if is_instance_valid(_round):
 		_round.free()
 	stage_index = index
@@ -157,11 +186,14 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.name = "Player"
 	player.run_state = run_state
 	player.horde = horde
-	player.weapons = class_definition.starting_weapons
+	player.weapons = run_state.hand_definitions()
 	player.ability_scene = Profile.equipped_ability_scene(class_definition)
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
 	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"))
+	damage_numbers = DamageNumbers.new()
+	_round.add_child(damage_numbers)
+	damage_numbers.setup(player.camera, horde)
 	var tool := mining_tool_scene.instantiate() as MiningTool
 	player.camera.add_child(tool)
 	tool.setup(player, run_state)
@@ -191,14 +223,14 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.shot_fired.connect(hud.show_shot)
 	player.hit_confirmed.connect(hud.show_hit)
 	player.combo_changed.connect(hud.show_combo)
-	player.weapon_changed.connect(hud.set_weapon)
 	horde.enemy_killed.connect(_on_enemy_killed)
 	horde.boss_spawned.connect(_on_boss_spawned)
 	horde.boss_health_changed.connect(hud.set_boss_health)
 	horde.boss_killed.connect(_on_boss_killed)
 	player.select_weapon(mini(weapon_slot, player.weapons.size() - 1))
-	hud.set_weapon(player.weapons[player.selected_weapon], player.selected_weapon)
+	hud.set_hands(run_state, player.selected_weapon)
 	hud.set_weapon_mods(run_state)
+	player.weapon_changed.connect(func(_definition: WeaponDefinition, hand: int): hud.set_hands(run_state, hand))
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
 	hud.set_kills(kills)
@@ -245,6 +277,8 @@ func _present_level_up() -> void:
 func grant_upgrade(upgrade: UpgradeDefinition) -> void:
 	run_state.apply_upgrade(upgrade)
 	player.refresh_stats()
+	player.refresh_weapons()
+	hud.set_hands(run_state, player.selected_weapon)
 	if upgrade.instant_heal > 0:
 		player.heal(upgrade.instant_heal)
 	rack.sync()
@@ -284,14 +318,14 @@ func _on_abandon() -> void:
 	pause_menu.close()
 	_bank(death_bank_fraction)
 	_record_run(false)
-	_request(_to_menu)
+	_request(_to_base)
 
 # ---------------------------------------------------------------- run end
 
 func _on_boss_killed() -> void:
 	if round_state != RoundState.PLAYING:
 		return
-	round_state = RoundState.CLEARED
+	round_state = RoundState.SHOP
 	stages_cleared += 1
 	if boss_reward != null:
 		run_state.add_resource(boss_reward, boss_reward_amount)
@@ -308,7 +342,10 @@ func _on_boss_killed() -> void:
 	Music.stinger(&"run_complete" if final_stage else &"stage_clear")
 	if final_stage:
 		_record_run(true)
-	hud.finish_stage(true, final_stage, _summary(), _banked_text(banked))
+	hud.feedback.reset()
+	damage_numbers.hide()
+	get_tree().paused = true
+	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked), player.selected_weapon)
 
 func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:
@@ -319,7 +356,7 @@ func _on_player_died() -> void:
 	player.sound.play_cue(&"death")
 	Music.set_boss(false)
 	Music.stinger(&"death")
-	hud.finish_stage(false, false, _summary(), _banked_text(banked))
+	hud.finish_run(_summary(), _banked_text(banked))
 
 ## Moves collected currency into the Profile; returns what was banked now.
 func _bank(fraction: float) -> Dictionary:

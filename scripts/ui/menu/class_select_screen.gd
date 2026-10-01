@@ -206,7 +206,7 @@ func _ability_cost_text(scene: PackedScene) -> String:
 
 func _loadout_text(definition: ClassDefinition) -> String:
 	var names := PackedStringArray()
-	for weapon in definition.starting_weapons:
+	for weapon in Profile.hand_loadout(definition):
 		if weapon != null:
 			names.append(weapon.display_name)
 	var text := "  ·  ".join(names) if not names.is_empty() else "No main guns"
@@ -214,6 +214,8 @@ func _loadout_text(definition: ClassDefinition) -> String:
 	for upgrade in definition.starting_upgrades:
 		if upgrade != null:
 			extras.append(upgrade.display_name)
+	for upgrade in Profile.starting_craft_upgrades():
+		extras.append(upgrade.display_name)
 	if not extras.is_empty():
 		text += "\n+ " + "  ·  ".join(extras)
 	return text

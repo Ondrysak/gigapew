@@ -15,4 +15,6 @@ spread_degrees = 11.0
 jitter_degrees = 2.5
 knockback = 1.5
 pierce = 3
+damage_type = 1
+recoil_degrees = 0.15
 view_scene = ExtResource("2_view")

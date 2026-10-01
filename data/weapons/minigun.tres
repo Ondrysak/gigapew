@@ -16,6 +16,7 @@ jitter_degrees = 1.6
 knockback = 2.5
 pierce = 0
 screen_shake = 0.08
+recoil_degrees = 0.15
 view_scene = ExtResource("2_view")
 spin_up_time = 0.6
 spin_up_start_multiplier = 4.0

@@ -11,3 +11,26 @@ All third-party art is released under **CC0 1.0 (public domain)**: free for pers
 | Alien Bug Animated | CDmir / OpenGameArt | https://opengameart.org/content/alien-bug-animated | CC0 | Alien swarm monster |
 
 The environment packs include their original `LICENSE.txt` in `assets/third_party/`. `assets/monsters/LICENSES.txt` records source packs and licenses for the baked characters; the alien bug download has no separate license file, so its source page is the record. Raw downloads are not stored in the repository. `tools/vat/README.md` documents the bake.
+
+## Engine and bundled libraries
+
+Kakaboomboom runs on **Godot Engine 4.7.2**, distributed under the MIT license.
+See https://godotengine.org/license/ for the engine's license terms. Release
+packages include the full Godot license and dependency copyright/license notices
+in `licenses/GODOT-LICENSE.txt` and `licenses/GODOT-COPYRIGHT.txt`; source copies
+are under `tools/release/licenses/`. These notices cover the engine and its
+bundled libraries, not the original game code.
+
+## Visual and design inspiration
+
+[Ondrysak's Crystaldive](https://github.com/Ondrysak/crystaldive), especially its
+temporal feedback renderer, informed the mining overlay's use of alternating
+history textures, warp, injection and decay. No Crystaldive code or assets are
+included: the repository has no declared reuse license, and this project's
+Godot shaders and procedural geometry are independently authored. The mining
+design references and adaptations are listed in `README.md`.
+
+Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf)
+informed the emphasis on reliable target feedback before camera effects. The
+firearm geometry and gloved hands in `scripts/weapons/firearm_model.gd` are
+independently authored; no firearm meshes or slide content are redistributed.

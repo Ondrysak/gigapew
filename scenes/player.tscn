@@ -14,7 +14,7 @@ height = 1.8
 [node name="Player" type="CharacterBody3D"]
 floor_snap_length = 0.2
 script = ExtResource("1_player")
-weapons = Array[ExtResource("6_definition")]([ExtResource("3_pulse"), ExtResource("5_rail")])
+weapons = Array[ExtResource("6_definition")]([ExtResource("3_pulse"), ExtResource("5_rail"), ExtResource("3_pulse")])
 ability_scene = ExtResource("7_ability")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

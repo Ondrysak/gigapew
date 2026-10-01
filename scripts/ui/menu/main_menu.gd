@@ -7,13 +7,13 @@ extends Node
 @export_file("*.tscn") var game_scene := "res://scenes/game.tscn"
 @export var home: Control
 @export var play_button: Button
-@export var armory_button: Button
+@export var base_button: Button
 @export var records_button: Button
 @export var settings_button: Button
 @export var quit_button: Button
 @export var operator_label: Label
 @export var class_select: ClassSelectScreen
-@export var armory: MenuScreen
+@export var base: MenuScreen
 @export var records: MenuScreen
 @export var settings: MenuScreen
 ## Darkens the backdrop while a page is open.
@@ -29,7 +29,7 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	Music.play(&"menu")
 	play_button.pressed.connect(_open.bind(class_select, play_button))
-	armory_button.pressed.connect(_open.bind(armory, armory_button))
+	base_button.pressed.connect(_open.bind(base, base_button))
 	records_button.pressed.connect(_open.bind(records, records_button))
 	settings_button.pressed.connect(_open.bind(settings, settings_button))
 	quit_button.pressed.connect(get_tree().quit)
@@ -42,9 +42,12 @@ func _ready() -> void:
 	_show_home()
 	fade.color.a = 1.0
 	create_tween().tween_property(fade, ^"color:a", 0.0, 0.6)
+	if get_tree().get_meta(&"open_base", false):
+		get_tree().remove_meta(&"open_base")
+		_open.call_deferred(base, base_button)
 
 func _screens() -> Array[MenuScreen]:
-	return [class_select, armory, records, settings]
+	return [class_select, base, records, settings]
 
 func _open(screen: MenuScreen, from: Control) -> void:
 	if _leaving:
@@ -72,6 +75,7 @@ func _refresh_operator() -> void:
 		parts.append("OPERATOR  %s" % definition.display_name.to_upper())
 	var records_data := Profile.records
 	parts.append("RUNS  %d" % int(records_data.runs))
+	parts.append("v%s" % ProjectSettings.get_setting("application/config/version"))
 	if float(records_data.best_time) > 0.0:
 		var seconds := int(records_data.best_time)
 		parts.append("BEST  %d:%02d" % [floori(seconds / 60.0), seconds % 60])

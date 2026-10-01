@@ -4,6 +4,9 @@ extends Resource
 @export var display_name := "Pulse"
 @export var description := "Rapid precision fire"
 @export var damage := 25
+@export_enum("Kinetic", "Fire", "Frost", "Shock") var damage_type: int = 0
+## Small, temporary camera kick; player look rotation is never modified.
+@export_range(0.15, 0.6, 0.01) var recoil_degrees := 0.28
 @export var fire_interval := 0.16
 @export var range_meters := 40.0
 @export_range(1, 32, 1) var pellet_count := 1

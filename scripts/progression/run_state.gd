@@ -26,6 +26,11 @@ var owned_weapons: Array[UpgradeDefinition] = []
 ## PERK upgrades in pick order; they never use weapon slots.
 var owned_perks: Array[UpgradeDefinition] = []
 
+## Three effective hand resources retained across stage loads.
+var hands: Array[WeaponHand] = []
+var shop_levels: Dictionary = {}
+var _shop_modifiers: Array[StatModifier] = []
+
 var damage_multiplier := 1.0
 ## Higher fires the main gun faster.
 var fire_rate_multiplier := 1.0
@@ -102,6 +107,41 @@ func consume_level_up() -> bool:
 	pending_level_ups -= 1
 	return true
 
+
+func initialize_hands(definitions: Array[WeaponDefinition]) -> void:
+	hands.clear()
+	var fallback: WeaponDefinition = preload("res://data/weapons/pulse.tres")
+	for index in range(3):
+		var source := definitions[index] if index < definitions.size() else fallback
+		var hand := WeaponHand.new()
+		hand.setup(source if source != null else fallback)
+		hands.append(hand)
+
+func hand_definitions() -> Array[WeaponDefinition]:
+	var definitions: Array[WeaponDefinition] = []
+	for hand in hands:
+		definitions.append(hand.definition)
+	return definitions
+
+## Round-shop boosts are run-local and survive stage changes.
+func can_buy_shop_stat(id: StringName) -> bool:
+	return id in [&"armor", &"health", &"power"] and int(shop_levels.get(id, 0)) < 5
+
+func buy_shop_stat(id: StringName) -> bool:
+	if not can_buy_shop_stat(id):
+		return false
+	var modifier := StatModifier.new()
+	match id:
+		&"armor":
+			modifier.armor = 1.0
+		&"health":
+			modifier.max_health_bonus = 15
+		&"power":
+			modifier.damage_multiplier = 0.1
+	shop_levels[id] = int(shop_levels.get(id, 0)) + 1
+	_shop_modifiers.append(modifier)
+	_recompute()
+	return true
 ## Sets the modifiers that last the whole run: the class (x1) and each
 ## purchased meta upgrade (x its level). Call once before play.
 func set_permanent_modifiers(class_definition: ClassDefinition, meta_levels: Dictionary) -> void:
@@ -110,7 +150,7 @@ func set_permanent_modifiers(class_definition: ClassDefinition, meta_levels: Dic
 	if class_definition != null:
 		_permanent.append(class_definition)
 		_permanent_stacks.append(1)
-	for meta: MetaUpgradeDefinition in meta_levels:
+	for meta: StatModifier in meta_levels:
 		if int(meta_levels[meta]) > 0:
 			_permanent.append(meta)
 			_permanent_stacks.append(int(meta_levels[meta]))
@@ -303,6 +343,8 @@ func _recompute() -> void:
 		_add_modifier(_permanent[index], _permanent_stacks[index])
 	for id in upgrade_levels:
 		_add_modifier(_definitions[id], int(upgrade_levels[id]))
+	for modifier in _shop_modifiers:
+		_add_modifier(modifier, 1)
 	for modifier in _temporary:
 		_add_modifier(modifier, 1)
 	damage_multiplier = maxf(damage_multiplier, 0.1)

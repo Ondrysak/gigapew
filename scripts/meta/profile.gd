@@ -61,6 +61,10 @@ var _meta_levels: Dictionary = {}
 var _unlocked_abilities: Dictionary = {}
 # class_id -> ability_key of the equipped ability (missing = class default).
 var _equipped_abilities: Dictionary = {}
+var _crafted_ranks: Dictionary = {}
+var _equipped_armor: StringName = &""
+var _equipped_weapons: Dictionary = {}
+var _equipped_gadgets: Dictionary = {}
 var _loading := false
 
 func _ready() -> void:
@@ -98,6 +102,172 @@ func spend(id: StringName, amount: int) -> bool:
 		return true
 	add_currency(id, -amount)
 	return true
+
+## All entries are validated before any debit; one save covers the transaction.
+func can_pay(costs: Dictionary) -> bool:
+	return _validated_payment(costs) != null
+
+func pay(costs: Dictionary) -> bool:
+	var payment: Variant = _validated_payment(costs)
+	if payment == null:
+		return false
+	if payment.is_empty():
+		return true
+	_debit_payment(payment)
+	_mutated()
+	_emit_payment(payment)
+	return true
+
+func _validated_payment(costs: Dictionary) -> Variant:
+	var payment := {}
+	for key in costs:
+		if not (key is String or key is StringName) or str(key).is_empty():
+			return null
+		var value: Variant = costs[key]
+		if not (value is int or value is float):
+			return null
+		var amount := float(value)
+		if not is_finite(amount) or amount < 0.0 or amount != floor(amount) or amount > 2147483647.0:
+			return null
+		var id := str(key)
+		payment[id] = int(payment.get(id, 0)) + int(amount)
+	for id in payment:
+		if currency(StringName(id)) < int(payment[id]):
+			return null
+	return payment
+
+func _debit_payment(payment: Dictionary) -> void:
+	for id in payment:
+		_currencies[id] = currency(StringName(id)) - int(payment[id])
+
+func _emit_payment(payment: Dictionary) -> void:
+	for id in payment:
+		if int(payment[id]) > 0:
+			currency_changed.emit(StringName(id), currency(StringName(id)))
+
+# --- workshop crafting -------------------------------------------------------
+
+func craft_rank(id: StringName) -> int:
+	var recipe := CraftingCatalog.find(id)
+	if recipe == null:
+		return 0
+	return clampi(int(_crafted_ranks.get(String(id), 0)), 0, recipe.max_rank)
+
+func craft_cost(id: StringName) -> Dictionary:
+	var recipe := CraftingCatalog.find(id)
+	if recipe == null or craft_rank(id) >= recipe.max_rank:
+		return {}
+	var costs := {}
+	for mineral in recipe.costs:
+		costs[mineral] = int(recipe.costs[mineral]) * (craft_rank(id) + 1)
+	return costs
+
+func craft(id: StringName) -> bool:
+	var recipe := CraftingCatalog.find(id)
+	if recipe == null or craft_rank(id) >= recipe.max_rank:
+		return false
+	var payment: Variant = _validated_payment(craft_cost(id))
+	if payment == null:
+		return false
+	_debit_payment(payment)
+	_crafted_ranks[String(id)] = craft_rank(id) + 1
+	_mutated()
+	_emit_payment(payment)
+	return true
+
+func equip_craft(id: StringName, hand: int = 0) -> bool:
+	if hand < 0 or hand >= 3 or craft_rank(id) <= 0:
+		return false
+	var recipe := CraftingCatalog.find(id)
+	match recipe.category:
+		&"armor":
+			_equipped_armor = id
+		&"weapon":
+			if recipe.weapon == null:
+				return false
+			_equipped_weapons[str(hand)] = String(id)
+		&"gadget":
+			if recipe.hand_upgrade == &"":
+				return false
+			_equipped_gadgets[str(hand)] = String(id)
+		_:
+			return false
+	_mutated()
+	return true
+
+func unequip_craft(category: StringName, hand: int = 0) -> bool:
+	if hand < 0 or hand >= 3:
+		return false
+	match category:
+		&"armor":
+			_equipped_armor = &""
+		&"weapon":
+			_equipped_weapons.erase(str(hand))
+		&"gadget":
+			_equipped_gadgets.erase(str(hand))
+		_:
+			return false
+	_mutated()
+	return true
+
+func is_craft_equipped(id: StringName, hand: int = 0) -> bool:
+	if hand < 0 or hand >= 3 or craft_rank(id) <= 0:
+		return false
+	var recipe := CraftingCatalog.find(id)
+	match recipe.category:
+		&"armor":
+			return _equipped_armor == id
+		&"weapon":
+			return _equipped_weapons.get(str(hand), "") == String(id)
+		&"gadget":
+			return _equipped_gadgets.get(str(hand), "") == String(id)
+		&"perk", &"talent":
+			return true
+	return false
+
+func hand_loadout(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
+	var first: WeaponDefinition = preload("res://data/weapons/pulse.tres")
+	var second := first
+	if class_definition != null and not class_definition.starting_weapons.is_empty():
+		if class_definition.starting_weapons[0] != null:
+			first = class_definition.starting_weapons[0]
+		second = first
+		if class_definition.starting_weapons.size() > 1 and class_definition.starting_weapons[1] != null:
+			second = class_definition.starting_weapons[1]
+	var result: Array[WeaponDefinition] = [first, second, first]
+	for hand in range(3):
+		var id := StringName(str(_equipped_weapons.get(str(hand), "")))
+		var recipe := CraftingCatalog.find(id)
+		if recipe != null and recipe.category == &"weapon" and recipe.weapon != null and craft_rank(id) > 0:
+			result[hand] = recipe.weapon
+	return result
+
+func crafting_modifiers() -> Dictionary:
+	var modifiers := {}
+	for recipe in CraftingCatalog.recipes():
+		var rank := craft_rank(recipe.id)
+		if rank <= 0:
+			continue
+		if recipe.category == &"talent":
+			modifiers[recipe] = rank
+		elif recipe.category == &"armor" and _equipped_armor == recipe.id:
+			modifiers[recipe] = 1
+	return modifiers
+
+func apply_hand_gadgets(hands: Array[WeaponHand]) -> void:
+	for hand in mini(3, hands.size()):
+		var id := StringName(str(_equipped_gadgets.get(str(hand), "")))
+		var recipe := CraftingCatalog.find(id)
+		if recipe != null and recipe.category == &"gadget" and craft_rank(id) > 0:
+			hands[hand].upgrade(recipe.hand_upgrade)
+
+## The normal run perk machinery instantiates these effects once at deployment.
+func starting_craft_upgrades() -> Array[UpgradeDefinition]:
+	var upgrades: Array[UpgradeDefinition] = []
+	for recipe in CraftingCatalog.recipes():
+		if recipe.category == &"perk" and craft_rank(recipe.id) > 0 and recipe.upgrade != null:
+			upgrades.append(recipe.upgrade)
+	return upgrades
 
 # --- classes ----------------------------------------------------------------
 
@@ -287,6 +457,10 @@ func save() -> void:
 		"meta_levels": _meta_levels,
 		"unlocked_abilities": _unlocked_abilities.keys(),
 		"equipped_abilities": _equipped_abilities,
+		"crafted_ranks": _crafted_ranks,
+		"equipped_armor": String(_equipped_armor),
+		"equipped_weapons": _equipped_weapons,
+		"equipped_gadgets": _equipped_gadgets,
 		"records": records,
 		"settings": settings,
 	}
@@ -344,6 +518,20 @@ func _apply_data(data: Dictionary) -> void:
 	if levels is Dictionary:
 		for key in levels:
 			_meta_levels[str(key)] = maxi(int(_number(levels[key])), 0)
+	var crafted: Variant = data.get("crafted_ranks", {})
+	if crafted is Dictionary:
+		for key in crafted:
+			var recipe := CraftingCatalog.find(StringName(str(key)))
+			if recipe != null:
+				var rank := clampi(int(_number(crafted[key])), 0, recipe.max_rank)
+				if rank > 0:
+					_crafted_ranks[String(recipe.id)] = rank
+	var armor_id := StringName(str(data.get("equipped_armor", "")))
+	var armor_recipe := CraftingCatalog.find(armor_id)
+	if armor_recipe != null and armor_recipe.category == &"armor" and craft_rank(armor_id) > 0:
+		_equipped_armor = armor_id
+	_load_craft_slots(data.get("equipped_weapons", {}), &"weapon", _equipped_weapons)
+	_load_craft_slots(data.get("equipped_gadgets", {}), &"gadget", _equipped_gadgets)
 	var saved_records: Variant = data.get("records", {})
 	if saved_records is Dictionary:
 		for key in DEFAULT_RECORDS:
@@ -368,8 +556,21 @@ func _reset() -> void:
 	_meta_levels.clear()
 	_unlocked_abilities.clear()
 	_equipped_abilities.clear()
+	_crafted_ranks.clear()
+	_equipped_armor = &""
+	_equipped_weapons.clear()
+	_equipped_gadgets.clear()
 	records = DEFAULT_RECORDS.duplicate()
 	settings = DEFAULT_SETTINGS.duplicate()
+
+func _load_craft_slots(saved: Variant, category: StringName, slots: Dictionary) -> void:
+	if not saved is Dictionary:
+		return
+	for hand in range(3):
+		var id := StringName(str(saved.get(str(hand), "")))
+		var recipe := CraftingCatalog.find(id)
+		if recipe != null and recipe.category == category and craft_rank(id) > 0:
+			slots[str(hand)] = String(id)
 
 func _sanitize_setting(key: String, value: Variant) -> Variant:
 	match key:

@@ -56,6 +56,13 @@ extends Node3D
 @export var min_view_clearance := 1.0
 
 var _rest: Vector3
+var _rest_rotation := Vector3.ZERO
+var _mining_offset := Vector3.ZERO
+var _kick_strength := 1.0
+var _damage_type := -1
+var _flash_material: StandardMaterial3D
+var _critical_material: StandardMaterial3D
+var _blast_material: StandardMaterial3D
 var _recoil := 0.0
 var _landing_dip := 0.0
 var _stride := 0.0
@@ -83,6 +90,7 @@ var _blast_radii := PackedFloat32Array()
 
 func _ready() -> void:
 	_rest = position
+	_rest_rotation = rotation
 	_shot_audio = _make_audio(shot_sound if shot_sound != null else SynthCue.make(synth_shot))
 	_shot_audio.volume_db = shot_volume_db
 	_hit_audio = _make_audio(hit_sound)
@@ -102,6 +110,20 @@ func _make_audio(stream: AudioStream) -> AudioStreamPlayer:
 
 func prepare(pellet_count: int) -> void:
 	# Allocate once for this definition's maximum rays, never during firing.
+	if not _impacts.is_empty():
+		return
+	# All materials mutated by type upgrades belong to this view, not its scene.
+	trace_material = _local_material(trace_material) if trace_material != null else null
+	impact_material = _local_material(impact_material)
+	target_impact_material = _local_material(target_impact_material)
+	puff_material = _local_material(puff_material) if puff_material != null else null
+	_critical_material = _local_material(target_impact_material)
+	_blast_material = _local_material(null)
+	_blast_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	if flash is MeshInstance3D:
+		var mesh_flash := flash as MeshInstance3D
+		_flash_material = _local_material(mesh_flash.get_active_material(0))
+		mesh_flash.material_override = _flash_material
 	var trace_mesh := BoxMesh.new()
 	trace_mesh.size = Vector3(trace_width, trace_width, 1.0)
 	var impact_mesh := _sphere_mesh(8, 4)
@@ -136,17 +158,69 @@ func prepare(pellet_count: int) -> void:
 		_puff_to.resize(puff_pool_size)
 		_puff_age.resize(puff_pool_size)
 		_puff_age.fill(-1.0)
+	var blast_count := maxi(pellet_count, blast_pool_size)
+	var blast_mesh := _sphere_mesh(12, 6)
 	if blast_template != null:
 		blast_template.hide()
-		for index in range(blast_pool_size):
-			var blast := blast_template.duplicate() as Node3D
-			add_child(blast)
-			blast.top_level = true
-			blast.hide()
-			_blasts.append(blast)
-		_blast_times.resize(blast_pool_size)
-		_blast_times.fill(0.0)
-		_blast_radii.resize(blast_pool_size)
+	for index in range(blast_count):
+		var blast: Node3D
+		if blast_template != null:
+			blast = blast_template.duplicate() as Node3D
+		else:
+			var sphere := MeshInstance3D.new()
+			sphere.mesh = blast_mesh
+			sphere.material_override = _blast_material
+			sphere.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			blast = sphere
+		add_child(blast)
+		blast.top_level = true
+		blast.hide()
+		_blasts.append(blast)
+	_blast_times.resize(blast_count)
+	_blast_times.fill(0.0)
+	_blast_radii.resize(blast_count)
+
+func _local_material(source: Material) -> StandardMaterial3D:
+	if source is StandardMaterial3D:
+		return source.duplicate() as StandardMaterial3D
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return material
+
+## Called when effective hand upgrades change, never from the shot path.
+func configure(definition: WeaponDefinition) -> void:
+	_kick_strength = lerpf(0.7, 1.35, inverse_lerp(0.15, 0.6, clampf(definition.recoil_degrees, 0.15, 0.6)))
+	if _damage_type == definition.damage_type:
+		return
+	_damage_type = definition.damage_type
+	var color := DamageType.color(_damage_type)
+	_tint(trace_material as StandardMaterial3D, color)
+	_tint(impact_material as StandardMaterial3D, color.lerp(Color.WHITE, 0.25))
+	_tint(target_impact_material as StandardMaterial3D, color)
+	_tint(puff_material as StandardMaterial3D, color)
+	_tint(_flash_material, color.lerp(Color.WHITE, 0.35))
+	_tint(_critical_material, color.lerp(Color.WHITE, 0.7))
+	_tint(_blast_material, Color(color.r, color.g, color.b, 0.25))
+	if flash_light != null:
+		flash_light.light_color = color
+	for blast in _blasts:
+		_tint_blast(blast, color)
+
+func _tint(material: StandardMaterial3D, color: Color) -> void:
+	if material == null:
+		return
+	material.albedo_color = color
+	if material.emission_enabled:
+		material.emission = Color(color.r, color.g, color.b)
+
+func _tint_blast(node: Node, color: Color) -> void:
+	if node is MeshInstance3D:
+		var mesh := node as MeshInstance3D
+		mesh.material_override = _blast_material
+	elif node is Light3D:
+		(node as Light3D).light_color = color
+	for child in node.get_children():
+		_tint_blast(child, color)
 
 func _sphere_mesh(segments: int, rings: int) -> SphereMesh:
 	var mesh := SphereMesh.new()
@@ -183,7 +257,7 @@ func set_spin(ratio: float) -> void:
 	if not _spin_audio.playing:
 		_spin_audio.play()
 
-func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool) -> void:
+func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool, mining: bool = false) -> void:
 	var blend := 1.0 - exp(-18.0 * delta)
 	_recoil = lerpf(_recoil, 0.0, blend)
 	_landing_dip = lerpf(_landing_dip, 0.0, 1.0 - exp(-12.0 * delta))
@@ -193,17 +267,19 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio
 	# A spinning gun hums with a slight shake.
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
-	position = _rest + bob + buzz + Vector3(-_sway.x, _sway.y - _landing_dip, _recoil * recoil_distance)
-	rotation.x = _recoil * recoil_angle
-	rotation.z = -lateral_speed * 0.002
+	# The drill raises on the left; yield space without hiding a weapon/hand.
+	_mining_offset = _mining_offset.lerp(Vector3(-0.16, -0.12, 0.0) if mining else Vector3.ZERO, blend)
+	position = _rest + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, _recoil * recoil_distance)
+	rotation = _rest_rotation + Vector3(_recoil * recoil_angle, 0.0, -lateral_speed * 0.002)
 	if not active:
 		_flash_time = 0.0
 
 func _process(delta: float) -> void:
 	_flash_time = maxf(0.0, _flash_time - delta)
-	flash.visible = _flash_time > 0.0
+	if flash != null:
+		flash.visible = _flash_time > 0.0
 	if flash_light != null:
-		flash_light.visible = flash.visible
+		flash_light.visible = _flash_time > 0.0
 	_trace_time = maxf(0.0, _trace_time - delta)
 	_impact_time = maxf(0.0, _impact_time - delta)
 	for trace in _traces:
@@ -228,7 +304,7 @@ func _process(delta: float) -> void:
 
 func begin_shot(sound: CombatAudio) -> void:
 	_play(_shot_audio, sound, shot_cue)
-	_recoil = 1.0
+	_recoil = _kick_strength
 	_flash_time = flash_duration
 	_trace_time = trace_duration
 	_impact_time = 0.13
@@ -239,7 +315,7 @@ func begin_shot(sound: CombatAudio) -> void:
 	for spark in _sparks:
 		spark.hide()
 
-func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_enemy: bool) -> void:
+func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_enemy: bool, critical: bool = false) -> void:
 	var start := muzzle.global_position
 	var ray := end - start
 	var orientation := muzzle.global_basis
@@ -257,14 +333,14 @@ func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_
 		var impact := _impacts[index]
 		var surface_normal := orientation.z if hit_enemy else normal
 		impact.global_position = end + surface_normal * (0.09 if hit_enemy else 0.035)
-		impact.material_override = target_impact_material if hit_enemy else impact_material
-		impact.scale = Vector3.ONE * 0.117
+		impact.material_override = _critical_material if hit_enemy and critical else target_impact_material if hit_enemy else impact_material
+		impact.scale = Vector3.ONE * (0.15 if hit_enemy and critical else 0.117)
 		impact.show()
 		for arm in 2:
 			var spark := _sparks[index * 2 + arm]
 			spark.global_position = end + surface_normal * 0.07
 			spark.global_basis = orientation.rotated(orientation.z, PI * (0.25 if arm == 0 else -0.25))
-			spark.material_override = target_impact_material if hit_enemy else impact_material
+			spark.material_override = impact.material_override
 			spark.scale = Vector3.ONE
 			spark.show()
 
@@ -289,11 +365,17 @@ func show_blast(at: Vector3, radius: float) -> void:
 	_blast_times[slot] = blast_duration
 	_blast_radii[slot] = visual_radius
 
-func confirm_hit(killed: bool, sound: CombatAudio, chain: int) -> void:
-	var pitch := 1.0 + 0.045 * float(mini(chain, 7))
+func confirm_hit(killed: bool, sound: CombatAudio, chain: int, critical: bool = false) -> void:
+	var pitch := 1.0 + 0.045 * float(mini(chain, 7)) + (0.18 if critical and not killed else 0.0)
 	_play(_kill_audio if killed else _hit_audio, sound, kill_cue if killed else hit_cue, pitch)
-	if killed:
-		_recoil = maxf(_recoil, 1.15)
+	if killed or critical:
+		_impact_time = maxf(_impact_time, 0.18 if killed else 0.15)
+		for impact in _impacts:
+			if impact.visible and impact.material_override == target_impact_material:
+				impact.material_override = _critical_material
+		for spark in _sparks:
+			if spark.visible and spark.material_override == target_impact_material:
+				spark.material_override = _critical_material
 
 func _play(player: AudioStreamPlayer, fallback: CombatAudio, cue: StringName, pitch: float = 1.0) -> void:
 	if player.stream != null:

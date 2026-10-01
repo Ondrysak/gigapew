@@ -1,32 +1,11 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
-
-[sub_resource type="StandardMaterial3D" id="Mat_tank"]
-albedo_color = Color(0.58, 0.12, 0.06, 1)
-metallic = 0.5
-roughness = 0.35
-
-[sub_resource type="StandardMaterial3D" id="Mat_steel"]
-albedo_color = Color(0.2, 0.2, 0.21, 1)
-metallic = 0.75
-roughness = 0.4
-
-[sub_resource type="StandardMaterial3D" id="Mat_dark"]
-albedo_color = Color(0.05, 0.04, 0.035, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id="Mat_hazard"]
-albedo_color = Color(0.95, 0.7, 0.1, 1)
-roughness = 0.5
+[ext_resource type="Script" path="res://scripts/weapons/firearm_model.gd" id="2_model"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_glow"]
 shading_mode = 0
 albedo_color = Color(1, 0.5, 0.1, 1)
-
-[sub_resource type="StandardMaterial3D" id="Mat_pilot"]
-shading_mode = 0
-albedo_color = Color(0.35, 0.65, 1, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_impact"]
 shading_mode = 0
@@ -42,57 +21,13 @@ transparency = 1
 blend_mode = 1
 albedo_color = Color(1, 0.42, 0.08, 0.26)
 
-[sub_resource type="BoxMesh" id="Mesh_body"]
-size = Vector3(0.2, 0.18, 0.4)
-
-[sub_resource type="BoxMesh" id="Mesh_grip"]
-size = Vector3(0.1, 0.2, 0.12)
-
-[sub_resource type="BoxMesh" id="Mesh_band"]
-size = Vector3(0.03, 0.03, 0.03)
-
-[sub_resource type="CylinderMesh" id="Mesh_tank"]
-top_radius = 0.085
-bottom_radius = 0.085
-height = 0.36
-radial_segments = 12
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_nozzle"]
-top_radius = 0.035
-bottom_radius = 0.065
-height = 0.36
-radial_segments = 10
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_tip"]
-top_radius = 0.05
-bottom_radius = 0.042
-height = 0.06
-radial_segments = 10
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_pipe"]
-top_radius = 0.016
-bottom_radius = 0.016
-height = 0.34
-radial_segments = 6
-rings = 1
-
-[sub_resource type="SphereMesh" id="Mesh_pilot"]
-radius = 0.018
-height = 0.05
-radial_segments = 8
-rings = 4
-
 [sub_resource type="SphereMesh" id="Mesh_flash"]
-radius = 0.07
-height = 0.14
+radius = 0.033
+height = 0.085
 radial_segments = 8
 rings = 4
 
 [node name="Flamethrower" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
-position = Vector3(0.31, -0.31, -0.6)
 script = ExtResource("1_view")
 muzzle = NodePath("MuzzleFlash")
 flash = NodePath("MuzzleFlash")
@@ -111,151 +46,21 @@ puff_start_size = 0.06
 puff_end_size = 0.85
 puff_camera_clearance = 0.45
 
-[node name="Body" type="MeshInstance3D" parent="."]
-mesh = SubResource("Mesh_body")
-material_override = SubResource("Mat_steel")
-cast_shadow = 0
-
-[node name="Grip" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.15, 0.08)
-rotation = Vector3(-0.25, 0, 0)
-mesh = SubResource("Mesh_grip")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="Tank" type="MeshInstance3D" parent="."]
-position = Vector3(-0.02, 0.15, 0.04)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_tank")
-cast_shadow = 0
-
-[node name="TankBand" type="MeshInstance3D" parent="."]
-position = Vector3(-0.02, 0.15, 0.04)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(1.08, 0.12, 1.08)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_hazard")
-cast_shadow = 0
-
-[node name="Pipe" type="MeshInstance3D" parent="."]
-position = Vector3(0.075, 0.1, -0.2)
-rotation = Vector3(1.4, 0, 0)
-mesh = SubResource("Mesh_pipe")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="Nozzle" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0, -0.38)
-rotation = Vector3(-1.570796, 0, 0)
-mesh = SubResource("Mesh_nozzle")
-material_override = SubResource("Mat_steel")
-cast_shadow = 0
-
-[node name="Tip" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0, -0.58)
-rotation = Vector3(-1.570796, 0, 0)
-mesh = SubResource("Mesh_tip")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="Heat" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.045, -0.5)
-scale = Vector3(1.5, 0.4, 2.5)
-mesh = SubResource("Mesh_band")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="Pilot" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.055, -0.6)
-mesh = SubResource("Mesh_pilot")
-material_override = SubResource("Mat_pilot")
-cast_shadow = 0
-
-[node name="ReserveTank" type="MeshInstance3D" parent="."]
-position = Vector3(0.155, 0.13, 0.04)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.78, 0.82, 0.78)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_tank")
-cast_shadow = 0
-
-[node name="ReserveTankBand" type="MeshInstance3D" parent="."]
-position = Vector3(0.155, 0.13, 0.04)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.84, 0.12, 0.84)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_hazard")
-cast_shadow = 0
-
-[node name="TankValve" type="MeshInstance3D" parent="."]
-position = Vector3(-0.02, 0.15, 0.245)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.57, 0.18, 0.57)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_steel")
-cast_shadow = 0
-
-[node name="FuelLineRear" type="MeshInstance3D" parent="."]
-position = Vector3(0.15, 0.185, -0.13)
-rotation = Vector3(1.18, 0, 0)
-mesh = SubResource("Mesh_pipe")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="FuelLineFront" type="MeshInstance3D" parent="."]
-position = Vector3(0.115, 0.09, -0.38)
-rotation = Vector3(1.25, 0, 0)
-mesh = SubResource("Mesh_pipe")
-material_override = SubResource("Mat_hazard")
-cast_shadow = 0
-
-[node name="LeftHeatGuard" type="MeshInstance3D" parent="."]
-position = Vector3(-0.12, 0.015, -0.34)
-scale = Vector3(0.28, 0.6, 0.8)
-mesh = SubResource("Mesh_body")
-material_override = SubResource("Mat_steel")
-cast_shadow = 0
-
-[node name="RightHeatGuard" type="MeshInstance3D" parent="."]
-position = Vector3(0.12, 0.015, -0.34)
-scale = Vector3(0.28, 0.6, 0.8)
-mesh = SubResource("Mesh_body")
-material_override = SubResource("Mat_steel")
-cast_shadow = 0
-
-[node name="LeftHeatStripe" type="MeshInstance3D" parent="."]
-position = Vector3(-0.15, 0.067, -0.34)
-scale = Vector3(0.55, 0.35, 8)
-mesh = SubResource("Mesh_band")
-material_override = SubResource("Mat_hazard")
-cast_shadow = 0
-
-[node name="RightHeatStripe" type="MeshInstance3D" parent="."]
-position = Vector3(0.15, 0.067, -0.34)
-scale = Vector3(0.55, 0.35, 8)
-mesh = SubResource("Mesh_band")
-material_override = SubResource("Mat_hazard")
-cast_shadow = 0
-
-[node name="PressureGauge" type="MeshInstance3D" parent="."]
-position = Vector3(0.15, 0.218, -0.075)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.45, 0.1, 0.45)
-mesh = SubResource("Mesh_tank")
-material_override = SubResource("Mat_pilot")
-cast_shadow = 0
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")
+kind = "flamethrower"
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.66)
+position = Vector3(0, 0, -0.49)
+rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_flash")
 material_override = SubResource("Mat_glow")
 cast_shadow = 0
 
 [node name="MuzzleLight" type="OmniLight3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.9)
+position = Vector3(0, 0, -0.49)
 light_color = Color(1, 0.5, 0.15, 1)
 light_energy = 2.4
 omni_range = 5.0

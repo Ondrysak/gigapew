@@ -12,6 +12,7 @@ signal enemy_killed(definition: HordeEnemyDefinition, position: Vector3)
 signal boss_spawned(definition: HordeEnemyDefinition)
 signal boss_health_changed(current: float, maximum: float)
 signal boss_killed
+signal damage_reported(at: Vector3, amount: float, damage_type: int, critical: bool, killed: bool)
 
 const CAPACITY := 4096
 const CELL := 2.0
@@ -26,6 +27,14 @@ const MAX_NEIGHBOR_CHECKS := 8
 const SEPARATION := 0.45
 const MAX_PROJECTILES := 512
 const BIG_RADIUS := 0.9
+const BURN_DURATION := 2.0
+const BURN_TICK := 0.5
+const FROST_FACTOR := 0.55
+const FROST_DURATION := 1.8
+const SHOCK_RADIUS := 3.5
+const SHOCK_TARGETS := 3
+const SHOCK_CHECKS := 96
+const RADIUS_DEPTH := 8
 
 enum { FREE, ALIVE, DYING }
 enum Mode { SEEK, WINDUP, CHARGE }
@@ -98,6 +107,10 @@ var _death := PackedFloat32Array()
 ## Movement factor while slowed (1 = normal) and seconds of slow remaining.
 var _slow := PackedFloat32Array()
 var _slow_time := PackedFloat32Array()
+## Strongest burn wins; refreshes extend duration without postponing its tick.
+var _burn_time := PackedFloat32Array()
+var _burn_tick := PackedFloat32Array()
+var _burn_damage := PackedFloat32Array()
 var _stamp := PackedInt32Array()
 var _cell_of := PackedInt32Array()
 var _query_id := 0
@@ -175,7 +188,12 @@ var _shot_buffer := PackedFloat32Array()
 
 var _candidate_index := PackedInt32Array()
 var _candidate_t := PackedFloat32Array()
-var _scratch := PackedInt32Array()
+## Each synchronous splash owns its target snapshot until its callbacks return.
+var _radius_buffers: Array[PackedInt32Array] = []
+var _radius_depth := 0
+## Shock never uses the splash/raycast/caller scratch arrays.
+var _chain_index := PackedInt32Array()
+var _chain_distance := PackedFloat32Array()
 
 ## `elevation` (optional) holds StaticBody3D decks and ramps, each with one
 ## BoxShape3D; their top faces become walkable ground for the horde.
@@ -202,6 +220,13 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_slow.resize(CAPACITY)
 	_slow.fill(1.0)
 	_slow_time.resize(CAPACITY)
+	_slow_time.fill(0.0)
+	_burn_time.resize(CAPACITY)
+	_burn_time.fill(0.0)
+	_burn_tick.resize(CAPACITY)
+	_burn_tick.fill(0.0)
+	_burn_damage.resize(CAPACITY)
+	_burn_damage.fill(0.0)
 	_pos.resize(CAPACITY)
 	_y.resize(CAPACITY)
 	_y.fill(0.0)
@@ -223,6 +248,14 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_cell_cursor.resize(_cells)
 	_candidate_index.resize(64)
 	_candidate_t.resize(64)
+	_radius_buffers.clear()
+	_radius_depth = 0
+	for depth in RADIUS_DEPTH:
+		var buffer := PackedInt32Array()
+		buffer.resize(CAPACITY)
+		_radius_buffers.append(buffer)
+	_chain_index.resize(SHOCK_TARGETS)
+	_chain_distance.resize(SHOCK_TARGETS)
 	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
 	_setup_rendering()
 	for definition in definitions:
@@ -496,6 +529,9 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	_cooldown[slot] = _rng.randf_range(0.5, definition.attack_cooldown)
 	_slow[slot] = 1.0
 	_slow_time[slot] = 0.0
+	_burn_time[slot] = 0.0
+	_burn_tick[slot] = 0.0
+	_burn_damage[slot] = 0.0
 	_phase[slot] = _rng.randf() * TAU
 	_yaw[slot] = _rng.randf() * TAU
 	_active[_active_count] = slot
@@ -781,44 +817,172 @@ func sample_positions(out: PackedVector2Array, max_count: int) -> int:
 
 # ---------------------------------------------------------------- damage
 
-func damage(index: int, amount: float, knockback := Vector3.ZERO) -> bool:
+func damage(index: int, amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
 	if not is_alive(index) or amount <= 0.0:
 		return false
-	_hp[index] -= amount
-	_flash[index] = 1.0
-	var mass := _t_mass[_type[index]]
-	_knock[index] += Vector2(knockback.x, knockback.z) / mass
-	if index == _boss_index:
-		boss_health_changed.emit(maxf(0.0, _hp[index]), _max_hp[index])
-	if _hp[index] > 0.0:
-		if _fx != null:
-			_fx.burst_hit(_defs[_type[index]], enemy_position(index))
-		return false
-	var definition := _defs[_type[index]]
 	var at := enemy_position(index)
-	_begin_death(index)
-	alive_count -= 1
-	enemy_killed.emit(definition, at)
-	if index == _boss_index:
-		_boss_index = -1
-		boss_killed.emit()
-	return true
+	var killed := _deal_damage(index, amount, knockback, damage_type, critical)
+	match damage_type:
+		DamageType.Kind.FIRE:
+			if is_alive(index):
+				if _burn_time[index] <= 0.0:
+					_burn_tick[index] = BURN_TICK
+				_burn_time[index] = BURN_DURATION
+				_burn_damage[index] = maxf(_burn_damage[index], amount * 0.15)
+		DamageType.Kind.FROST:
+			slow(index, FROST_FACTOR, FROST_DURATION)
+		DamageType.Kind.SHOCK:
+			_chain_shock(index, at, amount * 0.4, critical)
+	return killed
 
-func damage_radius(center: Vector3, radius: float, amount: float, knockback_strength := 0.0) -> int:
-	var count := query_radius(center, radius, _scratch)
+## Shared health/reward path, deliberately without secondary type effects.
+func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: int, critical: bool) -> bool:
+	if not is_alive(index) or amount <= 0.0:
+		return false
+	var before := _hp[index]
+	_hp[index] = maxf(0.0, before - minf(amount, before))
+	# Report the stored HP delta, including packed-float rounding.
+	var removed := before - _hp[index]
+	if removed <= 0.0:
+		return false
+	var at := enemy_position(index)
+	var definition := _defs[_type[index]]
+	var was_boss := index == _boss_index
+	_flash[index] = 1.0
+	_knock[index] += Vector2(knockback.x, knockback.z) / _t_mass[_type[index]]
+	var killed := _hp[index] <= 0.0
+	if killed:
+		_begin_death(index)
+		alive_count -= 1
+		if was_boss:
+			_boss_index = -1
+	if was_boss:
+		boss_health_changed.emit(_hp[index], _max_hp[index])
+	damage_reported.emit(at, removed, damage_type, critical, killed)
+	if killed:
+		enemy_killed.emit(definition, at)
+		if was_boss:
+			boss_killed.emit()
+	elif _fx != null:
+		_fx.burst_hit(definition, at)
+	return killed
+
+## One-hop conduction to the three closest targets among at most 96 local
+## grid entries. Fixed candidate storage keeps crowd-density work bounded.
+func _chain_shock(source: int, center: Vector3, amount: float, critical: bool) -> void:
+	var c := Vector2(center.x, center.z)
+	_chain_index.fill(-1)
+	_chain_distance.fill(INF)
+	var checks := 0
+	for cz in range(_cell_z(c.y - SHOCK_RADIUS), _cell_z(c.y + SHOCK_RADIUS) + 1):
+		for cx in range(_cell_x(c.x - SHOCK_RADIUS), _cell_x(c.x + SHOCK_RADIUS) + 1):
+			var cell := cz * _grid_w + cx
+			for k in range(_cell_start[cell], _cell_start[cell + 1]):
+				if checks >= SHOCK_CHECKS:
+					break
+				checks += 1
+				var slot := _cell_items[k]
+				if slot == source or not is_alive(slot):
+					continue
+				var d2 := enemy_position(slot).distance_squared_to(center)
+				if d2 > SHOCK_RADIUS * SHOCK_RADIUS:
+					continue
+				for rank in SHOCK_TARGETS:
+					if d2 < _chain_distance[rank]:
+						for shift in range(SHOCK_TARGETS - 1, rank, -1):
+							_chain_index[shift] = _chain_index[shift - 1]
+							_chain_distance[shift] = _chain_distance[shift - 1]
+						_chain_index[rank] = slot
+						_chain_distance[rank] = d2
+						break
+			if checks >= SHOCK_CHECKS:
+				break
+		if checks >= SHOCK_CHECKS:
+			break
+	# Capture all three before emitting signals: a synchronous callback can
+	# start another shock and overwrite the selection scratch.
+	var first := _chain_index[0]
+	var second := _chain_index[1]
+	var third := _chain_index[2]
+	if first >= 0:
+		_deal_damage(first, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
+	if second >= 0:
+		_deal_damage(second, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
+	if third >= 0:
+		_deal_damage(third, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
+
+func _update_burns(delta: float) -> void:
+	# Death only marks slots here; compacting stays in _rebuild_grid afterward.
+	# Thus a DOT kill cannot swap a survivor past this iteration.
+	for a in _active_count:
+		var slot := _active[a]
+		if not is_alive(slot) or _burn_time[slot] <= 0.0:
+			continue
+		var elapsed := minf(delta, _burn_time[slot])
+		_burn_time[slot] = maxf(0.0, _burn_time[slot] - delta)
+		_burn_tick[slot] -= elapsed
+		while _burn_tick[slot] <= 0.00001 and is_alive(slot):
+			_burn_tick[slot] += BURN_TICK
+			_deal_damage(slot, _burn_damage[slot], Vector3.ZERO, DamageType.Kind.FIRE, false)
+		if _burn_time[slot] <= 0.0:
+			_burn_damage[slot] = 0.0
+			_burn_tick[slot] = 0.0
+
+func damage_radius(center: Vector3, radius: float, amount: float, knockback_strength := 0.0, damage_type: int = 0, critical: bool = false) -> int:
+	if amount <= 0.0:
+		return 0
+	if _radius_depth >= RADIUS_DEPTH:
+		# Exceptional deeper callback nesting scans slots directly. It remains
+		# bounded by CAPACITY and cannot overwrite an ancestor's target list.
+		return _damage_radius_scan(center, radius, amount, knockback_strength, damage_type, critical)
+	var depth := _radius_depth
+	_radius_depth += 1
+	var buffer := _radius_buffers[depth]
+	# Packed arrays use copy-on-write; detach while this invocation owns it.
+	_radius_buffers[depth] = PackedInt32Array()
+	var count := query_radius(center, radius, buffer)
+	var damaged := 0
 	var c := Vector2(center.x, center.z)
 	for n in count:
-		var slot := _scratch[n]
-		var away := _pos[slot] - c
-		var push := Vector3.ZERO
-		if knockback_strength > 0.0 and away.length_squared() > 0.0001:
-			away = away.normalized() * knockback_strength
-			push = Vector3(away.x, 0.0, away.y)
-		damage(slot, amount, push)
-	return count
+		damaged += _damage_radius_slot(buffer[n], c, amount, knockback_strength, damage_type, critical)
+	_radius_buffers[depth] = buffer
+	_radius_depth -= 1
+	return damaged
+
+func _damage_radius_slot(slot: int, center: Vector2, amount: float, knockback_strength: float, damage_type: int, critical: bool) -> int:
+	if not is_alive(slot):
+		return 0
+	var away := _pos[slot] - center
+	var push := Vector3.ZERO
+	if knockback_strength > 0.0 and away.length_squared() > 0.0001:
+		away = away.normalized() * knockback_strength
+		push = Vector3(away.x, 0.0, away.y)
+	var before := _hp[slot]
+	damage(slot, amount, push, damage_type, critical)
+	return 1 if _hp[slot] < before else 0
+
+func _damage_radius_scan(center: Vector3, radius: float, amount: float, knockback_strength: float, damage_type: int, critical: bool) -> int:
+	var c := Vector2(center.x, center.z)
+	var damaged := 0
+	for slot in CAPACITY:
+		if not is_alive(slot):
+			continue
+		var reach := radius + _t_radius[_type[slot]]
+		if _pos[slot].distance_squared_to(c) > reach * reach:
+			continue
+		var half := _t_height[_type[slot]] * 0.5
+		if absf(_y[slot] + half - center.y) > radius + half + LEVEL_GAP:
+			continue
+		damaged += _damage_radius_slot(slot, c, amount, knockback_strength, damage_type, critical)
+	return damaged
 
 func _begin_death(slot: int) -> void:
 	_state[slot] = DYING
+	_slow[slot] = 1.0
+	_slow_time[slot] = 0.0
+	_burn_time[slot] = 0.0
+	_burn_tick[slot] = 0.0
+	_burn_damage[slot] = 0.0
 	_death[slot] = _t_death_time[_type[slot]]
 	_flash[slot] = 1.0
 	_dying[_dying_count] = slot
@@ -831,6 +995,7 @@ func _begin_death(slot: int) -> void:
 # ---------------------------------------------------------------- simulation
 
 func _physics_process(delta: float) -> void:
+	_update_burns(delta)
 	_rebuild_grid()
 	_flow_timer -= delta
 	if _flow_timer <= 0.0 and is_instance_valid(target):
@@ -851,6 +1016,8 @@ func _physics_process(delta: float) -> void:
 	var last_z := _grid_h - 1
 	for a in _active_count:
 		var i := _active[a]
+		if not is_alive(i):
+			continue
 		var type := _type[i]
 		var p := _pos[i]
 		var to := player - p

@@ -15,6 +15,7 @@ spread_degrees = 0.0
 knockback = 14.0
 pierce = 0
 screen_shake = 0.3
+recoil_degrees = 0.6
 view_scene = ExtResource("2_view")
 explosion_radius = 2.2
 explosion_damage_fraction = 0.6

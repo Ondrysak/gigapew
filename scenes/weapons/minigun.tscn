@@ -1,21 +1,7 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
-
-[sub_resource type="StandardMaterial3D" id="Mat_gunmetal"]
-albedo_color = Color(0.2, 0.21, 0.23, 1)
-metallic = 0.8
-roughness = 0.32
-
-[sub_resource type="StandardMaterial3D" id="Mat_dark"]
-albedo_color = Color(0.04, 0.04, 0.05, 1)
-metallic = 0.4
-roughness = 0.6
-
-[sub_resource type="StandardMaterial3D" id="Mat_brass"]
-albedo_color = Color(0.62, 0.45, 0.14, 1)
-metallic = 0.75
-roughness = 0.3
+[ext_resource type="Script" path="res://scripts/weapons/firearm_model.gd" id="2_model"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_glow"]
 shading_mode = 0
@@ -33,58 +19,24 @@ albedo_color = Color(1, 0.7, 0.3, 1)
 shading_mode = 0
 albedo_color = Color(1, 0.3, 0.4, 1)
 
-[sub_resource type="BoxMesh" id="Mesh_receiver"]
-size = Vector3(0.24, 0.2, 0.36)
-
-[sub_resource type="BoxMesh" id="Mesh_handle"]
-size = Vector3(0.05, 0.05, 0.22)
-
-[sub_resource type="BoxMesh" id="Mesh_ammo"]
-size = Vector3(0.1, 0.16, 0.2)
-
-[sub_resource type="BoxMesh" id="Mesh_strip"]
-size = Vector3(0.02, 0.02, 0.22)
-
-[sub_resource type="CylinderMesh" id="Mesh_barrel"]
-top_radius = 0.02
-bottom_radius = 0.02
-height = 0.5
-radial_segments = 6
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_plate"]
-top_radius = 0.088
-bottom_radius = 0.088
-height = 0.03
-radial_segments = 12
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_hub"]
-top_radius = 0.03
-bottom_radius = 0.03
-height = 0.52
-radial_segments = 8
-rings = 1
-
 [sub_resource type="SphereMesh" id="Mesh_flash"]
-radius = 0.075
-height = 0.2
+radius = 0.038
+height = 0.12
 radial_segments = 8
 rings = 4
 
 [node name="Minigun" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "spinner")]
-position = Vector3(0.3, -0.31, -0.6)
 script = ExtResource("1_view")
-muzzle = NodePath("MuzzleFlash")
-flash = NodePath("MuzzleFlash")
-flash_light = NodePath("MuzzleLight")
+muzzle = NodePath("Spinner/MuzzleFlash")
+flash = NodePath("Spinner/MuzzleFlash")
+flash_light = NodePath("Spinner/MuzzleLight")
 trace_material = SubResource("Mat_trace")
 impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
 synth_shot = &"minigun"
 shot_volume_db = -15.0
-recoil_distance = 0.035
-recoil_angle = 0.025
+recoil_distance = 0.018
+recoil_angle = 0.012
 trace_width = 0.012
 trace_duration = 0.035
 flash_duration = 0.03
@@ -93,220 +45,23 @@ spin_speed = 42.0
 synth_spin = &"spin"
 spin_volume_db = -17.0
 
-[node name="Receiver" type="MeshInstance3D" parent="."]
-mesh = SubResource("Mesh_receiver")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Handle" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.15, -0.02)
-mesh = SubResource("Mesh_handle")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="HandleFront" type="MeshInstance3D" parent="."]
-position = Vector3(0, 0.12, -0.12)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(1, 0.3, 1)
-mesh = SubResource("Mesh_handle")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="AmmoBox" type="MeshInstance3D" parent="."]
-position = Vector3(-0.17, -0.04, 0.02)
-mesh = SubResource("Mesh_ammo")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="Strip" type="MeshInstance3D" parent="."]
-position = Vector3(0.122, 0.03, 0)
-mesh = SubResource("Mesh_strip")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="MotorHousing" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.01, -0.14)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(3.7, 0.28, 3.7)
-mesh = SubResource("Mesh_hub")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="MotorVentLeft" type="MeshInstance3D" parent="."]
-position = Vector3(-0.12, 0.07, -0.14)
-scale = Vector3(0.38, 1, 0.65)
-mesh = SubResource("Mesh_strip")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="MotorVentRight" type="MeshInstance3D" parent="."]
-position = Vector3(0.12, 0.07, -0.14)
-scale = Vector3(0.38, 1, 0.65)
-mesh = SubResource("Mesh_strip")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="AmmoCanister" type="MeshInstance3D" parent="."]
-position = Vector3(-0.245, -0.085, 0.045)
-scale = Vector3(1.55, 1.3, 1.55)
-mesh = SubResource("Mesh_ammo")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
-
-[node name="AmmoCanisterStripe" type="MeshInstance3D" parent="."]
-position = Vector3(-0.33, 0.02, 0.045)
-rotation = Vector3(0, 1.570796, 0)
-scale = Vector3(0.8, 1.0, 1.2)
-mesh = SubResource("Mesh_strip")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="FeedLinkRear" type="MeshInstance3D" parent="."]
-position = Vector3(-0.18, 0.025, -0.04)
-scale = Vector3(0.65, 0.3, 0.35)
-mesh = SubResource("Mesh_ammo")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="FeedLinkFront" type="MeshInstance3D" parent="."]
-position = Vector3(-0.15, 0.01, -0.11)
-scale = Vector3(0.65, 0.3, 0.35)
-mesh = SubResource("Mesh_ammo")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
 [node name="Spinner" type="Node3D" parent="."]
-position = Vector3(0, -0.01, -0.18)
 
-[node name="Hub" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0, 0, -0.24)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_hub")
-material_override = SubResource("Mat_dark")
-cast_shadow = 0
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")
+kind = "minigun"
 
-[node name="Barrel1" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.056, 0, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Barrel2" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.028, 0.0485, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Barrel3" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.028, 0.0485, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Barrel4" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.056, 0, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Barrel5" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.028, -0.0485, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Barrel6" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.028, -0.0485, -0.26)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_barrel")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="RearPlate" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0, 0, -0.06)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="FrontPlate" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0, 0, -0.44)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_gunmetal")
-cast_shadow = 0
-
-[node name="Marker" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.056, 0, -0.41)
-scale = Vector3(1.4, 1.4, 0.25)
-mesh = SubResource("Mesh_strip")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="BarrelCollar1" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.056, 0, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="BarrelCollar2" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.028, 0.0485, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="BarrelCollar3" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.028, 0.0485, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="BarrelCollar4" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.056, 0, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="BarrelCollar5" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(-0.028, -0.0485, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="BarrelCollar6" type="MeshInstance3D" parent="Spinner"]
-position = Vector3(0.028, -0.0485, -0.505)
-rotation = Vector3(1.570796, 0, 0)
-scale = Vector3(0.29, 0.65, 0.29)
-mesh = SubResource("Mesh_plate")
-material_override = SubResource("Mat_brass")
-cast_shadow = 0
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
+[node name="MuzzleFlash" type="MeshInstance3D" parent="Spinner"]
 visible = false
-position = Vector3(0, -0.01, -0.72)
+position = Vector3(0.043, 0, -0.49)
 rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_flash")
 material_override = SubResource("Mat_glow")
 cast_shadow = 0
 
-[node name="MuzzleLight" type="OmniLight3D" parent="."]
+[node name="MuzzleLight" type="OmniLight3D" parent="Spinner"]
 visible = false
-position = Vector3(0, 0, -0.75)
+position = Vector3(0.043, 0, -0.49)
 light_color = Color(1, 0.75, 0.3, 1)
 light_energy = 1.6
 omni_range = 3.0

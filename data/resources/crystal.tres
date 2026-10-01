@@ -7,5 +7,5 @@ script = ExtResource("1_definition")
 id = &"crystal"
 display_name = "Cinder Crystal"
 color = Color(1, 0.38, 0.14, 1)
-banked = false
+banked = true
 supply_value = 1

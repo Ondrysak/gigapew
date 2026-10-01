@@ -20,11 +20,9 @@ signal deposit_broken(definition: DepositDefinition, position: Vector3)
 @export var spawn_clearance := 8.0
 ## Respawns never pop in this close to the player.
 @export var respawn_player_clearance := 8.0
-@export var min_spacing := 3.0
+@export var min_spacing := 5.5
 ## Share of placements on perimeter walls (the rest go on obstacles).
 @export_range(0.0, 1.0) var wall_share := 0.6
-## Added to every deposit mesh briefly when it is hit.
-@export var hit_flash_material: Material
 
 @export_group("Effects")
 ## Chips and break bursts; the material should use vertex color as albedo.
@@ -68,13 +66,14 @@ var _player: ArenaPlayer
 var _run_state: RunState
 var _rng := RandomNumberGenerator.new()
 var _query: PhysicsRayQueryParameters3D
+var _clearance_box := BoxShape3D.new()
+var _clearance_query := PhysicsShapeQueryParameters3D.new()
 var _populate_delay := 2
 var _cap := 0
 var _respawn_timer := 0.0
 var _spawn_point := Vector3.ZERO
 var _alive: Array[MineralDeposit] = []
 var _placed: Dictionary = {}
-var _shapes: Dictionary = {}
 
 # Obstacle footprints (world X/Z), read like Horde does.
 var _obstacle_body: Array[StaticBody3D] = []
@@ -118,12 +117,11 @@ func setup(world: Node3D, play_area: Rect2, player: ArenaPlayer, run_state: RunS
 	_cap = clampi(roundi(play_area.get_area() * deposits_per_square_meter), min_deposits, max_deposits)
 	_respawn_timer = _rng.randf_range(respawn_interval_min, respawn_interval_max)
 	_query = PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 1, [player.get_rid()])
+	_clearance_query.shape = _clearance_box
+	_clearance_query.collision_mask = 1
 	for definition in deposit_types:
 		if definition == null or definition.resource == null:
 			continue
-		var shape := BoxShape3D.new()
-		shape.size = definition.collision_size
-		_shapes[definition] = shape
 		_placed[definition] = 0
 		if definition.pickup_mesh != null and not _pickup_style.has(definition.resource):
 			_pickup_style[definition.resource] = definition
@@ -244,10 +242,10 @@ func _populate() -> void:
 	_spawn_point = spawn.global_position if spawn != null else Vector3(_area.get_center().x, 0.0, _area.get_center().y)
 	_read_obstacles(_world.get_node_or_null("Obstacles"))
 	for definition in deposit_types:
-		if not _shapes.has(definition):
+		if definition == null or definition.resource == null:
 			continue
 		for _index in definition.guaranteed:
-			_try_place(definition, 40, false)
+			_try_place(definition, 160, false, true)
 	var attempts := _cap * 3
 	while _alive.size() < _cap and attempts > 0:
 		attempts -= 1
@@ -309,17 +307,19 @@ func _pick_type() -> DepositDefinition:
 	return null
 
 func _can_place_more(definition: DepositDefinition) -> bool:
-	if definition == null or not _shapes.has(definition):
+	if definition == null or definition.resource == null or not _placed.has(definition):
 		return false
 	return definition.max_per_stage <= 0 or int(_placed[definition]) < definition.max_per_stage
 
-func _try_place(definition: DepositDefinition, attempts: int, respawn: bool) -> bool:
-	if not _can_place_more(definition):
+func _try_place(definition: DepositDefinition, attempts: int, respawn: bool, wall_only: bool = false) -> bool:
+	if not _can_place_more(definition) or _alive.size() >= _cap:
 		return false
 	var space := get_world_3d().direct_space_state
 	for _attempt in attempts:
-		var on_wall := _obstacle_body.is_empty() or _rng.randf() < wall_share
-		if not (_wall_probe(definition) if on_wall else _obstacle_probe(definition)):
+		var size_scale := _rng.randf_range(0.95, 1.08)
+		var bounds := definition.formation_size * size_scale
+		var on_wall := wall_only or _obstacle_body.is_empty() or _rng.randf() < wall_share
+		if not (_wall_probe(definition, bounds) if on_wall else _obstacle_probe(definition, bounds)):
 			continue
 		if _is_inside_obstacle(Vector2(_probe_from.x, _probe_from.z)):
 			continue
@@ -339,26 +339,31 @@ func _try_place(definition: DepositDefinition, attempts: int, respawn: bool) -> 
 			continue
 		normal = normal.normalized()
 		var point: Vector3 = hit["position"]
-		if not _is_clear(point, respawn):
+		if not _is_clear(point, bounds, respawn):
 			continue
-		_spawn_deposit(definition, point, normal)
+		if not _formation_clear(space, point, normal, bounds, collider as StaticBody3D):
+			continue
+		_spawn_deposit(definition, point, normal, size_scale)
 		return true
 	return false
 
-func _wall_probe(definition: DepositDefinition) -> bool:
+func _wall_probe(definition: DepositDefinition, bounds: Vector3) -> bool:
 	var width := _area.size.x
 	var depth := _area.size.y
 	var along := _rng.randf() * (width + depth) * 2.0
-	var y := _rng.randf_range(definition.min_height, definition.max_height)
+	var y := _rng.randf_range(maxf(definition.min_height, bounds.y * 0.5 + 0.15), maxf(definition.max_height, bounds.y * 0.5 + 0.15))
+	var margin := bounds.x * 0.5 + bounds.z + 0.5
+	if width <= margin * 2.0 or depth <= margin * 2.0:
+		return false
 	var surface: Vector3
 	if along < width * 2.0:
-		var x := _area.position.x + clampf(fmod(along, width), 1.5, width - 1.5)
+		var x := _area.position.x + clampf(fmod(along, width), margin, width - margin)
 		var north := along < width
 		surface = Vector3(x, y, _area.position.y if north else _area.end.y)
 		_probe_normal = Vector3.BACK if north else Vector3.FORWARD
 	else:
 		along -= width * 2.0
-		var z := _area.position.y + clampf(fmod(along, depth), 1.5, depth - 1.5)
+		var z := _area.position.y + clampf(fmod(along, depth), margin, depth - margin)
 		var west := along < depth
 		surface = Vector3(_area.position.x if west else _area.end.x, y, z)
 		_probe_normal = Vector3.RIGHT if west else Vector3.LEFT
@@ -367,31 +372,31 @@ func _wall_probe(definition: DepositDefinition) -> bool:
 	_probe_body = null
 	return true
 
-func _obstacle_probe(definition: DepositDefinition) -> bool:
+func _obstacle_probe(definition: DepositDefinition, bounds: Vector3) -> bool:
 	var index := _rng.randi_range(0, _obstacle_body.size() - 1)
-	var low := maxf(definition.min_height, _obstacle_bottom[index] + 0.3)
-	var high := minf(definition.max_height, _obstacle_top[index] - 0.35)
+	var low := maxf(definition.min_height, _obstacle_bottom[index] + bounds.y * 0.5 + 0.15)
+	var high := minf(definition.max_height, _obstacle_top[index] - bounds.y * 0.5 - 0.15)
 	if high < low:
 		return false
 	var center := _obstacle_center[index]
 	var half := _obstacle_half[index]
 	var surface := Vector2.ZERO
+	# Broad flat faces only: pillars and narrow cover are not formation anchors.
 	if _obstacle_circle[index] == 1:
-		var angle := _rng.randf() * TAU
-		var direction := Vector2(cos(angle), sin(angle))
-		surface = center + direction * half.x
-		_probe_normal = Vector3(direction.x, 0.0, direction.y)
+		return false
+	var margin := bounds.x * 0.5 + 0.4
+	var x_face := half.x >= margin
+	var z_face := half.y >= margin
+	if not x_face and not z_face:
+		return false
+	if x_face and (not z_face or _rng.randf() < half.x / (half.x + half.y)):
+		var side := 1.0 if _rng.randf() < 0.5 else -1.0
+		surface = Vector2(center.x + _rng.randf_range(-half.x + margin, half.x - margin), center.y + half.y * side)
+		_probe_normal = Vector3(0.0, 0.0, side)
 	else:
-		# Faces weighted by their length.
-		var roll := _rng.randf() * (half.x + half.y) * 2.0
-		if roll < half.x * 2.0:
-			var side := 1.0 if roll < half.x else -1.0
-			surface = Vector2(center.x + _rng.randf_range(-half.x, half.x) * 0.8, center.y + half.y * side)
-			_probe_normal = Vector3(0.0, 0.0, side)
-		else:
-			var side := 1.0 if roll < half.x * 2.0 + half.y else -1.0
-			surface = Vector2(center.x + half.x * side, center.y + _rng.randf_range(-half.y, half.y) * 0.8)
-			_probe_normal = Vector3(side, 0.0, 0.0)
+		var side := 1.0 if _rng.randf() < 0.5 else -1.0
+		surface = Vector2(center.x + half.x * side, center.y + _rng.randf_range(-half.y + margin, half.y - margin))
+		_probe_normal = Vector3(side, 0.0, 0.0)
 	var y := _rng.randf_range(low, high)
 	var point := Vector3(surface.x, y, surface.y)
 	_probe_from = point + _probe_normal * PROBE_OUT
@@ -412,28 +417,63 @@ func _is_inside_obstacle(xz: Vector2) -> bool:
 			return true
 	return false
 
-func _is_clear(point: Vector3, respawn: bool) -> bool:
+func _is_clear(point: Vector3, bounds: Vector3, respawn: bool) -> bool:
 	var xz := Vector2(point.x, point.z)
-	if xz.distance_to(Vector2(_spawn_point.x, _spawn_point.z)) < spawn_clearance:
+	var radius := Vector2(bounds.x * 0.5, bounds.z).length()
+	if xz.distance_to(Vector2(_spawn_point.x, _spawn_point.z)) < spawn_clearance + radius:
 		return false
 	if respawn and _player != null and is_instance_valid(_player):
 		var player := _player.global_position
-		if xz.distance_to(Vector2(player.x, player.z)) < respawn_player_clearance:
+		if xz.distance_to(Vector2(player.x, player.z)) < respawn_player_clearance + radius:
 			return false
 	for deposit in _alive:
-		if deposit.global_position.distance_to(point) < min_spacing:
+		var other_radius := Vector2(deposit.formation_size.x * 0.5, deposit.formation_size.z).length()
+		if deposit.global_position.distance_to(point) < maxf(min_spacing, radius + other_radius + 0.4):
 			return false
 	return true
 
-func _spawn_deposit(definition: DepositDefinition, point: Vector3, normal: Vector3) -> void:
+func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: Vector3, bounds: Vector3, support: StaticBody3D) -> bool:
+	var right := Vector3.UP.cross(normal)
+	# The entire width and height must sit against the same broad wall face.
+	for x in [-0.48, 0.0, 0.48]:
+		for y in [-0.46, 0.46]:
+			var sample: Vector3 = point + right * bounds.x * x + Vector3.UP * bounds.y * y
+			_query.from = sample + normal * PROBE_OUT
+			_query.to = sample - normal * PROBE_IN
+			var hit := space.intersect_ray(_query)
+			if hit.is_empty() or hit["collider"] != support:
+				return false
+			var face_normal: Vector3 = hit["normal"]
+			var face_point: Vector3 = hit["position"]
+			if face_normal.dot(normal) < 0.95 or absf((face_point - point).dot(normal)) > 0.15:
+				return false
+	# Check floor clearance under all three columns, including outward tips.
+	for x in [-0.45, 0.0, 0.45]:
+		var bottom: Vector3 = point + right * bounds.x * x + normal * bounds.z * 0.6 - Vector3.UP * bounds.y * 0.5
+		_query.from = bottom + Vector3.UP * 0.25
+		_query.to = bottom - Vector3.UP * 4.0
+		var floor_hit := space.intersect_ray(_query)
+		if floor_hit.is_empty():
+			return false
+		var floor_point: Vector3 = floor_hit["position"]
+		if floor_point.y > bottom.y - 0.06:
+			return false
+	# Reserve real walkable room beyond the whole deposit, not just its origin.
+	_clearance_box.size = Vector3(bounds.x + 0.3, bounds.y - 0.12, bounds.z + 1.25)
+	_clearance_query.transform = Transform3D(Basis(right, Vector3.UP, normal), point + normal * (0.18 + _clearance_box.size.z * 0.5))
+	_clearance_query.exclude = [_player.get_rid(), support.get_rid()]
+	return space.intersect_shape(_clearance_query, 1).is_empty()
+
+func _spawn_deposit(definition: DepositDefinition, point: Vector3, normal: Vector3, size_scale: float) -> void:
 	var deposit := MineralDeposit.new()
 	deposit.name = "%sDeposit" % String(definition.resource.id).capitalize()
-	deposit.configure(definition, _shapes[definition], hit_flash_material, _rng.randf_range(-0.6, 0.6), _rng.randf_range(0.9, 1.1))
+	deposit.configure(definition, _rng.randi(), size_scale)
 	add_child(deposit)
-	# The model protrudes along +Z, i.e. out of the surface.
+	# Procedural geometry protrudes along +Z, out of the surface.
 	var up := Vector3.UP
 	deposit.global_transform = Transform3D(Basis(up.cross(normal), up, normal), point)
 	deposit.struck.connect(_on_deposit_struck)
+	deposit.fragment_mined.connect(_on_fragment_mined)
 	deposit.depleted.connect(_on_deposit_depleted)
 	_alive.append(deposit)
 	_placed[definition] = int(_placed[definition]) + 1
@@ -444,13 +484,11 @@ func _on_deposit_struck(deposit: MineralDeposit) -> void:
 	_chip_cooldown = 0.06
 	var emitter := _chips[_next_chip]
 	_next_chip = (_next_chip + 1) % _chips.size()
-	_fire_emitter(emitter, deposit.global_transform * Vector3(0.0, 0.0, 0.45), deposit.global_basis.z, deposit.definition.resource.color)
+	_fire_emitter(emitter, deposit.last_hit_position, deposit.global_basis.z, deposit.definition.resource.color)
 
-func _on_deposit_depleted(deposit: MineralDeposit) -> void:
+func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -> void:
 	var definition := deposit.definition
-	var center := deposit.global_transform * Vector3(0.0, 0.0, 0.45)
 	var normal := deposit.global_basis.z
-	var amount := _rng.randi_range(definition.yield_min, maxi(definition.yield_min, definition.yield_max))
 	_spill(definition.resource, amount, center, normal)
 	if not _bursts.is_empty():
 		_fire_emitter(_bursts[_next_burst], center, normal, definition.resource.color)
@@ -458,8 +496,12 @@ func _on_deposit_depleted(deposit: MineralDeposit) -> void:
 	_break_voice.global_position = center
 	_break_voice.pitch_scale = _rng.randf_range(0.9, 1.1)
 	_break_voice.play()
-	if show_popups and not _popups.is_empty():
+	if amount > 0 and show_popups and not _popups.is_empty():
 		_show_popup(center, "+%d %s" % [floori(amount * (_run_state.resource_multiplier if _run_state != null else 1.0)), definition.resource.display_name], definition.resource.color)
+
+func _on_deposit_depleted(deposit: MineralDeposit) -> void:
+	var definition := deposit.definition
+	var center := deposit.last_hit_position
 	_alive.erase(deposit)
 	deposit.queue_free()
 	deposit_broken.emit(definition, center)

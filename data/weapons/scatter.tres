@@ -13,4 +13,5 @@ range_meters = 24.0
 pellet_count = 7
 spread_degrees = 5.0
 knockback = 12.0
+recoil_degrees = 0.42
 view_scene = ExtResource("2_view")

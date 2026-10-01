@@ -117,7 +117,7 @@ theme_override_constants/separation = 10
 custom_minimum_size = Vector2(380, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.72, 0.55, 1)
-text = "Abandon this run? Resources not yet banked are lost."
+text = "Abandon this run? Bank 50% of carried minerals; the rest is lost."
 autowrap_mode = 2
 
 [node name="Buttons" type="HBoxContainer" parent="Root/Main/Panel/Rows/Confirm"]

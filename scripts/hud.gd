@@ -3,7 +3,6 @@ extends CanvasLayer
 
 @export var healthy_color := Color(0.86, 0.98, 1.0)
 @export var critical_color := Color(1.0, 0.3, 0.4)
-@export var victory_color := Color(0.55, 1.0, 0.88)
 @export var boss_phase_color := Color(1.0, 0.45, 0.25)
 @export var ability_ready_color := Color(0.4, 1.0, 0.85)
 @export var ability_charging_color := Color(0.55, 0.65, 0.7)
@@ -33,7 +32,7 @@ extends CanvasLayer
 var _last_health := 0
 var _resource_labels: Dictionary = {}
 var _resource_names: Dictionary = {}
-var _weapon_description := ""
+var _hand_summary := ""
 var _weapon_mods := ""
 
 ## Builds one counter per banked resource, styled by its definition.
@@ -124,10 +123,25 @@ func set_boss_health(current: float, maximum: float) -> void:
 	boss_bar.max_value = maximum
 	boss_bar.value = current
 
-func set_weapon(definition: WeaponDefinition, index: int) -> void:
-	weapon_label.text = "[%d] %s" % [index + 1, definition.display_name.to_upper()]
-	_weapon_description = definition.description
-	weapon_detail.text = _weapon_description + ("\n" + _weapon_mods if not _weapon_mods.is_empty() else "")
+func set_hands(state: RunState, focused: int) -> void:
+	if state.hands.is_empty():
+		return
+	var selected := state.hands[clampi(focused, 0, state.hands.size() - 1)].definition
+	weapon_label.text = "HAND %d  //  %s" % [focused + 1, selected.display_name.to_upper()]
+	var lines := PackedStringArray()
+	for index in state.hands.size():
+		var gun := state.hands[index].definition
+		var pellets := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)
+		lines.append("%s%d %s · %s ×%d%s" % [
+			"▶ " if index == focused else "   ", index + 1,
+			gun.display_name.to_upper(), DamageType.label(gun.damage_type).to_upper(), pellets,
+			" · BLAST %.1fm" % gun.explosion_radius if gun.explosion_radius > 0.0 else "",
+		])
+	_hand_summary = "\n".join(lines)
+	_refresh_weapon_detail()
+
+func _refresh_weapon_detail() -> void:
+	weapon_detail.text = _hand_summary + ("\n" + _weapon_mods if not _weapon_mods.is_empty() else "")
 
 ## Show currently installed main-gun mods below the selected gun.
 func set_weapon_mods(state: RunState) -> void:
@@ -139,7 +153,7 @@ func set_weapon_mods(state: RunState) -> void:
 	if state.upgrade_levels.get(&"mod_executioner", 0) > 0:
 		_weapon_mods += "  /  EXECUTIONER"
 	_weapon_mods = _weapon_mods.trim_prefix("  /  ")
-	weapon_detail.text = _weapon_description + ("\n" + _weapon_mods if not _weapon_mods.is_empty() else "")
+	_refresh_weapon_detail()
 
 func show_shot() -> void:
 	feedback.show_shot()
@@ -150,14 +164,9 @@ func show_hit(killed: bool) -> void:
 func show_combo(hits: int, bonus: float) -> void:
 	feedback.show_combo(hits, bonus)
 
-func finish_stage(victory: bool, final_stage: bool, summary: String, banked: String) -> void:
+func finish_run(summary: String, banked: String) -> void:
 	feedback.terminal = true
 	boss_panel.hide()
-	message.add_theme_color_override("font_color", victory_color if victory else critical_color)
-	if victory and final_stage:
-		message.text = "RUN COMPLETE\n%s\n%s\nENTER  MENU   /   R  NEW RUN" % [summary, banked]
-	elif victory:
-		message.text = "STAGE CLEAR\n%s\n%s\nENTER  NEXT STAGE" % [summary, banked]
-	else:
-		message.text = "YOU DIED\n%s\n%s\nR  RETRY   /   ENTER  MENU" % [summary, banked]
+	message.add_theme_color_override("font_color", critical_color)
+	message.text = "YOU DIED\n%s\n%s\nR  RETRY   /   ENTER  MENU" % [summary, banked]
 	message.show()
