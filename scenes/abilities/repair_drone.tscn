@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/repair_drone.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/repair_drone.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
 albedo_color = Color(0.85, 0.88, 0.86, 1)
@@ -92,6 +93,7 @@ rotor = NodePath("Drone/Rotor")
 bubble = NodePath("Bubble")
 beam_template = NodePath("BeamTemplate")
 pulse_template = NodePath("PulseTemplate")
+icon = ExtResource("icon_px")
 
 [node name="Drone" type="Node3D" parent="."]
 visible = false

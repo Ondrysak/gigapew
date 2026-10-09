@@ -33,8 +33,11 @@ flash_light = NodePath("MuzzleLight")
 trace_material = SubResource("Mat_trace")
 impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
-recoil_distance = 0.022
-recoil_angle = 0.015
+recoil_distance = 0.038
+recoil_angle = 0.055
+recoil_frequency = 8.0
+recoil_damping = 0.45
+trace_duration = 0.08
 
 [node name="Model" type="Node3D" parent="."]
 script = ExtResource("2_model")

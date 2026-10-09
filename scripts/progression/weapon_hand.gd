@@ -2,13 +2,11 @@ class_name WeaponHand
 extends RefCounted
 
 ## Effective per-hand resource; authored weapons and sibling hands stay unchanged.
+## Weapon-mod names, tracks and rank caps live in RoundShop.CATALOG; this class
+## applies their effects.
 const MAX_PROJECTILES := 32
 const MAX_SPLASH := 8.0
 const MAX_PIERCE := 12
-const CAPS := {
-	&"projectiles": 6, &"splash": 4, &"fire": 1, &"frost": 1,
-	&"shock": 1, &"damage": 5, &"cadence": 5, &"pierce": 4,
-}
 
 var definition: WeaponDefinition
 var upgrade_levels: Dictionary = {}
@@ -23,10 +21,13 @@ func setup(source: WeaponDefinition) -> void:
 		_base_damage = definition.damage
 		_base_interval = definition.fire_interval
 
+func rank(kind: StringName) -> int:
+	return int(upgrade_levels.get(kind, 0))
+
 func can_upgrade(kind: StringName) -> bool:
-	if definition == null or not CAPS.has(kind):
+	if definition == null or not RoundShop.is_hand_mod(kind):
 		return false
-	if int(upgrade_levels.get(kind, 0)) >= int(CAPS[kind]):
+	if rank(kind) >= RoundShop.max_rank(kind):
 		return false
 	match kind:
 		&"projectiles":
@@ -46,25 +47,36 @@ func can_upgrade(kind: StringName) -> bool:
 func upgrade(kind: StringName) -> bool:
 	if not can_upgrade(kind):
 		return false
-	var rank := int(upgrade_levels.get(kind, 0)) + 1
-	upgrade_levels[kind] = rank
+	var next := rank(kind) + 1
+	upgrade_levels[kind] = next
+	_apply(definition, kind, next)
+	return true
+
+## A copy of this hand's weapon with one more rank of `kind`; null when capped.
+func preview(kind: StringName) -> WeaponDefinition:
+	if not can_upgrade(kind):
+		return null
+	var copy := definition.duplicate(false) as WeaponDefinition
+	_apply(copy, kind, rank(kind) + 1)
+	return copy
+
+func _apply(target: WeaponDefinition, kind: StringName, level: int) -> void:
 	match kind:
 		&"projectiles":
-			definition.pellet_count = mini(MAX_PROJECTILES, definition.pellet_count + 2)
-			definition.spread_degrees = maxf(definition.spread_degrees, 2.0)
+			target.pellet_count = mini(MAX_PROJECTILES, target.pellet_count + 2)
+			target.spread_degrees = maxf(target.spread_degrees, 2.0)
 		&"splash":
-			definition.explosion_radius = minf(MAX_SPLASH, definition.explosion_radius + 1.1)
-			definition.explosion_damage_fraction = maxf(definition.explosion_damage_fraction, 0.6)
+			target.explosion_radius = minf(MAX_SPLASH, target.explosion_radius + 1.1)
+			target.explosion_damage_fraction = maxf(target.explosion_damage_fraction, 0.6)
 		&"fire":
-			definition.damage_type = DamageType.Kind.FIRE
+			target.damage_type = DamageType.Kind.FIRE
 		&"frost":
-			definition.damage_type = DamageType.Kind.FROST
+			target.damage_type = DamageType.Kind.FROST
 		&"shock":
-			definition.damage_type = DamageType.Kind.SHOCK
+			target.damage_type = DamageType.Kind.SHOCK
 		&"damage":
-			definition.damage = roundi(_base_damage * (1.0 + rank * 0.2))
+			target.damage = roundi(_base_damage * (1.0 + level * 0.2))
 		&"cadence":
-			definition.fire_interval = maxf(0.025, _base_interval / (1.0 + rank * 0.15))
+			target.fire_interval = maxf(0.025, _base_interval / (1.0 + level * 0.15))
 		&"pierce":
-			definition.pierce = mini(MAX_PIERCE, definition.pierce + 1)
-	return true
+			target.pierce = mini(MAX_PIERCE, target.pierce + 1)

@@ -18,8 +18,18 @@ extends Node3D
 ## Built-in SynthCue used when shot_sound is empty; empty falls back to shot_cue.
 @export var synth_shot: StringName
 @export var shot_volume_db := -10.0
+## Peak backward kick (metres) of one shot, before per-weapon scaling.
 @export var recoil_distance := 0.11
+## Peak muzzle climb (radians) of one shot, before per-weapon scaling.
 @export var recoil_angle := 0.09
+## Upward lift of the kick as a fraction of recoil_distance.
+@export var recoil_lift := 0.3
+## Random yaw/roll per shot as a fraction of recoil_angle.
+@export var recoil_wobble := 0.35
+## Natural frequency (Hz) of the recoil spring; heavy guns recover slower.
+@export var recoil_frequency := 6.0
+## Damping ratio of the recoil spring; below 1 overshoots on the way back.
+@export_range(0.1, 1.0) var recoil_damping := 0.4
 @export var trace_width := 0.014
 @export var trace_duration := 0.045
 @export var flash_duration := 0.045
@@ -55,6 +65,19 @@ extends Node3D
 ## flash (damage still applies), so point-blank shots never white out the view.
 @export var min_view_clearance := 1.0
 
+@export_group("Casings")
+## Spent casings pooled per view; 0 ejects none (e.g. flame weapons).
+@export var casing_pool_size := 6
+@export var casing_color := Color(0.86, 0.62, 0.24)
+@export var casing_radius := 0.0065
+@export var casing_length := 0.026
+@export var casing_lifetime := 0.6
+## Ejection point in view space.
+@export var casing_port := Vector3(0.0, 0.05, -0.03)
+@export var casing_speed := 1.6
+## Ejection direction in view space; X mirrors for left-hand views.
+@export var casing_direction := Vector3(0.9, 1.0, 0.15)
+
 var _rest: Vector3
 var _rest_rotation := Vector3.ZERO
 var _mining_offset := Vector3.ZERO
@@ -63,7 +86,27 @@ var _damage_type := -1
 var _flash_material: StandardMaterial3D
 var _critical_material: StandardMaterial3D
 var _blast_material: StandardMaterial3D
-var _recoil := 0.0
+# Recoil springs in view space: offset in metres, angle as (pitch, yaw, roll).
+var _kick_offset := Vector3.ZERO
+var _kick_offset_velocity := Vector3.ZERO
+var _kick_angle := Vector3.ZERO
+var _kick_angle_velocity := Vector3.ZERO
+var _spring_omega := TAU * 6.0
+## -1 for a left-hand view, +1 otherwise: wobble and casings lean outward.
+var _side := 1.0
+var _rng := RandomNumberGenerator.new()
+var _flash_basis := Basis.IDENTITY
+var _flash_shot_basis := Basis.IDENTITY
+var _flash_energy := 1.0
+var _trace_fade: StandardMaterial3D
+var _trace_from := PackedVector3Array()
+var _trace_to := PackedVector3Array()
+var _casing_root: Node3D
+var _casings: Array[MeshInstance3D] = []
+var _casing_velocity := PackedVector3Array()
+var _casing_spin := PackedVector3Array()
+var _casing_age := PackedFloat32Array()
+var _casing_next := 0
 var _landing_dip := 0.0
 var _stride := 0.0
 var _sway := Vector2.ZERO
@@ -91,6 +134,15 @@ var _blast_radii := PackedFloat32Array()
 func _ready() -> void:
 	_rest = position
 	_rest_rotation = rotation
+	_side = -1.0 if _rest.x < -0.01 else 1.0
+	_rng.randomize()
+	# Each hand rings at a slightly different pitch so hands never move in lockstep.
+	_spring_omega = TAU * recoil_frequency * _rng.randf_range(0.9, 1.1)
+	if flash != null:
+		_flash_basis = flash.basis
+		_flash_shot_basis = _flash_basis
+	if flash_light != null:
+		_flash_energy = flash_light.light_energy
 	_shot_audio = _make_audio(shot_sound if shot_sound != null else SynthCue.make(synth_shot))
 	_shot_audio.volume_db = shot_volume_db
 	_hit_audio = _make_audio(hit_sound)
@@ -113,7 +165,11 @@ func prepare(pellet_count: int) -> void:
 	if not _impacts.is_empty():
 		return
 	# All materials mutated by type upgrades belong to this view, not its scene.
-	trace_material = _local_material(trace_material) if trace_material != null else null
+	if trace_material != null:
+		# Tracers fade out over their lifetime instead of popping off.
+		_trace_fade = _local_material(trace_material)
+		_trace_fade.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		trace_material = _trace_fade
 	impact_material = _local_material(impact_material)
 	target_impact_material = _local_material(target_impact_material)
 	puff_material = _local_material(puff_material) if puff_material != null else null
@@ -146,6 +202,8 @@ func prepare(pellet_count: int) -> void:
 			spark.mesh = spark_mesh
 			_add_world_visual(spark)
 			_sparks.append(spark)
+	_trace_from.resize(pellet_count)
+	_trace_to.resize(pellet_count)
 	if puff_material != null:
 		var puff_mesh := _sphere_mesh(10, 5)
 		for index in range(puff_pool_size):
@@ -179,6 +237,39 @@ func prepare(pellet_count: int) -> void:
 	_blast_times.resize(blast_count)
 	_blast_times.fill(0.0)
 	_blast_radii.resize(blast_count)
+	if casing_pool_size > 0:
+		_prepare_casings()
+
+func _prepare_casings() -> void:
+	# Casings live in the parent (camera) frame so they never fly into the lens.
+	_casing_root = Node3D.new()
+	add_child(_casing_root)
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = casing_radius
+	mesh.bottom_radius = casing_radius
+	mesh.height = casing_length
+	mesh.radial_segments = 8
+	mesh.rings = 1
+	var material := StandardMaterial3D.new()
+	material.albedo_color = casing_color
+	material.metallic = 0.6
+	material.roughness = 0.35
+	# A faint glow keeps the casings readable in the dark arenas.
+	material.emission_enabled = true
+	material.emission = casing_color
+	material.emission_energy_multiplier = 0.35
+	mesh.material = material
+	for index in range(casing_pool_size):
+		var casing := MeshInstance3D.new()
+		casing.mesh = mesh
+		casing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		casing.hide()
+		_casing_root.add_child(casing)
+		_casings.append(casing)
+	_casing_velocity.resize(casing_pool_size)
+	_casing_spin.resize(casing_pool_size)
+	_casing_age.resize(casing_pool_size)
+	_casing_age.fill(-1.0)
 
 func _local_material(source: Material) -> StandardMaterial3D:
 	if source is StandardMaterial3D:
@@ -259,7 +350,7 @@ func set_spin(ratio: float) -> void:
 
 func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool, mining: bool = false) -> void:
 	var blend := 1.0 - exp(-18.0 * delta)
-	_recoil = lerpf(_recoil, 0.0, blend)
+	_step_kick(delta)
 	_landing_dip = lerpf(_landing_dip, 0.0, 1.0 - exp(-12.0 * delta))
 	_sway = _sway.lerp(Vector2.ZERO, blend)
 	if active and grounded:
@@ -269,22 +360,71 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
 	# The drill raises on the left; yield space without hiding a weapon/hand.
 	_mining_offset = _mining_offset.lerp(Vector3(-0.16, -0.12, 0.0) if mining else Vector3.ZERO, blend)
-	position = _rest + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, _recoil * recoil_distance)
-	rotation = _rest_rotation + Vector3(_recoil * recoil_angle, 0.0, -lateral_speed * 0.002)
+	position = _rest + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
+	rotation = _rest_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
+	if _casing_root != null:
+		_casing_root.transform = transform.affine_inverse()
 	if not active:
 		_flash_time = 0.0
 
+## Damped springs pull the kick back to rest, overshooting slightly.
+func _step_kick(delta: float) -> void:
+	var steps := clampi(ceili(delta * 240.0), 1, 8)
+	var step := delta / float(steps)
+	var stiffness := _spring_omega * _spring_omega
+	var damping := 2.0 * recoil_damping * _spring_omega
+	for n in steps:
+		_kick_offset_velocity -= (_kick_offset * stiffness + _kick_offset_velocity * damping) * step
+		_kick_offset += _kick_offset_velocity * step
+		_kick_angle_velocity -= (_kick_angle * stiffness + _kick_angle_velocity * damping) * step
+		_kick_angle += _kick_angle_velocity * step
+	_clamp_kick()
+
+## Sustained fire saturates instead of climbing out of frame.
+func _clamp_kick() -> void:
+	var back := recoil_distance * _kick_strength * 1.7
+	var climb := recoil_angle * _kick_strength * 1.7
+	var offset := _kick_offset.clamp(Vector3(-back, -back, -back) * 0.5, Vector3(back * 0.5, back * maxf(recoil_lift, 0.2), back))
+	var angle := _kick_angle.clamp(Vector3(-climb, -climb, -climb) * 0.5, Vector3(climb, climb * 0.5, climb * 0.5))
+	for axis in 3:
+		if offset[axis] != _kick_offset[axis]:
+			_kick_offset_velocity[axis] = 0.0
+		if angle[axis] != _kick_angle[axis]:
+			_kick_angle_velocity[axis] = 0.0
+	_kick_offset = offset
+	_kick_angle = angle
+
+## One shot's impulse: snap part of the kick, let the spring carry the rest.
+func _kick() -> void:
+	var climb := recoil_angle * _kick_strength * 1.7
+	# Kicks landing on an already-raised gun add less, so bursts plateau.
+	var room := 1.0 - 0.75 * clampf(_kick_angle.x / climb, 0.0, 1.0) if climb > 0.0 else 1.0
+	var punch := _kick_strength * room * _rng.randf_range(0.85, 1.15)
+	var shove := Vector3(_rng.randf_range(-0.15, 0.15), recoil_lift, 1.0) * (recoil_distance * punch)
+	var wobble := recoil_angle * recoil_wobble * punch
+	var twist := Vector3(recoil_angle * punch, _rng.randf_range(-wobble, wobble), (0.5 * _side + _rng.randf_range(-0.7, 0.7)) * wobble)
+	_kick_offset += shove * 0.65
+	_kick_offset_velocity += shove * _spring_omega
+	_kick_angle += twist * 0.65
+	_kick_angle_velocity += twist * _spring_omega
+	_clamp_kick()
+
 func _process(delta: float) -> void:
 	_flash_time = maxf(0.0, _flash_time - delta)
+	var flash_left := _flash_time / flash_duration if flash_duration > 0.0 else 0.0
 	if flash != null:
 		flash.visible = _flash_time > 0.0
+		if flash.visible:
+			# Blooms open, then pinches shut as it fades.
+			flash.basis = _flash_shot_basis * (0.45 + 0.55 * sqrt(flash_left))
 	if flash_light != null:
 		flash_light.visible = _flash_time > 0.0
+		if flash_light.visible:
+			flash_light.light_energy = _flash_energy * (0.35 + 0.95 * flash_left) * _rng.randf_range(0.75, 1.25)
 	_trace_time = maxf(0.0, _trace_time - delta)
 	_impact_time = maxf(0.0, _impact_time - delta)
-	for trace in _traces:
-		if _trace_time == 0.0:
-			trace.hide()
+	if not _traces.is_empty():
+		_update_traces()
 	for impact in _impacts:
 		if _impact_time == 0.0:
 			impact.hide()
@@ -301,11 +441,39 @@ func _process(delta: float) -> void:
 		_update_puffs(delta)
 	if not _blasts.is_empty():
 		_update_blasts(delta)
+	if not _casings.is_empty():
+		_update_casings(delta)
+
+## Tracers thin and fade while their tail chases the head toward the hit.
+func _update_traces() -> void:
+	var life := _trace_time / trace_duration if trace_duration > 0.0 else 0.0
+	if _trace_fade != null:
+		_trace_fade.albedo_color.a = clampf(life * 1.4, 0.0, 1.0)
+	for index in range(_traces.size()):
+		var trace := _traces[index]
+		if not trace.visible:
+			continue
+		if _trace_time == 0.0:
+			trace.hide()
+			continue
+		var head := _trace_to[index]
+		# Hold the full line early, then let the tail race in.
+		var tail := _trace_from[index].lerp(head, (1.0 - life) * (1.0 - life) * 0.85)
+		var width := 0.25 + 0.75 * life
+		trace.global_position = (tail + head) * 0.5
+		trace.scale = Vector3(width, width, maxf(0.001, tail.distance_to(head)))
 
 func begin_shot(sound: CombatAudio) -> void:
 	_play(_shot_audio, sound, shot_cue)
-	_recoil = _kick_strength
+	_kick()
 	_flash_time = flash_duration
+	if flash != null:
+		# Every flash gets its own roll, size and length.
+		var width := _rng.randf_range(0.8, 1.3)
+		_flash_shot_basis = Basis(Vector3.BACK, _rng.randf() * TAU) \
+				* Basis.from_scale(Vector3(width, width, width * _rng.randf_range(0.75, 1.5))) * _flash_basis
+	if not _casings.is_empty():
+		_eject_casing()
 	_trace_time = trace_duration
 	_impact_time = 0.13
 	for trace in _traces:
@@ -315,10 +483,48 @@ func begin_shot(sound: CombatAudio) -> void:
 	for spark in _sparks:
 		spark.hide()
 
+func _eject_casing() -> void:
+	var slot := _casing_next
+	_casing_next = (_casing_next + 1) % _casings.size()
+	var casing := _casings[slot]
+	# Spawned in the parent (camera) frame from the view's current pose.
+	var axes := transform.basis.orthonormalized()
+	casing.position = transform * casing_port
+	casing.basis = axes * Basis(Vector3.BACK, PI * 0.5)
+	var direction := Vector3(casing_direction.x * _side, casing_direction.y, casing_direction.z) \
+			+ Vector3(_rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.15, 0.15))
+	_casing_velocity[slot] = axes * direction * (casing_speed * _rng.randf_range(0.85, 1.15))
+	_casing_spin[slot] = Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-0.4, 0.4), _rng.randf_range(-1.0, 1.0)).normalized() * _rng.randf_range(14.0, 28.0)
+	_casing_age[slot] = 0.0
+	casing.show()
+
+func _update_casings(delta: float) -> void:
+	# Cancel the view's own motion so casings fly free of the gun's recoil.
+	_casing_root.transform = transform.affine_inverse()
+	var gravity := Vector3.DOWN * 11.0
+	var frame := get_parent() as Node3D
+	if frame != null:
+		gravity = frame.global_basis.orthonormalized().transposed() * gravity
+	for index in range(_casings.size()):
+		var age := _casing_age[index]
+		if age < 0.0:
+			continue
+		var casing := _casings[index]
+		age += delta
+		if age >= casing_lifetime:
+			_casing_age[index] = -1.0
+			casing.hide()
+			continue
+		_casing_age[index] = age
+		_casing_velocity[index] += gravity * delta
+		casing.position += _casing_velocity[index] * delta
+		var spin := _casing_spin[index]
+		casing.basis = casing.basis.rotated(spin.normalized(), spin.length() * delta)
+
 func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_enemy: bool, critical: bool = false) -> void:
 	var start := muzzle.global_position
 	var ray := end - start
-	var orientation := muzzle.global_basis
+	var orientation := muzzle.global_basis.orthonormalized()
 	if ray.length_squared() > 0.0001:
 		orientation = Basis.looking_at(ray, Vector3.RIGHT if absf(ray.normalized().y) > 0.98 else Vector3.UP)
 	if index < _traces.size() and ray.length_squared() > 0.01:
@@ -326,10 +532,15 @@ func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_
 		trace.global_position = (start + end) * 0.5
 		trace.global_basis = orientation
 		trace.scale = Vector3(1.0, 1.0, ray.length())
+		_trace_from[index] = start
+		_trace_to[index] = end
 		trace.show()
 	if not _puffs.is_empty():
 		_launch_puff(start, end)
-	if hit_surface:
+	# Point-blank contact flashes would fill the screen; the hit still lands
+	# and the crosshair/numbers still confirm it.
+	var point_blank := _view_camera() != null and _camera.global_position.distance_to(end) < min_view_clearance
+	if hit_surface and not point_blank:
 		var impact := _impacts[index]
 		var surface_normal := orientation.z if hit_enemy else normal
 		impact.global_position = end + surface_normal * (0.09 if hit_enemy else 0.035)

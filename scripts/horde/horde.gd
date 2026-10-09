@@ -26,6 +26,9 @@ const PLAYER_RADIUS := 0.4
 const MAX_NEIGHBOR_CHECKS := 8
 const SEPARATION := 0.45
 const MAX_PROJECTILES := 512
+## Enemy projectiles shrink to nothing between these camera distances (m).
+const PROJECTILE_FADE_NEAR := 0.35
+const PROJECTILE_FADE_FAR := 1.6
 const BIG_RADIUS := 0.9
 const BURN_DURATION := 2.0
 const BURN_TICK := 0.5
@@ -1463,20 +1466,24 @@ func _write_clip(buffer: PackedFloat32Array, at: int, clip: int, frame: float, l
 func _draw_projectiles() -> void:
 	var buffer := _shot_buffer
 	_shot_buffer = PackedFloat32Array()
+	# A spit only counts as a hit within a body width of the player's axis, so
+	# it would otherwise fill the view for its last frame; it shrinks away instead.
+	var eye := target.camera.global_position if is_instance_valid(target) else Vector3.INF
 	for s in _shot_count:
 		var k := s * 12
 		var p := _shot_pos[s]
-		buffer[k] = 1.0
+		var size := clampf((p.distance_to(eye) - PROJECTILE_FADE_NEAR) / (PROJECTILE_FADE_FAR - PROJECTILE_FADE_NEAR), 0.0, 1.0)
+		buffer[k] = size
 		buffer[k + 1] = 0.0
 		buffer[k + 2] = 0.0
 		buffer[k + 3] = p.x
 		buffer[k + 4] = 0.0
-		buffer[k + 5] = 1.0
+		buffer[k + 5] = size
 		buffer[k + 6] = 0.0
 		buffer[k + 7] = p.y
 		buffer[k + 8] = 0.0
 		buffer[k + 9] = 0.0
-		buffer[k + 10] = 1.0
+		buffer[k + 10] = size
 		buffer[k + 11] = p.z
 	RenderingServer.multimesh_set_buffer(_shot_renderer.multimesh.get_rid(), buffer)
 	_shot_renderer.multimesh.visible_instance_count = _shot_count

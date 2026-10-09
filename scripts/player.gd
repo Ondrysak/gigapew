@@ -22,6 +22,11 @@ const MOUSE_SENSITIVITY := 0.0025
 const MINING_SHARE := 0.35
 const COMBO_WINDOW := 2.5
 const COMBO_MAX_BONUS := 0.4
+## Visual camera kick spring (radians, Hz-derived) and its accumulation cap.
+const CAMERA_KICK_OMEGA := TAU * 3.5
+const CAMERA_KICK_DAMPING := 0.55
+const CAMERA_KICK_MAX := 0.052
+const FOV_PUNCH_MAX := 4.0
 
 ## Up to three simultaneous guns; selection focuses HUD/shop, not firing.
 @export var weapons: Array[WeaponDefinition] = []
@@ -56,7 +61,12 @@ var _dash_time := 0.0
 ## Spin progress and recovery belong to each hand, never the focused slot.
 var _spins := PackedFloat32Array()
 var _camera_rest_rotation := Vector3.ZERO
-var _camera_recoil := Vector2.ZERO
+# Visual-only camera kick (pitch, yaw, roll) on a damped spring; never the player's aim.
+var _camera_kick := Vector3.ZERO
+var _camera_kick_velocity := Vector3.ZERO
+var _fov_punch := 0.0
+## 0..1 crosshair bloom from recent shots' spread and recoil; recovers over time.
+var aim_bloom := 0.0
 var _trauma := 0.0
 var _shake_clock := 0.0
 var _profile: Node
@@ -264,16 +274,41 @@ func _process(delta: float) -> void:
 		if view != null:
 			view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active, mining and slot == 0)
 			view.set_spin(_spins[slot] if active else 0.0)
-	_camera_recoil *= exp(-20.0 * delta)
-	if _camera_recoil.length_squared() < 0.000000001:
-		_camera_recoil = Vector2.ZERO
-	camera.rotation = _camera_rest_rotation + Vector3(_camera_recoil.x, _camera_recoil.y, 0.0)
-	camera.fov = lerpf(camera.fov, 90.0 + speed_ratio * 2.5, 1.0 - exp(-5.0 * delta))
+	_step_camera_kick(delta)
+	camera.rotation = _camera_rest_rotation + _camera_kick
+	# Abilities add to camera.fov directly; the shot punch rides on top and decays faster.
+	var fov_base := camera.fov - _fov_punch
+	_fov_punch *= exp(-11.0 * delta)
+	camera.fov = lerpf(fov_base, 90.0 + speed_ratio * 2.5, 1.0 - exp(-5.0 * delta)) + _fov_punch
+	aim_bloom *= exp(-5.0 * delta)
 	_trauma = maxf(0.0, _trauma - delta * 1.8)
 	_shake_clock += delta
 	var shake := _trauma * _trauma * 0.12
 	camera.h_offset = sin(_shake_clock * 71.0) * shake
 	camera.v_offset = sin(_shake_clock * 53.0 + 1.3) * shake
+
+func _step_camera_kick(delta: float) -> void:
+	# The spring is ~99% settled after 0.4 s; longer frames (hitches) would also
+	# exceed the fixed-step integrator's stable range, so they simply rest it.
+	if delta >= 0.4:
+		_camera_kick = Vector3.ZERO
+		_camera_kick_velocity = Vector3.ZERO
+		return
+	var steps := clampi(ceili(delta * 240.0), 1, 96)
+	var step := delta / float(steps)
+	for n in steps:
+		_camera_kick_velocity -= (_camera_kick * (CAMERA_KICK_OMEGA * CAMERA_KICK_OMEGA) \
+				+ _camera_kick_velocity * (2.0 * CAMERA_KICK_DAMPING * CAMERA_KICK_OMEGA)) * step
+		_camera_kick += _camera_kick_velocity * step
+	_clamp_camera_kick()
+
+func _clamp_camera_kick() -> void:
+	var limit := Vector3(CAMERA_KICK_MAX, CAMERA_KICK_MAX * 0.4, CAMERA_KICK_MAX * 0.4)
+	var kick := _camera_kick.clamp(Vector3(-CAMERA_KICK_MAX * 0.5, -limit.y, -limit.z), limit)
+	for axis in 3:
+		if kick[axis] != _camera_kick[axis]:
+			_camera_kick_velocity[axis] = 0.0
+	_camera_kick = kick
 
 func _physics_process(delta: float) -> void:
 	if not active:
@@ -502,12 +537,23 @@ func _shoot(hand: int) -> void:
 		add_shake(0.095 if killed else 0.035)
 	if critical_at != Vector3.INF:
 		critical_hit.emit(critical_at)
-	# Camera kick is a bounded temporary child offset, never player/head aim.
-	var kick := deg_to_rad(clampf(definition.recoil_degrees, 0.15, 0.6))
-	_camera_recoil.x = minf(deg_to_rad(0.85), _camera_recoil.x + kick)
+	# Camera kick is a bounded temporary child rotation, never player/head aim.
+	var kick := deg_to_rad(clampf(definition.recoil_degrees, 0.15, 0.6)) * 2.4
+	# Kicks landing on an already-raised view add less, so sustained fire plateaus.
+	var room := 1.0 - clampf(_camera_kick.x / CAMERA_KICK_MAX, 0.0, 1.0)
 	var side := -1.0 if hand == 0 else 1.0 if hand == 1 else _rng.randf_range(-1.0, 1.0)
-	_camera_recoil.y = clampf(_camera_recoil.y + kick * side * 0.22, -deg_to_rad(0.35), deg_to_rad(0.35))
-	camera.rotation = _camera_rest_rotation + Vector3(_camera_recoil.x, _camera_recoil.y, 0.0)
+	var impulse := Vector3(kick * room, kick * (side * 0.25 + _rng.randf_range(-0.15, 0.15)), kick * _rng.randf_range(-0.4, 0.4))
+	_camera_kick += impulse * 0.5
+	_camera_kick_velocity += impulse * CAMERA_KICK_OMEGA
+	_clamp_camera_kick()
+	camera.rotation = _camera_rest_rotation + _camera_kick
+	if definition.recoil_degrees >= 0.4:
+		var punch := minf((definition.recoil_degrees - 0.3) * 6.0, FOV_PUNCH_MAX - _fov_punch)
+		if punch > 0.0:
+			_fov_punch += punch
+			camera.fov += punch
+	var bloom := 0.08 + definition.spread_degrees / 14.0 + definition.jitter_degrees / 10.0 + definition.recoil_degrees * 0.5
+	aim_bloom = minf(1.0, aim_bloom + bloom * (1.0 - aim_bloom * 0.6))
 
 func _reset_combo() -> void:
 	if combo_hits == 0:

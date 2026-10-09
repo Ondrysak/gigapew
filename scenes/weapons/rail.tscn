@@ -30,11 +30,20 @@ trace_material = SubResource("Trace")
 impact_material = SubResource("Impact")
 target_impact_material = SubResource("Hit")
 shot_cue = &"rail"
-recoil_distance = 0.03
-recoil_angle = 0.023
+recoil_distance = 0.085
+recoil_angle = 0.135
+recoil_wobble = 0.3
+recoil_frequency = 3.2
+recoil_damping = 0.42
 trace_width = 0.045
-trace_duration = 0.12
+trace_duration = 0.24
 flash_duration = 0.085
+casing_pool_size = 4
+casing_color = Color(0.55, 0.42, 0.95, 1)
+casing_radius = 0.009
+casing_length = 0.04
+casing_port = Vector3(0, 0.06, 0.02)
+casing_speed = 1.4
 
 [node name="Model" type="Node3D" parent="."]
 script = ExtResource("2_model")

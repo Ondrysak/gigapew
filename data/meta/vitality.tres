@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
 
 [ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/meta/vitality.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
@@ -11,3 +12,4 @@ description = "Reinforced suit frame: +10 max health per level."
 accent_color = Color(0.3, 1, 0.55, 1)
 costs = PackedInt32Array(50, 100, 180, 300, 450)
 currency = &"gold"
+icon = ExtResource("icon_px")

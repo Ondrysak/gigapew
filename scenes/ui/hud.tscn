@@ -1,63 +1,161 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/combat_feedback.gd" id="2_feedback"]
 [ext_resource type="Script" path="res://scripts/ui/horde_radar.gd" id="3_radar"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/supply.png" id="4_supply"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/timer.png" id="5_timer"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/boss.png" id="6_boss"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/hostiles.png" id="7_hostiles"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/kills.png" id="8_kills"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/health.png" id="9_health"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/armor.png" id="10_armor"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/xp.png" id="11_xp"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/ability.png" id="12_ability"]
 
-[sub_resource type="StyleBoxFlat" id="Style_status"]
-content_margin_left = 18.0
-content_margin_right = 18.0
-bg_color = Color(0.015, 0.035, 0.05, 0.92)
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 14.0
+content_margin_bottom = 10.0
+bg_color = Color(0.012, 0.03, 0.045, 0.86)
 border_width_left = 3
 border_width_bottom = 1
 border_color = Color(0.07, 0.72, 0.76, 1)
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 
-[sub_resource type="StyleBoxFlat" id="Style_hostiles"]
-content_margin_left = 18.0
-content_margin_right = 18.0
-bg_color = Color(0.025, 0.03, 0.04, 0.92)
+[sub_resource type="StyleBoxFlat" id="Style_threat"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.025, 0.028, 0.038, 0.86)
 border_width_right = 3
 border_width_bottom = 1
 border_color = Color(1, 0.48, 0.17, 1)
 corner_radius_top_left = 6
 corner_radius_bottom_left = 6
 
-[sub_resource type="StyleBoxFlat" id="Style_message"]
-content_margin_left = 20.0
-content_margin_right = 20.0
-bg_color = Color(0.015, 0.025, 0.04, 0.97)
+[sub_resource type="StyleBoxFlat" id="Style_boss"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.045, 0.014, 0.016, 0.92)
+border_width_left = 2
 border_width_top = 2
+border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.1, 0.82, 0.83, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_left = 8
-corner_radius_bottom_right = 8
-shadow_color = Color(0, 0, 0, 0.6)
-shadow_size = 10
+border_color = Color(1, 0.36, 0.2, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0.9, 0.15, 0.05, 0.28)
+shadow_size = 12
 
-[sub_resource type="StyleBoxFlat" id="Bar_background"]
-bg_color = Color(0.01, 0.025, 0.035, 0.85)
+[sub_resource type="StyleBoxFlat" id="Style_boss_badge"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+bg_color = Color(0.16, 0.03, 0.03, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.55, 0.3, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="Style_level"]
+content_margin_left = 8.0
+content_margin_top = 1.0
+content_margin_right = 8.0
+content_margin_bottom = 1.0
+bg_color = Color(0.05, 0.3, 0.26, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.07, 0.4, 0.45, 1)
-
-[sub_resource type="StyleBoxFlat" id="Bar_xp"]
-bg_color = Color(0.2, 1, 0.75, 1)
-
-[sub_resource type="StyleBoxFlat" id="Bar_boss"]
-bg_color = Color(1, 0.3, 0.2, 1)
+border_color = Color(0.3, 1, 0.78, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[sub_resource type="StyleBoxFlat" id="Bar_supply"]
-bg_color = Color(1, 0.42, 0.18, 1)
+[sub_resource type="StyleBoxFlat" id="Style_ability"]
+bg_color = Color(0.015, 0.04, 0.055, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.1, 0.4, 0.45, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
-[sub_resource type="StyleBoxFlat" id="Bar_ability"]
-bg_color = Color(0.3, 0.95, 0.85, 1)
+[sub_resource type="StyleBoxFlat" id="Style_key"]
+content_margin_left = 6.0
+content_margin_right = 6.0
+bg_color = Color(1, 0.55, 0.2, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="Style_death"]
+content_margin_left = 36.0
+content_margin_top = 26.0
+content_margin_right = 36.0
+content_margin_bottom = 26.0
+bg_color = Color(0.016, 0.022, 0.032, 0.97)
+border_width_left = 1
+border_width_top = 4
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.25, 0.32, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.7)
+shadow_size = 18
+
+[sub_resource type="StyleBoxFlat" id="Bar_background"]
+bg_color = Color(0.01, 0.025, 0.035, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.07, 0.3, 0.34, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="Bar_xp"]
+bg_color = Color(0.2, 1, 0.75, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="Bar_health"]
+bg_color = Color(0.3, 0.9, 0.62, 1)
+border_width_bottom = 3
+border_color = Color(0.16, 0.55, 0.4, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="Bar_supply"]
+bg_color = Color(1, 0.55, 0.22, 1)
 corner_radius_top_left = 2
 corner_radius_top_right = 2
 corner_radius_bottom_right = 2
@@ -66,317 +164,636 @@ corner_radius_bottom_left = 2
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
-[node name="Identity" type="Label" parent="."]
-offset_left = 28.0
-offset_top = 23.0
-offset_right = 430.0
-offset_bottom = 57.0
+[node name="Stage" type="PanelContainer" parent="."]
+offset_left = 0.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 132.0
 mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Stage"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Sector" type="Label" parent="Stage/Rows"]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.83, 0.96, 0.99, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 25
-text = "KAKABOOMBOOM"
+theme_override_font_sizes/font_size = 17
+text = "01 / 03   TRAINING YARD"
 
-[node name="Sector" type="Label" parent="."]
-offset_left = 30.0
-offset_top = 60.0
-offset_right = 580.0
-offset_bottom = 100.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.35, 0.8, 0.84, 1)
-theme_override_font_sizes/font_size = 13
-text = "01 / 03   YARD"
+[node name="Subtitle" type="Label" parent="Stage/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.72, 0.78, 1)
+theme_override_font_sizes/font_size = 12
+text = "Sector 01 / live-fire proving ground"
 
-[node name="XPBar" type="ProgressBar" parent="."]
-anchor_right = 1.0
-offset_bottom = 8.0
-grow_horizontal = 2
+[node name="Resources" type="HBoxContainer" parent="Stage/Rows"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
 mouse_filter = 2
-theme_override_styles/background = SubResource("Bar_background")
-theme_override_styles/fill = SubResource("Bar_xp")
-max_value = 10.0
-show_percentage = false
+theme_override_constants/separation = 16
 
-[node name="Timer" type="Label" parent="."]
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -300.0
-offset_top = 18.0
-offset_right = 300.0
-offset_bottom = 64.0
-grow_horizontal = 2
+[node name="Supply" type="HBoxContainer" parent="Stage/Rows"]
+layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.86, 0.98, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 34
-text = "3:00"
-horizontal_alignment = 1
+theme_override_constants/separation = 8
 
-[node name="Boss" type="Control" parent="."]
-visible = false
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -280.0
-offset_top = 68.0
-offset_right = 280.0
-offset_bottom = 118.0
-grow_horizontal = 2
+[node name="Icon" type="TextureRect" parent="Stage/Rows/Supply"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
+texture = ExtResource("4_supply")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="Name" type="Label" parent="Boss"]
-anchor_right = 1.0
-offset_bottom = 22.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.62, 0.45, 1)
-theme_override_font_sizes/font_size = 15
-text = "DREADNOUGHT"
-horizontal_alignment = 1
-
-[node name="Bar" type="ProgressBar" parent="Boss"]
-anchor_right = 1.0
-offset_top = 26.0
-offset_bottom = 40.0
-mouse_filter = 2
-theme_override_styles/background = SubResource("Bar_background")
-theme_override_styles/fill = SubResource("Bar_boss")
-value = 100.0
-show_percentage = false
-
-[node name="Level" type="Label" parent="."]
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = -190.0
-offset_right = 285.0
-offset_bottom = -160.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.3, 1, 0.78, 1)
-theme_override_font_sizes/font_size = 22
-text = "LV 1"
-
-[node name="ClassName" type="Label" parent="."]
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = -214.0
-offset_right = 285.0
-offset_bottom = -192.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "SCOUT"
-
-[node name="Resources" type="HBoxContainer" parent="."]
-offset_left = 30.0
-offset_top = 104.0
-offset_right = 560.0
-offset_bottom = 128.0
-mouse_filter = 2
-theme_override_constants/separation = 22
-
-[node name="Supply" type="Control" parent="."]
-offset_left = 30.0
-offset_top = 132.0
-offset_right = 250.0
-offset_bottom = 152.0
-mouse_filter = 2
-
-[node name="Caption" type="Label" parent="Supply"]
-offset_right = 70.0
-offset_bottom = 20.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.55, 0.3, 1)
+[node name="Caption" type="Label" parent="Stage/Rows/Supply"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.35, 1)
 theme_override_font_sizes/font_size = 11
 text = "SUPPLY"
-vertical_alignment = 1
 
-[node name="Bar" type="ProgressBar" parent="Supply"]
-anchor_right = 1.0
-offset_left = 62.0
-offset_top = 6.0
-offset_bottom = 14.0
+[node name="Bar" type="ProgressBar" parent="Stage/Rows/Supply"]
+custom_minimum_size = Vector2(150, 8)
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
 theme_override_styles/background = SubResource("Bar_background")
 theme_override_styles/fill = SubResource("Bar_supply")
 max_value = 60.0
 show_percentage = false
 
-[node name="Ability" type="Control" parent="."]
+[node name="Value" type="Label" parent="Stage/Rows/Supply"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.62, 0.66, 1)
+theme_override_font_sizes/font_size = 11
+text = "0 / 60"
+
+[node name="Timer" type="HBoxContainer" parent="."]
 anchor_left = 0.5
-anchor_top = 1.0
 anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -170.0
-offset_top = -104.0
-offset_right = 170.0
-offset_bottom = -64.0
+offset_left = -160.0
+offset_top = 16.0
+offset_right = 160.0
+offset_bottom = 64.0
 grow_horizontal = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
 
-[node name="Name" type="Label" parent="Ability"]
-anchor_right = 1.0
-offset_bottom = 24.0
+[node name="Icon" type="TextureRect" parent="Timer"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
 mouse_filter = 2
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 17
-text = "Q   ABILITY"
-horizontal_alignment = 1
+texture = ExtResource("5_timer")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="Bar" type="ProgressBar" parent="Ability"]
-anchor_right = 1.0
-offset_left = 40.0
-offset_top = 28.0
-offset_right = -40.0
-offset_bottom = 34.0
-mouse_filter = 2
-theme_override_styles/background = SubResource("Bar_background")
-theme_override_styles/fill = SubResource("Bar_ability")
-max_value = 1.0
-value = 1.0
-show_percentage = false
-
-[node name="HealthCaption" type="Label" parent="."]
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = -157.0
-offset_right = 285.0
-offset_bottom = -136.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.41, 0.79, 0.84, 1)
-theme_override_font_sizes/font_size = 12
-text = "OPERATOR VITALS"
-
-[node name="Health" type="Label" parent="."]
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 28.0
-offset_top = -130.0
-offset_right = 290.0
-offset_bottom = -72.0
-mouse_filter = 2
+[node name="Label" type="Label" parent="Timer"]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 28
-theme_override_styles/normal = SubResource("Style_status")
-text = "HEALTH 100"
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 34
+text = "3:00"
+
+[node name="Boss" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -330.0
+offset_top = 12.0
+offset_right = 330.0
+offset_bottom = 96.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_boss")
+
+[node name="Row" type="HBoxContainer" parent="Boss"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Badge" type="PanelContainer" parent="Boss/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_boss_badge")
+
+[node name="Icon" type="TextureRect" parent="Boss/Row/Badge"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("6_boss")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Info" type="VBoxContainer" parent="Boss/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Header" type="HBoxContainer" parent="Boss/Row/Info"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Name" type="Label" parent="Boss/Row/Info/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.86, 0.76, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 22
+text = "DREADNOUGHT"
 vertical_alignment = 1
 
-[node name="Hostiles" type="Label" parent="."]
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -267.0
-offset_top = 28.0
-offset_right = -28.0
-offset_bottom = 88.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.78, 0.55, 1)
-theme_override_font_sizes/font_size = 25
-theme_override_styles/normal = SubResource("Style_hostiles")
-text = "HOSTILES 5"
+[node name="Phase" type="Label" parent="Boss/Row/Info/Header"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.45, 1)
+theme_override_font_sizes/font_size = 13
+text = "ENRAGED"
+vertical_alignment = 1
+
+[node name="Percent" type="Label" parent="Boss/Row/Info/Header"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.45, 1)
+theme_override_font_sizes/font_size = 20
+text = "100%"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Kills" type="Label" parent="."]
+[node name="Bar" type="Control" parent="Boss/Row/Info"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Threat" type="PanelContainer" parent="."]
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -267.0
-offset_top = 92.0
-offset_right = -30.0
-offset_bottom = 118.0
+offset_left = -212.0
+offset_top = 20.0
+offset_right = 0.0
+offset_bottom = 110.0
+grow_horizontal = 0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.9, 0.8, 0.7, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_styles/panel = SubResource("Style_threat")
+
+[node name="Rows" type="VBoxContainer" parent="Threat"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Hostiles" type="HBoxContainer" parent="Threat/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="TextureRect" parent="Threat/Rows/Hostiles"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("7_hostiles")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Threat/Rows/Hostiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.6, 0.45, 1)
+theme_override_font_sizes/font_size = 12
+text = "HOSTILES"
+
+[node name="Value" type="Label" parent="Threat/Rows/Hostiles"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.6, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 26
+text = "0"
+horizontal_alignment = 2
+
+[node name="Kills" type="HBoxContainer" parent="Threat/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="TextureRect" parent="Threat/Rows/Kills"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("8_kills")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="Threat/Rows/Kills"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.62, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 12
+text = "KILLS"
+
+[node name="Value" type="Label" parent="Threat/Rows/Kills"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.88, 0.82, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 17
-text = "KILLS 0"
+theme_override_font_sizes/font_size = 20
+text = "0"
 horizontal_alignment = 2
 
 [node name="Radar" type="Control" parent="."]
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -200.0
-offset_top = 128.0
-offset_right = -30.0
-offset_bottom = 298.0
+offset_left = -194.0
+offset_top = 124.0
+offset_right = -34.0
+offset_bottom = 284.0
+grow_horizontal = 0
 mouse_filter = 2
 script = ExtResource("3_radar")
 
-[node name="Weapon" type="Label" parent="."]
-anchor_left = 1.0
+[node name="Vitals" type="PanelContainer" parent="."]
 anchor_top = 1.0
-anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -365.0
-offset_top = -188.0
-offset_right = -28.0
-offset_bottom = -144.0
+offset_left = 0.0
+offset_top = -138.0
+offset_right = 372.0
+offset_bottom = -30.0
+grow_vertical = 0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.7, 0.97, 1, 1)
-theme_override_font_sizes/font_size = 21
-theme_override_styles/normal = SubResource("Style_status")
-text = "HAND 1  //  PULSE"
-horizontal_alignment = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Vitals"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Top" type="HBoxContainer" parent="Vitals/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Level" type="PanelContainer" parent="Vitals/Rows/Top"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_level")
+
+[node name="Label" type="Label" parent="Vitals/Rows/Top/Level"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 1, 0.94, 1)
+theme_override_font_sizes/font_size = 14
+text = "LV 1"
+
+[node name="ClassName" type="Label" parent="Vitals/Rows/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "SCOUT"
 vertical_alignment = 1
 
-[node name="WeaponDetail" type="Label" parent="."]
-anchor_left = 1.0
-anchor_top = 1.0
+[node name="XPIcon" type="TextureRect" parent="Vitals/Rows/Top"]
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_xp")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="XPValue" type="Label" parent="Vitals/Rows/Top"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.78, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "0 / 10"
+vertical_alignment = 1
+
+[node name="XPBar" type="ProgressBar" parent="Vitals/Rows"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_xp")
+max_value = 10.0
+show_percentage = false
+
+[node name="Health" type="HBoxContainer" parent="Vitals/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Icon" type="TextureRect" parent="Vitals/Rows/Health"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_health")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Bar" type="ProgressBar" parent="Vitals/Rows/Health"]
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_health")
+value = 100.0
+show_percentage = false
+
+[node name="Value" type="Label" parent="Vitals/Rows/Health/Bar"]
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -390.0
-offset_top = -139.0
-offset_right = -30.0
-offset_bottom = -58.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0.03, 0.04, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "100 / 100"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Armor" type="HBoxContainer" parent="Vitals/Rows/Health"]
+visible = false
+layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.7, 0.8, 0.85, 1)
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="Vitals/Rows/Health/Armor"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("10_armor")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="Label" parent="Vitals/Rows/Health/Armor"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.78, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+vertical_alignment = 1
+
+[node name="Ability" type="Control" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -36.0
+offset_top = -116.0
+offset_right = 36.0
+offset_bottom = -44.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Slot" type="Panel" parent="Ability"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_ability")
+
+[node name="Icon" type="TextureRect" parent="Ability"]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = 24.0
+mouse_filter = 2
+texture = ExtResource("12_ability")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Cooldown" type="Control" parent="Ability"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Seconds" type="Label" parent="Ability"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0.02, 0.03, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Key" type="PanelContainer" parent="Ability"]
+layout_mode = 0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 12.0
+offset_bottom = 12.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_key")
+
+[node name="Label" type="Label" parent="Ability/Key"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.06, 0.03, 0.01, 1)
+theme_override_font_sizes/font_size = 13
+text = "Q"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Name" type="Label" parent="Ability"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = 4.0
+offset_right = 120.0
+offset_bottom = 22.0
+grow_horizontal = 2
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 13
-horizontal_alignment = 2
-text = "THREE HANDS  /  HOLD LMB TO FIRE"
+theme_override_font_sizes/font_size = 12
+text = "ABILITY"
+horizontal_alignment = 1
+
+[node name="Hands" type="VBoxContainer" parent="."]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -452.0
+offset_top = -184.0
+offset_right = -24.0
+offset_bottom = -30.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 2
+
+[node name="Header" type="HBoxContainer" parent="Hands"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Hands/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.97, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 17
+text = "PULSE"
+vertical_alignment = 1
+
+[node name="Mods" type="HBoxContainer" parent="Hands/Header"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+alignment = 2
+
+[node name="Slots" type="HBoxContainer" parent="Hands"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 2
 
 [node name="Controls" type="Label" parent="."]
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = -51.0
-offset_right = -28.0
-offset_bottom = -12.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.67, 0.78, 0.82, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+offset_left = 16.0
+offset_top = -22.0
+offset_right = -16.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.62, 0.74, 0.78, 0.55)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 13
-text = "WASD MOVE  /  SPACE JUMP  /  LMB FIRE ALL HANDS  /  RMB MINE  /  Q ABILITY  /  E INTERACT  /  1 2 3 OR WHEEL FOCUS HAND\nESC PAUSE  /  CLEAR BOSS FOR MINERAL SHOP  /  SHOOT BARRELS AND VALVES"
-autowrap_mode = 2
-
-[node name="Message" type="Label" parent="."]
-visible = false
-anchor_left = 0.12
-anchor_top = 0.5
-anchor_right = 0.88
-anchor_bottom = 0.5
-offset_top = -150.0
-offset_bottom = 150.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.84, 0.97, 1, 1)
-theme_override_constants/line_spacing = 18
-theme_override_font_sizes/font_size = 30
-theme_override_styles/normal = SubResource("Style_message")
-text = "YOU DIED\nR RETRY / ENTER MENU"
+theme_override_font_sizes/font_size = 11
+text = "WASD MOVE  ·  SPACE JUMP  ·  LMB FIRE  ·  RMB MINE  ·  Q ABILITY  ·  E INTERACT  ·  1 2 3 / WHEEL FOCUS HAND  ·  ESC PAUSE  ·  CLEAR THE BOSS FOR THE MINERAL SHOP  ·  SHOOT BARRELS AND VALVES"
 horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 2
+
+[node name="Warning" type="Control" parent="."]
+visible = false
+anchor_right = 1.0
+offset_top = 176.0
+offset_bottom = 260.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Band" type="Control" parent="Warning"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Content" type="HBoxContainer" parent="Warning"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 22
+alignment = 1
+
+[node name="SkullLeft" type="TextureRect" parent="Warning/Content"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_boss")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Text" type="VBoxContainer" parent="Warning/Content"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Warning/Content/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.32, 0.22, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 38
+text = "WARNING"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Warning/Content/Text"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.7, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 16
+text = "BOSS INBOUND"
+horizontal_alignment = 1
+
+[node name="SkullRight" type="TextureRect" parent="Warning/Content"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_boss")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Feedback" type="Control" parent="."]
 anchors_preset = 15
@@ -386,3 +803,116 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_feedback")
+
+[node name="Death" type="Control" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dim" type="ColorRect" parent="Death"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.09, 0.0, 0.015, 0.62)
+
+[node name="Center" type="CenterContainer" parent="Death"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Death/Center"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_death")
+
+[node name="Rows" type="VBoxContainer" parent="Death/Center/Panel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="SkullLeft" type="TextureRect" parent="Death/Center/Panel/Rows/Title"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("8_kills")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Death/Center/Panel/Rows/Title"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.36, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 46
+text = "YOU DIED"
+
+[node name="SkullRight" type="TextureRect" parent="Death/Center/Panel/Rows/Title"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("8_kills")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Where" type="Label" parent="Death/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.68, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+text = "SIGNAL LOST"
+horizontal_alignment = 1
+
+[node name="Stats" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="BankedCaption" type="Label" parent="Death/Center/Panel/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.75, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "MINERALS BANKED"
+horizontal_alignment = 1
+
+[node name="Banked" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="Rule" type="ColorRect" parent="Death/Center/Panel/Rows"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 0.3, 0.36, 0.35)
+
+[node name="Keys" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+alignment = 1

@@ -7,6 +7,7 @@ extends PanelContainer
 signal purchase_requested(definition: MetaUpgradeDefinition)
 
 @export var accent_bar: ColorRect
+@export var badge: PanelContainer
 @export var icon_rect: TextureRect
 @export var name_label: Label
 @export var level_label: Label
@@ -19,8 +20,12 @@ signal purchase_requested(definition: MetaUpgradeDefinition)
 
 var definition: MetaUpgradeDefinition
 
+var _badge: StyleBoxFlat
+
 func _ready() -> void:
 	buy_button.pressed.connect(func() -> void: purchase_requested.emit(definition))
+	_badge = badge.get_theme_stylebox(&"panel").duplicate() as StyleBoxFlat
+	badge.add_theme_stylebox_override(&"panel", _badge)
 
 ## Redraws for `level` owned; `price_text` is empty when maxed.
 func show_upgrade(upgrade: MetaUpgradeDefinition, level: int, price_text: String, affordable: bool) -> void:
@@ -29,7 +34,8 @@ func show_upgrade(upgrade: MetaUpgradeDefinition, level: int, price_text: String
 	var maximum := upgrade.max_level()
 	accent_bar.color = accent
 	icon_rect.texture = upgrade.icon
-	icon_rect.visible = upgrade.icon != null
+	badge.visible = upgrade.icon != null
+	_badge.border_color = accent.darkened(0.25) if level > 0 else accent.darkened(0.6)
 	name_label.text = upgrade.display_name.to_upper()
 	name_label.add_theme_color_override(&"font_color", accent.lightened(0.3))
 	level_label.text = "LV %d / %d" % [level, maximum]

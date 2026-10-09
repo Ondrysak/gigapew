@@ -68,6 +68,7 @@ func _ready() -> void:
 	pause_menu.resume_requested.connect(_on_resume)
 	pause_menu.abandon_requested.connect(_on_abandon)
 	hud.setup_resources(resources)
+	hud.setup_upgrades(upgrade_pool)
 	var shop_layer := CanvasLayer.new()
 	shop_layer.name = "RoundShopLayer"
 	shop_layer.layer = 20
@@ -356,7 +357,7 @@ func _on_player_died() -> void:
 	player.sound.play_cue(&"death")
 	Music.set_boss(false)
 	Music.stinger(&"death")
-	hud.finish_run(_summary(), _banked_text(banked))
+	hud.finish_run(run_state.level, kills, run_time, stages_cleared, banked)
 
 ## Moves collected currency into the Profile; returns what was banked now.
 func _bank(fraction: float) -> Dictionary:

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/abilities/bulwark.tscn" id="5_ability"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/suppression_barrage.tscn" id="6_alt"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/ammo_frenzy.tscn" id="7_alt"]
+[ext_resource type="Texture2D" path="res://assets/icons/classes/gunner.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_class")
@@ -24,3 +25,4 @@ alternate_abilities = Array[PackedScene]([ExtResource("6_alt"), ExtResource("7_a
 alternate_ability_costs = PackedInt32Array(4, 6)
 unlock_cost = 6
 unlock_currency = &"shard"
+icon = ExtResource("icon_px")

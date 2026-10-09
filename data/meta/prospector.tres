@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
 
 [ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/meta/prospector.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
@@ -11,3 +12,4 @@ description = "Hardened drill bits: +15% mining damage per level."
 accent_color = Color(1, 0.75, 0.25, 1)
 costs = PackedInt32Array(50, 100, 180, 300, 450)
 currency = &"gold"
+icon = ExtResource("icon_px")

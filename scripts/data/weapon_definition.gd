@@ -20,6 +20,8 @@ extends Resource
 ## Camera shake added per shot (0..1 trauma).
 @export_range(0.0, 1.0) var screen_shake := 0.0
 @export var view_scene: PackedScene
+## Pixel-art icon for HUD, shop and workshop listings.
+@export var icon: Texture2D
 
 @export_group("Explosive")
 ## Blast radius at the end of every ray; 0 disables the blast.

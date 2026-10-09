@@ -20,6 +20,7 @@ var _boss := Vector2.INF
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func refresh(horde: Horde, player: Node3D, boss_index: int) -> void:
 	_count = horde.sample_positions(_positions, max_dots)
@@ -47,6 +48,12 @@ func _draw() -> void:
 	for n in _count:
 		draw_rect(Rect2(_map(_positions[n]) - Vector2.ONE, Vector2(2.5, 2.5)), dot_color)
 	if _boss != Vector2.INF:
-		draw_circle(_map(_boss), 5.0, boss_color)
+		var at := _map(_boss)
+		var skull := GameIcons.lookup(&"hud", &"boss")
+		draw_circle(at, 9.0, Color(boss_color, 0.35))
+		if skull != null:
+			draw_texture_rect(skull, Rect2(at - Vector2(8, 8), Vector2(16, 16)), false)
+		else:
+			draw_circle(at, 5.0, boss_color)
 	# Player marker: a small forward-pointing wedge.
 	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -7), center + Vector2(5, 5), center + Vector2(-5, 5)]), player_color)

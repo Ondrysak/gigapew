@@ -36,14 +36,24 @@ target_impact_material = SubResource("Mat_hit")
 synth_shot = &"minigun"
 shot_volume_db = -15.0
 recoil_distance = 0.018
-recoil_angle = 0.012
+recoil_angle = 0.022
+recoil_wobble = 0.6
+recoil_frequency = 11.0
+recoil_damping = 0.5
 trace_width = 0.012
-trace_duration = 0.035
+trace_duration = 0.05
 flash_duration = 0.03
 spinner = NodePath("Spinner")
 spin_speed = 42.0
 synth_spin = &"spin"
 spin_volume_db = -17.0
+casing_pool_size = 12
+casing_radius = 0.006
+casing_length = 0.024
+casing_lifetime = 0.45
+casing_port = Vector3(0, 0.03, 0.02)
+casing_speed = 1.5
+casing_direction = Vector3(1, -0.3, 0.2)
 
 [node name="Spinner" type="Node3D" parent="."]
 

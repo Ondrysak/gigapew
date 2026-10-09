@@ -21,6 +21,8 @@ var _combo_hits := 0
 var _combo_time := 0.0
 var _chain_pulse := 0.0
 var _combo_text := ""
+var _bloom := 0.0
+var _hit_punch := 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -36,6 +38,8 @@ func reset() -> void:
 	_lethal_hit = false
 	_combo_hits = 0
 	_combo_time = 0.0
+	_bloom = 0.0
+	_hit_punch = 0.0
 	_chain_pulse = 0.0
 	_combo_text = ""
 
@@ -44,6 +48,7 @@ func show_shot() -> void:
 
 func show_hit(killed: bool) -> void:
 	_hit = 0.32 if killed else 0.16
+	_hit_punch = 1.0
 	_lethal_hit = killed
 	if killed:
 		_kill = 0.8
@@ -60,6 +65,10 @@ func show_combo(hits: int, bonus: float) -> void:
 
 func _process(delta: float) -> void:
 	_shot = move_toward(_shot, 0.0, delta * 8.0)
+	_hit_punch = move_toward(_hit_punch, 0.0, delta * 9.0)
+	# Opens fast with the shooter's bloom, settles back smoothly.
+	var bloom := _aim_bloom()
+	_bloom = bloom if bloom > _bloom else lerpf(_bloom, bloom, 1.0 - exp(-14.0 * delta))
 	_hit = maxf(0.0, _hit - delta)
 	_damage = move_toward(_damage, 0.0, delta * 2.8)
 	_kill = maxf(0.0, _kill - delta)
@@ -75,17 +84,22 @@ func _draw() -> void:
 			var tint := Color(damage_color, _damage * 0.12 * (1.0 - float(i) / 10.0))
 			draw_rect(Rect2(Vector2.ONE * inset, size - Vector2.ONE * inset * 2.0), tint, false, 16.0)
 	if not terminal and aiming:
-		var gap := 6.0 + _shot * 4.0
+		var gap := 6.0 + _bloom * 18.0 + _shot * 3.0
+		var arm := 5.0 + _bloom * 3.0
 		var ink := reticle_color
 		for direction in CROSS_DIRECTIONS:
-			draw_line(center + direction * gap, center + direction * (gap + 5.0), Color(0.01, 0.02, 0.03, 0.7), 4.0)
-			draw_line(center + direction * gap, center + direction * (gap + 5.0), ink, 2.0)
+			draw_line(center + direction * gap, center + direction * (gap + arm), Color(0.01, 0.02, 0.03, 0.7), 4.0)
+			draw_line(center + direction * gap, center + direction * (gap + arm), ink, 2.0)
 		draw_circle(center, 1.5, Color.WHITE)
 	if _hit > 0.0 and not terminal:
 		var color := kill_color if _lethal_hit else Color.WHITE
 		color.a = minf(1.0, _hit * 12.0)
+		# Markers snap out wide and thick, then settle onto the reticle.
+		var punch := _hit_punch * _hit_punch * (1.6 if _lethal_hit else 1.0)
+		var inner := 7.0 + _bloom * 10.0 + punch * 6.0
+		var width := 2.0 + punch * 1.5
 		for direction in HIT_DIRECTIONS:
-			draw_line(center + direction * 7.0, center + direction * 12.0, color, 2.0, true)
+			draw_line(center + direction * inner, center + direction * (inner + 5.0 + punch * 4.0), color, width, true)
 	if _kill > 0.0 and not terminal:
 		var color := Color(kill_color, minf(1.0, _kill * 3.0))
 		_centered_text(confirmation_text, center.y + 52.0, 17, color)
@@ -102,3 +116,9 @@ func _centered_text(text: String, y: float, font_size: int, color: Color) -> voi
 	var font := ThemeDB.fallback_font
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_string(font, Vector2((size.x - width) * 0.5, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+
+## The active camera's ArenaPlayer drives the bloom; none (menus) means a tight reticle.
+func _aim_bloom() -> float:
+	var camera := get_viewport().get_camera_3d()
+	var player := camera.owner as ArenaPlayer if camera != null else null
+	return player.aim_bloom if player != null else 0.0

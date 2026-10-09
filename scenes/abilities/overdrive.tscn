@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/overdrive.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/overdrive.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ring"]
 shading_mode = 0
@@ -44,6 +45,7 @@ accent_color = Color(0.5, 1, 0.38, 1)
 synth_activate = &"overdrive"
 aura = NodePath("Aura")
 orbit = NodePath("Aura/Orbit")
+icon = ExtResource("icon_px")
 
 [node name="Aura" type="Node3D" parent="."]
 

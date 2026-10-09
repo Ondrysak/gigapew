@@ -2,10 +2,12 @@ class_name AbilityOption
 extends Button
 
 ## One tile of the class-select ability picker. Layout lives in
-## ability_option.tscn; the script writes text/colors and the equipped,
-## previewed and locked looks.
+## ability_option.tscn; the script writes text/colors, the ability icon and
+## the equipped, previewed and locked looks (dimmed icon plus lock glyph).
 
 @export var accent_bar: ColorRect
+@export var icon_rect: TextureRect
+@export var lock_icon: TextureRect
 @export var name_label: Label
 @export var status_label: Label
 
@@ -22,11 +24,16 @@ func _ready() -> void:
 	add_theme_stylebox_override(&"hover", _hover)
 	add_theme_stylebox_override(&"pressed", _hover)
 
-## `status` is the short state line (EQUIPPED / OWNED / cost).
-func show_option(ability_scene: PackedScene, ability_name: String, accent: Color, unlocked: bool, equipped: bool, previewed: bool, status: String) -> void:
+## `status` is the short state line (EQUIPPED / OWNED / cost); locked tiles
+## show the lock glyph in front of it.
+func show_option(ability_scene: PackedScene, ability_name: String, icon: Texture2D, accent: Color, unlocked: bool, equipped: bool, previewed: bool, status: String) -> void:
 	scene = ability_scene
 	var shown := accent if unlocked else accent.darkened(0.55)
 	accent_bar.color = shown
+	icon_rect.texture = icon
+	icon_rect.visible = icon != null
+	icon_rect.modulate = Color.WHITE if unlocked else Color(0.42, 0.44, 0.5)
+	lock_icon.visible = not unlocked
 	name_label.text = ability_name
 	name_label.add_theme_color_override(&"font_color", accent.lightened(0.35) if unlocked else Color(0.5, 0.56, 0.6))
 	status_label.text = status

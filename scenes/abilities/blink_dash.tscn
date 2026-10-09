@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/blink_dash.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/blink_dash.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_streak"]
 shading_mode = 0
@@ -34,6 +35,7 @@ accent_color = Color(0.3, 0.95, 1, 1)
 synth_activate = &"blink"
 streak_template = NodePath("StreakTemplate")
 ring_template = NodePath("RingTemplate")
+icon = ExtResource("icon_px")
 
 [node name="StreakTemplate" type="MeshInstance3D" parent="."]
 visible = false

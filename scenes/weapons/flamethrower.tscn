@@ -36,8 +36,11 @@ impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
 synth_shot = &"flame"
 shot_volume_db = -14.0
-recoil_distance = 0.018
+recoil_distance = 0.012
 recoil_angle = 0.012
+recoil_wobble = 0.6
+recoil_frequency = 9.0
+recoil_damping = 0.55
 flash_duration = 0.05
 puff_material = SubResource("Mat_puff")
 puff_pool_size = 48
@@ -45,6 +48,7 @@ puff_lifetime = 0.32
 puff_start_size = 0.06
 puff_end_size = 0.85
 puff_camera_clearance = 0.45
+casing_pool_size = 0
 
 [node name="Model" type="Node3D" parent="."]
 script = ExtResource("2_model")

@@ -2,14 +2,17 @@
 
 [ext_resource type="Script" path="res://scripts/progression/level_up_screen.gd" id="1_screen"]
 [ext_resource type="PackedScene" path="res://scenes/ui/level_up_card.tscn" id="2_card"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/level.png" id="3_level"]
 
-[node name="LevelUp" type="CanvasLayer" node_paths=PackedStringArray("card_container", "level_label")]
+[node name="LevelUp" type="CanvasLayer" node_paths=PackedStringArray("card_container", "level_label", "header", "dim")]
 process_mode = 3
 layer = 20
 visible = false
 script = ExtResource("1_screen")
 card_container = NodePath("Center/Rows/Cards")
 level_label = NodePath("Center/Rows/Level")
+header = NodePath("Center/Rows/Title")
+dim = NodePath("Dim")
 
 [node name="Dim" type="ColorRect" parent="."]
 anchors_preset = 15
@@ -17,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.005, 0.01, 0.02, 0.78)
+color = Color(0.005, 0.012, 0.022, 0.8)
 
 [node name="Center" type="CenterContainer" parent="."]
 anchors_preset = 15
@@ -30,11 +33,26 @@ mouse_filter = 2
 [node name="Rows" type="VBoxContainer" parent="Center"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Center/Rows"]
+[node name="Title" type="HBoxContainer" parent="Center/Rows"]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="IconLeft" type="TextureRect" parent="Center/Rows/Title"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_level")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Center/Rows/Title"]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 1, 0.8, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 3
@@ -43,13 +61,27 @@ theme_override_font_sizes/font_size = 44
 text = "LEVEL UP"
 horizontal_alignment = 1
 
+[node name="IconRight" type="TextureRect" parent="Center/Rows/Title"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("3_level")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Level" type="Label" parent="Center/Rows"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.7, 0.88, 0.92, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.62, 0.84, 0.88, 1)
+theme_override_font_sizes/font_size = 16
 text = "OPERATOR LEVEL 2"
 horizontal_alignment = 1
+
+[node name="Gap" type="Control" parent="Center/Rows"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Cards" type="HBoxContainer" parent="Center/Rows"]
 layout_mode = 2
@@ -68,8 +100,7 @@ layout_mode = 2
 
 [node name="Hint" type="Label" parent="Center/Rows"]
 layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.6, 0.72, 0.78, 1)
-theme_override_font_sizes/font_size = 14
-text = "PRESS 1 / 2 / 3 OR CLICK A CARD"
+theme_override_colors/font_color = Color(0.55, 0.66, 0.7, 1)
+theme_override_font_sizes/font_size = 13
+text = "PRESS  1 / 2 / 3  OR CLICK A CARD"
 horizontal_alignment = 1

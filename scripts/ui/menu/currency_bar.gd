@@ -5,6 +5,8 @@ extends HBoxContainer
 ## come from the ResourceDefinition). Other menu code asks it for currency
 ## labels so prices read the same everywhere.
 
+const ICON_PIXELS := 32
+
 @export var currencies: Array[ResourceDefinition] = []
 @export var font_size := 20
 
@@ -18,12 +20,8 @@ func _ready() -> void:
 		chip.add_theme_constant_override(&"separation", 8)
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if definition.icon != null:
-			var icon := TextureRect.new()
-			icon.texture = definition.icon
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon.custom_minimum_size = Vector2(font_size, font_size)
-			chip.add_child(icon)
+			# Pixel art: nearest filter at 2x the 16 px source.
+			chip.add_child(GameIcons.rect(definition.icon, ICON_PIXELS))
 		else:
 			var swatch := ColorRect.new()
 			swatch.color = definition.color
@@ -31,6 +29,7 @@ func _ready() -> void:
 			swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			chip.add_child(swatch)
 		var value := Label.new()
+		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		value.add_theme_font_size_override(&"font_size", font_size)
 		value.add_theme_color_override(&"font_color", definition.color.lightened(0.25))
 		chip.add_child(value)

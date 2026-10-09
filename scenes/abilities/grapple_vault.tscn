@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/grapple_vault.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/grapple_vault.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_line"]
 shading_mode = 0
@@ -61,6 +62,7 @@ synth_activate = &"blink"
 line = NodePath("Line")
 ring_template = NodePath("RingTemplate")
 dust_template = NodePath("DustTemplate")
+icon = ExtResource("icon_px")
 
 [node name="Line" type="Node3D" parent="."]
 visible = false

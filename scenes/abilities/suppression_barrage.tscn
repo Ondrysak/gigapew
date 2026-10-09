@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/suppression_barrage.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/suppression_barrage.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_core"]
 shading_mode = 0
@@ -51,6 +52,7 @@ accent_color = Color(1, 0.6, 0.25, 1)
 synth_activate = &"autocannon"
 flash_template = NodePath("FlashTemplate")
 scorch_template = NodePath("ScorchTemplate")
+icon = ExtResource("icon_px")
 
 [node name="FlashTemplate" type="Node3D" parent="."]
 visible = false

@@ -4,6 +4,9 @@ extends MenuScreen
 const MENU_THEME := preload("res://scenes/ui/menu/menu_theme.tres")
 const ARMORY := preload("res://scenes/ui/menu/armory_screen.tscn")
 const BACKDROP := preload("res://scripts/ui/menu/base_backdrop.gd")
+const ICON_BADGE := preload("res://scripts/ui/menu/icon_badge.gd")
+const BADGE_IDLE := Color(0.1, 0.4, 0.45)
+const BADGE_LIVE := Color(0.3, 0.9, 0.9)
 const CATEGORIES: Array[StringName] = [&"armor", &"weapon", &"gadget", &"perk", &"talent"]
 const MINERALS: Array[ResourceDefinition] = [preload("res://data/resources/gold.tres"), preload("res://data/resources/crystal.tres"), preload("res://data/resources/shard.tres")]
 
@@ -12,8 +15,9 @@ var _workshop: HBoxContainer
 var _legacy: MenuScreen
 var _cards: Array[Dictionary] = []
 var _hand_selector: OptionButton
-var _hand_labels: Array[Label] = []
-var _hand_buttons: Array[Button] = []
+## Per hand: {button, badge, name, gadget_icon, gadget, stats}.
+var _hands: Array[Dictionary] = []
+var _armor_badge: ICON_BADGE
 var _armor_label: Label
 var _status: Label
 var _currency: CurrencyBar
@@ -82,6 +86,9 @@ func _ready() -> void:
 	var legacy_margin := _legacy.get_node("Margin") as MarginContainer
 	for side in [&"left", &"top", &"right", &"bottom"]:
 		legacy_margin.add_theme_constant_override(StringName("margin_" + String(side)), 4)
+	# The workshop header already carries the title tab and the balances.
+	_legacy.get_node("Margin/Rows/Header").hide()
+	_legacy.get_node("Margin/Rows/Separator").hide()
 	_legacy.back_requested.connect(back_requested.emit)
 	_legacy.hide()
 	var footer := HBoxContainer.new()
@@ -137,19 +144,48 @@ func _build_loadout() -> void:
 		_hand_selector.add_item("EQUIP TO HAND %d" % (index + 1))
 	_hand_selector.item_selected.connect(_select_hand)
 	rows.add_child(_hand_selector)
+	var armor := HBoxContainer.new()
+	armor.add_theme_constant_override(&"separation", 10)
+	rows.add_child(armor)
+	_armor_badge = ICON_BADGE.new(null, 32)
+	armor.add_child(_armor_badge)
 	_armor_label = _label("", 16)
 	_armor_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rows.add_child(_armor_label)
+	_armor_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_armor_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	armor.add_child(_armor_label)
 	for index in range(3):
 		var select := Button.new()
 		select.add_theme_font_size_override(&"font_size", 16)
 		select.pressed.connect(_select_hand.bind(index))
 		rows.add_child(select)
-		_hand_buttons.append(select)
-		var details := _label("", 15)
-		details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rows.add_child(details)
-		_hand_labels.append(details)
+		var header := HBoxContainer.new()
+		header.add_theme_constant_override(&"separation", 10)
+		rows.add_child(header)
+		var badge := ICON_BADGE.new(null, 32)
+		header.add_child(badge)
+		var titles := VBoxContainer.new()
+		titles.add_theme_constant_override(&"separation", 2)
+		titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		titles.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		header.add_child(titles)
+		var weapon_name := _label("", 17)
+		weapon_name.add_theme_color_override(&"font_color", Color(1, 0.8, 0.5))
+		titles.add_child(weapon_name)
+		var gadget_row := HBoxContainer.new()
+		gadget_row.add_theme_constant_override(&"separation", 6)
+		titles.add_child(gadget_row)
+		var gadget_icon := GameIcons.rect(null, 16)
+		gadget_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		gadget_row.add_child(gadget_icon)
+		var gadget := _label("", 14)
+		gadget.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		gadget.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gadget_row.add_child(gadget)
+		var stats := _label("", 14)
+		stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rows.add_child(stats)
+		_hands.append({"button": select, "badge": badge, "name": weapon_name, "gadget_icon": gadget_icon, "gadget": gadget, "stats": stats})
 		var actions := HBoxContainer.new()
 		rows.add_child(actions)
 		for category in [&"weapon", &"gadget"]:
@@ -166,9 +202,15 @@ func _add_recipe(parent: Container, recipe: CraftRecipe) -> void:
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = &"CardPanel"
 	parent.add_child(panel)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override(&"separation", 16)
+	panel.add_child(columns)
+	var badge := ICON_BADGE.new(recipe.display_icon(), 48)
+	columns.add_child(badge)
 	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override(&"separation", 8)
-	panel.add_child(rows)
+	columns.add_child(rows)
 	var title := _label(recipe.display_name, 21)
 	rows.add_child(title)
 	var description := _label(recipe.description, 16)
@@ -189,7 +231,7 @@ func _add_recipe(parent: Container, recipe: CraftRecipe) -> void:
 	equip.add_theme_font_size_override(&"font_size", 16)
 	equip.pressed.connect(_equip.bind(recipe.id))
 	actions.add_child(equip)
-	_cards.append({"recipe": recipe, "panel": panel, "state": state, "buy": buy, "equip": equip})
+	_cards.append({"recipe": recipe, "panel": panel, "badge": badge, "state": state, "buy": buy, "equip": equip})
 
 func refresh() -> void:
 	if _currency == null:
@@ -205,6 +247,7 @@ func refresh() -> void:
 		panel.visible = _tabs.current_tab < CATEGORIES.size() and recipe.category == CATEGORIES[mini(_tabs.current_tab, CATEGORIES.size() - 1)]
 		var state: Label = card.state
 		state.text = "OWNED %d / %d%s" % [rank, recipe.max_rank, "  ·  EQUIPPED" if equipped else ""]
+		card.badge.show_icon(recipe.display_icon(), BADGE_LIVE if equipped else (BADGE_IDLE.lightened(0.15) if rank > 0 else BADGE_IDLE))
 		if recipe.category in [&"perk", &"talent"] and rank > 0:
 			state.text += "  ·  AUTOMATIC AT DEPLOYMENT"
 		var buy: Button = card.buy
@@ -225,17 +268,27 @@ func _refresh_loadout() -> void:
 	preview.initialize_hands(Profile.hand_loadout(Profile.selected_class()))
 	Profile.apply_hand_gadgets(preview.hands)
 	var definitions := preview.hand_definitions()
-	_armor_label.text = "ARMOR  ·  " + _equipped_name(&"armor", 0, "Operator standard")
+	var armor := _equipped_recipe(&"armor", 0)
+	_armor_badge.show_icon(armor.display_icon() if armor != null else GameIcons.lookup(&"hud", &"armor"), BADGE_LIVE if armor != null else BADGE_IDLE)
+	_armor_label.text = "ARMOR  ·  " + (armor.display_name if armor != null else "Operator standard")
 	for index in range(3):
-		_hand_buttons[index].text = "HAND %d%s" % [index + 1, "  ·  SELECTED" if index == _selected_hand else "  ·  SELECT"]
+		var hand := _hands[index]
+		var selected := index == _selected_hand
+		hand.button.text = "HAND %d%s" % [index + 1, "  ·  SELECTED" if selected else "  ·  SELECT"]
 		var weapon := definitions[index]
-		_hand_labels[index].text = "%s\n%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · %s\nGadget: %s" % [weapon.display_name, weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, DamageType.label(weapon.damage_type), _equipped_name(&"gadget", index, "None")]
+		hand.badge.show_icon(weapon.icon, BADGE_LIVE if selected else BADGE_IDLE)
+		hand.name.text = weapon.display_name
+		var gadget := _equipped_recipe(&"gadget", index)
+		hand.gadget_icon.texture = gadget.display_icon() if gadget != null else null
+		hand.gadget_icon.visible = gadget != null
+		hand.gadget.text = "Gadget: %s" % (gadget.display_name if gadget != null else "None")
+		hand.stats.text = "%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · %s" % [weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, DamageType.label(weapon.damage_type)]
 
-func _equipped_name(category: StringName, hand: int, fallback: String) -> String:
+func _equipped_recipe(category: StringName, hand: int) -> CraftRecipe:
 	for recipe in CraftingCatalog.recipes():
 		if recipe.category == category and Profile.is_craft_equipped(recipe.id, hand):
-			return recipe.display_name
-	return fallback
+			return recipe
+	return null
 
 func _on_category_changed(_tab: int) -> void:
 	refresh()

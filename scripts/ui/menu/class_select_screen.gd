@@ -8,16 +8,23 @@ extends MenuScreen
 
 signal deploy_requested(definition: ClassDefinition)
 
+const ICON_BADGE := preload("res://scripts/ui/menu/icon_badge.gd")
+
 @export var card_scene: PackedScene
 @export var card_row: Container
 @export var currency_bar: CurrencyBar
 @export var accent_bar: ColorRect
+@export var class_badge: PanelContainer
+@export var class_icon: TextureRect
 @export var name_label: Label
 @export var tagline_label: Label
 @export var description_label: Label
-@export var weapons_label: Label
+## Holds one weapon chip (icon badge + name) per starting hand.
+@export var loadout_row: HBoxContainer
+@export var extras_label: Label
 @export var ability_option_scene: PackedScene
 @export var ability_option_row: Container
+@export var ability_icon: TextureRect
 @export var ability_name_label: Label
 @export var ability_description_label: Label
 @export var ability_action_button: Button
@@ -32,8 +39,9 @@ var _options: Array[AbilityOption] = []
 var _selected: ClassDefinition
 ## Ability shown in the detail panel (defaults to the equipped one).
 var _preview: PackedScene
-## PackedScene -> {name, description, cooldown, accent}; read once per scene.
+## PackedScene -> {name, description, cooldown, accent, icon}; read once per scene.
 var _abilities: Dictionary = {}
+var _class_badge_style: StyleBoxFlat
 
 func _ready() -> void:
 	super()
@@ -141,12 +149,19 @@ func _redraw() -> void:
 	var accent := _selected.accent_color
 	var unlocked := Profile.is_class_unlocked(_selected)
 	accent_bar.color = accent
+	class_icon.texture = _selected.icon
+	class_badge.visible = _selected.icon != null
+	class_icon.modulate = Color.WHITE if unlocked else Color(0.42, 0.44, 0.5)
+	if _class_badge_style == null:
+		_class_badge_style = class_badge.get_theme_stylebox(&"panel").duplicate() as StyleBoxFlat
+		class_badge.add_theme_stylebox_override(&"panel", _class_badge_style)
+	_class_badge_style.border_color = accent if unlocked else accent.darkened(0.45)
 	name_label.text = _selected.display_name.to_upper()
 	name_label.add_theme_color_override(&"font_color", accent.lightened(0.35))
 	tagline_label.text = _selected.tagline.to_upper()
 	tagline_label.add_theme_color_override(&"font_color", accent)
 	description_label.text = _selected.description
-	weapons_label.text = _loadout_text(_selected)
+	_redraw_loadout(_selected)
 	_redraw_abilities(unlocked)
 	var stats := StatText.bbcode(_selected, good_color, bad_color)
 	stats_label.text = stats if not stats.is_empty() else "Standard-issue baseline."
@@ -176,11 +191,13 @@ func _redraw_abilities(class_unlocked: bool) -> void:
 		var state := "EQUIPPED" if scene == equipped else "OWNED"
 		if not owned:
 			var currency := currency_bar.label_for(_selected.ability_unlock_currency).trim_prefix("VOID ")
-			state = "LOCKED · %d %s" % [_selected.ability_cost(scene), currency]
-		tile.show_option(scene, info.name, info.accent, owned, scene == equipped, scene == _preview, state)
+			state = "%d %s" % [_selected.ability_cost(scene), currency]
+		tile.show_option(scene, info.name, info.icon, info.accent, owned, scene == equipped, scene == _preview, state)
 	ability_option_row.visible = options.size() > 1
 	var shown := _ability_info(_preview)
 	ability_name_label.text = String(shown.name).to_upper()
+	ability_icon.texture = shown.icon
+	ability_icon.visible = shown.icon != null
 	ability_name_label.add_theme_color_override(&"font_color", Color(shown.accent).lightened(0.35))
 	if float(shown.cooldown) > 0.0:
 		ability_description_label.text = "%d s recharge  ·  %s" % [roundi(shown.cooldown), shown.description]
@@ -204,31 +221,56 @@ func _cost_text(definition: ClassDefinition) -> String:
 func _ability_cost_text(scene: PackedScene) -> String:
 	return "%d %s" % [_selected.ability_cost(scene), currency_bar.label_for(_selected.ability_unlock_currency)]
 
-func _loadout_text(definition: ClassDefinition) -> String:
-	var names := PackedStringArray()
+## One chip per starting hand weapon, plus a line for starting upgrades.
+func _redraw_loadout(definition: ClassDefinition) -> void:
+	var weapons: Array[WeaponDefinition] = []
 	for weapon in Profile.hand_loadout(definition):
 		if weapon != null:
-			names.append(weapon.display_name)
-	var text := "  ·  ".join(names) if not names.is_empty() else "No main guns"
+			weapons.append(weapon)
+	var shown := maxi(weapons.size(), 1)
+	while loadout_row.get_child_count() < shown:
+		loadout_row.add_child(_loadout_chip())
+	for index in range(loadout_row.get_child_count()):
+		var chip := loadout_row.get_child(index)
+		chip.visible = index < shown
+		if not chip.visible:
+			continue
+		var weapon: WeaponDefinition = weapons[index] if index < weapons.size() else null
+		var badge = chip.get_child(0)
+		badge.visible = weapon != null and weapon.icon != null
+		if badge.visible:
+			badge.show_icon(weapon.icon, definition.accent_color.darkened(0.3))
+		(chip.get_child(1) as Label).text = weapon.display_name if weapon != null else "No main guns"
 	var extras := PackedStringArray()
 	for upgrade in definition.starting_upgrades:
 		if upgrade != null:
 			extras.append(upgrade.display_name)
 	for upgrade in Profile.starting_craft_upgrades():
 		extras.append(upgrade.display_name)
-	if not extras.is_empty():
-		text += "\n+ " + "  ·  ".join(extras)
-	return text
+	extras_label.visible = not extras.is_empty()
+	extras_label.text = "+ " + "  ·  ".join(extras)
+
+func _loadout_chip() -> HBoxContainer:
+	var chip := HBoxContainer.new()
+	chip.add_theme_constant_override(&"separation", 8)
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(ICON_BADGE.new(null, 32))
+	var label := Label.new()
+	label.add_theme_font_size_override(&"font_size", 18)
+	label.add_theme_color_override(&"font_color", Color(1, 0.8, 0.5))
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip.add_child(label)
+	return chip
 
 func _ability_info(scene: PackedScene) -> Dictionary:
 	if _abilities.has(scene):
 		return _abilities[scene]
-	var info := {"name": "No ability", "description": "This operator has no active ability.", "cooldown": 0.0, "accent": Color(0.6, 1, 1)}
+	var info := {"name": "No ability", "description": "This operator has no active ability.", "cooldown": 0.0, "accent": Color(0.6, 1, 1), "icon": GameIcons.lookup(&"hud", &"ability")}
 	if scene != null:
 		var node := scene.instantiate()
 		var ability := node as ActiveAbility
 		if ability != null:
-			info = {"name": ability.display_name, "description": ability.description, "cooldown": ability.base_cooldown, "accent": ability.accent_color}
+			info = {"name": ability.display_name, "description": ability.description, "cooldown": ability.base_cooldown, "accent": ability.accent_color, "icon": ability.icon if ability.icon != null else info.icon}
 		node.free()
 	_abilities[scene] = info
 	return info

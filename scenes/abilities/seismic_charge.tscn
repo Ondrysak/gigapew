@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/seismic_charge.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/seismic_charge.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_casing"]
 albedo_color = Color(0.22, 0.2, 0.18, 1)
@@ -113,6 +114,7 @@ charge = NodePath("Charge")
 marker = NodePath("Marker")
 shock_template = NodePath("ShockTemplate")
 flash_template = NodePath("FlashTemplate")
+icon = ExtResource("icon_px")
 
 [node name="Charge" type="Node3D" parent="."]
 visible = false

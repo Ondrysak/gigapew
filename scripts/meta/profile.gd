@@ -66,6 +66,8 @@ var _equipped_armor: StringName = &""
 var _equipped_weapons: Dictionary = {}
 var _equipped_gadgets: Dictionary = {}
 var _loading := false
+# False in the visual test lab: the player's save is neither read nor written.
+var _persistent := true
 
 func _ready() -> void:
 	if ResourceLoader.exists(ROSTER_PATH):
@@ -80,6 +82,17 @@ func _ready() -> void:
 		meta_pool = MetaPool.new()
 	load_profile()
 	apply_settings()
+
+## Detaches from user://profile.json for the rest of the process and starts
+## from defaults, so lab scenarios are deterministic and never touch the save.
+func enter_sandbox() -> void:
+	_persistent = false
+	_loading = true
+	_reset()
+	_loading = false
+
+func is_sandboxed() -> bool:
+	return not _persistent
 
 # --- currencies -------------------------------------------------------------
 
@@ -449,6 +462,8 @@ func apply_settings() -> void:
 # --- persistence ------------------------------------------------------------
 
 func save() -> void:
+	if not _persistent:
+		return
 	var data := {
 		"version": VERSION,
 		"selected_class_id": String(selected_class_id),

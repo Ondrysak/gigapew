@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/recon_flare.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/recon_flare.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
 shading_mode = 0
@@ -104,6 +105,7 @@ flare = NodePath("Flare")
 zone = NodePath("Zone")
 zone_ring = NodePath("Zone/Ring")
 sweep = NodePath("Zone/Sweep")
+icon = ExtResource("icon_px")
 
 [node name="Flare" type="Node3D" parent="."]
 visible = false

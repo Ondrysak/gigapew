@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menu/class_card.gd" id="1_card"]
+[ext_resource type="Texture2D" path="res://assets/icons/hud/lock.png" id="2_lock"]
 
 [sub_resource type="StyleBoxFlat" id="Style_normal"]
 bg_color = Color(0.02, 0.04, 0.06, 0.95)
@@ -28,17 +29,35 @@ corner_radius_bottom_left = 8
 shadow_color = Color(0.1, 0.8, 0.9, 0.25)
 shadow_size = 14
 
-[node name="ClassCard" type="Button" node_paths=PackedStringArray("accent_bar", "icon_rect", "name_label", "tagline_label", "status_label")]
-custom_minimum_size = Vector2(262, 160)
+[sub_resource type="StyleBoxFlat" id="Style_badge"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.01, 0.025, 0.04, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.1, 0.4, 0.45, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="ClassCard" type="Button" node_paths=PackedStringArray("accent_bar", "badge", "icon_rect", "lock_icon", "name_label", "tagline_label", "status_label")]
+custom_minimum_size = Vector2(262, 162)
 theme_override_styles/normal = SubResource("Style_normal")
 theme_override_styles/hover = SubResource("Style_hover")
 theme_override_styles/pressed = SubResource("Style_hover")
 script = ExtResource("1_card")
 accent_bar = NodePath("Margin/Rows/Accent")
-icon_rect = NodePath("Margin/Rows/Header/Icon")
+badge = NodePath("Margin/Rows/Header/Badge")
+icon_rect = NodePath("Margin/Rows/Header/Badge/Icon")
+lock_icon = NodePath("Margin/Rows/StatusRow/Lock")
 name_label = NodePath("Margin/Rows/Header/Name")
 tagline_label = NodePath("Margin/Rows/Tagline")
-status_label = NodePath("Margin/Rows/Status")
+status_label = NodePath("Margin/Rows/StatusRow/Status")
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -49,14 +68,14 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 14
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_bottom = 10
 
 [node name="Rows" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
 [node name="Accent" type="ColorRect" parent="Margin/Rows"]
 custom_minimum_size = Vector2(0, 5)
@@ -67,11 +86,16 @@ color = Color(0.1, 0.85, 0.9, 1)
 [node name="Header" type="HBoxContainer" parent="Margin/Rows"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
-[node name="Icon" type="TextureRect" parent="Margin/Rows/Header"]
-visible = false
-custom_minimum_size = Vector2(36, 36)
+[node name="Badge" type="PanelContainer" parent="Margin/Rows/Header"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_badge")
+
+[node name="Icon" type="TextureRect" parent="Margin/Rows/Header/Badge"]
+texture_filter = 1
+custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 1
@@ -83,6 +107,8 @@ size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_font_sizes/font_size = 28
 text = "CLASS"
+vertical_alignment = 1
+text_overrun_behavior = 3
 
 [node name="Tagline" type="Label" parent="Margin/Rows"]
 custom_minimum_size = Vector2(220, 0)
@@ -94,8 +120,26 @@ theme_override_font_sizes/font_size = 15
 text = "Tagline"
 autowrap_mode = 2
 
-[node name="Status" type="Label" parent="Margin/Rows"]
+[node name="StatusRow" type="HBoxContainer" parent="Margin/Rows"]
 layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Lock" type="TextureRect" parent="Margin/Rows/StatusRow"]
+visible = false
+texture_filter = 1
+custom_minimum_size = Vector2(16, 16)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("2_lock")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Status" type="Label" parent="Margin/Rows/StatusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_font_sizes/font_size = 14
 text = "READY"
+text_overrun_behavior = 3

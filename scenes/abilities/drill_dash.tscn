@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/abilities/drill_dash.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/drill_dash.png" id="icon_px"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_bit"]
 albedo_color = Color(0.55, 0.5, 0.45, 1)
@@ -83,6 +84,7 @@ drill = NodePath("Drill")
 drill_bit = NodePath("Drill/Bit")
 debris_template = NodePath("DebrisTemplate")
 ring_template = NodePath("RingTemplate")
+icon = ExtResource("icon_px")
 
 [node name="Drill" type="Node3D" parent="."]
 visible = false

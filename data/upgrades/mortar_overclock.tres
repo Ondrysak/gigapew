@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
 [ext_resource type="Resource" path="res://data/upgrades/mortar.tres" id="2_target"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/mortar_overclock.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
@@ -13,3 +14,4 @@ max_level = 1
 weight = 3.0
 accent_color = Color(1.0, 0.84, 0.3, 1)
 overclock_target = ExtResource("2_target")
+icon = ExtResource("icon_px")

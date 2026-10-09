@@ -25,6 +25,25 @@
 - Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
   exit; rendered smoke runs reported up to 20, and the virtual display still
   warns about unsupported V-Sync. These changes are not claimed warning-free.
+- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): ten scenarios
+  (combat, weapons, recoil, boss, level-up, shop, HUD, mining, menus, icons)
+  render through the real scenes with a sandboxed profile, capture screenshots
+  and report checks. A full headless run produced 58 captures with 0 failures.
+  The lab is excluded from the Linux export.
+- Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
+  upgrade, mineral, workshop recipe, shop item and HUD glyph, generated from
+  `tools/icons/art_*.py` (`make icons`).
+- Gun feel: spring-driven weapon kick per hand, a visual camera kick and FOV
+  punch that never moves the aim, varied muzzle flashes, fading tracers, ejected
+  casings and a blooming crosshair. Point-blank impact flashes and enemy spit
+  no longer fill the screen.
+- Round shop rebuilt: hand loadout cards with stats and rank pips, 4 weapon-mod
+  offers for the selected hand plus 2 suit-system offers, live effect previews
+  and icon prices. Rerolls keep sold cards. Hand upgrades live in one catalog.
+- HUD, boss and level-up pass: icon-based HUD, boss WARNING banner and
+  segmented bar with damage trail and ENRAGED state, death stat panel, level-up
+  cards with icons, rank pips and gold overclocks, and less overlap between
+  damage numbers. Menus show class, ability, recipe, loadout and Armory icons.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.
