@@ -176,7 +176,7 @@ func _fire() -> bool:
 	if flat.length_squared() > 0.0001:
 		flat = flat.normalized()
 		_target_yaw = atan2(-flat.x, -flat.z) - turret.global_rotation.y
-	horde.damage(target, damage, flat * knockback)
+	horde.damage_direct(target, damage, origin, flat * knockback)
 	_tracer_from[_muzzle] = origin
 	_tracer_to[_muzzle] = hit_at
 	_tracer_times[_muzzle] = tracer_duration

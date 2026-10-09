@@ -74,6 +74,9 @@ var _respawn_timer := 0.0
 var _spawn_point := Vector3.ZERO
 var _alive: Array[MineralDeposit] = []
 var _placed: Dictionary = {}
+# Authored encounter formations do not consume random caps or respawn budgets.
+var _reserved_centers := PackedVector3Array()
+var _reserved_radii := PackedFloat32Array()
 
 # Obstacle footprints (world X/Z), read like Horde does.
 var _obstacle_body: Array[StaticBody3D] = []
@@ -143,6 +146,37 @@ func collect_all() -> void:
 ## Live deposits (for HUD or debugging).
 func deposit_count() -> int:
 	return _alive.size()
+
+## Reserve before the delayed random population; the reservation survives depletion.
+func reserve_authored_space(center: Vector3, radius: float) -> void:
+	_reserved_centers.append(center)
+	_reserved_radii.append(maxf(0.0, radius))
+
+## A real, permanent formation on an authored collider face, with normal conserved loot.
+## Returns null until physics can prove its support and floor/walk-up clearance.
+func create_authored_deposit(definition: DepositDefinition, point: Vector3, normal: Vector3, support: StaticBody3D, seed: int) -> MineralDeposit:
+	if _world == null or definition == null or definition.resource == null or support == null:
+		return null
+	normal.y = 0.0
+	if normal.length_squared() < 0.5:
+		return null
+	normal = normal.normalized()
+	var space := get_world_3d().direct_space_state
+	if not _formation_clear(space, point, normal, definition.formation_size, support):
+		return null
+	var deposit := MineralDeposit.new()
+	deposit.name = "AuthoredDefenseVein"
+	deposit.configure(definition, seed, 1.0)
+	add_child(deposit)
+	deposit.global_transform = Transform3D(Basis(Vector3.UP.cross(normal), Vector3.UP, normal), point)
+	deposit.struck.connect(_on_deposit_struck)
+	deposit.fragment_mined.connect(_on_fragment_mined)
+	deposit.depleted.connect(_on_authored_depleted)
+	return deposit
+
+func _on_authored_depleted(deposit: MineralDeposit) -> void:
+	# Keep the depleted object for encounter progress; no random respawn or second payout.
+	deposit_broken.emit(deposit.definition, deposit.last_hit_position)
 
 func _physics_process(delta: float) -> void:
 	if _world == null:
@@ -425,6 +459,9 @@ func _is_clear(point: Vector3, bounds: Vector3, respawn: bool) -> bool:
 	if respawn and _player != null and is_instance_valid(_player):
 		var player := _player.global_position
 		if xz.distance_to(Vector2(player.x, player.z)) < respawn_player_clearance + radius:
+			return false
+	for index in _reserved_centers.size():
+		if point.distance_to(_reserved_centers[index]) < radius + _reserved_radii[index]:
 			return false
 	for deposit in _alive:
 		var other_radius := Vector2(deposit.formation_size.x * 0.5, deposit.formation_size.z).length()

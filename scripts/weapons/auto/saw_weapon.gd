@@ -96,7 +96,7 @@ func _tick(delta: float) -> void:
 			if _next_hit[enemy] > _clock:
 				continue
 			_next_hit[enemy] = _clock + rest
-			horde.damage(enemy, amount, push)
+			horde.damage_direct(enemy, amount, at, push)
 			if _spark_ready[index] <= _clock:
 				_spark_ready[index] = _clock + spark_interval
 				_sparks.spawn(horde.enemy_position(enemy), spark_size, 0.12, _spin)

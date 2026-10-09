@@ -101,7 +101,7 @@ func _tick(delta: float) -> void:
 		if overclocked:
 			end = _fire_beam(at, flat)
 		else:
-			horde.damage(target, damage_amount(), flat * knockback)
+			horde.damage_direct(target, damage_amount(), at, flat * knockback)
 		_impacts.spawn(end, impact_size * (1.6 if overclocked else 1.0), tracer_duration * 1.5)
 		_tracer_from[index] = at
 		_tracer_to[index] = end
@@ -113,7 +113,7 @@ func _fire_beam(from: Vector3, flat: Vector3) -> Vector3:
 	var count := horde.raycast(origin, flat, target_range, beam_hits, _hits, _distances)
 	var amount := damage_amount()
 	for n in range(count):
-		horde.damage(_hits[n], amount, flat * knockback)
+		horde.damage_direct(_hits[n], amount, origin, flat * knockback)
 	return origin + flat * target_range
 
 func _process(delta: float) -> void:

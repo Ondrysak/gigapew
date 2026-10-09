@@ -12,6 +12,7 @@
 [ext_resource type="Texture2D" path="res://assets/icons/hud/armor.png" id="10_armor"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/xp.png" id="11_xp"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/ability.png" id="12_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/resources/gold.png" id="16_vein"]
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
 content_margin_left = 14.0
@@ -942,3 +943,101 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 28
 alignment = 1
+
+[node name="Objective" type="PanelContainer" parent="."]
+visible = false
+offset_left = 0.0
+offset_top = 158.0
+offset_right = 320.0
+offset_bottom = 260.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Objective"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="Objective/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="Objective/Rows/Header"]
+texture_filter = 1
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("16_vein")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Objective/Rows/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "OPTIONAL · DEFENSE VEIN"
+
+[node name="Detail" type="Label" parent="Objective/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.84, 0.86, 1)
+theme_override_font_sizes/font_size = 12
+text = "Mine the vein. Survive its responders."
+
+[node name="Progress" type="ProgressBar" parent="Objective/Rows"]
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_supply")
+max_value = 1.0
+show_percentage = false
+
+[node name="BossCue" type="PanelContainer" parent="."]
+visible = false
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -230.0
+offset_top = 104.0
+offset_right = 230.0
+offset_bottom = 166.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_boss")
+
+[node name="Rows" type="VBoxContainer" parent="BossCue"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="BossCue/Rows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="BossCue/Rows/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "BREACH RAM"
+
+[node name="Time" type="Label" parent="BossCue/Rows/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.86, 0.88, 1)
+theme_override_font_sizes/font_size = 12
+text = "1.2s"
+
+[node name="Instruction" type="Label" parent="BossCue/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.86, 0.88, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "Leave the marked lane."
+
+[node name="Progress" type="ProgressBar" parent="BossCue/Rows"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = SubResource("Bar_background")
+theme_override_styles/fill = SubResource("Bar_supply")
+max_value = 1.0
+show_percentage = false

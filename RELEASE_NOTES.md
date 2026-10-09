@@ -25,9 +25,10 @@
 - Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
   exit; rendered smoke runs reported up to 20, and the virtual display still
   warns about unsupported V-Sync. These changes are not claimed warning-free.
-- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 15 scenarios,
-  including gun models, rotation, alternate fire, finite ammo and survival
-  pickups. Script/engine errors fail the runner. Lab content is excluded
+- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 18 scenarios,
+  including gun models, rotation, alternate fire, finite ammo, survival
+  pickups, directional armor, mining defense and Yard boss patterns.
+  Script/engine errors fail the runner. Lab content is excluded
   from the Linux export.
 - Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
   upgrade, mineral, workshop recipe, shop item and HUD glyph, generated from
@@ -80,12 +81,37 @@
 - Pickup radar glyphs, compact aggregated ammo/magnet/repair/supply notices,
   separate automatic-swap feedback and low/dry/reserve weapon readouts.
   New ammo and magnet pixel icons use the existing reproducible generator.
-- Verification: all 15 rendered lab scenarios produced 93 captures with zero
+- Pickup-loop verification: all 15 rendered lab scenarios produced 93 captures with zero
   failures on the Radeon GPU; precision and nested-blast regressions passed.
   Checks cover actual ammo collection and recovered firing, finite/partial
   reloads, swap boundaries, full-cap pickup preservation, exact XP conservation,
   homing-pool overflow, later loose gems, boss loot, paused/inactive supply
   timers and real raised-deck supply fallback.
+- Optional Yard defense vein: real, persistent mineral sections and conserved
+  fragments; three escalating response packs; one upgrade choice after both
+  mining and defense finish. E claims once; boss clear escrows earned choices
+  before the shop without consuming or fabricating XP levels.
+- Rare Bulwark role: batched amber front plate, teal rear precision core, slow
+  capped turning and directional direct-hit reduction. Flanks, splash, burn
+  ticks and area hazards remain counters. Auto guns, piercing beams and blades
+  use their actual sources; mixed direct/splash remains one damage transaction.
+- Yard Dreadnought alternates a locked ram lane and three staggered, cover-clipped
+  mortar footprints. Both have harmless warnings and a teal +50% recovery
+  window; stagger interrupts windups/rushes. Terrain, height and actual warned
+  footprints constrain hits. Pausing, death, node removal and stage clear
+  release controller state and prevent late attacks.
+- Authored mining formations reserve placement space outside random respawn
+  budgets; bounded response reservations and lifetime generations keep full
+  crowds and recycled enemy slots from corrupting encounter completion.
+- Game-root pause semantics are explicit even under the lab's always-processing
+  shell. Encounter HUD, radar discovery and the earned-choice picker use the
+  existing presentation conventions.
+- Encounter verification: all 18 rendered lab scenarios produced 114 captures
+  with zero failures and no script/engine errors on the Radeon GPU. Precision
+  and nested-blast regressions passed (the existing ObjectDB exit warning remains).
+  An accelerated live-director smoke from 90–122 Yard seconds observed 492
+  hostiles including a scheduled Bulwark, with the defense vein still optional.
+  This is encounter/integration evidence, not full-campaign balance certification.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.

@@ -16,6 +16,7 @@ const CARD_DURATION := 0.22
 @export var card_container: Container
 @export var level_label: Label
 @export var header: Control
+@export var title_label: Label
 @export var dim: CanvasItem
 ## Ignores picks briefly so a held key/click cannot choose blindly.
 @export var input_delay := 0.25
@@ -37,9 +38,10 @@ func _ready() -> void:
 		card.pressed.connect(_choose.bind(_cards.size()))
 		_cards.append(card)
 
-func present(offers: Array[UpgradeDefinition], run_state: RunState) -> void:
+func present(offers: Array[UpgradeDefinition], run_state: RunState, title: String = "LEVEL UP", subtitle: String = "") -> void:
 	_offers.assign(offers)
-	level_label.text = "OPERATOR LEVEL %d" % run_state.level
+	title_label.text = title
+	level_label.text = subtitle if not subtitle.is_empty() else "OPERATOR LEVEL %d" % run_state.level
 	for index in range(_cards.size()):
 		var card := _cards[index]
 		if index < _offers.size():

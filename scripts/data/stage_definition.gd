@@ -10,3 +10,6 @@ extends Resource
 ## inner faces of the perimeter walls.
 @export var play_area := Rect2(-32, -32, 64, 64)
 @export var schedule: SpawnSchedule
+## Optional stage encounters; stages without them retain ordinary horde behavior.
+@export var mining_encounter_scene: PackedScene
+@export var boss_fight_scene: PackedScene

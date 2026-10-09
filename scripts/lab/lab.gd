@@ -24,6 +24,9 @@ const SCENARIOS := {
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
 	&"secondary": preload("res://scripts/lab/scenarios/secondary_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
+	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
+	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),
+	&"encounter": preload("res://scripts/lab/scenarios/encounter_scenario.gd"),
 	&"levelup": preload("res://scripts/lab/scenarios/level_up_scenario.gd"),
 	&"shop": preload("res://scripts/lab/scenarios/shop_scenario.gd"),
 	&"hud": preload("res://scripts/lab/scenarios/hud_scenario.gd"),
@@ -32,7 +35,7 @@ const SCENARIOS := {
 	&"icons": preload("res://scripts/lab/scenarios/icons_scenario.gd"),
 }
 ## Batch runs never hang: the whole process quits after this many seconds.
-const BATCH_TIMEOUT := 240.0
+const BATCH_TIMEOUT := 480.0
 const REPORT_FILE := "lab_report.txt"
 
 var game: ArenaGame

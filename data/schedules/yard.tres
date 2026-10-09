@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SpawnSchedule" load_steps=13 format=3]
+[gd_resource type="Resource" script_class="SpawnSchedule" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/spawn_schedule.gd" id="1_schedule"]
 [ext_resource type="Script" path="res://scripts/data/spawn_wave.gd" id="2_wave"]
@@ -7,6 +7,7 @@
 [ext_resource type="Resource" path="res://data/enemies/robot_runner.tres" id="5_runner"]
 [ext_resource type="Resource" path="res://data/enemies/robot_spitter.tres" id="6_spitter"]
 [ext_resource type="Resource" path="res://data/enemies/robot_tank.tres" id="7_tank"]
+[ext_resource type="Resource" path="res://data/enemies/robot_bulwark.tres" id="8_bulwark"]
 
 [sub_resource type="Resource" id="Wave_1"]
 script = ExtResource("2_wave")
@@ -58,11 +59,21 @@ rate_end = 0.25
 group_size = 1
 health_multiplier = 1.0
 
+[sub_resource type="Resource" id="Wave_Bulwark"]
+script = ExtResource("2_wave")
+enemy = ExtResource("8_bulwark")
+start_time = 90.0
+end_time = 180.0
+rate_start = 0.035
+rate_end = 0.075
+group_size = 1
+health_multiplier = 1.0
+
 [resource]
 script = ExtResource("1_schedule")
 duration = 180.0
 max_alive = 700
-waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5")])
+waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5"), SubResource("Wave_Bulwark")])
 boss = ExtResource("3_dreadnought")
 boss_health_multiplier = 1.0
 spawn_distance_min = 20.0

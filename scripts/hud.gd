@@ -18,6 +18,7 @@ const PICKUP_NOTICE_SECONDS := 3.0
 const AUTO_SWAP_NOTICE_SECONDS := 1.4
 const NOTICE_FADE_SECONDS := 0.4
 const PICKUP_KINDS: Array[StringName] = [&"ammo", &"magnet", &"repair", &"supply"]
+const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM", "MORTAR SALVO", "MORTAR SALVO", "CORE EXPOSED", ""]
 
 @export var healthy_color := Color(0.3, 0.9, 0.62)
 @export var critical_color := Color(1.0, 0.24, 0.32)
@@ -79,6 +80,15 @@ const PICKUP_KINDS: Array[StringName] = [&"ammo", &"magnet", &"repair", &"supply
 @onready var death_banked: HBoxContainer = $Death/Center/Panel/Rows/Banked
 @onready var death_keys: HBoxContainer = $Death/Center/Panel/Rows/Keys
 
+@onready var objective: PanelContainer = $Objective
+@onready var objective_title: Label = $Objective/Rows/Header/Title
+@onready var objective_detail: Label = $Objective/Rows/Detail
+@onready var objective_progress: ProgressBar = $Objective/Rows/Progress
+@onready var boss_cue: PanelContainer = $BossCue
+@onready var boss_cue_title: Label = $BossCue/Rows/Header/Title
+@onready var boss_cue_time: Label = $BossCue/Rows/Header/Time
+@onready var boss_cue_instruction: Label = $BossCue/Rows/Instruction
+@onready var boss_cue_progress: ProgressBar = $BossCue/Rows/Progress
 var _resource_labels: Dictionary = {}
 var _definitions: Array[ResourceDefinition] = []
 var _upgrades: Array[UpgradeDefinition] = []
@@ -113,6 +123,7 @@ var _pickup_dirty := false
 var _auto_swap_label: Label
 var _auto_swap_icon: TextureRect
 var _auto_swap_time := 0.0
+var _boss_cue_style: StyleBoxFlat
 
 func _ready() -> void:
 	_health_fill = (health_bar.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate()
@@ -122,6 +133,8 @@ func _ready() -> void:
 	_vitals_border = _vitals_style.border_color
 	_ability_style = (ability_slot.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate()
 	ability_slot.add_theme_stylebox_override(&"panel", _ability_style)
+	_boss_cue_style = (boss_cue.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate()
+	boss_cue.add_theme_stylebox_override(&"panel", _boss_cue_style)
 	boss_bar.draw.connect(_draw_boss_bar)
 	ability_cooldown.draw.connect(_draw_ability_cooldown)
 	warning_band.draw.connect(_draw_warning_band)
@@ -206,6 +219,8 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()
 	boss_panel.hide()
 	warning.hide()
+	objective.hide()
+	boss_cue.hide()
 	timer_box.show()
 	_last_health = 0
 	_stage_name = "SECTOR %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
@@ -215,6 +230,40 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	timer_label.remove_theme_color_override(&"font_color")
 	feedback.reset()
 	_reset_notices()
+
+func set_mining_encounter(encounter: MiningDefense, operator: ArenaPlayer) -> void:
+	objective.visible = is_instance_valid(encounter) and encounter.state != MiningDefense.State.CANCELLED and encounter.state != MiningDefense.State.CLAIMED and not death.visible
+	if not objective.visible:
+		return
+	var distance := roundi(operator.global_position.distance_to(encounter.global_position))
+	var mined := roundi(encounter.progress() * 100.0)
+	objective_progress.value = encounter.progress()
+	match encounter.state:
+		MiningDefense.State.WAITING:
+			objective_title.text = "OPTIONAL · DEFENSE VEIN"
+			objective_detail.text = "Mine to start · %dm away\nFinish mining + survive for an upgrade." % distance
+		MiningDefense.State.MINING:
+			objective_title.text = "DEFENSE VEIN · %d%% MINED" % mined
+			objective_detail.text = "Mine between attacks · %d responders\nProgress stays when you stop drilling." % encounter.enemies_remaining()
+		MiningDefense.State.DEFENDING:
+			objective_title.text = "VEIN MINED · HOLD THE SITE"
+			objective_detail.text = "%d responders left · finish the defense\nAn upgrade choice awaits." % encounter.enemies_remaining()
+		MiningDefense.State.READY:
+			objective_title.text = "VEIN SECURED · REWARD READY"
+			objective_detail.text = "E near the beacon · choose an upgrade\n%dm away" % distance
+
+func set_boss_fight(fight: YardBossFight) -> void:
+	boss_cue.visible = is_instance_valid(fight) and fight.state != YardBossFight.State.CANCELLED and not death.visible
+	if not boss_cue.visible:
+		return
+	var recovering := fight.state == YardBossFight.State.RECOVERY
+	var color := ability_ready_color if recovering else boss_color
+	boss_cue_title.text = BOSS_CUE_TITLES[fight.state]
+	boss_cue_title.add_theme_color_override(&"font_color", color)
+	_boss_cue_style.border_color = color
+	boss_cue_instruction.text = fight.instruction()
+	boss_cue_time.text = "%.1fs" % fight.remaining()
+	boss_cue_progress.value = fight.phase_progress()
 
 func set_aiming(captured: bool) -> void:
 	feedback.aiming = captured

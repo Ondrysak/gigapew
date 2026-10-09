@@ -18,6 +18,9 @@ var _player := Vector2.ZERO
 var _yaw := 0.0
 var _boss := Vector2.INF
 var _loot: PickupField
+var _vein := Vector2.INF
+var _vein_ready := false
+@onready var _vein_icon := GameIcons.lookup(&"resources", &"gold")
 @onready var _ammo_icon := GameIcons.lookup(&"hud", &"ammo")
 @onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
 @onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
@@ -26,7 +29,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
-func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField) -> void:
+func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField, encounter: MiningDefense) -> void:
 	_count = horde.sample_positions(_positions, max_dots)
 	_player = Vector2(player.global_position.x, player.global_position.z)
 	_yaw = player.global_rotation.y
@@ -35,6 +38,10 @@ func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField) -
 	if boss_index >= 0 and horde.is_alive(boss_index):
 		var at := horde.enemy_position(boss_index)
 		_boss = Vector2(at.x, at.z)
+	_vein = Vector2.INF
+	if is_instance_valid(encounter) and encounter.state != MiningDefense.State.CANCELLED and encounter.state != MiningDefense.State.CLAIMED:
+		_vein = Vector2(encounter.global_position.x, encounter.global_position.z)
+		_vein_ready = encounter.state == MiningDefense.State.READY
 	queue_redraw()
 
 func _map(world: Vector2) -> Vector2:
@@ -57,6 +64,13 @@ func _draw() -> void:
 		_draw_pickups(_loot._supplies, _ammo_icon)
 		_draw_pickups(_loot._magnets, _magnet_icon)
 		_draw_pickups(_loot._repairs, _repair_icon)
+	if _vein != Vector2.INF:
+		var point := _map(_vein)
+		var color := Color(0.35, 1.0, 0.78) if _vein_ready else Color(1.0, 0.7, 0.24)
+		draw_circle(point, 10.0, Color(color, 0.3))
+		draw_arc(point, 10.0, 0.0, TAU, 16, color, 1.5, true)
+		if _vein_icon != null:
+			draw_texture_rect(_vein_icon, Rect2(point - Vector2(7, 7), Vector2(14, 14)), false)
 	if _boss != Vector2.INF:
 		var at := _map(_boss)
 		var skull := GameIcons.lookup(&"hud", &"boss")

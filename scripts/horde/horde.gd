@@ -74,6 +74,13 @@ var _t_boss := PackedByteArray()
 var _t_weak_offset := PackedVector3Array()
 var _t_weak_radius_squared := PackedFloat32Array()
 var _t_weak_top := PackedFloat32Array()
+var _t_front_scale := PackedFloat32Array()
+var _t_front_cos := PackedFloat32Array()
+var _t_rear_cos := PackedFloat32Array()
+var _t_turn_speed := PackedFloat32Array()
+var _t_armored := PackedByteArray()
+var _armor_renderers: Array[MultiMeshInstance3D] = []
+var _armor_buffers: Array[PackedFloat32Array] = []
 var _renderers: Array[MultiMeshInstance3D] = []
 var _buffers: Array[PackedFloat32Array] = []
 
@@ -123,6 +130,8 @@ var _stamp := PackedInt32Array()
 var _cell_of := PackedInt32Array()
 var _query_id := 0
 
+var _generation := PackedInt64Array()
+var _reserved_slots := 0
 var _active := PackedInt32Array()
 var _active_count := 0
 var _dying := PackedInt32Array()
@@ -131,6 +140,11 @@ var _free := PackedInt32Array()
 var _free_count := 0
 var _big := PackedInt32Array()
 var _boss_index := -1
+## One stage-authored boss controller; the bulk horde keeps its normal simulation.
+var _boss_controlled := false
+var _boss_velocity := Vector2.ZERO
+var _boss_facing := Vector2.ZERO
+var _boss_recovering := false
 
 var _area := Rect2()
 ## Walkable XZ rectangle enemies are confined to (read-only after setup).
@@ -217,6 +231,9 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_cell_of.resize(CAPACITY)
 	_state.fill(FREE)
 	_stamp.fill(0)
+	_generation.resize(CAPACITY)
+	_generation.fill(0)
+	_reserved_slots = 0
 	_yaw.resize(CAPACITY)
 	_hp.resize(CAPACITY)
 	_max_hp.resize(CAPACITY)
@@ -316,6 +333,11 @@ func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	_t_weak_offset.append(weak_offset)
 	_t_weak_radius_squared.append(weak_radius * weak_radius)
 	_t_weak_top.append(weak_offset.y + weak_radius if weak_radius > 0.0 else 0.0)
+	_t_armored.append(1 if definition.front_armored else 0)
+	_t_front_scale.append(clampf(definition.front_damage_scale, 0.0, 1.0))
+	_t_front_cos.append(cos(deg_to_rad(definition.front_half_angle_degrees)))
+	_t_rear_cos.append(cos(deg_to_rad(definition.rear_precision_half_angle_degrees)))
+	_t_turn_speed.append(maxf(0.0, definition.turn_speed))
 	_register_renderer(definition, bounds)
 
 func _setup_rendering() -> void:
@@ -362,6 +384,24 @@ func _register_renderer(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	var buffer := PackedFloat32Array()
 	buffer.resize(64 * stride)
 	_buffers.append(buffer)
+	var armor_renderer: MultiMeshInstance3D
+	var armor_buffer := PackedFloat32Array()
+	if definition.front_armored:
+		var armor := MultiMesh.new()
+		armor.transform_format = MultiMesh.TRANSFORM_3D
+		armor.use_custom_data = true
+		armor.mesh = HordeArmorMesh.bake(definition.weak_spot_offset, definition.weak_spot_radius)
+		armor.instance_count = CAPACITY
+		armor.visible_instance_count = 0
+		armor_renderer = MultiMeshInstance3D.new()
+		armor_renderer.name = "%sPlateAndCore" % definition.display_name
+		armor_renderer.multimesh = armor
+		armor_renderer.custom_aabb = bounds
+		armor_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(armor_renderer)
+		armor_buffer.resize(CAPACITY * 16)
+	_armor_renderers.append(armor_renderer)
+	_armor_buffers.append(armor_buffer)
 
 # Appends `clip_name` of `animation` to the clip tables; returns its id or -1.
 func _add_clip(animation: HordeVertexAnimation, clip_name: StringName) -> int:
@@ -524,12 +564,35 @@ func _cell_z(z: float) -> int:
 
 # ---------------------------------------------------------------- spawning
 
-func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
-	if _free_count == 0:
+## Reserves vacancies for a bounded encounter; reservation persists across its
+## spawns/deaths until released. The caller owns the returned reservation count.
+func reserve_slots(count: int) -> int:
+	var granted := clampi(count, 0, maxi(0, _free_count - _reserved_slots))
+	_reserved_slots += granted
+	return granted
+
+func release_reserved(count: int) -> void:
+	_reserved_slots = maxi(0, _reserved_slots - maxi(0, count))
+
+func spawn_reserved(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
+	if _reserved_slots <= 0 or _free_count == 0:
 		return -1
+	return _spawn(definition, xz, health_multiplier)
+
+## Slot generation identifies a particular life, not a recycled enemy index.
+func enemy_generation(index: int) -> int:
+	return _generation[index] if index >= 0 and index < CAPACITY else -1
+
+func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
+	if _free_count <= _reserved_slots:
+		return -1
+	return _spawn(definition, xz, health_multiplier)
+
+func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: float) -> int:
 	var type: int = _type_of[definition]
 	_free_count -= 1
 	var slot := _free[_free_count]
+	_generation[slot] += 1
 	var radius := _t_radius[type]
 	xz.x = clampf(xz.x, _area.position.x + radius, _area.end.x - radius)
 	xz.y = clampf(xz.y, _area.position.y + radius, _area.end.y - radius)
@@ -553,6 +616,9 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	_stunned[slot] = 0.0
 	_phase[slot] = _rng.randf() * TAU
 	_yaw[slot] = _rng.randf() * TAU
+	if _t_armored[type] != 0 and is_instance_valid(target):
+		var toward := Vector2(target.global_position.x, target.global_position.z) - xz
+		_yaw[slot] = atan2(-toward.x, -toward.y)
 	_active[_active_count] = slot
 	_active_count += 1
 	alive_count += 1
@@ -560,10 +626,35 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 		_big.append(slot)
 	if definition.is_boss:
 		_boss_index = slot
+		control_boss(false)
 		boss_spawned.emit(definition)
 		boss_health_changed.emit(_hp[slot], _max_hp[slot])
 	_reset_animation(slot)
 	return slot
+
+## Transfers the current boss's steering to its stage encounter controller.
+func control_boss(enabled: bool) -> void:
+	_boss_controlled = enabled
+	_boss_velocity = Vector2.ZERO
+	_boss_facing = Vector2.ZERO
+	_boss_recovering = false
+	if is_alive(_boss_index):
+		_mode[_boss_index] = Mode.SEEK
+		_cooldown[_boss_index] = _defs[_type[_boss_index]].attack_cooldown
+
+## Movement still goes through Horde's obstacle/heightfield constraints.
+## Progress drives the existing windup animation rather than an independent pose.
+func drive_boss(velocity: Vector2, facing: Vector2, pose: int, progress: float = 0.0) -> void:
+	if not _boss_controlled or not is_alive(_boss_index):
+		return
+	_boss_velocity = velocity
+	_boss_facing = facing
+	_aim[_boss_index] = facing
+	_mode[_boss_index] = pose
+	_timer[_boss_index] = _defs[_type[_boss_index]].telegraph_duration * (1.0 - clampf(progress, 0.0, 1.0))
+
+func set_boss_recovery(recovering: bool) -> void:
+	_boss_recovering = _boss_controlled and recovering
 
 ## True when a disc at xz would overlap an obstacle or leave the play area.
 func is_blocked(xz: Vector2, radius: float) -> bool:
@@ -601,6 +692,8 @@ func _rect_blocked(rect: Rect2) -> bool:
 
 ## Removes every enemy without rewards (stage clear).
 func clear() -> void:
+	control_boss(false)
+	_reserved_slots = 0
 	for a in _active_count:
 		var slot := _active[a]
 		if _state[slot] == ALIVE:
@@ -668,6 +761,10 @@ func weak_spot_hit(index: int, origin: Vector3, direction: Vector3, max_distance
 		return false
 	var radius_squared := _t_weak_radius_squared[_type[index]]
 	if radius_squared <= 0.0:
+		return false
+	# A ray from the front cannot claim a core behind the intervening chassis.
+	# Stun freezes rotation; it never disables the plate or opens this gate.
+	if _t_armored[_type[index]] != 0 and _source_facing_dot(index, origin) > -_t_rear_cos[_type[index]]:
 		return false
 	var offset := weak_spot_position(index) - origin
 	var distance := clampf(offset.dot(direction), 0.0, max_distance)
@@ -816,6 +913,62 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 		return candidates
 	_stamp[slot] = _query_id
 	var type := _type[slot]
+	var t := _cylinder_ray_distance(slot, type, origin, direction, o, h, max_distance)
+	# Plated roles have a real protruding static core. Its visible geometry is
+	# hittable even on a grazing ray that misses the underlying chassis cylinder.
+	# Precision separately requires the rear approach; front rays stop at the
+	# nearer chassis instead of pretending to pass through it to the core.
+	if _t_armored[type] != 0:
+		t = minf(t, _core_ray_distance(slot, origin, direction, max_distance))
+		t = minf(t, _plate_ray_distance(slot, origin, direction, max_distance))
+	if t == INF:
+		return candidates
+	if candidates >= _candidate_t.size():
+		_candidate_t.resize(candidates * 2)
+		_candidate_index.resize(candidates * 2)
+	_candidate_index[candidates] = slot
+	_candidate_t[candidates] = t
+	return candidates + 1
+
+func _core_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_distance: float) -> float:
+	var radius_squared := _t_weak_radius_squared[_type[slot]]
+	if radius_squared <= 0.0:
+		return INF
+	var offset := weak_spot_position(slot) - origin
+	var projection := offset.dot(direction)
+	var discriminant := radius_squared - (offset.length_squared() - projection * projection)
+	if discriminant < 0.0:
+		return INF
+	var root := sqrt(discriminant)
+	if projection + root < 0.0:
+		return INF
+	var t := maxf(0.0, projection - root)
+	return t if t <= max_distance else INF
+
+func _plate_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_distance: float) -> float:
+	var c := cos(_yaw[slot])
+	var s := sin(_yaw[slot])
+	var scale := _t_scale[_type[slot]]
+	var offset := origin - Vector3(_pos[slot].x, _y[slot], _pos[slot].y)
+	var local := Vector3(offset.x * c - offset.z * s, offset.y, offset.x * s + offset.z * c) / scale - HordeArmorMesh.FRONT_CENTER
+	var ray := Vector3(direction.x * c - direction.z * s, direction.y, direction.x * s + direction.z * c) / scale
+	var half := HordeArmorMesh.FRONT_SIZE * 0.5
+	var near := 0.0
+	var far := max_distance
+	for axis in 3:
+		if absf(ray[axis]) < 0.000001:
+			if absf(local[axis]) > half[axis]:
+				return INF
+			continue
+		var a := (-half[axis] - local[axis]) / ray[axis]
+		var b := (half[axis] - local[axis]) / ray[axis]
+		near = maxf(near, minf(a, b))
+		far = minf(far, maxf(a, b))
+		if near > far:
+			return INF
+	return near
+
+func _cylinder_ray_distance(slot: int, type: int, origin: Vector3, direction: Vector3, o: Vector2, h: Vector2, max_distance: float) -> float:
 	var radius := _t_radius[type] + 0.08
 	var m := o - _pos[slot]
 	var a := h.length_squared()
@@ -824,36 +977,31 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 	var t_exit := max_distance
 	if a < 0.000001:
 		if c > 0.0:
-			return candidates
+			return INF
 	else:
 		var b := m.dot(h)
 		var disc := b * b - a * c
 		if disc < 0.0:
-			return candidates
+			return INF
 		var root := sqrt(disc)
 		t = (-b - root) / a
 		t_exit = (-b + root) / a
 		if t_exit < 0.0:
-			return candidates
+			return INF
 		t = maxf(t, 0.0)
 	if t > max_distance:
-		return candidates
+		return INF
 	var y_enter := origin.y + direction.y * t
 	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
 	var base := _y[slot]
 	var top := base + maxf(_t_height[type] + hit_headroom, _t_weak_top[type])
 	if minf(y_enter, y_exit) > top or maxf(y_enter, y_exit) < base:
-		return candidates
+		return INF
 	if y_enter > top and direction.y < 0.0:
 		t = (top - origin.y) / direction.y
 	elif y_enter < base and direction.y > 0.0:
 		t = (base - origin.y) / direction.y
-	if candidates >= _candidate_t.size():
-		_candidate_t.resize(candidates * 2)
-		_candidate_index.resize(candidates * 2)
-	_candidate_index[candidates] = slot
-	_candidate_t[candidates] = t
-	return candidates + 1
+	return t
 
 ## Positions for radar display, sampled evenly across the living crowd.
 func sample_positions(out: PackedVector2Array, max_count: int) -> int:
@@ -872,7 +1020,37 @@ func sample_positions(out: PackedVector2Array, max_count: int) -> int:
 
 # ---------------------------------------------------------------- damage
 
+## Direct sources must pass the actual muzzle/blade/contact origin, never the
+## player's current position. Piercing keeps the original origin for every hit.
+func damage_direct(index: int, amount: float, origin: Vector3, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
+	return damage_combined(index, amount, origin, 0.0, knockback, damage_type, critical)
+
+## One health/event transaction for a gun's aggregated direct pellets + splash.
+## Only the direct component sees the plate; exposure applies afterward to both.
+func damage_combined(index: int, direct_amount: float, origin: Vector3, area_amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
+	if not is_alive(index):
+		return false
+	var type := _type[index]
+	var effect_amount := direct_amount + area_amount
+	if _t_armored[type] != 0 and _source_facing_dot(index, origin) >= _t_front_cos[type]:
+		direct_amount *= _t_front_scale[type]
+	return _damage_effects(index, direct_amount + area_amount, effect_amount, knockback, damage_type, critical)
+
+func _source_facing_dot(index: int, origin: Vector3) -> float:
+	var offset := Vector2(origin.x, origin.z) - _pos[index]
+	if offset.length_squared() <= 0.000001:
+		return 0.0
+	return offset.normalized().dot(Vector2(-sin(_yaw[index]), -cos(_yaw[index])))
+
+## Non-directional damage only: splash, area hazards, burn/conduction effects.
+## No attacker-position fallback; all direct-hit consumers use damage_direct or
+## damage_combined. FIRE's later burn ticks bypass armor even after a plated hit.
 func damage(index: int, amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
+	return _damage_effects(index, amount, amount, knockback, damage_type, critical)
+
+## Status potency derives from the unplated hit. Fire DOT and secondary shock
+## conduction bypass front plating; only the original direct HP hit is blocked.
+func _damage_effects(index: int, amount: float, effect_amount: float, knockback: Vector3, damage_type: int, critical: bool) -> bool:
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var at := enemy_position(index)
@@ -883,11 +1061,11 @@ func damage(index: int, amount: float, knockback := Vector3.ZERO, damage_type: i
 				if _burn_time[index] <= 0.0:
 					_burn_tick[index] = BURN_TICK
 				_burn_time[index] = BURN_DURATION
-				_burn_damage[index] = maxf(_burn_damage[index], amount * 0.15)
+				_burn_damage[index] = maxf(_burn_damage[index], effect_amount * 0.15)
 		DamageType.Kind.FROST:
 			slow(index, FROST_FACTOR, FROST_DURATION)
 		DamageType.Kind.SHOCK:
-			_chain_shock(index, at, amount * 0.4, critical)
+			_chain_shock(index, at, effect_amount * 0.4, critical)
 	return killed
 
 ## Shared health/reward path, deliberately without secondary type effects.
@@ -895,6 +1073,8 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var before := _hp[index]
+	if index == _boss_index and _boss_recovering:
+		amount *= 1.5
 	if _exposed[index] > 0.0:
 		amount *= 1.35
 	_hp[index] = maxf(0.0, before - minf(amount, before))
@@ -913,6 +1093,7 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 		alive_count -= 1
 		if was_boss:
 			_boss_index = -1
+			control_boss(false)
 	if was_boss:
 		boss_health_changed.emit(_hp[index], _max_hp[index])
 	damage_reported.emit(at, removed, damage_type, critical, killed)
@@ -1110,13 +1291,17 @@ func _physics_process(delta: float) -> void:
 		if _flash[i] > 0.0:
 			_flash[i] = maxf(0.0, _flash[i] - delta / FLASH_TIME)
 		if chasing and not stunned:
-			move = _steer(i, type, route, direction, distance, delta)
+			if i == _boss_index and _boss_controlled:
+				move = _boss_velocity
+				face = _boss_facing
+			else:
+				move = _steer(i, type, route, direction, distance, delta)
 			if _mode[i] == Mode.CHARGE:
 				face = _aim[i]
 			var touching := distance < reach + 0.15 and rise < _t_height[type] and rise > -1.9
 			if touching:
 				contact += _t_contact[type]
-				if _mode[i] == Mode.CHARGE:
+				if _mode[i] == Mode.CHARGE and not (i == _boss_index and _boss_controlled):
 					target.take_damage(ceili(_t_contact[type] * 2.0))
 					_end_charge(i, type)
 			if distance < reach and _mode[i] != Mode.CHARGE:
@@ -1143,8 +1328,12 @@ func _physics_process(delta: float) -> void:
 		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p):
 			_end_charge(i, type)
 		_pos[i] = clamped
-		if face != Vector2.ZERO:
-			_yaw[i] = lerp_angle(_yaw[i], atan2(-face.x, -face.y), turn)
+		if face != Vector2.ZERO and chasing and not stunned:
+			var desired := atan2(-face.x, -face.y)
+			if _t_turn_speed[type] > 0.0:
+				_yaw[i] = rotate_toward(_yaw[i], desired, _t_turn_speed[type] * delta)
+			else:
+				_yaw[i] = lerp_angle(_yaw[i], desired, turn)
 	_update_dying(delta)
 	_update_projectiles(delta)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
@@ -1413,6 +1602,23 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 		RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
 	multimesh.visible_instance_count = k / stride
 	_buffers[type] = buffer
+	_draw_armor(type)
+
+func _draw_armor(type: int) -> void:
+	var renderer := _armor_renderers[type]
+	if renderer == null:
+		return
+	var buffer := _armor_buffers[type]
+	_armor_buffers[type] = PackedFloat32Array()
+	var k := 0
+	var scale := _t_scale[type]
+	for a in _active_count:
+		var slot := _active[a]
+		if _type[slot] == type and _state[slot] == ALIVE:
+			k = _write_instance(buffer, k, slot, scale, scale, 0.0, 16)
+	RenderingServer.multimesh_set_buffer(renderer.multimesh.get_rid(), buffer)
+	renderer.multimesh.visible_instance_count = k / 16
+	_armor_buffers[type] = buffer
 
 # Writes transform and INSTANCE_CUSTOM; for stride 20 the caller fills COLOR at k + 12.
 func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: float, scale_y: float, flash: float, stride: int) -> int:
@@ -1442,7 +1648,7 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[custom] = flash
 	buffer[custom + 1] = -1.0 if _stunned[slot] > 0.0 else telegraph
 	buffer[custom + 2] = _phase[slot]
-	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
+	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 or (slot == _boss_index and _boss_recovering) else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
 	return k + stride
 
 func _reset_animation(slot: int) -> void:

@@ -49,7 +49,7 @@ func _refresh() -> void:
 	_radius = per_level(radii)
 	_damage = per_level(damages)
 
-# Emitted synchronously from Horde.damage: only queue here, never deal damage.
+# Emitted synchronously from the horde damage pipeline: queue, never deal damage.
 func _on_enemy_killed(_definition: HordeEnemyDefinition, at: Vector3) -> void:
 	if _count >= _queue.size() or _rng.randf() >= _chance:
 		return

@@ -115,9 +115,9 @@ func _tick(delta: float) -> void:
 		if flat.length_squared() > 0.0001:
 			flat = flat.normalized()
 			_yaws[index] = atan2(-flat.x, -flat.z)
-		horde.damage(target, amount, flat * knockback)
 		# Fire from the barrel tip in the new facing.
 		var tip := muzzle + Vector3(-sin(_yaws[index]), 0.0, -cos(_yaws[index])) * 0.58
+		horde.damage_direct(target, amount, tip, flat * knockback)
 		_tracer_from[index] = tip
 		_tracer_to[index] = hit_at
 		_tracer_times[index] = tracer_duration

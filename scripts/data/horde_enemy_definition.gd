@@ -28,6 +28,18 @@ enum Faction { ROBOT, ALIEN }
 ## A forgiving sphere around the visible feature; zero disables precision hits.
 @export_range(0.0, 2.0) var weak_spot_radius := 0.22
 
+@export_group("Front Plate")
+## Direct bullets, beams, blades and contact attacks only. Splash, conduction
+## secondary effects, environmental areas and burn ticks bypass this plate.
+@export var front_armored := false
+@export_range(0.0, 1.0) var front_damage_scale := 0.25
+## Half-angle of the protected front arc; flanks take full damage.
+@export_range(0.0, 89.0) var front_half_angle_degrees := 60.0
+## Hard yaw speed limit in radians/sec; zero retains ordinary crowd turning.
+@export_range(0.0, 8.0) var turn_speed := 0.0
+## Precision on plated roles requires approaching the visible rear core.
+@export_range(0.0, 89.0) var rear_precision_half_angle_degrees := 60.0
+
 @export_group("Ranged")
 @export var preferred_range := 12.0
 @export var attack_range := 22.0

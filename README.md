@@ -56,7 +56,7 @@ same version; older versioned releases remain intact.
 - **Hold LMB** fires the focused gun and automatically rotates to the next loaded, non-reloading gun when empty. **1 / 2 / 3** or the **mouse wheel** still selects a gun manually. Both swaps use the 0.2 s draw; cooldowns, ammo, reload progress and secondary charge survive switching.
 - **RMB** uses the focused gun's charged alternate fire. When aiming at a mineral section within 3.2 m, it instead raises the drill: hold to cut, aim at the glowing **◇ weak seam** for faster cuts. Release and press again to change RMB's purpose.
 - **Q** uses your class ability.
-- **E** activates nearby consoles or flame vents while facing them; shoot barrels and vent valves to trigger them. Look for warning lights before crossing electrified floor panels.
+- **E** activates nearby consoles or flame vents while facing them, or claims a secured defense vein's upgrade choice when near its beacon. Shoot barrels and vent valves to trigger them. Look for warning lights before crossing electrified floor panels.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
 - **Esc** pauses (Resume, Settings, Abandon Run).
 - **Clear a boss:** choose a hand in the mineral shop (click it or press **1 / 2 / 3**), buy weapon mods and suit systems or reroll stock, then **Continue**. After death: **R** retries with the same class, **Enter** returns to the menu.
@@ -72,6 +72,13 @@ Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) �
 | Reactor Core (76 × 76 m) | 5:00 | 1600 | 14400 |
 
 Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when surrounded. Enemies path through 4 m or wider doorways and around interior walls; each stage also has shootable explosive barrels, proximity mines, cycling electric floors, crystal-powered turrets and activatable flame vents.
+
+**Yard tactical encounters (source changes, not yet packaged):**
+
+- **Defense vein:** the framed gold formation on the north crate stack is visible from spawn and marked on the radar. Its first real drill or gun hit calls three escalating response packs: grunts, runners, then a Bulwark with support. Stop drilling to dodge or fight; section damage and mined fragments stay earned. Finish every section **and** defeat the responders, then press E near the frame for one three-card upgrade choice. The choice is separate from XP levels; a boss clear preserves an earned choice before opening the shop.
+- **Bulwark:** a rare, slow-turning robot with an amber front shield and teal rear core. Direct hits inside its front ±60° arc lose 75% damage; flank/rear body hits deal full damage and aimed rear-core hits earn precision. Scatter's Concussion freezes its turn while you flank with Rail. Autocannon splash, fire's burn ticks and environmental areas bypass the plate; Tag exposure still boosts damage afterward. Automated guns use their own firing positions, not your position.
+- **George Dreadnought:** alternates a locked orange **Breach Ram** lane with three locked **Mortar Salvo** circles. Ram gives 1.2 s warning; mortar gives 1.5 s, with impacts 0.3 s apart. Leave the markers; solid cover and height boundaries also constrain damage. Each attack ends in a 2 s teal-core recovery window with +50% incoming damage. Concussion can interrupt windups or a rush to open recovery early. Pausing, dying and leaving the stage stop encounter attacks.
+
 
 **High ground.** Every stage has raised decks reached by ramps, plus 0.8 m jump ledges that only the player can climb as shortcuts. The Yard has a two-tier corner overlook (2.2 m and 3 m) and a 1.8 m gantry with a single-ramp chokepoint. The Foundry has a west casting gallery (1.6 m, 2.4 m, 1.6 m) and a 2.4 m forge mezzanine; each forms a loop back to the floor. The Reactor has corner bastions and mezzanines at 1.6 m and 2.4 m, a 3.2 m terrace and a 4 m overlook facing the core. Enemies cannot climb deck edges; they climb the ramps, so a ramp becomes a chokepoint. If you are below them, they walk off ledges and drop down at you. Enemies below a ledge cannot hit you in melee, but spitters still can, and no deck is out of the horde's reach.
 
@@ -230,6 +237,9 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `pickups` | ammo crates, repair kits, distant XP vacuum and supplies | real collection and recovered firing, cap preservation, actual healing, exact XP and overflow conservation, later loose gems, supply cap, pause/inactive timers, raised-deck fallback |
 | `secondary` | all six alternate modes and mineral shots | real damage and charge cost, cancellation, exposure damage/expiry, pursuit stopped by stagger, shorter boss stagger, overspin cadence, napalm burn/slow, mineral fracture |
 | `boss` | robot and alien bosses: arrival, fight, low health, kill | boss tracked, frame and WARNING banner up, kill opens the shop, guaranteed ammo and magnet drops |
+| `boss_patterns` | ram lanes, mortar footprints/impacts and teal recovery | real damage and movement dodges, locked targets, cover/height/radius boundaries, +50% recovery, stagger interruption, pause and death/menu/node-removal cancellation |
+| `armor` | front shield/rear core, rotated markers and independent auto guns | real armor/precision arc boundaries, actual source direction, tag ordering, mixed splash, burn potency, finite stun/turning, slot reuse and reserved admission |
+| `encounter` | walking to the defense vein, mining under pressure and earned reward | actual sections and three response packs, both completion orders, conserved loot, pause, identity reuse, E once, real upgrade grant and boss-clear/XP-choice ordering |
 | `levelup` | new, mixed and ranked picks incl. an overclock, entrance animation | every card has an icon, picking levels the upgrade and resumes play |
 | `shop` | open, hand 3 selected, bought, maxed, empty wallet | 4 + 2 stock, layout fits, debits, sold marking, reroll, refusals charge nothing, Esc cannot skip |
 | `hud` | play, armor/mods/cooldown gear, low health, death panel | armor and mod readouts, lethal damage ends the run |
@@ -241,8 +251,16 @@ Run the precision-damage and nested-blast regressions with the editor executable
 make lab-shots                         # all scenarios -> lab_shots/*.png + lab_report.txt
 make lab-shots SCENARIOS="shop boss"   # a subset
 python3 tools/lab.py ammo pickups      # ammunition rotation and survival collectibles
+python3 tools/lab.py encounter armor boss_patterns  # tactical Yard features
 python3 tools/lab.py --list            # scenario names; --window renders visibly, --clean hides the overlay
 make lab                               # interactive: pick a scenario, play on; F1 list, F12 screenshot
 ```
 
-`tools/lab.py` renders in an invisible 1280 × 720 `gamescope --backend headless` session on the real GPU when gamescope is installed (otherwise in a window), prints each `PASS`/`FAIL` and engine error, and exits non-zero on a failed check, engine error, failed process, 240 s timeout or missing report. A scenario is a `LabScenario` subclass in `scripts/lab/scenarios/`, registered in `Lab.SCENARIOS`. Helpers include `start_game(class, stage)`, `spawn_pack`, `ahead`, `aim_at`, `aim_deposit` (finds an actual live section rather than a geode's hollow centre), `fire`, `wait`, `capture`, `capture_strip` and `check`. The 15-scenario pickup-loop run produced 93 captures with zero failures on the Radeon GPU; precision and nested-blast regressions also passed.
+`tools/lab.py` renders in an invisible 1280 × 720 `gamescope --backend headless` session on the real GPU when gamescope is installed (otherwise in a window), prints each `PASS`/`FAIL` and engine error, and exits non-zero on a failed check, engine error, failed process, 480 s timeout or missing report. A scenario is a `LabScenario` subclass in `scripts/lab/scenarios/`, registered in `Lab.SCENARIOS`. Helpers include `start_game(class, stage)`, `spawn_pack`, `ahead`, `aim_at`, `aim_deposit` (finds an actual live section rather than a geode's hollow centre), `fire`, `wait`, `capture`, `capture_strip` and `check`. The game root explicitly uses pausable processing, including when hosted under the lab's always-processing controls.
+
+The tactical encounter pass passed all **18 rendered scenarios / 114 captures**
+with zero failures and no script/engine errors. Precision and nested-blast
+regressions passed; the existing ObjectDB exit warning remains. A separate
+accelerated live-director smoke from 90–122 Yard seconds spawned a Bulwark among
+492 hostiles while the vein stayed optional. This does not certify full-campaign
+balance. The published 0.3.0 package has not been rebuilt for these source changes.

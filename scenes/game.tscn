@@ -20,6 +20,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="18_pause"]
 
 [node name="Game" type="Node3D"]
+process_mode = 1
 script = ExtResource("1_game")
 campaign = Array[ExtResource("7_stage")]([ExtResource("8_yard"), ExtResource("9_foundry"), ExtResource("10_reactor")])
 player_scene = ExtResource("2_player")

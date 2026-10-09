@@ -98,7 +98,7 @@ func _strike(index: int, from: Vector3, amount: float, width: float) -> Vector3:
 	_link_from.append(from)
 	_link_to.append(at)
 	_link_width.append(width)
-	horde.damage(index, amount, push * knockback)
+	horde.damage_direct(index, amount, from, push * knockback)
 	_sparks.spawn(at, spark_size * width, bolt_duration * 1.4, _rng.randf() * TAU)
 	return at
 

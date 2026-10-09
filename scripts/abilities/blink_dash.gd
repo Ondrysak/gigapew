@@ -94,7 +94,7 @@ func _strike_around(center: Vector3) -> void:
 		if side.length_squared() < 0.0001:
 			side = _direction.cross(Vector3.UP)
 		var push := side.normalized() * knockback + _direction * knockback * 0.35
-		horde.damage(index, amount, push)
+		horde.damage_direct(index, amount, center, push)
 
 func _was_struck(index: int) -> bool:
 	for n in _struck_count:

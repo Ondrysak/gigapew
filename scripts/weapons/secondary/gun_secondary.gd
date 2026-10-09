@@ -211,7 +211,7 @@ func _line(base_damage: float, pierce: int, tag := false, mining := 0.0) -> void
 		var slot := _hits[n]
 		if tag:
 			horde.expose(slot, 4.0)
-		killed = horde.damage(slot, _damage(base_damage), direction * definition.knockback, definition.damage_type) or killed
+		killed = horde.damage_direct(slot, _damage(base_damage), origin, direction * definition.knockback, definition.damage_type) or killed
 	var stopped := count >= pierce
 	var end := origin + direction * (_distances[count - 1] if stopped else reach)
 	view.show_ray(0, end, wall.get("normal", Vector3.ZERO), count > 0 or not wall.is_empty(), count > 0, mode == Mode.LANCE)
@@ -234,6 +234,8 @@ func _concussion() -> void:
 		if offset.normalized().dot(forward) < 0.72 or not _visible(origin, at):
 			continue
 		horde.stun(slot, 1.2)
+		# A pressure-wave cone is area damage: it bypasses plating, while stun
+		# only holds the current facing so the player can reach the rear core.
 		killed = horde.damage(slot, _damage(definition.damage * 2.0), forward * 36.0) or killed
 		hits += 1
 	view.begin_shot(player.sound)

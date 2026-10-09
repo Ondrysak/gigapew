@@ -132,7 +132,7 @@ func _zap() -> void:
 		return
 	var target := horde.enemy_position(index)
 	var push := Vector3(target.x - origin.x, 0.0, target.z - origin.z).normalized() * zap_knockback
-	horde.damage(index, zap_damage * damage_scale(), push)
+	horde.damage_direct(index, zap_damage * damage_scale(), origin, push)
 	if _zap_audio.stream != null:
 		_zap_audio.play()
 	if _beams.is_empty():

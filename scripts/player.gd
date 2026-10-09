@@ -90,9 +90,10 @@ var _view_scenes: Array[PackedScene] = []
 var _query: PhysicsRayQueryParameters3D
 var _hits := PackedInt32Array()
 var _distances := PackedFloat32Array()
-# Per-shot combined damage per enemy slot; reused, never reallocated per shot.
+# Per-shot direct/area components per slot, combined only after front plating.
 var _hit_slots := PackedInt32Array()
 var _hit_damage := PackedFloat32Array()
+var _hit_direct_damage := PackedFloat32Array()
 var _hit_count := 0
 var _hit_lookup := PackedInt32Array()
 var _hit_critical := PackedByteArray()
@@ -113,6 +114,7 @@ func _ready() -> void:
 	_distances.resize(Horde.CAPACITY)
 	_hit_slots.resize(Horde.CAPACITY)
 	_hit_damage.resize(Horde.CAPACITY)
+	_hit_direct_damage.resize(Horde.CAPACITY)
 	_hit_lookup.resize(Horde.CAPACITY)
 	_hit_lookup.fill(-1)
 	_hit_critical.resize(Horde.CAPACITY)
@@ -634,7 +636,7 @@ func _shoot(hand: int) -> void:
 				direct_damage *= 1.4
 			if executioner and horde.enemy_health_fraction(slot) < 0.35:
 				direct_damage *= 1.6
-			_add_hit(slot, direct_damage, hit_critical)
+			_add_hit(slot, direct_damage, hit_critical, true)
 			var hit_index := _hit_lookup[slot]
 			if _hit_direct[hit_index] == 0:
 				_hit_push[hit_index] += forward * definition.knockback * (1.6 if quickdraw else 1.0)
@@ -659,13 +661,13 @@ func _shoot(hand: int) -> void:
 					var away := horde.enemy_position(slot) - end
 					away.y = 0.0
 					var push := away.normalized() * definition.explosion_knockback if away.length_squared() > 0.0001 else Vector3.ZERO
-					_add_hit(slot, pellet_damage * definition.explosion_damage_fraction, critical)
+					_add_hit(slot, pellet_damage * definition.explosion_damage_fraction, critical, false)
 					_hit_push[_hit_lookup[slot]] += push
 			view.show_blast(end, definition.explosion_radius)
 	# Direct pellets and splash aggregate before any deaths or feedback.
 	var confirmed := _hit_count > 0
 	for n in _hit_count:
-		horde.damage(_hit_slots[n], _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0)
+		horde.damage_combined(_hit_slots[n], _hit_direct_damage[n], origin, _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0)
 	if direct_confirmed:
 		combo_hits += 1 # One beat per direct-hit shot, not per pellet or blast victim.
 		_combo_left = COMBO_WINDOW
@@ -702,7 +704,7 @@ func _reset_combo() -> void:
 	_combo_left = 0.0
 	combo_changed.emit(0, 0.0)
 
-func _add_hit(slot: int, amount: float, critical: bool) -> void:
+func _add_hit(slot: int, amount: float, critical: bool, direct: bool) -> void:
 	var index := _hit_lookup[slot]
 	if index < 0:
 		index = _hit_count
@@ -710,10 +712,14 @@ func _add_hit(slot: int, amount: float, critical: bool) -> void:
 		_hit_lookup[slot] = index
 		_hit_slots[index] = slot
 		_hit_damage[index] = 0.0
+		_hit_direct_damage[index] = 0.0
 		_hit_critical[index] = 0
 		_hit_push[index] = Vector3.ZERO
 		_hit_direct[index] = 0
-	_hit_damage[index] += amount
+	if direct:
+		_hit_direct_damage[index] += amount
+	else:
+		_hit_damage[index] += amount
 	if critical:
 		_hit_critical[index] = 1
 

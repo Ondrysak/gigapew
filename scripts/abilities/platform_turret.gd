@@ -190,7 +190,7 @@ func _ability_physics(delta: float) -> void:
 	var push := Vector3(direction.x, 0.0, direction.z).normalized() * shot_knockback
 	var end_distance := reach
 	for n in count:
-		horde.damage(_hits[n], amount, push)
+		horde.damage_direct(_hits[n], amount, origin, push)
 		end_distance = maxf(end_distance, _distances[n])
 	_fire_tracer(origin, origin + direction * end_distance)
 	_flash = flash_time

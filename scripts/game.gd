@@ -6,7 +6,7 @@ extends Node3D
 ## pause and level-up flow, banking of mined currency into the Profile, and
 ## music intensity. Each stage is rebuilt from data under a fresh Round node.
 
-enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST }
+enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD }
 
 const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
@@ -53,6 +53,10 @@ var world: Node3D
 var _round: Node3D
 var round_shop: RoundShopScreen
 var damage_numbers: DamageNumbers
+var mining_encounter: MiningDefense
+var boss_fight: YardBossFight
+var _pending_encounter_rewards := 0
+var _stage_clear_pending := false
 var _rng := RandomNumberGenerator.new()
 var _banked_ids: Array[StringName] = []
 var _nearby := PackedInt32Array()
@@ -111,12 +115,19 @@ func _new_run() -> void:
 func _process(delta: float) -> void:
 	if round_state == RoundState.LOADING:
 		return
+	# Optional encounter nodes can be removed independently of the round.
+	if not is_instance_valid(mining_encounter):
+		mining_encounter = null
+	if not is_instance_valid(boss_fight):
+		boss_fight = null
 	hud.set_aiming(Input.mouse_mode == Input.MOUSE_MODE_CAPTURED)
 	hud.set_timer(director.remaining(), director.boss_phase)
 	hud.set_hostiles(horde.alive_count)
-	hud.radar.refresh(horde, player, horde.boss_index, pickups)
+	hud.radar.refresh(horde, player, horde.boss_index, pickups, mining_encounter)
 	hud.set_ability(player.ability)
 	hud.set_gunplay(player)
+	hud.set_mining_encounter(mining_encounter, player)
+	hud.set_boss_fight(boss_fight)
 	if round_state == RoundState.PLAYING:
 		run_time += delta
 		_music_timer -= delta
@@ -149,6 +160,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
+	_cancel_encounters()
 	player.active = false
 	player.cancel_secondaries()
 	# Rebuild outside input/physics callbacks; the whole old round is freed.
@@ -173,6 +185,11 @@ func _on_shop_continue(hand: int) -> void:
 func _load_stage(index: int, weapon_slot: int) -> void:
 	get_tree().paused = false
 	round_shop.hide()
+	_cancel_encounters()
+	mining_encounter = null
+	boss_fight = null
+	_pending_encounter_rewards = 0
+	_stage_clear_pending = false
 	if is_instance_valid(_round):
 		_round.free()
 	stage_index = index
@@ -231,6 +248,11 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	horde.boss_spawned.connect(_on_boss_spawned)
 	horde.boss_health_changed.connect(hud.set_boss_health)
 	horde.boss_killed.connect(_on_boss_killed)
+	if stage.mining_encounter_scene != null:
+		mining_encounter = stage.mining_encounter_scene.instantiate() as MiningDefense
+		_round.add_child(mining_encounter)
+		mining_encounter.reward_ready.connect(_on_encounter_reward_ready)
+		mining_encounter.setup(horde, player, run_state, deposits, pickups)
 	player.select_weapon(mini(weapon_slot, player.weapons.size() - 1))
 	hud.set_hands(run_state, player.selected_weapon)
 	hud.set_weapon_mods(run_state)
@@ -263,6 +285,30 @@ func _on_enemy_killed(_definition: HordeEnemyDefinition, _position: Vector3) -> 
 func _on_boss_spawned(definition: HordeEnemyDefinition) -> void:
 	hud.show_boss(definition)
 	Music.set_boss(true)
+	var scene := campaign[stage_index].boss_fight_scene
+	if scene != null:
+		boss_fight = scene.instantiate() as YardBossFight
+		_round.add_child(boss_fight)
+		boss_fight.setup(horde, player)
+
+func _cancel_encounters() -> void:
+	if is_instance_valid(mining_encounter):
+		mining_encounter.cancel()
+	if is_instance_valid(boss_fight):
+		boss_fight.cancel()
+
+func _on_encounter_reward_ready() -> void:
+	_pending_encounter_rewards += 1
+	if round_state == RoundState.PLAYING:
+		_present_encounter_reward()
+
+func _present_encounter_reward() -> void:
+	_pending_encounter_rewards -= 1
+	round_state = RoundState.ENCOUNTER_REWARD
+	get_tree().paused = true
+	player.cancel_secondaries()
+	Music.stinger(&"level_up")
+	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state, "VEIN SECURED", "DEFENSE REWARD  ·  CHOOSE ONE UPGRADE")
 
 # ---------------------------------------------------------------- level-ups
 
@@ -291,12 +337,9 @@ func grant_upgrade(upgrade: UpgradeDefinition) -> void:
 	hud.set_weapon_mods(run_state)
 
 func _on_upgrade_chosen(upgrade: UpgradeDefinition) -> void:
-	if round_state != RoundState.LEVEL_UP:
+	if round_state != RoundState.LEVEL_UP and round_state != RoundState.ENCOUNTER_REWARD:
 		return
 	grant_upgrade(upgrade)
-	if run_state.pending_level_ups > 0:
-		_present_level_up()
-		return
 	_resume_play()
 
 # ---------------------------------------------------------------- pause
@@ -314,6 +357,16 @@ func _on_resume() -> void:
 	_resume_play()
 
 func _resume_play() -> void:
+	# Preserve earned choices even when the boss dies during a picker callback.
+	if _pending_encounter_rewards > 0:
+		_present_encounter_reward()
+		return
+	if _stage_clear_pending:
+		_finish_stage_clear()
+		return
+	if run_state.pending_level_ups > 0:
+		_present_level_up()
+		return
 	get_tree().paused = false
 	round_state = RoundState.PLAYING
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -330,8 +383,19 @@ func _on_abandon() -> void:
 # ---------------------------------------------------------------- run end
 
 func _on_boss_killed() -> void:
-	if round_state != RoundState.PLAYING:
+	if round_state == RoundState.SHOP or round_state == RoundState.LOST or round_state == RoundState.LOADING:
 		return
+	_stage_clear_pending = true
+	if is_instance_valid(mining_encounter) and mining_encounter.state == MiningDefense.State.READY:
+		mining_encounter.claim_reward()
+	_cancel_encounters()
+	player.active = false
+	player.cancel_secondaries()
+	if round_state == RoundState.PLAYING:
+		_resume_play()
+
+func _finish_stage_clear() -> void:
+	_stage_clear_pending = false
 	round_state = RoundState.SHOP
 	stages_cleared += 1
 	if boss_reward != null:
@@ -359,6 +423,7 @@ func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:
 		return
 	round_state = RoundState.LOST
+	_cancel_encounters()
 	var banked := _bank(death_bank_fraction)
 	_record_run(false)
 	player.sound.play_cue(&"death")

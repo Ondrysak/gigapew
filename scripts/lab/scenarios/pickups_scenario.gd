@@ -102,8 +102,13 @@ func run() -> void:
 	field.magnetize_xp()
 	for n in 2:
 		_kill(game, Vector2(20 + n * 0.2, 12))
-	await lab.wait(1.8)
-	lab.check(field._gems.count == 0 and _total_xp(game.run_state) == xp_before + 10, "overflow into a fully homing pool preserves all XP and awards no duplicates")
+	# Bound simulated homing time, not rendering time during pool/GPU setup.
+	for frame in 180:
+		if field._gems.count == 0:
+			break
+		await lab.get_tree().physics_frame
+	var earned := _total_xp(game.run_state) - xp_before
+	lab.check(field._gems.count == 0 and earned == 10, "overflow into a fully homing pool preserves all XP and awards no duplicates (loose=%d earned=%d)" % [field._gems.count, earned])
 
 	# Configured cadences must drop on the boundary, never one kill early.
 	field.ammo_kill_interval = 3

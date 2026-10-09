@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/level_up_card.tscn" id="2_card"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/level.png" id="3_level"]
 
-[node name="LevelUp" type="CanvasLayer" node_paths=PackedStringArray("card_container", "level_label", "header", "dim")]
+[node name="LevelUp" type="CanvasLayer" node_paths=PackedStringArray("card_container", "level_label", "header", "title_label", "dim")]
 process_mode = 3
 layer = 20
 visible = false
@@ -12,6 +12,7 @@ script = ExtResource("1_screen")
 card_container = NodePath("Center/Rows/Cards")
 level_label = NodePath("Center/Rows/Level")
 header = NodePath("Center/Rows/Title")
+title_label = NodePath("Center/Rows/Title/Label")
 dim = NodePath("Dim")
 
 [node name="Dim" type="ColorRect" parent="."]

@@ -4,6 +4,7 @@ extends PerkEffect
 ## Enemies pressing against the player are pricked every `interval` seconds
 ## and shoved outward. Losing health also triggers a stronger retaliation
 ## burst around the player on the next physics frame.
+## Both pulses are non-directional area effects, so they bypass front plating.
 
 @export var interval := 0.35
 ## Player capsule radius; the touch range reaches `touch_reach` beyond it.

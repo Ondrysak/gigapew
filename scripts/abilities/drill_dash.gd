@@ -137,7 +137,7 @@ func _grind_around(center: Vector3) -> void:
 		if side.length_squared() < 0.0001:
 			side = _direction.cross(Vector3.UP) * (1.0 if _rng.randf() < 0.5 else -1.0)
 		var push := side.normalized() * knockback + Vector3.UP * knockback * 0.35 - _direction * knockback * 0.25
-		horde.damage(index, amount, push)
+		horde.damage_direct(index, amount, center, push)
 
 func _was_struck(index: int) -> bool:
 	for n in _struck_count:

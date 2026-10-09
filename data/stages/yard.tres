@@ -1,8 +1,10 @@
-[gd_resource type="Resource" script_class="StageDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StageDefinition" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/stage_definition.gd" id="definition"]
 [ext_resource type="PackedScene" path="res://scenes/levels/yard.tscn" id="world"]
 [ext_resource type="Resource" path="res://data/schedules/yard.tres" id="schedule"]
+[ext_resource type="PackedScene" path="res://scenes/encounters/mining_defense.tscn" id="mining"]
+[ext_resource type="PackedScene" path="res://scenes/encounters/yard_boss_fight.tscn" id="boss_fight"]
 
 [resource]
 script = ExtResource("definition")
@@ -12,3 +14,5 @@ subtitle = "Sector 01 / live-fire proving ground"
 world_scene = ExtResource("world")
 play_area = Rect2(-32, -32, 64, 64)
 schedule = ExtResource("schedule")
+mining_encounter_scene = ExtResource("mining")
+boss_fight_scene = ExtResource("boss_fight")
