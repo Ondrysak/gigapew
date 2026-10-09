@@ -3,6 +3,7 @@ extends Node3D
 
 # Scene-assigned references keep the actor independent of model hierarchy.
 @export var muzzle: Node3D
+@export var melee_view := false
 @export var flash: GeometryInstance3D
 @export var flash_light: Light3D
 ## Tracer line material; leave empty to draw no tracers (e.g. flame weapons).
@@ -141,6 +142,12 @@ var _puff_next := 0
 var _blasts: Array[Node3D] = []
 var _blast_times := PackedFloat32Array()
 var _blast_radii := PackedFloat32Array()
+var _melee_time := -1.0
+var _melee_windup := 0.0
+var _melee_recovery := 0.0
+var _melee_heavy := false
+var _melee_charge := 0.0
+var _melee_contact_next := 0
 
 func _ready() -> void:
 	_rest = position
@@ -165,8 +172,8 @@ func _ready() -> void:
 		_flash_energy = flash_light.light_energy
 	_shot_audio = _make_audio(shot_sound if shot_sound != null else SynthCue.make(synth_shot))
 	_shot_audio.volume_db = shot_volume_db
-	_hit_audio = _make_audio(hit_sound)
-	_kill_audio = _make_audio(kill_sound)
+	_hit_audio = _make_audio(hit_sound if hit_sound != null else SynthCue.make(&"melee_hit") if melee_view else null)
+	_kill_audio = _make_audio(kill_sound if kill_sound != null else SynthCue.make(&"melee_kill") if melee_view else null)
 	var hum := spin_sound if spin_sound != null else SynthCue.make(synth_spin)
 	if hum != null:
 		_spin_audio = _make_audio(hum)
@@ -236,8 +243,8 @@ func prepare(pellet_count: int) -> void:
 		_puff_to.resize(puff_pool_size)
 		_puff_age.resize(puff_pool_size)
 		_puff_age.fill(-1.0)
-	var blast_count := maxi(pellet_count, blast_pool_size)
-	var blast_mesh := _sphere_mesh(12, 6)
+	var blast_count := 0 if melee_view else maxi(pellet_count, blast_pool_size)
+	var blast_mesh := _sphere_mesh(12, 6) if blast_count > 0 else null
 	if blast_template != null:
 		blast_template.hide()
 	for index in range(blast_count):
@@ -391,6 +398,11 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	_mining_offset = _mining_offset.lerp(Vector3(0.13, -0.15, 0.04) if mining else Vector3.ZERO, blend)
 	position = _rest + _pose_offset + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
 	rotation = _rest_rotation + _pose_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
+	if melee_view:
+		# Upright tools expose their broad side instead of presenting a knife
+		# edge along the camera's -Z axis, including while holstered.
+		rotation += Vector3(0.0, deg_to_rad(55.0), 0.08)
+		_animate_melee(delta)
 	if _magazine != null:
 		_magazine.position = _magazine_rest + Vector3.DOWN * (reload_dip * 0.11)
 	if _pump != null:
@@ -497,7 +509,71 @@ func _update_traces() -> void:
 		trace.global_position = (tail + head) * 0.5
 		trace.scale = Vector3(width, width, maxf(0.001, tail.distance_to(head)))
 
+## Timed pose only: the actor owns impact timing and cancellation.
+func melee_swing(windup: float, recovery: float, heavy: bool = false) -> void:
+	_melee_time = 0.0
+	_melee_windup = windup
+	_melee_recovery = recovery
+	_melee_heavy = heavy
+	_melee_charge = 0.0
+
+func melee_charge(progress: float) -> void:
+	_melee_charge = progress
+
+func cancel_melee() -> void:
+	_melee_time = -1.0
+	_melee_charge = 0.0
+
+func _animate_melee(delta: float) -> void:
+	var offset := Vector3.ZERO
+	var twist := Vector3.ZERO
+	if _melee_time >= 0.0:
+		_melee_time += delta
+		var prepared := Vector3(-0.3, -0.65, -0.5) * (1.3 if _melee_heavy else 1.0)
+		var finish := Vector3(0.2, 0.8, 0.45) * (1.3 if _melee_heavy else 1.0)
+		if _melee_time < _melee_windup:
+			var t := clampf(_melee_time / maxf(0.001, _melee_windup), 0.0, 1.0)
+			twist = prepared * sin(t * PI * 0.5)
+			offset = Vector3(0.08, 0.035, 0.08) * t
+		elif _melee_time < _melee_windup + ArenaPlayer.MELEE_SWEEP_TIME:
+			var t := (_melee_time - _melee_windup) / ArenaPlayer.MELEE_SWEEP_TIME
+			twist = prepared.lerp(finish, t)
+			offset = Vector3(0.08, 0.035, 0.08).lerp(Vector3(-0.18, -0.025, -0.24), t)
+		else:
+			var t := clampf((_melee_time - _melee_windup - ArenaPlayer.MELEE_SWEEP_TIME) / maxf(0.001, _melee_recovery), 0.0, 1.0)
+			twist = finish * (1.0 - smoothstep(0.0, 1.0, t))
+			offset = Vector3(-0.18, -0.025, -0.24) * (1.0 - t)
+			if t >= 1.0:
+				_melee_time = -1.0
+	elif _melee_charge > 0.0:
+		twist = Vector3(-0.25, -0.45, -0.35) * _melee_charge
+		offset = Vector3(0.04, 0.04, 0.08) * _melee_charge
+	position += offset
+	rotation += twist
+
+func melee_release(sound: CombatAudio) -> void:
+	_play(_shot_audio, sound, shot_cue)
+	_impact_time = 0.13
+	for impact in _impacts:
+		impact.hide()
+	for spark in _sparks:
+		spark.hide()
+
+func melee_contact(at: Vector3, enemy: bool, critical: bool) -> void:
+	if _impacts.is_empty():
+		return
+	var index := _melee_contact_next % _impacts.size()
+	_melee_contact_next += 1
+	_impact_time = 0.13
+	show_ray(index, at, Vector3.UP, true, enemy, critical)
+	if not enemy and _hit_audio.stream != null:
+		_hit_audio.pitch_scale = 1.0
+		_hit_audio.play()
+
 func begin_shot(sound: CombatAudio) -> void:
+	if melee_view:
+		melee_release(sound)
+		return
 	_play(_shot_audio, sound, shot_cue)
 	_kick()
 	_pump_cycle = 0.26

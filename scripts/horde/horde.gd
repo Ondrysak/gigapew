@@ -1025,16 +1025,17 @@ func sample_positions(out: PackedVector2Array, max_count: int) -> int:
 func damage_direct(index: int, amount: float, origin: Vector3, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
 	return damage_combined(index, amount, origin, 0.0, knockback, damage_type, critical)
 
-## One health/event transaction for a gun's aggregated direct pellets + splash.
-## Only the direct component sees the plate; exposure applies afterward to both.
-func damage_combined(index: int, direct_amount: float, origin: Vector3, area_amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
+## One health/event transaction for aggregated direct damage + splash.
+## Only direct damage sees the plate. Melee can constrain shock conduction to
+## its actual attack geometry; other sources retain their normal chain radius.
+func damage_combined(index: int, direct_amount: float, origin: Vector3, area_amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false, shock_filter: Callable = Callable()) -> bool:
 	if not is_alive(index):
 		return false
 	var type := _type[index]
 	var effect_amount := direct_amount + area_amount
 	if _t_armored[type] != 0 and _source_facing_dot(index, origin) >= _t_front_cos[type]:
 		direct_amount *= _t_front_scale[type]
-	return _damage_effects(index, direct_amount + area_amount, effect_amount, knockback, damage_type, critical)
+	return _damage_effects(index, direct_amount + area_amount, effect_amount, knockback, damage_type, critical, shock_filter)
 
 func _source_facing_dot(index: int, origin: Vector3) -> float:
 	var offset := Vector2(origin.x, origin.z) - _pos[index]
@@ -1046,11 +1047,11 @@ func _source_facing_dot(index: int, origin: Vector3) -> float:
 ## No attacker-position fallback; all direct-hit consumers use damage_direct or
 ## damage_combined. FIRE's later burn ticks bypass armor even after a plated hit.
 func damage(index: int, amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
-	return _damage_effects(index, amount, amount, knockback, damage_type, critical)
+	return _damage_effects(index, amount, amount, knockback, damage_type, critical, Callable())
 
 ## Status potency derives from the unplated hit. Fire DOT and secondary shock
 ## conduction bypass front plating; only the original direct HP hit is blocked.
-func _damage_effects(index: int, amount: float, effect_amount: float, knockback: Vector3, damage_type: int, critical: bool) -> bool:
+func _damage_effects(index: int, amount: float, effect_amount: float, knockback: Vector3, damage_type: int, critical: bool, shock_filter: Callable) -> bool:
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var at := enemy_position(index)
@@ -1065,7 +1066,7 @@ func _damage_effects(index: int, amount: float, effect_amount: float, knockback:
 		DamageType.Kind.FROST:
 			slow(index, FROST_FACTOR, FROST_DURATION)
 		DamageType.Kind.SHOCK:
-			_chain_shock(index, at, effect_amount * 0.4, critical)
+			_chain_shock(index, at, effect_amount * 0.4, critical, shock_filter)
 	return killed
 
 ## Shared health/reward path, deliberately without secondary type effects.
@@ -1107,11 +1108,12 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 
 ## One-hop conduction to the three closest targets among at most 96 local
 ## grid entries. Fixed candidate storage keeps crowd-density work bounded.
-func _chain_shock(source: int, center: Vector3, amount: float, critical: bool) -> void:
+func _chain_shock(source: int, center: Vector3, amount: float, critical: bool, shock_filter: Callable) -> void:
 	var c := Vector2(center.x, center.z)
 	_chain_index.fill(-1)
 	_chain_distance.fill(INF)
 	var checks := 0
+	var filtered := shock_filter.is_valid()
 	for cz in range(_cell_z(c.y - SHOCK_RADIUS), _cell_z(c.y + SHOCK_RADIUS) + 1):
 		for cx in range(_cell_x(c.x - SHOCK_RADIUS), _cell_x(c.x + SHOCK_RADIUS) + 1):
 			var cell := cz * _grid_w + cx
@@ -1124,6 +1126,8 @@ func _chain_shock(source: int, center: Vector3, amount: float, critical: bool) -
 					continue
 				var d2 := enemy_position(slot).distance_squared_to(center)
 				if d2 > SHOCK_RADIUS * SHOCK_RADIUS:
+					continue
+				if filtered and not shock_filter.call(source, slot):
 					continue
 				for rank in SHOCK_TARGETS:
 					if d2 < _chain_distance[rank]:

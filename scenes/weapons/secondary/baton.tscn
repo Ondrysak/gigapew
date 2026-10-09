@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/secondary/melee_secondary.gd" id="1"]
+
+[node name="ShockDischarge" type="Node3D"]
+script = ExtResource("1")
+display_name = "Shock Discharge"
+description = "Hold RMB to charge, release a short forward shock sweep that shoves and staggers enemies."
+charge_cost = 70.0
+cooldown = 0.8
+mode = 0
+charge_time = 0.45

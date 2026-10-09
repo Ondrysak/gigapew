@@ -24,8 +24,14 @@ func setup(source: WeaponDefinition) -> void:
 func rank(kind: StringName) -> int:
 	return int(upgrade_levels.get(kind, 0))
 
-func can_upgrade(kind: StringName) -> bool:
+## Compatibility is independent of rank: an unsupported mod is never "maxed".
+func supports(kind: StringName) -> bool:
 	if definition == null or not RoundShop.is_hand_mod(kind):
+		return false
+	return definition.kind != WeaponDefinition.Kind.MELEE or kind not in [&"projectiles", &"pierce"]
+
+func can_upgrade(kind: StringName) -> bool:
+	if not supports(kind):
 		return false
 	if rank(kind) >= RoundShop.max_rank(kind):
 		return false
@@ -77,6 +83,6 @@ func _apply(target: WeaponDefinition, kind: StringName, level: int) -> void:
 		&"damage":
 			target.damage = roundi(_base_damage * (1.0 + level * 0.2))
 		&"cadence":
-			target.fire_interval = maxf(0.025, _base_interval / (1.0 + level * 0.15))
+			target.fire_interval = maxf(0.008, _base_interval / (1.0 + level * 0.15))
 		&"pierce":
 			target.pierce = mini(MAX_PIERCE, target.pierce + 1)

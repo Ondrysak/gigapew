@@ -22,8 +22,8 @@ const GOLD_STAGE_CAP := 5
 ## `stat` names the hand/run stat the preview compares. ELEMENT conversions are
 ## mutually exclusive: a hand has one damage type, each conversion swaps it.
 const CATALOG := {
-	&"damage": {"name": "Hardened Rounds", "effect": "+20% base damage per rank", "track": Track.FIREPOWER, "stat": "DMG", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
-	&"cadence": {"name": "Accelerated Feed", "effect": "+15% fire rate per rank", "track": Track.FIREPOWER, "stat": "RATE", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
+	&"damage": {"name": "Hardened Output", "effect": "+20% base damage per rank", "track": Track.FIREPOWER, "stat": "DMG", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
+	&"cadence": {"name": "Accelerated Cycling", "effect": "+15% attack rate per rank", "track": Track.FIREPOWER, "stat": "RATE", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
 	&"projectiles": {"name": "Projectile Splitter", "effect": "+2 pellets per shot", "track": Track.PAYLOAD, "stat": "PELLETS", "max_rank": 6, "price": {&"gold": 0, &"crystal": 5}},
 	&"splash": {"name": "Blast Chamber", "effect": "+1.1 m blast on every hit", "track": Track.PAYLOAD, "stat": "SPLASH", "max_rank": 4, "price": {&"gold": 0, &"crystal": 5}},
 	&"pierce": {"name": "Penetrator", "effect": "Shots pierce +1 enemy", "track": Track.PAYLOAD, "stat": "PIERCE", "max_rank": 4, "price": {&"gold": 0, &"shard": 1}},
@@ -64,16 +64,19 @@ static func ids_in_track(value: int) -> Array[StringName]:
 			ids.append(id)
 	return ids
 
-## Display values of a hand's main-gun stats, keyed like CATALOG `stat`.
+## Weapon stats; ARC/REACH replace pellet/pierce readouts for melee hands.
 static func hand_stats(definition: WeaponDefinition, projectile_bonus: int) -> Dictionary:
 	var rate := 1.0 / maxf(definition.fire_interval, 0.001)
+	var melee := definition.kind == WeaponDefinition.Kind.MELEE
 	return {
 		"DMG": str(definition.damage),
 		"RATE": "%.1f/s" % rate if rate < 100.0 else "%d/s" % roundi(rate),
-		"PELLETS": str(clampi(definition.pellet_count + projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)),
+		"PELLETS": "—" if melee else str(clampi(definition.pellet_count + projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)),
 		"SPLASH": "%.1fm" % definition.explosion_radius if definition.explosion_radius > 0.0 else "—",
-		"PIERCE": str(definition.pierce),
+		"PIERCE": "—" if melee else str(definition.pierce),
 		"TYPE": DamageType.label(definition.damage_type).to_upper(),
+		"ARC": "%.0f°" % definition.melee_arc_degrees,
+		"REACH": "%.1fm" % definition.range_meters,
 	}
 
 ## Whole numbers without decimals, otherwise one decimal.
@@ -129,6 +132,8 @@ func preview(id: StringName, hand: int) -> Dictionary:
 	var stat := String(CATALOG[id].stat)
 	if is_hand_mod(id):
 		var weapon := _state.hands[hand]
+		if not weapon.supports(id):
+			return {"stat": stat, "from": "—", "to": ""}
 		var now := hand_stats(weapon.definition, _state.projectile_bonus)
 		var next := weapon.preview(id)
 		return {"stat": stat, "from": now[stat], "to": hand_stats(next, _state.projectile_bonus)[stat] if next != null else ""}

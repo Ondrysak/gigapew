@@ -25,7 +25,7 @@ func run() -> void:
 	state.hands[1].upgrade(&"fire")
 	state.hands[1].upgrade(&"projectiles")
 	state.hands[1].upgrade(&"damage")
-	state.hands[2].upgrade(&"pierce")
+	state.hands[2].upgrade(&"splash")
 	for upgrade in game.upgrade_pool.upgrades:
 		if upgrade.kind == UpgradeDefinition.Kind.GUN_MOD:
 			game.grant_upgrade(upgrade)

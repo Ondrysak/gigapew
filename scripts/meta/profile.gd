@@ -202,6 +202,8 @@ func equip_craft(id: StringName, hand: int = 0) -> bool:
 		&"gadget":
 			if recipe.hand_upgrade == &"":
 				return false
+			if not can_equip_gadget(id, hand):
+				return false
 			_equipped_gadgets[str(hand)] = String(id)
 		_:
 			return false
@@ -238,6 +240,18 @@ func is_craft_equipped(id: StringName, hand: int = 0) -> bool:
 			return true
 	return false
 
+## Checks the actual hand definition through the run's shared upgrade rules.
+## Saved gadgets are retained when a new weapon makes them ineligible.
+func can_equip_gadget(id: StringName, hand: int) -> bool:
+	if hand < 0 or hand >= 3:
+		return false
+	var recipe := CraftingCatalog.find(id)
+	if recipe == null or recipe.category != &"gadget":
+		return false
+	var preview := WeaponHand.new()
+	preview.setup(hand_loadout(selected_class())[hand])
+	return preview.can_upgrade(recipe.hand_upgrade)
+
 func hand_loadout(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
 	var fallback := load("res://data/weapons/pulse.tres") as WeaponDefinition
 	var result: Array[WeaponDefinition] = []
@@ -270,7 +284,8 @@ func apply_hand_gadgets(hands: Array[WeaponHand]) -> void:
 	for hand in mini(3, hands.size()):
 		var id := StringName(str(_equipped_gadgets.get(str(hand), "")))
 		var recipe := CraftingCatalog.find(id)
-		if recipe != null and recipe.category == &"gadget" and craft_rank(id) > 0:
+		if recipe != null and recipe.category == &"gadget" and craft_rank(id) > 0 \
+				and hands[hand].can_upgrade(recipe.hand_upgrade):
 			hands[hand].upgrade(recipe.hand_upgrade)
 
 ## The normal run perk machinery instantiates these effects once at deployment.

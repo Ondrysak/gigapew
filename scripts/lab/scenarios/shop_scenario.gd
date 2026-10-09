@@ -29,6 +29,22 @@ func run() -> void:
 	var needed := rows.get_combined_minimum_size().y
 	lab.check(needed <= rows.size.y + 0.5, "layout fits the screen without clipping (needs %d of %d px)" % [needed, rows.size.y])
 	screen._select_hand(2)
+	# Real stock on the default Cleaver: unsupported payload must not debit
+	# minerals or mark the offer sold; switching to a gun can still buy it.
+	var projectile_slot := -1
+	for index in RoundShop.MOD_SLOTS:
+		if StringName(shop.offers[index].id) == &"projectiles":
+			projectile_slot = index
+			break
+	if projectile_slot < 0:
+		projectile_slot = 0
+		shop.offers[0] = {"id": &"projectiles", "section": RoundShop.Section.MODS, "cost": shop._price(&"projectiles"), "sold": false}
+	screen._refresh()
+	var wallet := Profile.currency(&"gold")
+	var crystals := Profile.currency(&"crystal")
+	screen._on_buy(projectile_slot)
+	lab.check(not bool(shop.offers[projectile_slot].sold) and Profile.currency(&"gold") == wallet and Profile.currency(&"crystal") == crystals, "firearm-only payload refuses melee purchase without charging or selling stock")
+	lab.check(shop.can_buy(projectile_slot, 0), "the same stock remains available to the equipped firearm")
 	await lab.wait(0.2)
 	await lab.capture("hand_3")
 	var gold := Profile.currency(&"gold")

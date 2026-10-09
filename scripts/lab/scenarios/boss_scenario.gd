@@ -40,5 +40,5 @@ func _fight(stage: int) -> void:
 	game.horde.damage(slot, maximum)
 	await lab.wait(0.6)
 	lab.check(game.round_state == ArenaGame.RoundState.SHOP, "%s boss kill opens the round shop" % tag)
-	lab.check(game.pickups._ammo.count == ammo_before + 1 and game.pickups._magnets.count == magnets_before + 1, "%s boss drops an ammo pack and XP magnet before the shop" % tag)
+	lab.check(game.pickups._ammo.count == ammo_before + 1 and game.pickups._magnets.count == magnets_before, "%s boss drops one ammo pack without a guaranteed XP magnet before the shop" % tag)
 	await lab.capture("%s_cleared" % tag)

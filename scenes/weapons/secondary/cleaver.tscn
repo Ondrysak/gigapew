@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/secondary/melee_secondary.gd" id="1"]
+
+[node name="HeavyCleave" type="Node3D"]
+script = ExtResource("1")
+display_name = "Heavy Cleave"
+description = "Hold RMB to charge, release a wide heavy cleave with extra reach, damage and shove."
+charge_cost = 65.0
+cooldown = 0.9
+mode = 1
+charge_time = 0.55

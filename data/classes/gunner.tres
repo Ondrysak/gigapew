@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/minigun.tres" id="3_minigun"]
 [ext_resource type="Resource" path="res://data/weapons/autocannon.tres" id="4_autocannon"]
-[ext_resource type="Resource" path="res://data/weapons/scatter.tres" id="third"]
+[ext_resource type="Resource" path="res://data/weapons/baton.tres" id="third"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/bulwark.tscn" id="5_ability"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/suppression_barrage.tscn" id="6_alt"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/ammo_frenzy.tscn" id="7_alt"]
@@ -18,7 +18,7 @@ armor = 1.0
 id = &"gunner"
 display_name = "Gunner"
 tagline = "Plant your feet. Hold the trigger. Never stop."
-description = "Minigun feeds the grenade meter; Autocannon breaks packs; Scatter clears close threats. +30 health, +1 armor and -5% speed. Bulwark grants an invulnerable dome and knockback pulse."
+description = "Minigun feeds the grenade meter; Autocannon breaks packs; Shock Baton stuns close threats without ammunition. +30 health, +1 armor and -5% speed. Bulwark grants an invulnerable dome and knockback pulse."
 accent_color = Color(1, 0.74, 0.22, 1)
 starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_minigun"), ExtResource("4_autocannon"), ExtResource("third")])
 ability_scene = ExtResource("5_ability")

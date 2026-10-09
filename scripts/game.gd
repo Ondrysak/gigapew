@@ -21,7 +21,7 @@ const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 ## Every collectible resource; banked ones become Profile currency.
 @export var resources: Array[ResourceDefinition] = []
 @export var boss_reward: ResourceDefinition
-@export var boss_reward_amount := 3
+@export var boss_reward_amount := 1
 ## Share of unbanked currency kept when the run ends without clearing a stage.
 @export_range(0.0, 1.0) var death_bank_fraction := 0.5
 @export var offers_per_level := 3

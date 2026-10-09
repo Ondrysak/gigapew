@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://assets/melee/baton.glb" id="2_model"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+albedo_color = Color(0.2, 0.85, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hit"]
+shading_mode = 0
+albedo_color = Color(0.65, 1, 1, 1)
+
+[node name="Baton" type="Node3D" node_paths=PackedStringArray("muzzle")]
+script = ExtResource("1_view")
+muzzle = NodePath("StrikeTip")
+melee_view = true
+synth_shot = &"melee_swish"
+hit_cue = &"melee_hit"
+impact_material = SubResource("Mat_impact")
+target_impact_material = SubResource("Mat_hit")
+recoil_distance = 0.012
+recoil_angle = 0.015
+recoil_frequency = 9.0
+recoil_damping = 0.85
+casing_pool_size = 0
+puff_pool_size = 0
+blast_pool_size = 0
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="StrikeTip" type="Node3D" parent="."]
+position = Vector3(0, 0.54, -0.08)

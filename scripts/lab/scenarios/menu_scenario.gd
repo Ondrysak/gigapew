@@ -79,3 +79,20 @@ func _workshop(menu: Node) -> void:
 	loadout_scroll.ensure_control_visible(base._hands[1].stats)
 	await lab.wait(0.2)
 	await lab.capture("base_hand_2")
+	# Replace a crafted gun carrying a real saved splitter, then restore it:
+	# incompatible gadgets stay owned/saved without pretending to work.
+	lab.check(Profile.craft(&"splitter") and Profile.equip_craft(&"splitter", 1), "crafted splitter equips on the saved shotgun")
+	var gold := Profile.currency(&"gold")
+	lab.check(Profile.craft(&"weapon_baton") and Profile.currency(&"gold") == gold, "free baton blueprint is reachable without spending scarce minerals")
+	base._equip(&"weapon_baton")
+	var preview := RunState.new()
+	preview.initialize_hands(Profile.hand_loadout(Profile.selected_class()))
+	Profile.apply_hand_gadgets(preview.hands)
+	lab.check(preview.hands[1].definition.kind == WeaponDefinition.Kind.MELEE and preview.hands[1].rank(&"projectiles") == 0 and Profile.is_craft_equipped(&"splitter", 1), "equipping melee preserves the saved splitter but does not apply unsupported projectiles")
+	base._tabs.current_tab = 2
+	await lab.wait(0.2)
+	await lab.capture("base_melee_inactive_gadget")
+	base._equip(&"weapon_scatter")
+	preview.initialize_hands(Profile.hand_loadout(Profile.selected_class()))
+	Profile.apply_hand_gadgets(preview.hands)
+	lab.check(preview.hands[1].rank(&"projectiles") == 1 and preview.hands[1].definition.pellet_count == lab.weapon("scatter").pellet_count + 2, "returning to the saved shotgun restores the same crafted splitter")

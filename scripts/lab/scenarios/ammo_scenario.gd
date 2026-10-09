@@ -9,6 +9,11 @@ func summary() -> String:
 func run() -> void:
 	var game := await lab.start_game()
 	var player := game.player
+	var definitions: Array[WeaponDefinition] = [lab.weapon("pulse"), lab.weapon("rail"), lab.weapon("scatter")]
+	game.run_state.initialize_hands(definitions)
+	player.weapons = game.run_state.hand_definitions()
+	player.refresh_weapons()
+	game.hud.set_hands(game.run_state, 0)
 	game.horde.target = null
 	game.pickups.supply_interval = 1.0e6
 	player.global_position = Vector3(0, 1, 12)

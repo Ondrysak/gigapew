@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/pulse.tres" id="3_pulse"]
 [ext_resource type="Resource" path="res://data/weapons/autocannon.tres" id="4_autocannon"]
-[ext_resource type="Resource" path="res://data/weapons/flamethrower.tres" id="third"]
+[ext_resource type="Resource" path="res://data/weapons/baton.tres" id="third"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/overdrive.tscn" id="5_ability"]
 [ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="6_upgrade"]
 [ext_resource type="Resource" path="res://data/upgrades/sentry.tres" id="7_sentry"]
@@ -18,7 +18,7 @@ cooldown_multiplier = -0.1
 id = &"engineer"
 display_name = "Engineer"
 tagline = "Let the machines do the killing."
-description = "Pulse exposes targets, Autocannon bursts packs and Flamethrower leaves slowing fire lanes. Starts with a Sentry, -10% auto cooldown. Overdrive boosts every automated weapon."
+description = "Pulse exposes targets, Autocannon bursts packs and Shock Baton stuns nearby threats without ammunition. Starts with a Sentry, -10% auto cooldown. Overdrive boosts every automated weapon."
 accent_color = Color(0.5, 1, 0.38, 1)
 starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_autocannon"), ExtResource("third")])
 starting_upgrades = Array[ExtResource("6_upgrade")]([ExtResource("7_sentry")])

@@ -11,11 +11,11 @@ signal deposit_broken(definition: DepositDefinition, position: Vector3)
 @export_group("Deposits")
 @export var deposit_types: Array[DepositDefinition] = []
 ## Deposit cap per stage = play area x density, clamped to min/max.
-@export var deposits_per_square_meter := 0.004
-@export var min_deposits := 16
-@export var max_deposits := 26
-@export var respawn_interval_min := 20.0
-@export var respawn_interval_max := 30.0
+@export var deposits_per_square_meter := 0.0028
+@export var min_deposits := 11
+@export var max_deposits := 18
+@export var respawn_interval_min := 35.0
+@export var respawn_interval_max := 50.0
 ## No deposit spawns this close to the PlayerSpawn marker.
 @export var spawn_clearance := 8.0
 ## Respawns never pop in this close to the player.

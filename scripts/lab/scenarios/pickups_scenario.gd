@@ -13,6 +13,7 @@ func run() -> void:
 	var field := game.pickups
 	field.supply_interval = 1.0e6
 	field.repair_chance = 0.0
+	field.xp_kill_interval = 1
 	player.global_position = Vector3(0, 1, 12)
 	await lab.wait(0.3)
 	var repairs := [0]
@@ -34,9 +35,13 @@ func run() -> void:
 		await lab.get_tree().physics_frame
 	Input.action_release("move_forward")
 	await lab.frames(2)
-	lab.check(field._ammo.count == 0 and player.reserve_ammo(0) == player.weapons[0].magazine_size \
-			and player.reserve_ammo(1) == player.weapons[1].magazine_size \
-			and player.reserve_ammo(2) == player.weapons[2].magazine_size, "walking over one ammo pack restores one magazine of reserve to each dry gun")
+	var restored_guns := field._ammo.count == 0
+	for hand in player.weapons.size():
+		if player.weapons[hand].kind == WeaponDefinition.Kind.FIREARM:
+			restored_guns = restored_guns and player.reserve_ammo(hand) == player.weapons[hand].magazine_size
+		else:
+			restored_guns = restored_guns and player.reserve_ammo(hand) == 0
+	lab.check(restored_guns, "walking over one ammo pack restores one magazine per dry firearm without giving melee ammunition")
 	await lab.capture("ammo_collected")
 	await lab.wait(3.1)
 	lab.check(player.ammo(0) == player.weapons[0].magazine_size and player.reserve_ammo(0) == 0 \
@@ -90,6 +95,7 @@ func run() -> void:
 	field = game.pickup_scene.instantiate() as PickupField
 	field.max_gems = 2
 	field.repair_chance = 0.0
+	field.xp_kill_interval = 1
 	field.supply_interval = 1.0e6
 	game._round.add_child(field)
 	field.setup(game.horde, player, game.run_state)

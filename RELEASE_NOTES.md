@@ -25,9 +25,9 @@
 - Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
   exit; rendered smoke runs reported up to 20, and the virtual display still
   warns about unsupported V-Sync. These changes are not claimed warning-free.
-- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 18 scenarios,
-  including gun models, rotation, alternate fire, finite ammo, survival
-  pickups, directional armor, mining defense and Yard boss patterns.
+- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 21 scenarios,
+  including gun models, rotation, alternate fire, finite ammo, melee contact and
+  tempo, scarce loot, crowd pressure, armor, mining defense and Yard boss patterns.
   Script/engine errors fail the runner. Lab content is excluded
   from the Linux export.
 - Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
@@ -47,12 +47,14 @@
 - Focused firing replaces the triple volley. Finite magazines, automatic
   holstered reloads and a 0.2 s draw encourage rotation. In-hand reloads are
   1.6× slower; partial reload progress survives swaps and upgrades.
-- Each class now starts with three different guns; crafted slot overrides remain.
-  Hits charge the other two alternates; drilling charges the focused gun.
+- Each class starts with two complementary guns and one ammo-free melee weapon;
+  crafted slot overrides remain. Hits charge the other two alternates; drilling
+  charges the focused hand.
   HUD cards show magazine/reserve ammo, reload progress and alternate meters.
-- Six RMB modes: Pulse Tag Burst (+35% exposure window), charged Rail Lance,
+- Eight RMB modes: Pulse Tag Burst (+35% exposure window), charged Rail Lance,
   Scatter Concussion (shorter boss stagger), Minigun Overspin, ballistic
-  Autocannon Breach Grenade and persistent slowing Flamethrower Napalm.
+  Autocannon Breach Grenade, persistent slowing Flamethrower Napalm, charged
+  Shock Baton Discharge and Heavy Cleave.
   RMB near an aimed mineral section remains the drill, without an open-field
   drill shove. Rail Lance and Breach Grenade can fracture sections at range.
 - Original Blender-built firearm assets replace runtime primitive gun geometry.
@@ -64,18 +66,18 @@
   fresh-Scout primary-only rotation before the reserve/auto-swap pass killed
   a stationary Yard boss in 11.72 s body / 3.90 s weak-spot (zero random crits,
   60 Hz simulation, manual empty swaps). Historical baseline, not certification.
-- Automatic empty-primary swapping picks the next loaded, non-reloading gun,
-  preserving draw timing and manual selection. Idle, drilling and active
-  alternates keep focus; an all-dry loadout never cycles or fires free rounds.
+- Automatic empty-primary swapping picks the next loaded, non-reloading gun or
+  ammo-free melee hand, preserving draw timing and manual selection. Idle,
+  drilling and active alternates retain focus; all-dry firearm-only kits wait.
 - Finite reserves: three spare magazines per gun at stage start, cap six.
   Holstered and in-hand reloads consume only rounds actually transferred.
   Ammo crates restore one magazine to each equipped gun's reserve; capped
-  packs remain available. Regular kills drop ammo every 12 and magnets every 50;
-  bosses drop both.
+  packs remain available. Regular kills drop ammo every 30 and magnets every 120;
+  bosses drop one ammo pack without a guaranteed magnet.
 - XP magnets attract all currently loose gems without an instant XP grant or
   permanent global vacuum. Saturated gem pools merge value even while homing.
   Red-cross repair kits report actual healing and remain at full health.
-- Timed ammo supply every 25 gameplay seconds, at most two separated waiting packs,
+- Timed ammo supply every 50 gameplay seconds, at most two separated waiting packs,
   independent of ordinary loot. Grounded route checks reject obstacles and
   cliffs; a nearer placement fallback serves small raised decks.
 - Pickup radar glyphs, compact aggregated ammo/magnet/repair/supply notices,
@@ -112,6 +114,40 @@
   An accelerated live-director smoke from 90–122 Yard seconds observed 492
   hostiles including a scheduled Bulwark, with the defense vein still optional.
   This is encounter/integration evidence, not full-campaign balance certification.
+- Faster main fire without changing any of the six firearm models: Pulse .09 s,
+  Rail .45 s, Scatter .38 s, Minigun .032 s, Autocannon .19 s, Flamethrower .045 s.
+  Reloads are shorter; Minigun reaches full spin in .2 s. Fractional cooldown
+  overshoot and bounded multi-shot ticks preserve boosted cadence above 60 Hz
+  without idle/hitch bursts, free ammo or a second-hand shot on rotation.
+- Two original Blender-authored melee models and pixel icons: Shock Baton
+  (fast shock/stun) and Cleaver (broad kinetic cut). Real cancellable windup,
+  swept forward contact, recovery, body/height/range/cover boundaries, source-aware
+  armor, rolled crits, mineral hits, status/splash upgrades and cross-charge.
+  Melee shock conduction cannot leak behind the player or through solid cover.
+- Charged Shock Discharge costs 70 meter and Heavy Cleave 65, paid at completed
+  impact only. Swapping, menus, pause and death cancel unlanded attacks for free.
+  Synchronous impact callbacks also stop remaining contact and firearm queues.
+- Melee uses the normal three-hand inventory and Workshop; Baton blueprint is
+  free, Cleaver costs 6 Gold and 2 Cinder. Saves retain crafted weapon overrides
+  and gadgets; unsupported saved gadgets are inactive, not silently lost.
+  Shop/HUD show melee arc/reach and no-ammo/swing state; firearm-only pellet and
+  pierce purchases are explicitly unavailable and never debit minerals.
+- Ordinary campaign wave rates increased about 45%, with earlier runners and
+  rare specialists; crowd caps are Yard 1000, Foundry 1500, Reactor 2100.
+  Enemy/boss health, stage duration, terrain routing and contact tuning remain.
+- XP is earned only on each third ordinary victim, without banking skipped XP.
+  Repair chance .4%; Gold yields 14–20, Cinder 5–8, Void 1. Natural deposits
+  have 11–18 caps and 35–50 s respawns, with one rare formation per stage.
+  Stage-clear Void reward reduced to 1; Scavenger ordinary chances are
+  2% / 3.5% / 5%, with 2 guaranteed boss crystals.
+- Combat-loop verification: all 21 rendered scenarios produced 126 captures
+  with zero failures and no script/engine errors on the Radeon GPU. Precision
+  and nested-blast checks passed. Upgraded Overspin emitted 143 paid shots in
+  .65 s. Normal accelerated Yard combat reached 1000 live hostiles at 123.8 s
+  with 659 real kills and 14 loose XP gems, one magnet and one repair kit.
+  A synchronous impact-pause probe damaged three victims before the fix and
+  exactly one afterward; permanent coverage also proves no replay on resume.
+  This is isolated integration/stress evidence, not campaign-balance certification.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.

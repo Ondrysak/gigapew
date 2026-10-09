@@ -51,7 +51,10 @@ func run() -> void:
 	player.select_weapon(2)
 	await lab.wait(0.3)
 	lab.fire(true)
-	await lab.wait(3.5)
+	for tick in 300:
+		await lab.get_tree().physics_frame
+		if player.selected_weapon != 2:
+			break
 	lab.fire(false)
 	lab.check(player.selected_weapon == 0 and player.ammo(2) == 0 and player.is_reloading(2), "empty primary automatically swaps to the next loaded gun and reloads the holstered gun")
 	await lab.capture("auto_swap")

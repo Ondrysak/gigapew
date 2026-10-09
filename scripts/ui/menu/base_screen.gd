@@ -44,7 +44,7 @@ func _ready() -> void:
 	_currency.font_size = 17
 	_currency.add_theme_constant_override(&"separation", 18)
 	header.add_child(_currency)
-	rows.add_child(_label("Craft permanent equipment with banked minerals. Select a hand before equipping guns or gadgets.", 16))
+	rows.add_child(_label("Craft permanent equipment with banked minerals. Select a hand before equipping firearms, melee weapons or gadgets.", 16))
 	# Keep a clear strip of the actual workshop visible above its station tabs.
 	var panorama := Control.new()
 	panorama.custom_minimum_size.y = 84
@@ -190,7 +190,7 @@ func _build_loadout() -> void:
 		rows.add_child(actions)
 		for category in [&"weapon", &"gadget"]:
 			var clear := Button.new()
-			clear.text = "RESET GUN" if category == &"weapon" else "REMOVE GADGET"
+			clear.text = "RESET WEAPON" if category == &"weapon" else "REMOVE GADGET"
 			clear.add_theme_font_size_override(&"font_size", 12)
 			clear.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			clear.pressed.connect(_unequip.bind(category, index))
@@ -250,12 +250,15 @@ func refresh() -> void:
 		card.badge.show_icon(recipe.display_icon(), BADGE_LIVE if equipped else (BADGE_IDLE.lightened(0.15) if rank > 0 else BADGE_IDLE))
 		if recipe.category in [&"perk", &"talent"] and rank > 0:
 			state.text += "  ·  AUTOMATIC AT DEPLOYMENT"
+		var compatible := recipe.category != &"gadget" or Profile.can_equip_gadget(recipe.id, _selected_hand)
+		if not compatible:
+			state.text += "  ·  INACTIVE FOR THIS WEAPON"
 		var buy: Button = card.buy
 		buy.text = "MAX RANK" if maxed else "%s  ·  %s" % ["CRAFT" if rank == 0 else "UPGRADE", _price(cost)]
 		buy.disabled = maxed or not Profile.can_pay(cost)
 		var equip: Button = card.equip
 		equip.visible = recipe.category in [&"armor", &"weapon", &"gadget"]
-		equip.disabled = rank == 0
+		equip.disabled = rank == 0 or (not equipped and not compatible)
 		equip.text = "UNEQUIP" if equipped else ("EQUIP ARMOR" if recipe.category == &"armor" else "EQUIP H%d" % (_selected_hand + 1))
 	_workshop.visible = _tabs.current_tab != 5
 	_legacy.visible = _tabs.current_tab == 5
@@ -279,10 +282,15 @@ func _refresh_loadout() -> void:
 		hand.badge.show_icon(weapon.icon, BADGE_LIVE if selected else BADGE_IDLE)
 		hand.name.text = weapon.display_name
 		var gadget := _equipped_recipe(&"gadget", index)
+		var gadget_active := gadget != null and preview.hands[index].rank(gadget.hand_upgrade) > 0
 		hand.gadget_icon.texture = gadget.display_icon() if gadget != null else null
 		hand.gadget_icon.visible = gadget != null
-		hand.gadget.text = "Gadget: %s" % (gadget.display_name if gadget != null else "None")
-		hand.stats.text = "%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · %s" % [weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, DamageType.label(weapon.damage_type)]
+		hand.gadget_icon.modulate = Color.WHITE if gadget_active else Color(0.5, 0.5, 0.5)
+		hand.gadget.text = "Gadget: %s%s" % [gadget.display_name if gadget != null else "None", " (inactive)" if gadget != null and not gadget_active else ""]
+		if weapon.kind == WeaponDefinition.Kind.MELEE:
+			hand.stats.text = "%d dmg · %.0f° arc · %.1fm reach\n%.2fs swing cadence · %s · no ammo" % [weapon.damage, weapon.melee_arc_degrees, weapon.range_meters, weapon.fire_interval, DamageType.label(weapon.damage_type)]
+		else:
+			hand.stats.text = "%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · %s" % [weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, DamageType.label(weapon.damage_type)]
 
 func _equipped_recipe(category: StringName, hand: int) -> CraftRecipe:
 	for recipe in CraftingCatalog.recipes():
@@ -314,7 +322,7 @@ func _equip(id: StringName) -> void:
 	if Profile.equip_craft(id, _selected_hand):
 		_status.text = "%s equipped%s. Saved for your next run." % [recipe.display_name, "" if recipe.category == &"armor" else " to hand %d" % (_selected_hand + 1)]
 	else:
-		_status.text = "Craft this item before equipping it."
+		_status.text = "This gadget is not compatible with the selected weapon." if recipe.category == &"gadget" and not Profile.can_equip_gadget(id, _selected_hand) else "Craft this item before equipping it."
 	refresh()
 
 func _unequip(category: StringName, hand: int) -> void:
@@ -333,7 +341,7 @@ func _price(cost: Dictionary) -> String:
 	for mineral in MINERALS:
 		if cost.has(mineral.id):
 			parts.append("%d %s" % [int(cost[mineral.id]), "Cinder" if mineral.id == &"crystal" else mineral.display_name])
-	return " + ".join(parts)
+	return "FREE" if parts.is_empty() else " + ".join(parts)
 
 func _label(text: String, font_size: int) -> Label:
 	var label := Label.new()

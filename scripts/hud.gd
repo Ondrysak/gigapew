@@ -354,7 +354,7 @@ func set_hands(state: RunState, focused: int) -> void:
 		(slot.weapon as TextureRect).texture = gun.icon
 		(slot.type as TextureRect).texture = GameIcons.damage_type(gun.damage_type)
 		var pellets := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)
-		(slot.pellets as Label).text = "×%d" % pellets
+		(slot.pellets as Label).text = "%.1fm" % gun.range_meters if gun.kind == WeaponDefinition.Kind.MELEE else "×%d" % pellets
 		var mods: HBoxContainer = slot.mods
 		for child in mods.get_children():
 			child.queue_free()
@@ -382,44 +382,55 @@ func set_gunplay(player: ArenaPlayer) -> void:
 		if gun == null:
 			(slot.ammo as Label).text = "—"
 			(slot.reserve as Label).text = ""
-			(slot.status as Label).text = "NO GUN"
+			(slot.status as Label).text = "NO WEAPON"
 			continue
-		var reload := player.is_reloading(index)
 		var focused := index == player.selected_weapon
-		var rounds := player.ammo(index)
-		var reserve := player.reserve_ammo(index)
-		var capacity := player.reserve_capacity(index)
-		var text := "%d / %d" % [rounds, gun.magazine_size]
-		if (slot.ammo as Label).text != text:
-			(slot.ammo as Label).text = text
-		text = "RES %d / %d" % [reserve, capacity]
-		if (slot.reserve as Label).text != text:
-			(slot.reserve as Label).text = text
-		var status := "READY"
-		var tint := Color(0.65, 0.76, 0.8)
-		if reload:
-			status = "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
-			tint = focus_color
-		elif rounds == 0:
-			status = "OUT OF AMMO" if reserve == 0 else "EMPTY"
-			tint = critical_color.lightened(0.25)
-			if focused and reserve > 0:
-				for other in player.weapons.size():
-					if other != index and player.weapons[other] != null and player.ammo(other) > 0 and not player.is_reloading(other):
-						status = "EMPTY · AUTO"
-						break
-		elif rounds <= maxi(1, gun.magazine_size / 4):
-			status = "LOW AMMO"
-			tint = focus_color
-		elif reserve == 0:
-			status = "LAST MAG"
-			tint = focus_color
-		if (slot.status as Label).text != status:
-			(slot.status as Label).text = status
-		(slot.status as Label).modulate = tint
-		(slot.ammo as Label).modulate = tint if rounds == 0 or status == "LOW AMMO" else Color.WHITE
-		(slot.reserve as Label).modulate = focus_color if reserve == 0 else Color.WHITE
-		(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 0.0
+		if gun.kind == WeaponDefinition.Kind.MELEE:
+			(slot.ammo as Label).text = "MELEE"
+			(slot.reserve as Label).text = "NO AMMO NEEDED"
+			(slot.status as Label).text = ("SWING" if player.melee_busy() else "SELECTED") if focused else "HOLSTERED"
+			(slot.status as Label).modulate = focus_color if focused else Color(0.65, 0.76, 0.8)
+			(slot.ammo as Label).modulate = Color.WHITE
+			(slot.reserve as Label).modulate = Color.WHITE
+			(slot.reload as ProgressBar).value = player.melee_progress() * 100.0 if focused and player.melee_busy() else 0.0
+		else:
+			var reload := player.is_reloading(index)
+			var rounds := player.ammo(index)
+			var reserve := player.reserve_ammo(index)
+			var capacity := player.reserve_capacity(index)
+			var text := "%d / %d" % [rounds, gun.magazine_size]
+			if (slot.ammo as Label).text != text:
+				(slot.ammo as Label).text = text
+			text = "RES %d / %d" % [reserve, capacity]
+			if (slot.reserve as Label).text != text:
+				(slot.reserve as Label).text = text
+			var status := "READY"
+			var tint := Color(0.65, 0.76, 0.8)
+			if reload:
+				status = "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
+				tint = focus_color
+			elif rounds == 0:
+				status = "OUT OF AMMO" if reserve == 0 else "EMPTY"
+				tint = critical_color.lightened(0.25)
+				if focused:
+					for other in player.weapons.size():
+						if other == index or player.weapons[other] == null:
+							continue
+						if player.weapons[other].kind == WeaponDefinition.Kind.MELEE or (player.ammo(other) > 0 and not player.is_reloading(other)):
+							status = "EMPTY · AUTO"
+							break
+			elif rounds <= maxi(1, gun.magazine_size / 4):
+				status = "LOW AMMO"
+				tint = focus_color
+			elif reserve == 0:
+				status = "LAST MAG"
+				tint = focus_color
+			if (slot.status as Label).text != status:
+				(slot.status as Label).text = status
+			(slot.status as Label).modulate = tint
+			(slot.ammo as Label).modulate = tint if rounds == 0 or status == "LOW AMMO" else Color.WHITE
+			(slot.reserve as Label).modulate = focus_color if reserve == 0 else Color.WHITE
+			(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 0.0
 		var alternate := player.secondaries[index]
 		var charge := player.secondary_charge[index]
 		(slot.charge as ProgressBar).value = charge
@@ -436,7 +447,7 @@ func set_gunplay(player: ArenaPlayer) -> void:
 				hint = "RMB · " + hint
 		if (slot.alternate as Label).text != hint:
 			(slot.alternate as Label).text = hint
-		(slot.alternate as Label).modulate = ability_ready_color if charge >= 100.0 else Color(0.65, 0.76, 0.8)
+		(slot.alternate as Label).modulate = ability_ready_color if alternate != null and charge >= alternate.charge_cost else Color(0.65, 0.76, 0.8)
 
 func _gun_meter(color: Color) -> ProgressBar:
 	var meter := ProgressBar.new()

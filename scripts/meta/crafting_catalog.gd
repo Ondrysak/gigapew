@@ -20,12 +20,14 @@ static func recipes() -> Array[CraftRecipe]:
 	_weapon(&"weapon_minigun", "Minigun Blueprint", preload("res://data/weapons/minigun.tres"), {&"gold": 24, &"crystal": 10})
 	_weapon(&"weapon_autocannon", "Autocannon Blueprint", preload("res://data/weapons/autocannon.tres"), {&"gold": 24, &"crystal": 12, &"shard": 3})
 	_weapon(&"weapon_flamethrower", "Flamethrower Blueprint", preload("res://data/weapons/flamethrower.tres"), {&"gold": 18, &"crystal": 14})
+	_weapon(&"weapon_baton", "Shock Baton Blueprint", preload("res://data/weapons/baton.tres"), {})
+	_weapon(&"weapon_cleaver", "Cleaver Blueprint", preload("res://data/weapons/cleaver.tres"), {&"gold": 6, &"crystal": 2})
 	_gadget(&"splitter", "Projectile Splitter", &"projectiles", "Equip on one hand: +2 projectiles per shot, with a modest spread.", {&"gold": 15, &"crystal": 10})
 	_gadget(&"blast_chamber", "Blast Chamber", &"splash", "Equip on one hand: +1.1 m splash radius; blasts deal at least 60% shot damage.", {&"gold": 15, &"crystal": 12, &"shard": 2})
 	_gadget(&"fire_converter", "Cinder Converter", &"fire", "Equip on one hand: fire damage ignites enemies.", {&"gold": 10, &"crystal": 15})
 	_gadget(&"frost_converter", "Cryo Converter", &"frost", "Equip on one hand: frost damage slows enemies.", {&"gold": 12, &"crystal": 6, &"shard": 3})
 	_gadget(&"shock_converter", "Arc Converter", &"shock", "Equip on one hand: shock chains 40% hit damage to up to three nearby enemies.", {&"gold": 12, &"crystal": 8, &"shard": 4})
-	var scavenger := _recipe(&"perk_scavenger", "Salvage License", &"perk", "Start every run with Scavenger: kills may salvage Cinder Crystal; bosses yield 10.", {&"gold": 20, &"crystal": 8, &"shard": 3})
+	var scavenger := _recipe(&"perk_scavenger", "Salvage License", &"perk", "Unlocks Scavenger: kills can rarely salvage Cinder Crystals (2% / 3.5% / 5%); bosses yield 2.", {&"gold": 20, &"crystal": 8, &"shard": 3})
 	scavenger.upgrade = preload("res://data/upgrades/perk_scavenger.tres")
 	var vampiric := _recipe(&"perk_vampiric", "Vampiric Implant", &"perk", "Start every run with Vampiric Rounds: every 25 kills restores 2 health.", {&"gold": 20, &"crystal": 10, &"shard": 4})
 	vampiric.upgrade = preload("res://data/upgrades/perk_vampiric_rounds.tres")
@@ -60,7 +62,10 @@ static func _recipe(id: StringName, title: String, category: StringName, descrip
 	return recipe
 
 static func _weapon(id: StringName, title: String, weapon: WeaponDefinition, costs: Dictionary) -> void:
-	var recipe := _recipe(id, title, &"weapon", "Unlock %s for any hand. %s. Selected-class starting weapons remain free." % [weapon.display_name, weapon.description], costs)
+	var details := weapon.description
+	if weapon.kind == WeaponDefinition.Kind.MELEE:
+		details += ". %d damage, %.0f-degree arc, %.1f m reach, %.2f s swing cadence; no ammunition or reload" % [weapon.damage, weapon.melee_arc_degrees, weapon.range_meters, weapon.fire_interval]
+	var recipe := _recipe(id, title, &"weapon", "Unlock %s for any hand. %s. Selected-class starting weapons remain free." % [weapon.display_name, details], costs)
 	recipe.weapon = weapon
 
 static func _gadget(id: StringName, title: String, kind: StringName, description: String, costs: Dictionary) -> void:

@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://assets/melee/cleaver.glb" id="2_model"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+albedo_color = Color(1, 0.73, 0.35, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hit"]
+shading_mode = 0
+albedo_color = Color(1, 0.35, 0.2, 1)
+
+[node name="Cleaver" type="Node3D" node_paths=PackedStringArray("muzzle")]
+script = ExtResource("1_view")
+muzzle = NodePath("StrikeTip")
+melee_view = true
+synth_shot = &"cleaver_swish"
+hit_cue = &"melee_hit"
+impact_material = SubResource("Mat_impact")
+target_impact_material = SubResource("Mat_hit")
+recoil_distance = 0.017
+recoil_angle = 0.022
+recoil_frequency = 8.0
+recoil_damping = 0.85
+casing_pool_size = 0
+puff_pool_size = 0
+blast_pool_size = 0
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="StrikeTip" type="Node3D" parent="."]
+position = Vector3(0, 0.48, -0.24)

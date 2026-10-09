@@ -191,6 +191,7 @@ func _build_hand(parent: Container, index: int) -> void:
 	stats_row.add_theme_constant_override(&"separation", 4)
 	strip.add_child(stats_row)
 	var stats := {}
+	var captions := {}
 	for stat in HAND_STATS:
 		var column := VBoxContainer.new()
 		column.add_theme_constant_override(&"separation", -2)
@@ -203,6 +204,7 @@ func _build_hand(parent: Container, index: int) -> void:
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		column.add_child(value)
 		stats[stat] = value
+		captions[stat] = caption
 	var tracks := VBoxContainer.new()
 	tracks.add_theme_constant_override(&"separation", 3)
 	content.add_child(tracks)
@@ -229,7 +231,7 @@ func _build_hand(parent: Container, index: int) -> void:
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_select_hand.bind(index))
 	parent.add_child(button)
-	_hands.append({"button": button, "icon": icon, "slot": slot, "tag": tag, "title": title, "type_icon": type_icon, "type_label": type_label, "stats": stats, "pips": pips, "elements": elements})
+	_hands.append({"button": button, "icon": icon, "slot": slot, "tag": tag, "title": title, "type_icon": type_icon, "type_label": type_label, "stats": stats, "captions": captions, "pips": pips, "elements": elements})
 
 func _build_section_heads(parent: Container) -> void:
 	var heads := HBoxContainer.new()
@@ -411,9 +413,17 @@ func _refresh_hand(index: int) -> void:
 	card.type_label.add_theme_color_override(&"font_color", DamageType.color(kind))
 	var stats := RoundShop.hand_stats(definition, _state.projectile_bonus)
 	for stat: String in card.stats:
-		card.stats[stat].text = stats[stat]
+		var readout := stat
+		if definition.kind == WeaponDefinition.Kind.MELEE:
+			if stat == "PELLETS":
+				readout = "ARC"
+			elif stat == "PIERCE":
+				readout = "REACH"
+		card.captions[stat].text = readout
+		card.stats[stat].text = stats[readout]
 	for id: StringName in card.pips:
 		card.pips[id].show_ranks(hand.rank(id), RoundShop.max_rank(id), TRACK_COLORS[RoundShop.track(id)])
+		card.pips[id].modulate.a = 1.0 if hand.supports(id) else 0.25
 	for id: StringName in card.elements:
 		card.elements[id].modulate = Color.WHITE if kind == ELEMENTS[id] else Color(1, 1, 1, 0.2)
 	var button: Button = card.button
@@ -435,6 +445,7 @@ func _refresh_offer(index: int) -> void:
 	var sold := bool(offer.sold)
 	var buyable := _shop.can_buy(index, _selected_hand)
 	var maxed := _shop.is_maxed(id, _selected_hand)
+	var unsupported := RoundShop.is_hand_mod(id) and not _state.hands[_selected_hand].supports(id)
 	card.icon.texture = RoundShop.icon(id)
 	card.title.text = String(entry.name)
 	_set_chip(card.track, RoundShop.TRACK_NAMES[track], color)
@@ -444,7 +455,7 @@ func _refresh_offer(index: int) -> void:
 	card.from.text = String(preview.from)
 	var to := String(preview.to)
 	card.arrow.visible = not to.is_empty()
-	card.to.text = to if not to.is_empty() else ("MAX" if maxed or track != RoundShop.Track.ELEMENT else "ACTIVE")
+	card.to.text = to if not to.is_empty() else ("N/A" if unsupported else ("MAX" if maxed or track != RoundShop.Track.ELEMENT else "ACTIVE"))
 	card.to.add_theme_color_override(&"font_color", GOOD if not to.is_empty() else DIM)
 	card.pips.show_ranks(_shop.rank(id, _selected_hand), RoundShop.max_rank(id), color)
 	_show_price(card.price, offer.cost, sold)
@@ -452,6 +463,8 @@ func _refresh_offer(index: int) -> void:
 	buy.disabled = not buyable
 	if sold:
 		buy.text = "SOLD"
+	elif unsupported:
+		buy.text = "FIREARMS ONLY"
 	elif not to.is_empty():
 		buy.text = "BUY"
 	elif track == RoundShop.Track.ELEMENT and not maxed:

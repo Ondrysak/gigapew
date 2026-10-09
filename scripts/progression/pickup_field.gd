@@ -18,6 +18,8 @@ const SUPPLY_SEPARATION_SQUARED := 1.44
 ## Should honour per-instance color (vertex_color_use_as_albedo).
 @export var gem_material: Material
 @export_range(1, 10000) var max_gems := 3000
+## Only the admitted victim's XP is earned; skipped kills are not banked.
+@export_range(1, 1000) var xp_kill_interval := 3
 @export var low_value_color := Color(0.2, 0.95, 0.55)
 @export var high_value_color := Color(1.0, 0.35, 0.95)
 ## Gem value reaching the full high_value_color and max scale.
@@ -29,7 +31,7 @@ const SUPPLY_SEPARATION_SQUARED := 1.44
 @export var repair_mesh: Mesh
 @export var repair_material: Material
 @export var repair_color := Color.WHITE
-@export_range(0.0, 1.0) var repair_chance := 0.01
+@export_range(0.0, 1.0) var repair_chance := 0.004
 @export var repair_heal := 15
 @export var max_repairs := 64
 @export var repair_height := 0.45
@@ -40,7 +42,7 @@ const SUPPLY_SEPARATION_SQUARED := 1.44
 @export var ammo_color := Color.WHITE
 @export var max_ammo := 64
 @export var ammo_height := 0.3
-@export_range(1, 1000) var ammo_kill_interval := 12
+@export_range(1, 1000) var ammo_kill_interval := 30
 
 @export_group("Magnets")
 @export var magnet_mesh: Mesh
@@ -48,10 +50,10 @@ const SUPPLY_SEPARATION_SQUARED := 1.44
 @export var magnet_color := Color.WHITE
 @export var max_magnets := 32
 @export var magnet_height := 0.4
-@export_range(1, 1000) var magnet_kill_interval := 50
+@export_range(1, 1000) var magnet_kill_interval := 120
 
 @export_group("Timed Supply")
-@export_range(0.1, 300.0) var supply_interval := 25.0
+@export_range(0.1, 300.0) var supply_interval := 50.0
 @export_range(0.1, 30.0) var supply_retry_interval := 2.0
 @export var supply_min_distance := 5.0
 @export var supply_max_distance := 7.0
@@ -131,13 +133,14 @@ func _on_enemy_killed(definition: HordeEnemyDefinition, at: Vector3) -> void:
 		spawn_repair(at)
 	if definition.is_boss:
 		spawn_ammo(at)
-		spawn_magnet(at)
 	else:
 		_nonboss_kills += 1
 		if _nonboss_kills % maxi(1, ammo_kill_interval) == 0:
 			spawn_ammo(at)
 		if _nonboss_kills % maxi(1, magnet_kill_interval) == 0:
 			spawn_magnet(at)
+		if _nonboss_kills % maxi(1, xp_kill_interval) != 0:
+			return
 	var value := maxi(1, definition.xp_value)
 	var gem := _gems.add(_grounded(at, gem_height), value)
 	if gem < 0:

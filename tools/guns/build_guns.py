@@ -261,31 +261,32 @@ def flamethrower():
     fasteners([-.13,-.06,.06],.044,.043)
     MUZZLES['flamethrower']=(0,.041,-.6)
 
-for kind, build in [('pulse',pulse),('rail',railgun),('scatter',scatter),('minigun',minigun),('autocannon',autocannon),('flamethrower',flamethrower)]:
-    bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
-    ROOT=bpy.data.objects.new(kind,None); bpy.context.collection.objects.link(ROOT)
-    build()
-    # Join static material batches; retain moving Magazine, Pump and Spinner
-    # assemblies. Geometry is authored once, not built at game startup.
-    batches = {}
-    for o in list(bpy.context.scene.objects):
-        if o.type != 'MESH':
-            continue
-        if o.name == 'Magazine' or (o.parent and o.parent.name == 'Magazine'):
-            key = ('Magazine',)
-        else:
-            key = (o.parent.name, o.data.materials[0].name)
-        batches.setdefault(key, []).append(o)
-    for key, objects in batches.items():
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in objects: o.select_set(True)
-        active = next((o for o in objects if o.name == 'Magazine'), objects[0])
-        bpy.context.view_layer.objects.active = active
-        if len(objects) > 1: bpy.ops.object.join()
-        active.name = 'Magazine' if key == ('Magazine',) else 'Parts_' + key[1]
-    for name,p in [('Muzzle',MUZZLES[kind]),('Eject',(.058,.044,-.06))]:
-        o=bpy.data.objects.new(name,None); bpy.context.collection.objects.link(o); o.parent=ROOT; o.location=xyz(p)
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,kind+'.glb'),export_format='GLB',use_selection=True,export_apply=True)
-    tris=sum(len(o.data.polygons) for o in bpy.context.scene.objects if o.type=='MESH')
-    print('GUN BUILT',kind,'polygons',tris,'muzzle',MUZZLES[kind])
+if __name__ == '__main__':
+    for kind, build in [('pulse',pulse),('rail',railgun),('scatter',scatter),('minigun',minigun),('autocannon',autocannon),('flamethrower',flamethrower)]:
+        bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
+        ROOT=bpy.data.objects.new(kind,None); bpy.context.collection.objects.link(ROOT)
+        build()
+        # Join static material batches; retain moving Magazine, Pump and Spinner
+        # assemblies. Geometry is authored once, not built at game startup.
+        batches = {}
+        for o in list(bpy.context.scene.objects):
+            if o.type != 'MESH':
+                continue
+            if o.name == 'Magazine' or (o.parent and o.parent.name == 'Magazine'):
+                key = ('Magazine',)
+            else:
+                key = (o.parent.name, o.data.materials[0].name)
+            batches.setdefault(key, []).append(o)
+        for key, objects in batches.items():
+            bpy.ops.object.select_all(action='DESELECT')
+            for o in objects: o.select_set(True)
+            active = next((o for o in objects if o.name == 'Magazine'), objects[0])
+            bpy.context.view_layer.objects.active = active
+            if len(objects) > 1: bpy.ops.object.join()
+            active.name = 'Magazine' if key == ('Magazine',) else 'Parts_' + key[1]
+        for name,p in [('Muzzle',MUZZLES[kind]),('Eject',(.058,.044,-.06))]:
+            o=bpy.data.objects.new(name,None); bpy.context.collection.objects.link(o); o.parent=ROOT; o.location=xyz(p)
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,kind+'.glb'),export_format='GLB',use_selection=True,export_apply=True)
+        tris=sum(len(o.data.polygons) for o in bpy.context.scene.objects if o.type=='MESH')
+        print('GUN BUILT',kind,'polygons',tris,'muzzle',MUZZLES[kind])

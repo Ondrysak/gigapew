@@ -13,38 +13,38 @@ script = ExtResource("2_wave")
 enemy = ExtResource("4_grunt")
 start_time = 0.0
 end_time = 240.0
-rate_start = 5.0
-rate_end = 20.0
+rate_start = 7.25
+rate_end = 29.0
 group_size = 8
 health_multiplier = 1.25
 
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("2_wave")
 enemy = ExtResource("5_runner")
-start_time = 15.0
+start_time = 10.0
 end_time = 240.0
-rate_start = 1.5
-rate_end = 10.0
+rate_start = 2.2
+rate_end = 14.5
 group_size = 6
 health_multiplier = 1.25
 
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("2_wave")
 enemy = ExtResource("6_spitter")
-start_time = 40.0
+start_time = 30.0
 end_time = 240.0
-rate_start = 0.3
-rate_end = 1.6
+rate_start = 0.36
+rate_end = 1.92
 group_size = 2
 health_multiplier = 1.25
 
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("2_wave")
 enemy = ExtResource("7_tank")
-start_time = 90.0
+start_time = 75.0
 end_time = 240.0
-rate_start = 0.15
-rate_end = 0.5
+rate_start = 0.18
+rate_end = 0.6
 group_size = 1
 health_multiplier = 1.25
 
@@ -53,15 +53,15 @@ script = ExtResource("2_wave")
 enemy = ExtResource("5_runner")
 start_time = 150.0
 end_time = 190.0
-rate_start = 4.0
-rate_end = 10.0
+rate_start = 5.8
+rate_end = 14.5
 group_size = 12
 health_multiplier = 1.25
 
 [resource]
 script = ExtResource("1_schedule")
 duration = 240.0
-max_alive = 1100
+max_alive = 1500
 waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5")])
 boss = ExtResource("3_dreadnought")
 boss_health_multiplier = 1.6

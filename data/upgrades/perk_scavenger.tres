@@ -8,8 +8,8 @@
 script = ExtResource("1_definition")
 id = &"scavenger"
 display_name = "Scavenger"
-description = "Kills have a 6% chance to salvage a Cinder Crystal. Bosses always yield 10."
-level_descriptions = PackedStringArray("Kills have a 6% chance to salvage a Cinder Crystal. Bosses always yield 10.", "Kills have a 10% chance to salvage a Cinder Crystal. Bosses always yield 10.", "Kills have a 15% chance to salvage a Cinder Crystal. Bosses always yield 10.")
+description = "Kills have a 2% chance to salvage a Cinder Crystal. Bosses always yield 2."
+level_descriptions = PackedStringArray("Kills have a 2% chance to salvage a Cinder Crystal. Bosses always yield 2.", "Kills have a 3.5% chance to salvage a Cinder Crystal. Bosses always yield 2.", "Kills have a 5% chance to salvage a Cinder Crystal. Bosses always yield 2.")
 kind = 3
 max_level = 3
 weight = 1.0

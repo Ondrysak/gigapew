@@ -53,8 +53,8 @@ same version; older versioned releases remain intact.
 ## Controls
 
 - **WASD** moves; **mouse** aims; **Space** jumps.
-- **Hold LMB** fires the focused gun and automatically rotates to the next loaded, non-reloading gun when empty. **1 / 2 / 3** or the **mouse wheel** still selects a gun manually. Both swaps use the 0.2 s draw; cooldowns, ammo, reload progress and secondary charge survive switching.
-- **RMB** uses the focused gun's charged alternate fire. When aiming at a mineral section within 3.2 m, it instead raises the drill: hold to cut, aim at the glowing **◇ weak seam** for faster cuts. Release and press again to change RMB's purpose.
+- **Hold LMB** fires the focused gun or swings the focused melee weapon. Empty guns automatically rotate to a loaded, non-reloading gun or an ammo-free melee hand. **1 / 2 / 3** or the **mouse wheel** selects any hand manually. Swaps keep the 0.2 s draw; cooldowns, ammo, reload progress and secondary charge survive switching.
+- **RMB** uses the focused weapon's charged alternate. Hold and release for Shock Discharge or Heavy Cleave. An aimed mineral section within 3.2 m instead raises the drill: hold to cut, aim at the glowing **◇ weak seam** for faster cuts. Release and press again to change RMB's purpose.
 - **Q** uses your class ability.
 - **E** activates nearby consoles or flame vents while facing them, or claims a secured defense vein's upgrade choice when near its beacon. Shoot barrels and vent valves to trigger them. Look for warning lights before crossing electrified floor panels.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
@@ -67,11 +67,13 @@ Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) �
 
 | Stage | Length | Crowd cap | Boss health |
 | --- | --- | --- | --- |
-| Training Yard (64 × 64 m) | 3:00 | 700 | 6000 |
-| The Foundry (96 × 52 m) | 4:00 | 1100 | 9600 |
-| Reactor Core (76 × 76 m) | 5:00 | 1600 | 14400 |
+| Training Yard (64 × 64 m) | 3:00 | 1000 | 6000 |
+| The Foundry (96 × 52 m) | 4:00 | 1500 | 9600 |
+| Reactor Core (76 × 76 m) | 5:00 | 2100 | 14400 |
 
 Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when surrounded. Enemies path through 4 m or wider doorways and around interior walls; each stage also has shootable explosive barrels, proximity mines, cycling electric floors, crystal-powered turrets and activatable flame vents.
+
+Ordinary wave rates are about 45% higher, with earlier runners and rare specialists. Boss health, stage lengths and contact damage are unchanged; the increased pressure is more enemies, not tougher individual enemies.
 
 **Yard tactical encounters (source changes, not yet packaged):**
 
@@ -84,33 +86,37 @@ Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when su
 
 ## Classes
 
-| Class | Unlock | Guns | Default ability (Q) | Alternate abilities (Void Shards) | Profile |
+| Class | Unlock | Default weapons | Default ability (Q) | Alternate abilities (Void Shards) | Profile |
 | --- | --- | --- | --- | --- | --- |
-| Scout | free | Pulse, Rail, Scatter | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
-| Gunner | 6 shards | Minigun, Autocannon, Scatter | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
-| Driller | 10 shards | Flamethrower, Scatter, Rail | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
-| Engineer | 14 shards | Pulse, Autocannon, Flamethrower | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
+| Scout | free | Pulse, Rail, Shock Baton | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
+| Gunner | 6 shards | Minigun, Autocannon, Shock Baton | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
+| Driller | 10 shards | Flamethrower, Scatter, Cleaver | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
+| Engineer | 14 shards | Pulse, Autocannon, Shock Baton | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
 
 Each class has three Q abilities: its default and two permanent unlocks. On the class-select screen, select an ability tile, buy it with Void Shards, then equip it. The equipped choice is saved per class in `user://profile.json`.
 
-**Gun roles and alternate fire:**
+**Weapon roles and alternate fire (source changes, not yet packaged):**
 
-| Gun | Main fire | Magazine | Holstered reload | RMB at full charge |
+| Weapon | Main cadence | Magazine | Holstered reload | RMB alternate |
 | --- | --- | --- | --- | --- |
-| Pulse | Precise carbine, pierces 1 | 24 | 1.6 s | **Tag Burst:** three shots expose targets for +35% damage from every gun for 4 s |
-| Rail | Heavy piercing rifle | 5 | 2.0 s | **Overcharge Lance:** hold 0.7 s, release a ×3-damage piercing shot that also fractures minerals; early release or swapping cancels for free |
-| Scatter | Seven-pellet shotgun | 6 | 1.8 s | **Concussion Blast:** 8 m forward cone, strong shove and 1.2 s stagger; bosses stagger for 0.3 s |
-| Minigun | Spin-up rotary gun | 90 | 2.2 s | **Overspin:** instant full spin, double cadence and tight spread for 3 s; LMB remains the trigger |
-| Autocannon | Explosive shells | 10 | 2.0 s | **Breach Grenade:** ballistic 4 m blast, heavy knockback and a deep cut into a struck mineral section |
-| Flamethrower | Short-range piercing flame cone | 60 | 1.8 s | **Napalm Glob:** ballistic shot leaves a 4 s fire patch that burns and slows enemies |
+| Pulse | 0.09 s; precise carbine, pierces 1 | 24 | 1.0 s | **Tag Burst:** three shots expose targets for +35% damage from every weapon for 4 s |
+| Rail | 0.45 s; heavy piercing rifle | 5 | 1.25 s | **Overcharge Lance:** hold 0.7 s, release a ×3-damage piercing shot that fractures minerals; early release or swapping cancels for free |
+| Scatter | 0.38 s; seven-pellet shotgun | 6 | 1.1 s | **Concussion Blast:** 8 m forward cone, strong shove and 1.2 s stagger; bosses stagger for 0.3 s |
+| Minigun | 0.032 s after 0.2 s spin-up | 90 | 1.35 s | **Overspin:** instant full spin, double cadence and tight spread for 3 s; LMB remains the trigger |
+| Autocannon | 0.19 s; explosive shells | 10 | 1.25 s | **Breach Grenade:** ballistic 4 m blast, heavy knockback and a deep cut into a struck mineral section |
+| Flamethrower | 0.045 s; short-range piercing flame cone | 60 | 1.15 s | **Napalm Glob:** ballistic shot leaves a 4 s fire patch that burns and slows enemies |
+| Shock Baton | 0.24 s; 72 shock damage, 100° / 2.6 m sweep | none | none | **Shock Discharge:** hold 0.45 s, release a 5 m / 110° sweep with ×2.2 damage, strong shove and stagger; costs 70 meter |
+| Cleaver | 0.36 s; 135 kinetic damage, 135° / 3.0 m sweep | none | none | **Heavy Cleave:** hold 0.55 s, release a 4 m / 170° sweep with ×3 damage and shove; costs 65 meter |
 
-**Rotation, not a triple volley:** each class starts with three complementary guns; crafted equipment still replaces individual slots. Only the focused model is raised. Held primary automatically swaps an empty gun to the next loaded, non-reloading hand. If all guns are empty it waits rather than cycling; idle, drilling and active alternate effects never steal focus. Holstered guns automatically top up partially spent magazines from finite reserves; an empty gun reloads in hand at 1.6× the listed time. Reloads transfer only available missing rounds on completion, and upgrades preserve both magazines and reserves. The HUD shows magazine rounds, reserve counts, reload progress, low/dry states, separate alternate meters and a brief automatic-swap notice.
+**Rotation, not a triple volley:** default kits have two guns and one ammo-free melee weapon; crafted equipment still replaces any slot, including a three-firearm loadout. Only the focused model is raised. Held primary swaps an empty gun to the next ready hand, including melee; melee never cycles just because it has zero ammo. An all-dry firearm-only loadout waits. Idle, drilling and active alternates keep focus. Holstered guns top up partial magazines from finite reserves; in-hand reloads take 1.6× the listed time. Upgrades preserve ammo and reserves. The HUD shows magazine/reserve counts and reloads for guns, reach/swing status for melee, separate alternate meters and automatic-swap notices.
 
-Landed main-fire shots charge the **other two guns**, nominally in about 4.5 s of hits at base cadence; kills add a bonus. Successful drilling charges the **focused gun**, with a weak-seam bonus. Meters start at 35/100 and each alternate costs 100. This enables rhythms such as Pulse → tag → Rail lance → Scatter escape, or Napalm → drill to recharge → switch to a longer-range gun while the fire patch persists. Swapping cancels held/burst/overspin effects, but launched projectiles and napalm remain. Each hand retains its own damage, cadence, pellets, splash, element and pierce upgrades without mutating siblings or authored resources.
+Landed primary attacks charge the **other two hands**; kills add a bonus. Successful drilling charges the **focused hand**, with a weak-seam bonus. Meters start at 35/100; gun alternates cost 100, Shock Discharge 70 and Heavy Cleave 65. Melee can recharge a dry gun's alternate while holstered guns reload. Swaps, pause menus and death cancel unlanded swings; charged melee spends only at actual impact, and a cancelled windup is free. Launched gun projectiles and napalm remain. Per-hand damage, cadence, splash and element upgrades work on both kinds; pellet and pierce upgrades are firearm-only.
 
-**Survival loot:** each stage starts every gun loaded with three more magazines in reserve, capped at six reserve magazines. Walk over an **ammo crate** to add one magazine's worth to each equipped gun's reserve; full guns do not overflow and a pack stays put if nobody needs ammo. Every 12 regular kills drops ammo, every 50 drops an **XP magnet**, and bosses drop both. A magnet pulls all currently loose XP gems across the arena, including gems already moving; XP is awarded on arrival with the normal multiplier. Later gems remain loose. Rare red-cross repair kits heal up to 15 HP and remain available at full health.
+**Melee contact:** real windup, forward sweep and recovery, with range, body extent, height and solid-cover checks. Each contacted victim receives one direct damage transaction per swing; splash and elemental effects retain their normal damage rules. Shock conduction is also limited to the sweep and visible neighbors, not through walls or behind the player. Frontal armor still reduces direct strikes; flank or stagger then reposition. Melee uses rolled criticals, not the firearms' automatic head/core precision bonus, and can fracture reachable mineral sections. The free Shock Baton blueprint and inexpensive Cleaver blueprint equip through the normal Workshop. Saved firearm overrides and gadgets survive; incompatible saved gadgets show inactive and reactivate when a compatible weapon returns.
 
-**Timed resupply:** a nearby ammo crate lands every 25 gameplay seconds, with at most two waiting, separated packs independent of enemy loot. Placement checks obstacles, ground and the walkable route; small raised decks use a nearer fallback instead of dropping a pack beyond a cliff. Supply timers stop during pause and after the player becomes inactive. The radar marks ammo, magnets and repairs, and compact pickup notices distinguish ammunition received from a supply landing nearby. Continue to the next stage refills health and the starting ammo loadout.
+**Survival loot:** guns start loaded with three spare magazines, capped at six reserve magazines. Ammo crates add one magazine per equipped gun and ignore melee; capped packs remain on the ground. Every third regular kill earns that victim's XP gem; skipped XP is not silently merged into a later gem. Ammo drops every 30 regular kills, magnets every 120, and repair kits have a 0.4% chance. Bosses retain their authored XP and one ammo pack, but no guaranteed magnet; the stage-clear reward is one Void Shard. Magnets attract all currently loose XP, including moving gems, and award XP only on arrival. Later gems stay loose. Repair kits heal up to 15 HP and remain at full health.
+
+**Timed resupply:** a nearby ammo crate lands every 50 gameplay seconds, with at most two separated waiting packs independent of enemy loot. Placement checks obstacles, ground and walkable routes; small raised decks use a nearer fallback rather than dropping beyond a cliff. Timers stop during pause and after the player becomes inactive. The radar marks ammo, magnets and repairs; pickup notices distinguish ammo collected from supply landing nearby. Continue refills health and starting firearm ammo.
 
 **Damage and feedback:** kinetic deals direct damage; fire ignites for four burn ticks over two seconds; frost slows movement to 55% for 1.8 seconds; shock chains 40% damage to up to three nearby enemies. Critical and kill numbers report actual health removed, not overkill. Same-type hits within 0.9 m and 0.2 s merge into one number (a crit or kill upgrades it), and new numbers stack above ones they would overlap; crits carry a crit icon.
 
@@ -145,7 +151,7 @@ passages. Deposits respawn over time.
 section when you stop to fight. Its seams brighten as it cracks; breaking it
 removes its actual surface collider and spills part of the deposit's loot
 immediately. There is no whole-deposit shrink animation or final duplicate payout.
-The pre-rolled total is 24–36 Gold, 10–16 Cinder Crystals or 1–2 rare Void Shards.
+The pre-rolled total is 14–20 Gold, 5–8 Cinder Crystals or one rare Void Shard. Natural formation caps are 11–18 depending on stage area, with 35–50 s respawns; the authored defense vein remains separate.
 Rare deposits can have zero-yield outer sections; the complete formation still
 contains its fixed shard budget.
 
@@ -203,6 +209,7 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Stats and economy:** `StatModifier` (`scripts/data/stat_modifier.gd`) holds shared stat fields. `RunState` combines class stats, Armory levels, crafted modifiers and level-up stacks, and owns three `WeaponHand` resources. `RoundShop` generates and purchases run-only stock; `CraftingCatalog` supplies persistent `CraftRecipe` definitions.
 - **Classes and abilities:** `data/classes/*.tres` plus `roster.tres` define the loadout, stats, unlock cost, default `ability_scene` and optional `alternate_abilities` with shard costs. `Profile` remembers each class's equipped ability; abilities extend `ActiveAbility` (`scripts/abilities/`, scenes in `scenes/abilities/`).
 - **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up, magazine size, reload time, icon and `secondary_scene`) plus a `WeaponView` scene in `scenes/weapons/`. Views instance the original `assets/guns/*.glb` meshes. Rebuild with `blender -b --python tools/guns/build_guns.py`, then import with the project Godot executable. No external image-generation access is required. `ArenaPlayer` owns the focused trigger, magazines, reloads, cross-charge, combo, gun mods and camera spring. Alternate scenes in `scenes/weapons/secondary/` extend `SecondaryFire`; `gun_secondary.gd` owns reusable rays, projectiles and fire patches, with expose/stagger state in `Horde`. Impact, tracer, casing and secondary visuals are pooled, not allocated per shot.
+- **Melee weapons:** `WeaponDefinition.kind` selects firearm or melee. Melee adds arc, windup and stun data; `ArenaPlayer` snapshots a cancellable sweep, reuses contact buffers and checks enemy generations before impact. `melee_secondary.gd` integrates charge and delayed costs through `SecondaryFire`. `assets/melee/*.glb` and gloved grips are original, rebuilt with `blender -b --python tools/guns/build_melee.py`; this generator never re-exports the existing gun models. Views reuse `WeaponView` with melee poses and pooled contact sparks, without bullet flashes, tracers or casings.
 - **Auto weapons, perks and gun mods:** `AutoWeapon` subclasses in `scripts/weapons/auto/` and `PerkEffect` subclasses in `scripts/perks/`, granted by `UpgradeDefinition`s (STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD) listed in `data/upgrades/pool.tres`. The `AutoWeaponRack` owns auto weapons and perks; neither perks nor gun mods use an auto-weapon slot.
 - **Horde:** `scripts/horde/horde.gd` runs a data-oriented simulation with one MultiMesh per enemy type, a shared flow field, weapon queries, `slow()`, faction FX and contact tuning. The flow field avoids obstacles and treats cliffs as walls; it routes to the player's level over ramps. Each enemy has a feet height taken from the stage heightfield: it snaps up ramps, falls off ledges and never climbs a step over 0.3 m. Hit tests, blasts, projectiles and contact damage all use that height. Robot and alien stats/animations are in `data/enemies/*.tres`. Meshes are baked from the CC0 models in `assets/monsters/` into shared textured surfaces; `shaders/horde_enemy_vat.gdshader` animates the crowd from position/normal textures and per-instance clip state. `tools/vat/README.md` covers the reproducible Blender bake and source pack licenses. The static shader remains available for other models.
 
@@ -234,9 +241,12 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `guns` | side and three-quarter views of all six Blender models | visual review |
 | `gunplay` | focused fire, automatic rotation, reloads and contextual drilling | offhands do not fire, draw lock, exact reserve transfers, cross-charge, upgrades preserve ammo/charge, drill precedence |
 | `ammo` | automatic swaps and a fully dry loadout | no same-tick second shot, draw lock, reload eligibility, manual override, alternate focus, no cycling/free rounds, last partial reserve, inactive player |
+| `melee` | baton/cleaver swings, charged modes, mining and ammo-free fallback | actual damage, one direct hit per victim, arc/reach/height/cover, armor, upgrades, shock boundaries, boss interruption, drill precedence, charge cost and swap/pause/death cancellation |
+| `tempo` | real held-input firing for six guns and upgraded Overspin | actual cadence and paid ammo above 60 shots/s, no aim drift, gentle recoil, bounded hitch catch-up and no same-tick second gun |
+| `pressure` | real stage directors and an accelerated normal crowd with scarce loot | ordinary/specialist admissions, all-stage caps, sparse XP/ammo/magnet boundaries, boss isolation, repair RNG, overflow conservation and paused/inactive/freed-player supply timers |
 | `pickups` | ammo crates, repair kits, distant XP vacuum and supplies | real collection and recovered firing, cap preservation, actual healing, exact XP and overflow conservation, later loose gems, supply cap, pause/inactive timers, raised-deck fallback |
 | `secondary` | all six alternate modes and mineral shots | real damage and charge cost, cancellation, exposure damage/expiry, pursuit stopped by stagger, shorter boss stagger, overspin cadence, napalm burn/slow, mineral fracture |
-| `boss` | robot and alien bosses: arrival, fight, low health, kill | boss tracked, frame and WARNING banner up, kill opens the shop, guaranteed ammo and magnet drops |
+| `boss` | robot and alien bosses: arrival, fight, low health, kill | boss tracked, frame and WARNING banner up, kill opens the shop, one ammo drop and no guaranteed magnet |
 | `boss_patterns` | ram lanes, mortar footprints/impacts and teal recovery | real damage and movement dodges, locked targets, cover/height/radius boundaries, +50% recovery, stagger interruption, pause and death/menu/node-removal cancellation |
 | `armor` | front shield/rear core, rotated markers and independent auto guns | real armor/precision arc boundaries, actual source direction, tag ordering, mixed splash, burn potency, finite stun/turning, slot reuse and reserved admission |
 | `encounter` | walking to the defense vein, mining under pressure and earned reward | actual sections and three response packs, both completion orders, conserved loot, pause, identity reuse, E once, real upgrade grant and boss-clear/XP-choice ordering |
@@ -244,7 +254,7 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `shop` | open, hand 3 selected, bought, maxed, empty wallet | 4 + 2 stock, layout fits, debits, sold marking, reroll, refusals charge nothing, Esc cannot skip |
 | `hud` | play, armor/mods/cooldown gear, low health, death panel | armor and mod readouts, lethal damage ends the run |
 | `mining` | approaching and drilling a live mineral section | aimed collider reachable, section damaged, focused meter charged |
-| `menu` | main menu, every operator, each workshop tab | icons present and crisp |
+| `menu` | main menu, every operator, each workshop tab | icons present and crisp, free melee blueprint, saved gadget preservation/inactivity and restoration on compatible weapon |
 | `icons` | one gallery page per icon group | icon groups exist |
 
 ```sh
@@ -252,15 +262,19 @@ make lab-shots                         # all scenarios -> lab_shots/*.png + lab_
 make lab-shots SCENARIOS="shop boss"   # a subset
 python3 tools/lab.py ammo pickups      # ammunition rotation and survival collectibles
 python3 tools/lab.py encounter armor boss_patterns  # tactical Yard features
+python3 tools/lab.py melee tempo pressure  # melee contact, faster gunplay and scarce loot
 python3 tools/lab.py --list            # scenario names; --window renders visibly, --clean hides the overlay
 make lab                               # interactive: pick a scenario, play on; F1 list, F12 screenshot
 ```
 
 `tools/lab.py` renders in an invisible 1280 × 720 `gamescope --backend headless` session on the real GPU when gamescope is installed (otherwise in a window), prints each `PASS`/`FAIL` and engine error, and exits non-zero on a failed check, engine error, failed process, 480 s timeout or missing report. A scenario is a `LabScenario` subclass in `scripts/lab/scenarios/`, registered in `Lab.SCENARIOS`. Helpers include `start_game(class, stage)`, `spawn_pack`, `ahead`, `aim_at`, `aim_deposit` (finds an actual live section rather than a geode's hollow centre), `fire`, `wait`, `capture`, `capture_strip` and `check`. The game root explicitly uses pausable processing, including when hosted under the lab's always-processing controls.
 
-The tactical encounter pass passed all **18 rendered scenarios / 114 captures**
-with zero failures and no script/engine errors. Precision and nested-blast
-regressions passed; the existing ObjectDB exit warning remains. A separate
-accelerated live-director smoke from 90–122 Yard seconds spawned a Bulwark among
-492 hostiles while the vein stayed optional. This does not certify full-campaign
-balance. The published 0.3.0 package has not been rebuilt for these source changes.
+The faster-combat/melee pass passed all **21 rendered scenarios / 126 captures**
+with zero failures and no script/engine errors on the Radeon GPU. Precision and
+nested-blast regressions passed. Held upgraded Overspin produced **143 paid shots
+in 0.65 s**; the accelerated normal Yard run reached **1000 hostiles at 123.8 s**
+with **659 actual kills**, 14 loose XP gems, one magnet and one repair kit.
+The impact-pause regression reproduced three damaged targets before the fix
+and exactly one afterward, with no replay on resume. These are isolated
+integration/stress checks, not full-campaign balance or performance certification.
+The published 0.3.0 package has not been rebuilt for these source changes.

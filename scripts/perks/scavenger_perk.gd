@@ -1,14 +1,14 @@
 class_name ScavengerPerk
 extends PerkEffect
 
-## Kills may salvage a crystal straight into the run's resources; bosses
-## always yield a handful. A small orange sparkle marks each find.
+## Kills may rarely salvage one crystal straight into the run's resources;
+## bosses yield two. A small orange sparkle marks each find.
 
 @export var crystal: ResourceDefinition
 ## Chance per kill to salvage one crystal, per level.
-@export var chances := PackedFloat32Array([0.06, 0.1, 0.15])
+@export var chances := PackedFloat32Array([0.02, 0.035, 0.05])
 ## Crystals salvaged from every boss kill.
-@export var boss_amount := 10
+@export var boss_amount := 2
 ## Hidden sparkle authored at unit size.
 @export var sparkle_template: Node3D
 @export var sparkle_count := 6

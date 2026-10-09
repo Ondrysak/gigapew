@@ -30,6 +30,33 @@ const MAX_RESERVE_MAGAZINES := 6
 const CAMERA_KICK_OMEGA := TAU * 5.0
 const CAMERA_KICK_DAMPING := 0.85
 const CAMERA_KICK_MAX := 0.012
+const MAX_SHOTS_PER_TICK := 8
+const FIRE_HITCH_LIMIT := 0.1
+const MELEE_SWEEP_TIME := 0.065
+signal melee_released(hand: int, secondary: bool)
+var _melee_hand := -1
+var _melee_phase := 0 # 1 windup, 2 sweep; cooldown owns recovery.
+var _melee_left := 0.0
+var _melee_elapsed := 0.0
+var _melee_reach := 0.0
+var _melee_arc := 0.0
+var _melee_scale := 1.0
+var _melee_push := 1.0
+var _melee_stun := 0.0
+var _melee_type := 0
+var _melee_secondary := false
+var _melee_damage := 0.0
+var _melee_critical := false
+var _melee_quickdraw := false
+var _melee_alive_before := 0
+var _melee_direct := false
+var _melee_world := false
+var _melee_wall: Dictionary = {}
+var _melee_origin := Vector3.ZERO
+var _melee_basis := Basis.IDENTITY
+var _melee_seen := PackedInt32Array()
+var _melee_generations := PackedInt32Array()
+var _melee_shock_filter: Callable
 
 ## Only the focused gun fires; holstered guns reload and collect cross-charge.
 @export var weapons: Array[WeaponDefinition] = []
@@ -121,6 +148,9 @@ func _ready() -> void:
 	_hit_direct.resize(Horde.CAPACITY)
 	_hit_push.resize(Horde.CAPACITY)
 	_splash_hits.resize(Horde.CAPACITY)
+	_melee_seen.resize(Horde.CAPACITY)
+	_melee_generations.resize(Horde.CAPACITY)
+	_melee_shock_filter = _melee_shock_target
 	refresh_weapons()
 	if ability_scene != null:
 		var node := ability_scene.instantiate()
@@ -168,12 +198,14 @@ func refresh_weapons() -> void:
 			_directions.append(directions)
 		var scene := definition.view_scene if definition != null else null
 		if fresh or _view_scenes[slot] != scene:
+			if _melee_hand == slot:
+				cancel_secondaries()
 			if _views[slot] != null:
 				_views[slot].queue_free()
 				_views[slot] = null
 			_view_scenes[slot] = scene
-			_magazines[slot] = definition.magazine_size if definition != null else 0
-			_reserves[slot] = definition.magazine_size * STARTING_RESERVE_MAGAZINES if definition != null else 0
+			_magazines[slot] = definition.magazine_size if definition != null and definition.kind == WeaponDefinition.Kind.FIREARM else 0
+			_reserves[slot] = _magazines[slot] * STARTING_RESERVE_MAGAZINES
 			_reloads[slot] = 0.0
 			secondary_charge[slot] = 35.0
 			_fire_cooldowns[slot] = 0.0
@@ -223,6 +255,7 @@ func select_weapon(index: int) -> void:
 		return
 	if selected_weapon == index:
 		return
+	cancel_melee()
 	if secondaries[selected_weapon] != null:
 		secondaries[selected_weapon].cancel()
 	_alternate_held = Input.is_action_pressed("mine")
@@ -240,7 +273,7 @@ func reserve_ammo(hand: int) -> int:
 	return _reserves[hand]
 
 func reserve_capacity(hand: int) -> int:
-	return weapons[hand].magazine_size * MAX_RESERVE_MAGAZINES if weapons[hand] != null else 0
+	return weapons[hand].magazine_size * MAX_RESERVE_MAGAZINES if weapons[hand] != null and weapons[hand].kind == WeaponDefinition.Kind.FIREARM else 0
 
 ## Ammo packs restore one magazine's worth to every equipped gun's reserve.
 ## A pack stays in the world if all reserves are full.
@@ -249,7 +282,7 @@ func add_ammo(magazines: int = 1) -> bool:
 		return false
 	var gained := false
 	for hand in weapons.size():
-		if weapons[hand] == null:
+		if weapons[hand] == null or weapons[hand].kind == WeaponDefinition.Kind.MELEE:
 			continue
 		var before := _reserves[hand]
 		_reserves[hand] = mini(reserve_capacity(hand), before + weapons[hand].magazine_size * magazines)
@@ -258,12 +291,12 @@ func add_ammo(magazines: int = 1) -> bool:
 
 ## Pick a loaded, ready gun in hand order. Never bounce between empty guns.
 func _auto_swap_empty() -> void:
-	if _magazines[selected_weapon] > 0:
+	if weapons[selected_weapon] == null or weapons[selected_weapon].kind == WeaponDefinition.Kind.MELEE or _magazines[selected_weapon] > 0:
 		return
 	for offset in range(1, weapons.size()):
 		var hand := (selected_weapon + offset) % weapons.size()
 		if weapons[hand] != null and _views[hand] != null \
-				and _magazines[hand] > 0 and _reloads[hand] == 0.0:
+				and (weapons[hand].kind == WeaponDefinition.Kind.MELEE or (_magazines[hand] > 0 and _reloads[hand] == 0.0)):
 			select_weapon(hand)
 			auto_swapped.emit(hand)
 			return
@@ -283,6 +316,7 @@ func _on_secondary_fired(hand: int) -> void:
 	secondary_fired.emit(hand)
 
 func cancel_secondaries() -> void:
+	cancel_melee()
 	for alternate in secondaries:
 		if alternate != null:
 			alternate.cancel()
@@ -302,6 +336,7 @@ func refresh_stats() -> void:
 
 ## Blocks firing until the fire button is released (after menus and recapture).
 func suppress_fire_until_release() -> void:
+	cancel_secondaries()
 	_waiting_for_fire_release = Input.is_action_pressed("fire")
 	_alternate_held = Input.is_action_pressed("mine")
 	_alternate_drilling = false
@@ -412,6 +447,7 @@ func _clamp_camera_kick() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not active:
+		cancel_secondaries()
 		velocity = Vector3.ZERO
 		return
 	_invulnerable = maxf(0.0, _invulnerable - delta)
@@ -448,6 +484,9 @@ func _physics_process(delta: float) -> void:
 			alternate.release()
 		_alternate_drilling = false
 	_alternate_held = held
+	if not captured:
+		cancel_secondaries()
+	_step_melee(delta)
 	var overspin := alternate != null and alternate.primary_rate_multiplier() > 1.0
 	var trigger := captured and not _waiting_for_fire_release and not held \
 			and Input.is_action_pressed("fire") and _draw_left <= 0.0
@@ -455,22 +494,23 @@ func _physics_process(delta: float) -> void:
 		trigger = false
 	# RMB starts Overspin; LMB remains its trigger even if RMB stays held.
 	if overspin:
-		trigger = captured and Input.is_action_pressed("fire") and _draw_left <= 0.0
+		trigger = captured and not _waiting_for_fire_release and Input.is_action_pressed("fire") and _draw_left <= 0.0
 	for slot in range(weapons.size()):
-		if not active:
+		if not active or get_tree().paused:
 			break
 		var definition := weapons[slot]
 		if definition == null or _views[slot] == null:
 			continue
 		var focused := slot == selected_weapon
 		var shooting := trigger and focused
-		if _reloads[slot] > 0.0:
+		var firearm := definition.kind == WeaponDefinition.Kind.FIREARM
+		if firearm and _reloads[slot] > 0.0:
 			_reloads[slot] = maxf(0.0, _reloads[slot] - delta / (1.6 if focused else 1.0))
 			if _reloads[slot] == 0.0:
 				var transferred := mini(definition.magazine_size - _magazines[slot], _reserves[slot])
 				_magazines[slot] += transferred
 				_reserves[slot] -= transferred
-		elif _reserves[slot] > 0 and _magazines[slot] < definition.magazine_size \
+		elif firearm and _reserves[slot] > 0 and _magazines[slot] < definition.magazine_size \
 				and (not focused or _magazines[slot] == 0):
 			_reloads[slot] = definition.reload_time
 		if definition.spin_up_time > 0.0:
@@ -480,24 +520,247 @@ func _physics_process(delta: float) -> void:
 				_spins[slot] = minf(1.0, _spins[slot] + delta / definition.spin_up_time)
 			else:
 				_spins[slot] = maxf(0.0, _spins[slot] - delta / maxf(0.01, definition.spin_down_time))
-		_fire_cooldowns[slot] = maxf(-delta, _fire_cooldowns[slot] - delta)
-		if shooting and _reloads[slot] == 0.0 and _magazines[slot] > 0 and _fire_cooldowns[slot] <= 0.0:
-			var interval := definition.fire_interval
-			if definition.spin_up_time > 0.0:
-				var eased := 1.0 - (1.0 - _spins[slot]) * (1.0 - _spins[slot])
-				interval *= lerpf(definition.spin_up_start_multiplier, 1.0, eased)
-			var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
-			if focused and alternate != null:
-				rate *= alternate.primary_rate_multiplier()
-			_fire_cooldowns[slot] += maxf(0.025, interval / maxf(0.1, rate))
+		# Only a continuously firing focused hand retains fractional overshoot.
+		# Idle, drawing, reloading and long hitches cannot bank a burst.
+		if shooting and _reloads[slot] == 0.0 and delta <= FIRE_HITCH_LIMIT:
+			_fire_cooldowns[slot] -= delta
+		else:
+			_fire_cooldowns[slot] = maxf(0.0, _fire_cooldowns[slot] - delta)
+		if not shooting or _reloads[slot] > 0.0:
+			continue
+		var interval := definition.fire_interval
+		if definition.spin_up_time > 0.0:
+			var eased := 1.0 - (1.0 - _spins[slot]) * (1.0 - _spins[slot])
+			interval *= lerpf(definition.spin_up_start_multiplier, 1.0, eased)
+		var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
+		if alternate != null:
+			rate *= alternate.primary_rate_multiplier()
+		interval = maxf(0.001, interval / maxf(0.1, rate))
+		if not firearm:
+			if _fire_cooldowns[slot] <= 0.0 and _melee_hand < 0:
+				_fire_cooldowns[slot] += interval
+				_begin_melee(slot, definition.melee_windup, definition.range_meters, definition.melee_arc_degrees, 1.0, 1.0, definition.melee_stun, definition.damage_type, false, interval)
+			continue
+		var shots := 0
+		while active and not get_tree().paused and selected_weapon == slot and _magazines[slot] > 0 and _fire_cooldowns[slot] <= 0.0 and shots < MAX_SHOTS_PER_TICK:
+			_fire_cooldowns[slot] += interval
 			_magazines[slot] -= 1
+			shots += 1
 			_shoot(slot)
 			if _magazines[slot] == 0 and _reserves[slot] > 0:
 				_reloads[slot] = definition.reload_time
+		if shots == MAX_SHOTS_PER_TICK:
+			_fire_cooldowns[slot] = maxf(0.0, _fire_cooldowns[slot])
 	# Rotate only after the entire shot/reload loop, avoiding two guns firing in
 	# the same physics tick. Held RMB and active alternate effects retain focus.
 	if active and trigger and not held and (alternate == null or not alternate.is_active()):
 		_auto_swap_empty()
+
+## HUD/alternate consumers: windup and sweep belong to the focused hand.
+func melee_busy() -> bool:
+	return _melee_hand >= 0
+
+func melee_progress() -> float:
+	return clampf(_melee_elapsed / MELEE_SWEEP_TIME, 0.0, 1.0) if _melee_phase == 2 else 0.0
+
+func begin_melee_secondary(hand: int, windup: float, reach: float, arc: float, damage_scale: float, push_scale: float, stun: float, damage_type: int) -> bool:
+	if not active or hand != selected_weapon or melee_busy() or _draw_left > 0.0:
+		return false
+	_fire_cooldowns[hand] = maxf(_fire_cooldowns[hand], windup + MELEE_SWEEP_TIME + 0.25)
+	_begin_melee(hand, windup, reach, arc, damage_scale, push_scale, stun, damage_type, true, windup + 0.35)
+	return true
+
+func _begin_melee(hand: int, windup: float, reach: float, arc: float, damage_scale: float, push_scale: float, stun: float, damage_type: int, secondary: bool, interval: float) -> void:
+	_melee_hand = hand
+	_melee_phase = 1
+	_melee_left = windup
+	_melee_elapsed = 0.0
+	_melee_reach = reach
+	_melee_arc = deg_to_rad(arc)
+	_melee_scale = damage_scale
+	_melee_push = push_scale
+	_melee_stun = stun
+	_melee_type = damage_type
+	_melee_secondary = secondary
+	_melee_seen.fill(-1)
+	_melee_direct = false
+	_melee_world = false
+	_melee_wall.clear()
+	for n in _hit_count:
+		_hit_lookup[_hit_slots[n]] = -1
+	_hit_count = 0
+	_views[hand].melee_swing(windup, maxf(0.02, interval - windup - MELEE_SWEEP_TIME), secondary)
+
+func cancel_melee() -> void:
+	if _melee_hand >= 0 and _melee_hand < _views.size() and _views[_melee_hand] != null:
+		_views[_melee_hand].cancel_melee()
+	_melee_hand = -1
+	_melee_phase = 0
+	for n in _hit_count:
+		_hit_lookup[_hit_slots[n]] = -1
+	_hit_count = 0
+
+func _step_melee(delta: float) -> void:
+	if _melee_hand < 0:
+		return
+	if not active or selected_weapon != _melee_hand or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		cancel_melee()
+		return
+	var hand := _melee_hand
+	var definition := weapons[hand]
+	if _melee_phase == 1:
+		_melee_left -= delta
+		if _melee_left > 0.0:
+			return
+		delta = minf(delta, -_melee_left)
+		_melee_phase = 2
+		_melee_origin = camera.global_position
+		_melee_basis = head.global_basis
+		_melee_quickdraw = _quickdraw_left > 0.0
+		_quickdraw_left = 0.0
+		var combo := minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08))
+		_melee_damage = definition.damage * _melee_scale * (run_state.damage_multiplier if run_state != null else 1.0) * (1.0 + combo) * (1.75 if _melee_quickdraw else 1.0)
+		_melee_critical = run_state != null and run_state.roll_critical()
+		if _melee_critical:
+			_melee_damage *= run_state.crit_multiplier
+		_melee_alive_before = horde.alive_count if horde != null else 0
+		if not _melee_secondary:
+			shot_fired.emit()
+		_views[hand].melee_release(sound)
+		melee_released.emit(hand, _melee_secondary)
+	var previous := _melee_elapsed / MELEE_SWEEP_TIME
+	_melee_elapsed = minf(MELEE_SWEEP_TIME, _melee_elapsed + delta)
+	_collect_melee(previous, _melee_elapsed / MELEE_SWEEP_TIME)
+	if _melee_elapsed >= MELEE_SWEEP_TIME:
+		_finish_melee()
+
+func _collect_melee(previous: float, progress: float) -> void:
+	var origin := _melee_origin
+	var aim := _melee_basis
+	var definition := weapons[_melee_hand]
+	if horde != null:
+		var count := horde.query_radius(origin, _melee_reach, _hits)
+		var start := lerpf(-_melee_arc * 0.5, _melee_arc * 0.5, previous)
+		var end := lerpf(-_melee_arc * 0.5, _melee_arc * 0.5, progress)
+		for n in count:
+			var slot := _hits[n]
+			var generation := horde.enemy_generation(slot)
+			if _melee_seen[slot] == generation:
+				continue
+			var at := horde.enemy_position(slot)
+			var contact := _melee_target_contact(slot, start, end)
+			if contact == Vector3.INF:
+				continue
+			_melee_seen[slot] = generation
+			_melee_generations[slot] = generation
+			var amount := _melee_damage * (run_state.exposure_scale(at) if run_state != null else 1.0)
+			if run_state != null and run_state.upgrade_levels.get(&"mod_executioner", 0) > 0 and horde.enemy_health_fraction(slot) < 0.35:
+				amount *= 1.6
+			_add_hit(slot, amount, _melee_critical, true)
+			_hit_push[_hit_lookup[slot]] += (-aim.z) * definition.knockback * _melee_push * (1.6 if _melee_quickdraw else 1.0)
+			_melee_direct = true
+			_views[_melee_hand].melee_contact(contact, true, _melee_critical)
+			if definition.explosion_radius > 0.0:
+				_collect_melee_splash(contact, origin, definition)
+	if not _melee_world and previous <= 0.5 and progress >= 0.5:
+		_melee_world = true
+		_query.from = origin
+		_query.to = origin - aim.z * _melee_reach
+		_melee_wall = get_world_3d().direct_space_state.intersect_ray(_query)
+
+## A single volume/cover predicate is shared by the real sweep and its shock
+## conduction, so elemental upgrades cannot sneak through walls or hit rear bodies.
+func _melee_target_contact(slot: int, start: float, end: float) -> Vector3:
+	var at := horde.enemy_position(slot)
+	var body := horde.get_definition(slot)
+	var center := _melee_basis.transposed() * (at - _melee_origin)
+	if center.z >= 0.0:
+		return Vector3.INF
+	var horizontal := Vector2(center.x, center.z).length()
+	var angular_radius := asin(clampf(body.radius / maxf(0.001, horizontal), 0.0, 1.0))
+	var angle := atan2(center.x, -center.z)
+	if angle + angular_radius < start or angle - angular_radius > end:
+		return Vector3.INF
+	# Nearest real upright body surface, not radius-query level forgiveness.
+	var contact := at
+	contact.y = clampf(_melee_origin.y + (-_melee_basis.z).y * horizontal, at.y - body.height * 0.5, at.y + body.height * 0.5)
+	var flat := Vector3(_melee_origin.x - at.x, 0.0, _melee_origin.z - at.z)
+	contact += flat.normalized() * minf(body.radius, flat.length())
+	var local := _melee_basis.transposed() * (contact - _melee_origin)
+	if local.length_squared() > _melee_reach * _melee_reach or absf(local.y) > maxf(0.5, Vector2(local.x, local.z).length() * tan(deg_to_rad(30.0))):
+		return Vector3.INF
+	return contact if _melee_visible(_melee_origin, contact) else Vector3.INF
+
+func _melee_shock_target(source: int, slot: int) -> bool:
+	if _melee_hand < 0 or _melee_phase != 2 or not active or get_tree().paused:
+		return false
+	var contact := _melee_target_contact(slot, -_melee_arc * 0.5, _melee_arc * 0.5)
+	return contact != Vector3.INF and _melee_visible(horde.enemy_position(source), contact)
+
+func _melee_visible(origin: Vector3, contact: Vector3) -> bool:
+	_query.from = origin
+	_query.to = contact
+	return get_world_3d().direct_space_state.intersect_ray(_query).is_empty()
+
+func _collect_melee_splash(contact: Vector3, origin: Vector3, definition: WeaponDefinition) -> void:
+	var count := horde.query_radius(contact, definition.explosion_radius, _splash_hits)
+	for n in count:
+		var slot := _splash_hits[n]
+		var at := horde.enemy_position(slot)
+		if (_melee_basis.transposed() * (at - origin)).z >= 0.0 or not _melee_visible(contact, at) or not _melee_visible(origin, at):
+			continue
+		_melee_generations[slot] = horde.enemy_generation(slot)
+		_add_hit(slot, _melee_damage * definition.explosion_damage_fraction, _melee_critical, false)
+		_hit_push[_hit_lookup[slot]] += (at - contact).normalized() * definition.explosion_knockback
+
+func _finish_melee() -> void:
+	var hand := _melee_hand
+	if _melee_secondary and secondaries[hand] != null:
+		secondaries[hand].call(&"commit_swing")
+	if not _melee_wall.is_empty():
+		var collider: Object = _melee_wall["collider"]
+		if collider != null and collider.has_method(&"take_mining_damage"):
+			collider.take_mining_damage(_melee_damage * MINING_SHARE * (run_state.mining_multiplier if run_state != null else 1.0), _melee_wall["position"], int(_melee_wall["shape"]))
+			_views[hand].melee_contact(_melee_wall["position"], false, false)
+		elif collider != null and collider.has_method(&"take_hit"):
+			collider.take_hit(_melee_damage, _melee_wall["position"])
+			_views[hand].melee_contact(_melee_wall["position"], false, false)
+	var confirmed := false
+	var critical_at := Vector3.INF
+	for n in _hit_count:
+		# Damage callbacks can synchronously cancel the remaining contacts.
+		if _melee_hand != hand or not active or get_tree().paused:
+			return
+		var slot := _hit_slots[n]
+		if not horde.is_alive(slot) or horde.enemy_generation(slot) != _melee_generations[slot]:
+			continue
+		confirmed = true
+		if _hit_direct_damage[n] > 0.0 and _melee_stun > 0.0:
+			horde.stun(slot, _melee_stun)
+		if _melee_critical:
+			critical_at = horde.enemy_position(slot)
+		horde.damage_combined(slot, _hit_direct_damage[n], _melee_origin, _hit_damage[n], _hit_push[n], _melee_type, _hit_critical[n] != 0, _melee_shock_filter)
+	if _melee_hand != hand or not active or get_tree().paused:
+		return
+	if _melee_direct:
+		combo_hits += 1
+		_combo_left = COMBO_WINDOW
+		combo_changed.emit(combo_hits, minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08)))
+	else:
+		_reset_combo()
+	if confirmed:
+		var killed := horde.alive_count < _melee_alive_before
+		hit_confirmed.emit(killed)
+		_views[hand].confirm_hit(killed, sound, combo_hits, _melee_critical)
+		for other in weapons.size():
+			if other != hand:
+				add_secondary_charge(other, minf(weapons[hand].fire_interval, 0.8) * 22.0 + (8.0 if killed else 0.0))
+	if critical_at != Vector3.INF:
+		critical_hit.emit(critical_at)
+	_melee_hand = -1
+	_melee_phase = 0
+	if _melee_secondary and secondaries[hand] != null:
+		secondaries[hand].call(&"finish_swing")
 
 ## Grapples and dashes from raised decks can clear the perimeter walls; the
 ## player never leaves the stage's play area.
