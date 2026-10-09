@@ -18,23 +18,22 @@
   ten enemy types, inspected boss head/eye alignment, showed a noncritical
   finisher as its actual damage alone and rendered all three Lucky Strike cards.
   It exited with code 0.
-- Controlled fresh-Scout held-fire checks against stationary bosses measured
-  body/weak-spot kill times of 9.62/3.22 s (Yard), 15.68/5.13 s (Foundry), and
-  23.37/7.85 s (Reactor), with zero random crit chance and tracked aim.
-  These are controlled comparisons, not full-campaign balance certification.
+- Historical **triple-volley** fresh-Scout checks measured stationary-boss
+  body/weak-spot times of 9.62/3.22 s (Yard), 15.68/5.13 s (Foundry), and
+  23.37/7.85 s (Reactor). They predate the focused-gun rotation below and are
+  not current balance claims or full-campaign certification.
 - Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
   exit; rendered smoke runs reported up to 20, and the virtual display still
   warns about unsupported V-Sync. These changes are not claimed warning-free.
-- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): ten scenarios
-  (combat, weapons, recoil, boss, level-up, shop, HUD, mining, menus, icons)
-  render through the real scenes with a sandboxed profile, capture screenshots
-  and report checks. A full headless run produced 58 captures with 0 failures.
-  The lab is excluded from the Linux export.
+- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 13 scenarios,
+  including gun model gallery, rotation and alternate-fire checks. The rendered
+  Radeon GPU run produced 84 captures with 0 failures. Script/engine errors
+  also fail the runner. Lab content is excluded from the Linux export.
 - Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
   upgrade, mineral, workshop recipe, shop item and HUD glyph, generated from
   `tools/icons/art_*.py` (`make icons`).
-- Gun feel: spring-driven weapon kick per hand, a visual camera kick and FOV
-  punch that never moves the aim, varied muzzle flashes, fading tracers, ejected
+- Gun feel: gentle, more strongly damped weapon and camera springs, no firing
+  FOV punch, stable head-based ray aim, varied muzzle flashes, fading tracers,
   casings and a blooming crosshair. Point-blank impact flashes and enemy spit
   no longer fill the screen.
 - Round shop rebuilt: hand loadout cards with stats and rank pips, 4 weapon-mod
@@ -44,6 +43,26 @@
   segmented bar with damage trail and ENRAGED state, death stat panel, level-up
   cards with icons, rank pips and gold overclocks, and less overlap between
   damage numbers. Menus show class, ability, recipe, loadout and Armory icons.
+- Focused firing replaces the triple volley. Finite magazines, automatic
+  holstered reloads and a 0.2 s draw encourage rotation. In-hand reloads are
+  1.6× slower; partial reload progress survives swaps and upgrades.
+- Each class now starts with three different guns; crafted slot overrides remain.
+  Hits charge the other two alternates; drilling charges the focused gun.
+  HUD cards show ammo, reload progress, alternate meters and an EMPTY · SWAP hint.
+- Six RMB modes: Pulse Tag Burst (+35% exposure window), charged Rail Lance,
+  Scatter Concussion (shorter boss stagger), Minigun Overspin, ballistic
+  Autocannon Breach Grenade and persistent slowing Flamethrower Napalm.
+  RMB near an aimed mineral section remains the drill, without an open-field
+  drill shove. Rail Lance and Breach Grenade can fracture sections at range.
+- Original Blender-built firearm assets replace runtime primitive gun geometry.
+  Models have open bores, detailed receivers/rails/sights, magazines, pump,
+  rotary barrels and gloved grips; static geometry is batched by material.
+  Generation is reproducible with `tools/guns/build_guns.py`.
+- Rendered recoil checks measured 0.16° for a Rail shot and approximately
+  0.04–0.05° during sustained minigun fire, without aim drift. Controlled
+  fresh-Scout primary-only rotation killed a stationary Yard boss in
+  11.72 s with body fire / 3.90 s with weak-spot fire (zero random crits,
+  60 Hz simulated timing, swaps on empty magazines). Not campaign certification.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.

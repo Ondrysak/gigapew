@@ -309,6 +309,54 @@ func set_hands(state: RunState, focused: int) -> void:
 	hand_title.text = "HAND %d  ·  %s" % [focused + 1, selected.display_name.to_upper()]
 	_refresh_armor()
 
+## Updated from the actual player state; no menu preview drives these meters.
+func set_gunplay(player: ArenaPlayer) -> void:
+	for index in mini(_slots.size(), player.weapons.size()):
+		var slot: Dictionary = _slots[index]
+		var gun := player.weapons[index]
+		if gun == null:
+			continue
+		var reload := player.is_reloading(index)
+		var focused := index == player.selected_weapon
+		var rounds := player.ammo(index)
+		var text := "%d / %d" % [rounds, gun.magazine_size]
+		if reload:
+			text = "EMPTY · SWAP" if focused and rounds == 0 else "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
+		if (slot.ammo as Label).text != text:
+			(slot.ammo as Label).text = text
+		(slot.ammo as Label).modulate = focus_color if reload else Color.WHITE
+		(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 100.0
+		var alternate := player.secondaries[index]
+		var charge := player.secondary_charge[index]
+		(slot.charge as ProgressBar).value = charge
+		var hint := ""
+		if alternate != null:
+			hint = alternate.display_name.to_upper()
+			if focused and player.drilling():
+				hint = "DRILL → CHARGE"
+			elif alternate.charge_progress() > 0.0:
+				hint = "LANCE %d%% · RELEASE" % roundi(alternate.charge_progress() * 100.0)
+			elif alternate.is_active():
+				hint = "ALT ACTIVE"
+			elif focused and charge >= alternate.charge_cost:
+				hint = "RMB · " + hint
+		if (slot.alternate as Label).text != hint:
+			(slot.alternate as Label).text = hint
+		(slot.alternate as Label).modulate = ability_ready_color if charge >= 100.0 else Color(0.65, 0.76, 0.8)
+
+func _gun_meter(color: Color) -> ProgressBar:
+	var meter := ProgressBar.new()
+	meter.custom_minimum_size.y = 4
+	meter.show_percentage = false
+	meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var back := StyleBoxFlat.new()
+	back.bg_color = Color(0.05, 0.1, 0.12)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = color
+	meter.add_theme_stylebox_override(&"background", back)
+	meter.add_theme_stylebox_override(&"fill", fill)
+	return meter
+
 ## Shows installed main-gun mods as icons beside the focused hand's name.
 func set_weapon_mods(state: RunState) -> void:
 	_state = state
@@ -529,9 +577,20 @@ func _add_hand_slot() -> void:
 	top.add_child(type)
 	var pellets := _label("×1", 13, Color(0.75, 0.85, 0.88))
 	top.add_child(pellets)
-	var weapon := _icon(null, 64)
+	var weapon := _icon(null, 48)
 	weapon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	rows.add_child(weapon)
+	var ammo := _label("", 14, Color(0.87, 0.95, 0.98))
+	ammo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rows.add_child(ammo)
+	var reload := _gun_meter(focus_color)
+	rows.add_child(reload)
+	var alternate := _label("", 10, Color.WHITE)
+	alternate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	alternate.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	rows.add_child(alternate)
+	var charge := _gun_meter(ability_ready_color)
+	rows.add_child(charge)
 	var mods := HBoxContainer.new()
 	mods.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mods.custom_minimum_size.y = 16
@@ -539,7 +598,7 @@ func _add_hand_slot() -> void:
 	mods.add_theme_constant_override(&"separation", 2)
 	rows.add_child(mods)
 	hand_row.add_child(root)
-	_slots.append({"root": root, "key": key, "type": type, "pellets": pellets, "weapon": weapon, "mods": mods})
+	_slots.append({"root": root, "key": key, "type": type, "pellets": pellets, "weapon": weapon, "mods": mods, "ammo": ammo, "reload": reload, "alternate": alternate, "charge": charge})
 
 func _stat_tile(texture: Texture2D, value: String, caption: String) -> Control:
 	var tile := PanelContainer.new()

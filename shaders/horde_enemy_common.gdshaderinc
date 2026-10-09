@@ -1,7 +1,7 @@
 // Shared surface for batched horde enemies (static and vertex-animated).
 // Per-instance state arrives in INSTANCE_CUSTOM:
-// x = hit flash 0..1, y = attack telegraph 0..1, z = animation phase,
-// w = slow strength 0..1 (frost tint).
+// x = hit flash 0..1, y = attack telegraph 0..1 (-1 = stagger), z = animation phase,
+// w = slow strength 0..1 (frost tint), -1 = Tag Burst exposure.
 uniform vec4 albedo : source_color = vec4(1.0);
 uniform sampler2D albedo_texture : source_color, hint_default_white, filter_linear_mipmap, repeat_enable;
 uniform bool use_normal_texture = false;
@@ -39,9 +39,13 @@ varying float v_frost;
 
 void horde_surface(vec2 uv, vec3 normal, vec3 view, float time, float flash, float telegraph, float frost, out vec3 out_albedo, out float out_roughness, out float out_metallic, out vec3 out_emission) {
 	float warning = telegraph > 0.0 ? (0.35 + 0.65 * telegraph) * (0.75 + 0.25 * sin(time * 24.0)) : 0.0;
+	float tagged = max(-frost, 0.0);
+	float staggered = max(-telegraph, 0.0);
+	frost = max(frost, 0.0);
 	vec3 base = albedo.rgb * texture(albedo_texture, uv).rgb * tint.rgb;
 	base = mix(base, telegraph_color.rgb, warning);
 	base = mix(base, frost_color.rgb, frost * 0.6);
+	base = mix(base, vec3(0.1, 0.85, 0.7), tagged * 0.3);
 	out_albedo = mix(base, flash_color.rgb, flash);
 	vec4 orm = texture(orm_texture, uv);
 	float has_roughness = dot(roughness_channel, vec4(1.0));
@@ -50,4 +54,6 @@ void horde_surface(vec2 uv, vec3 normal, vec3 view, float time, float flash, flo
 	out_metallic = metallic * mix(1.0, dot(orm, metallic_channel), has_metallic);
 	float rim = pow(1.0 - clamp(dot(normal, view), 0.0, 1.0), 3.0);
 	out_emission = emission.rgb * emission_energy + base * unshaded_texture_energy + telegraph_color.rgb * warning * 1.5 + flash_color.rgb * flash + frost_color.rgb * frost * 0.35 + rim_color.rgb * rim_color.a * rim;
+	out_emission += vec3(0.08, 0.9, 0.72) * tagged * (0.18 + rim * 1.5);
+	out_emission += vec3(0.6, 0.7, 1.0) * staggered * rim;
 }

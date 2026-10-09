@@ -239,15 +239,14 @@ func is_craft_equipped(id: StringName, hand: int = 0) -> bool:
 	return false
 
 func hand_loadout(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
-	var first: WeaponDefinition = preload("res://data/weapons/pulse.tres")
-	var second := first
-	if class_definition != null and not class_definition.starting_weapons.is_empty():
-		if class_definition.starting_weapons[0] != null:
-			first = class_definition.starting_weapons[0]
-		second = first
-		if class_definition.starting_weapons.size() > 1 and class_definition.starting_weapons[1] != null:
-			second = class_definition.starting_weapons[1]
-	var result: Array[WeaponDefinition] = [first, second, first]
+	var fallback := load("res://data/weapons/pulse.tres") as WeaponDefinition
+	var result: Array[WeaponDefinition] = []
+	for slot in 3:
+		var gun := fallback
+		if class_definition != null and slot < class_definition.starting_weapons.size() \
+				and class_definition.starting_weapons[slot] != null:
+			gun = class_definition.starting_weapons[slot]
+		result.append(gun)
 	for hand in range(3):
 		var id := StringName(str(_equipped_weapons.get(str(hand), "")))
 		var recipe := CraftingCatalog.find(id)

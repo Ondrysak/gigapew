@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/pulse.tres" id="3_pulse"]
 [ext_resource type="Resource" path="res://data/weapons/rail.tres" id="4_rail"]
+[ext_resource type="Resource" path="res://data/weapons/scatter.tres" id="third"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/blink_dash.tscn" id="5_ability"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/recon_flare.tscn" id="6_alt"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/grapple_vault.tscn" id="7_alt"]
@@ -16,9 +17,9 @@ pickup_radius = 1.0
 id = &"scout"
 display_name = "Scout"
 tagline = "Fast, precise, gone before they close in."
-description = "Pulse carbine and Rail beam, 12% faster legs and a wider pickup reach. Blink Dash punches a lane through the swarm and leaves you untouchable for a heartbeat."
+description = "Pulse tags targets for the Rail; Scatter staggers the crowd while the rifles reload. +12% speed and wider pickup reach. Blink Dash clears a lane and grants a heartbeat of invulnerability."
 accent_color = Color(0.3, 0.95, 1, 1)
-starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_rail")])
+starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_rail"), ExtResource("third")])
 ability_scene = ExtResource("5_ability")
 alternate_abilities = Array[PackedScene]([ExtResource("6_alt"), ExtResource("7_alt")])
 alternate_ability_costs = PackedInt32Array(3, 5)

@@ -116,6 +116,7 @@ func _process(delta: float) -> void:
 	hud.set_hostiles(horde.alive_count)
 	hud.radar.refresh(horde, player, horde.boss_index)
 	hud.set_ability(player.ability)
+	hud.set_gunplay(player)
 	if round_state == RoundState.PLAYING:
 		run_time += delta
 		_music_timer -= delta
@@ -149,6 +150,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
 	player.active = false
+	player.cancel_secondaries()
 	# Rebuild outside input/physics callbacks; the whole old round is freed.
 	action.call_deferred()
 
@@ -271,6 +273,7 @@ func _present_level_up() -> void:
 		return
 	round_state = RoundState.LEVEL_UP
 	get_tree().paused = true
+	player.cancel_secondaries()
 	Music.stinger(&"level_up")
 	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state)
 
@@ -299,6 +302,7 @@ func _on_upgrade_chosen(upgrade: UpgradeDefinition) -> void:
 func _open_pause() -> void:
 	round_state = RoundState.PAUSED
 	get_tree().paused = true
+	player.cancel_secondaries()
 	pause_menu.open()
 
 func _on_resume() -> void:
@@ -335,6 +339,7 @@ func _on_boss_killed() -> void:
 	var banked := _bank(1.0)
 	horde.clear()
 	player.active = false
+	player.cancel_secondaries()
 	player.velocity = Vector3.ZERO
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player.sound.play_cue(&"victory")

@@ -53,8 +53,8 @@ same version; older versioned releases remain intact.
 ## Controls
 
 - **WASD** moves; **mouse** aims; **Space** jumps.
-- **Hold LMB** fires all three weapon hands together, each with its own cooldown and spin-up. **1 / 2 / 3** or the **mouse wheel** focuses a hand; focusing does not reset cooldowns.
-- **Hold RMB** drills: aim at a deposit's glowing **◇ weak seam** to cut faster. Sections fracture individually and spill loot; the drill also shoves nearby enemies.
+- **Hold LMB** fires only the focused gun. **1 / 2 / 3** or the **mouse wheel** swaps guns with a 0.2 s draw; cooldowns, reload progress and secondary charge survive swapping.
+- **RMB** uses the focused gun's charged alternate fire. When aiming at a mineral section within 3.2 m, it instead raises the drill: hold to cut, aim at the glowing **◇ weak seam** for faster cuts. Release and press again to change RMB's purpose.
 - **Q** uses your class ability.
 - **E** activates nearby consoles or flame vents while facing them; shoot barrels and vent valves to trigger them. Look for warning lights before crossing electrified floor panels.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
@@ -79,26 +79,37 @@ Contact damage comes in capped ticks of at most 4 damage per 0.5 s, even when su
 
 | Class | Unlock | Guns | Default ability (Q) | Alternate abilities (Void Shards) | Profile |
 | --- | --- | --- | --- | --- | --- |
-| Scout | free | Pulse, Rail, Pulse | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
-| Gunner | 6 shards | Minigun, Autocannon, Minigun | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
-| Driller | 10 shards | Flamethrower, Scatter, Flamethrower | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
-| Engineer | 14 shards | Pulse, Autocannon, Pulse | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
+| Scout | free | Pulse, Rail, Scatter | Blink Dash: invulnerable 9 m dash | Recon Flare (3), Grapple Vault (5) | +12% speed, +1 m pickup |
+| Gunner | 6 shards | Minigun, Autocannon, Scatter | Bulwark: 4 s shield and knockback pulse | Suppression Barrage (4), Ammo Frenzy (6) | +30 health, +1 armor, −5% speed |
+| Driller | 10 shards | Flamethrower, Scatter, Rail | Seismic Charge: thrown charge with a 7 m blast | Drill Dash (5), Magma Trail (7) | +150% mining, +5% damage |
+| Engineer | 14 shards | Pulse, Autocannon, Flamethrower | Overdrive: auto weapons recharge ~2× faster for 6 s | Platform Turret (6), Repair Drone (8) | Starts with Sentry Turret, −10% auto cooldown |
 
 Each class has three Q abilities: its default and two permanent unlocks. On the class-select screen, select an ability tile, buy it with Void Shards, then equip it. The equipped choice is saved per class in `user://profile.json`.
 
-**Main guns:** Pulse (fast, pierces 1), Rail (heavy, pierces the whole line), Scatter (7-pellet cone), Minigun (spins up to a shredding rate), Autocannon (explosive rounds), Flamethrower (short-range piercing cone).
+**Gun roles and alternate fire:**
 
-**Three hands:** the class's first two weapons repeat into three independent slots unless replaced by crafted equipment. All three models and gloved hands are visible. Each hand owns its own weapon definition, pellets, splash radius, damage type, damage, cadence and pierce upgrades; modifying one does not mutate its siblings or authored resources.
+| Gun | Main fire | Magazine | Holstered reload | RMB at full charge |
+| --- | --- | --- | --- | --- |
+| Pulse | Precise carbine, pierces 1 | 24 | 1.6 s | **Tag Burst:** three shots expose targets for +35% damage from every gun for 4 s |
+| Rail | Heavy piercing rifle | 5 | 2.0 s | **Overcharge Lance:** hold 0.7 s, release a ×3-damage piercing shot that also fractures minerals; early release or swapping cancels for free |
+| Scatter | Seven-pellet shotgun | 6 | 1.8 s | **Concussion Blast:** 8 m forward cone, strong shove and 1.2 s stagger; bosses stagger for 0.3 s |
+| Minigun | Spin-up rotary gun | 90 | 2.2 s | **Overspin:** instant full spin, double cadence and tight spread for 3 s; LMB remains the trigger |
+| Autocannon | Explosive shells | 10 | 2.0 s | **Breach Grenade:** ballistic 4 m blast, heavy knockback and a deep cut into a struck mineral section |
+| Flamethrower | Short-range piercing flame cone | 60 | 1.8 s | **Napalm Glob:** ballistic shot leaves a 4 s fire patch that burns and slows enemies |
+
+**Rotation, not a triple volley:** each class starts with three complementary guns; crafted equipment still replaces individual slots. Only the focused model is raised. Holstered guns automatically refill partially spent magazines; an empty gun reloads in hand at 1.6× the listed time. Reload progress survives swapping. The HUD shows rounds, reload progress, an EMPTY · SWAP hint and a separate alternate meter per gun.
+
+Landed main-fire shots charge the **other two guns**, nominally in about 4.5 s of hits at base cadence; kills add a bonus. Successful drilling charges the **focused gun**, with a weak-seam bonus. Meters start at 35/100 and each alternate costs 100. This enables rhythms such as Pulse → tag → Rail lance → Scatter escape, or Napalm → drill to recharge → switch to a longer-range gun while the fire patch persists. Swapping cancels held/burst/overspin effects, but launched projectiles and napalm remain. Each hand retains its own damage, cadence, pellets, splash, element and pierce upgrades without mutating siblings or authored resources.
 
 **Damage and feedback:** kinetic deals direct damage; fire ignites for four burn ticks over two seconds; frost slows movement to 55% for 1.8 seconds; shock chains 40% damage to up to three nearby enemies. Critical and kill numbers report actual health removed, not overkill. Same-type hits within 0.9 m and 0.2 s merge into one number (a crit or kill upgrades it), and new numbers stack above ones they would overlap; crits carry a crit icon.
 
-**Gun feel:** each weapon view kicks on a damped spring (back, up, pitch, randomized yaw/roll, slight overshoot), tuned per gun: rail and autocannon heavy, scatter punchy, pulse and minigun light. The three hands use slightly different spring rates so they never move in lockstep, and sustained fire plateaus under a cap. The camera gets a visual pitch/yaw/roll kick on its own spring (about 2° for a triple rail shot) plus a short FOV punch on heavy guns; it never changes the player's actual aim. Muzzle flashes vary roll, width and length and the light flickers; tracers thin and fade with their tail catching up to the hit; pooled casings eject per gun (brass, red scatter hulls, violet rail cells, none for flame). The crosshair blooms with each gun's spread and recoil and recovers; hit markers snap out wider on kills. Impact flashes within 1 m of the camera are skipped (damage still applies), and enemy spit shrinks away as it reaches the camera.
+**Gun feel:** stronger damping and shorter weapon travel keep recoil gentle. Camera pitch/yaw/roll recovers on a bounded spring, with no firing FOV punch; both main and alternate rays use the head's stable aim, not the visually recoiling camera. The rendered lab measured 0.16° for one Rail shot and about 0.04–0.05° during sustained minigun fire. Models slide into the raised pose on swaps; detachable magazines dip during in-hand reloads and Scatter cycles its pump after shots. Muzzle flashes vary, tracers fade and pooled casings eject from authored ports. The crosshair blooms without changing aim.
 
 **Precision hits (source changes, not yet packaged):** main-gun rays through a visible head or exposed core earn a guaranteed ×3 critical hit, without needing Lucky Strike. Ordinary rolled body crits deal ×2. Precision uses the current crit-damage factor plus one base-damage unit; it never multiplies a random crit again. Lucky Strike therefore improves both rolled crits and aimed hits. Each pierced victim is judged separately; headshots do not amplify splash, burn ticks or chained damage. Weak volumes follow enemy yaw, scale and feet height, and cannot be hit through a world blocker. Kill numbers retain actual damage but no longer say `DOWN`; critical numbers show a crit icon instead of `CRIT`.
 
-Spitters now have 180 base health, tanks 420 and bosses 6000; grunt and runner health is unchanged. Schedule multipliers still apply. Against stationary targets with fresh Scout hands, zero random-crit chance and uninterrupted tracked aim, the Yard boss took 9.62 s with body fire versus 3.22 s at its weak spot; the Reactor boss took 23.37 s versus 7.85 s. These controlled checks are not full-campaign balance certification.
+Spitters have 180 base health, tanks 420 and bosses 6000; schedule multipliers still apply. A controlled 60 Hz simulation through the rendered input path, with fresh Scout guns, no random crits, a stationary Yard boss and swaps on empty magazines, measured **11.72 s body / 3.90 s weak-spot** kill times using primary fire only. Earlier triple-volley measurements are historical and do not describe this rotation model. These checks are not full-campaign balance certification.
 
-**Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes readable, reliable target reactions and coherent presentation. Here, contact feedback precedes restrained camera effects; recoil recovers without aim drift, and there is no global hit-stop in the horde simulation. Firearms use independently authored hard-surface geometry with receivers, barrels, grips, sights, magazines and gloves, cached by weapon kind.
+**Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes reliable target reactions and coherent presentation. Contact feedback precedes restrained camera effects; recoil never drifts aim, and the horde simulation has no global hit-stop. Six original Blender-authored models use metre-scale receivers, open barrel bores, rails, sights, magazines, metal/polymer/rubber materials and gloved grips. Static parts are batched by material; magazines, the shotgun pump and the rotary barrel assembly remain movable.
 
 **Hit chains:** each main-gun shot that directly hits an enemy adds one beat, no matter how many pellets hit. After three consecutive hits, each further shot gains +8% damage per beat, capped at +40%. A miss, taking damage, or 2.5 seconds without another hit breaks the chain; explosions alone do not extend it. The crosshair shows the next shot's bonus and a countdown. Hit-confirmation sounds climb in pitch; hits and kills have brighter impact sparks and stronger recoil.
 
@@ -180,7 +191,7 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Autoloads:** `Profile` (`scripts/meta/profile.gd`) holds persistent currency, unlocks, Armory levels, crafting ranks, equipped armor/hand gear, records and settings. Multi-mineral payments validate the entire cost before debiting. `Music` (`scripts/audio/music_director.gd`, with `music_score.gd` for the arrangement and `music_synth.gd` for synthesis) plays tracks and stingers and follows intensity. Buses are defined in `default_bus_layout.tres`.
 - **Stats and economy:** `StatModifier` (`scripts/data/stat_modifier.gd`) holds shared stat fields. `RunState` combines class stats, Armory levels, crafted modifiers and level-up stacks, and owns three `WeaponHand` resources. `RoundShop` generates and purchases run-only stock; `CraftingCatalog` supplies persistent `CraftRecipe` definitions.
 - **Classes and abilities:** `data/classes/*.tres` plus `roster.tres` define the loadout, stats, unlock cost, default `ability_scene` and optional `alternate_abilities` with shard costs. `Profile` remembers each class's equipped ability; abilities extend `ActiveAbility` (`scripts/abilities/`, scenes in `scenes/abilities/`).
-- **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up, icon) plus a `WeaponView` scene in `scenes/weapons/`. Spring rates, kick shape, tracer lifetime and casings are tuned per view scene. `scripts/weapons/firearm_model.gd` builds original shared meshes once per weapon kind; views reuse impact, tracer and casing meshes from pools allocated once. `ArenaPlayer` owns independent hand cooldowns/spin-up, direct-hit chains, gun mods, the visual camera-kick spring and `aim_bloom`, which the crosshair reads. `Horde.damage_reported` feeds the fixed `DamageNumbers` label pool with actual health loss.
+- **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up, magazine size, reload time, icon and `secondary_scene`) plus a `WeaponView` scene in `scenes/weapons/`. Views instance the original `assets/guns/*.glb` meshes. Rebuild with `blender -b --python tools/guns/build_guns.py`, then import with the project Godot executable. No external image-generation access is required. `ArenaPlayer` owns the focused trigger, magazines, reloads, cross-charge, combo, gun mods and camera spring. Alternate scenes in `scenes/weapons/secondary/` extend `SecondaryFire`; `gun_secondary.gd` owns reusable rays, projectiles and fire patches, with expose/stagger state in `Horde`. Impact, tracer, casing and secondary visuals are pooled, not allocated per shot.
 - **Auto weapons, perks and gun mods:** `AutoWeapon` subclasses in `scripts/weapons/auto/` and `PerkEffect` subclasses in `scripts/perks/`, granted by `UpgradeDefinition`s (STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD) listed in `data/upgrades/pool.tres`. The `AutoWeaponRack` owns auto weapons and perks; neither perks nor gun mods use an auto-weapon slot.
 - **Horde:** `scripts/horde/horde.gd` runs a data-oriented simulation with one MultiMesh per enemy type, a shared flow field, weapon queries, `slow()`, faction FX and contact tuning. The flow field avoids obstacles and treats cliffs as walls; it routes to the player's level over ramps. Each enemy has a feet height taken from the stage heightfield: it snaps up ramps, falls off ledges and never climbs a step over 0.3 m. Hit tests, blasts, projectiles and contact damage all use that height. Robot and alien stats/animations are in `data/enemies/*.tres`. Meshes are baked from the CC0 models in `assets/monsters/` into shared textured surfaces; `shaders/horde_enemy_vat.gdshader` animates the crowd from position/normal textures and per-instance clip state. `tools/vat/README.md` covers the reproducible Blender bake and source pack licenses. The static shader remains available for other models.
 
@@ -201,18 +212,21 @@ Run the precision-damage and nested-blast regressions with the editor executable
 
 ## Visual test lab
 
-`scenes/lab/lab.tscn` runs isolated scenarios through the real game scenes and captures screenshots, like visual unit tests. The lab sandboxes `Profile` (`Profile.enter_sandbox()`): it starts from defaults and never reads or writes `user://profile.json`.
+`scenes/lab/lab.tscn` runs isolated scenarios through the real game scenes and captures screenshots, like visual unit tests. `Profile.enter_sandbox()` resets the loaded profile to defaults and disables save writes before scenarios start; lab purchases and runs never overwrite `user://profile.json`.
 
 | Scenario | Shows | Checks |
 | --- | --- | --- |
 | `combat` | Scout hands firing into a mixed robot pack | damage dealt, kills |
-| `weapons` | each main gun in all three hands, mid-burst | — |
+| `weapons` | each main gun firing from the focused hand | visual review |
 | `recoil` | 6-frame strips after one rail shot and during minigun fire | camera kicks and recovers, sustained kick stays capped, player aim unchanged |
+| `guns` | side and three-quarter views of all six Blender models | visual review |
+| `gunplay` | focused fire, empty magazines, swaps, reloads and contextual drilling | offhands do not fire, draw lock, reloads, cross-charge, upgrades preserve ammo/charge, drill precedence |
+| `secondary` | all six alternate modes and mineral shots | real damage and charge cost, cancellation, exposure damage/expiry, pursuit stopped by stagger, shorter boss stagger, overspin cadence, napalm burn/slow, mineral fracture |
 | `boss` | robot and alien bosses: arrival, fight, low health, kill | boss tracked, frame and WARNING banner up, kill opens the shop |
 | `levelup` | new, mixed and ranked picks incl. an overclock, entrance animation | every card has an icon, picking levels the upgrade and resumes play |
 | `shop` | open, hand 3 selected, bought, maxed, empty wallet | 4 + 2 stock, layout fits, debits, sold marking, reroll, refusals charge nothing, Esc cannot skip |
 | `hud` | play, armor/mods/cooldown gear, low health, death panel | armor and mod readouts, lethal damage ends the run |
-| `mining` | approaching and drilling a deposit | a reachable deposit exists |
+| `mining` | approaching and drilling a live mineral section | aimed collider reachable, section damaged, focused meter charged |
 | `menu` | main menu, every operator, each workshop tab | icons present and crisp |
 | `icons` | one gallery page per icon group | icon groups exist |
 
@@ -223,4 +237,4 @@ python3 tools/lab.py --list            # scenario names; --window renders visibl
 make lab                               # interactive: pick a scenario, play on; F1 list, F12 screenshot
 ```
 
-`tools/lab.py` renders in an invisible 1280 × 720 `gamescope --backend headless` session on the real GPU when gamescope is installed (otherwise in a window), prints each `PASS`/`FAIL` check plus engine errors, and exits non-zero on a failed check, a 240 s timeout or a missing report (crash or script parse error). A scenario is a `LabScenario` subclass in `scripts/lab/scenarios/` registered in `Lab.SCENARIOS`; `Lab` provides `start_game(class, stage)` (spawn director halted, scenario-driven level-ups, invulnerable player), `spawn_pack`, `ahead`, `aim_at`, `fire`, `wait`, `capture`, `capture_strip` and `check`.
+`tools/lab.py` renders in an invisible 1280 × 720 `gamescope --backend headless` session on the real GPU when gamescope is installed (otherwise in a window), prints each `PASS`/`FAIL` and engine error, and exits non-zero on a failed check, engine error, failed process, 240 s timeout or missing report. A scenario is a `LabScenario` subclass in `scripts/lab/scenarios/`, registered in `Lab.SCENARIOS`. Helpers include `start_game(class, stage)`, `spawn_pack`, `ahead`, `aim_at`, `aim_deposit` (finds an actual live section rather than a geode's hollow centre), `fire`, `wait`, `capture`, `capture_strip` and `check`. The 13-scenario gun rework run produced 84 captures with zero failures on the Radeon GPU.

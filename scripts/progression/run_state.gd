@@ -113,7 +113,8 @@ func consume_level_up() -> bool:
 
 func initialize_hands(definitions: Array[WeaponDefinition]) -> void:
 	hands.clear()
-	var fallback: WeaponDefinition = preload("res://data/weapons/pulse.tres")
+	# Runtime load avoids a resource cycle through gun alternates' RunState type.
+	var fallback := load("res://data/weapons/pulse.tres") as WeaponDefinition
 	for index in range(3):
 		var source := definitions[index] if index < definitions.size() else fallback
 		var hand := WeaponHand.new()

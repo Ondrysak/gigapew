@@ -117,6 +117,8 @@ var _slow_time := PackedFloat32Array()
 var _burn_time := PackedFloat32Array()
 var _burn_tick := PackedFloat32Array()
 var _burn_damage := PackedFloat32Array()
+var _exposed := PackedFloat32Array()
+var _stunned := PackedFloat32Array()
 var _stamp := PackedInt32Array()
 var _cell_of := PackedInt32Array()
 var _query_id := 0
@@ -233,6 +235,10 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_burn_tick.fill(0.0)
 	_burn_damage.resize(CAPACITY)
 	_burn_damage.fill(0.0)
+	_exposed.resize(CAPACITY)
+	_exposed.fill(0.0)
+	_stunned.resize(CAPACITY)
+	_stunned.fill(0.0)
 	_pos.resize(CAPACITY)
 	_y.resize(CAPACITY)
 	_y.fill(0.0)
@@ -543,6 +549,8 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	_burn_time[slot] = 0.0
 	_burn_tick[slot] = 0.0
 	_burn_damage[slot] = 0.0
+	_exposed[slot] = 0.0
+	_stunned[slot] = 0.0
 	_phase[slot] = _rng.randf() * TAU
 	_yaw[slot] = _rng.randf() * TAU
 	_active[_active_count] = slot
@@ -612,6 +620,22 @@ func slow(index: int, factor: float, duration: float) -> void:
 		_slow[index] = 1.0
 	_slow[index] = minf(_slow[index], clampf(factor, 0.0, 1.0))
 	_slow_time[index] = maxf(_slow_time[index], duration)
+
+## Tag Burst creates a cross-gun damage window, never a permanent multiplier.
+func expose(index: int, duration: float) -> void:
+	if is_alive(index):
+		_exposed[index] = maxf(_exposed[index], duration)
+
+func is_exposed(index: int) -> bool:
+	return is_alive(index) and _exposed[index] > 0.0
+
+## Bosses get a short stagger; regular enemies stop attacks as well as movement.
+func stun(index: int, duration: float) -> void:
+	if is_alive(index):
+		_stunned[index] = maxf(_stunned[index], duration * (0.25 if _t_boss[_type[index]] != 0 else 1.0))
+
+func is_stunned(index: int) -> bool:
+	return is_alive(index) and _stunned[index] > 0.0
 
 func is_alive(index: int) -> bool:
 	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
@@ -871,6 +895,8 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var before := _hp[index]
+	if _exposed[index] > 0.0:
+		amount *= 1.35
 	_hp[index] = maxf(0.0, before - minf(amount, before))
 	# Report the stored HP delta, including packed-float rounding.
 	var removed := before - _hp[index]
@@ -1049,6 +1075,9 @@ func _physics_process(delta: float) -> void:
 		var i := _active[a]
 		if not is_alive(i):
 			continue
+		_exposed[i] = maxf(0.0, _exposed[i] - delta)
+		var stunned := _stunned[i] > 0.0
+		_stunned[i] = maxf(0.0, _stunned[i] - delta)
 		var type := _type[i]
 		var p := _pos[i]
 		var to := player - p
@@ -1080,7 +1109,7 @@ func _physics_process(delta: float) -> void:
 		var face := route
 		if _flash[i] > 0.0:
 			_flash[i] = maxf(0.0, _flash[i] - delta / FLASH_TIME)
-		if chasing:
+		if chasing and not stunned:
 			move = _steer(i, type, route, direction, distance, delta)
 			if _mode[i] == Mode.CHARGE:
 				face = _aim[i]
@@ -1411,9 +1440,9 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[k + 11] = p.y
 	var custom := k + stride - 4
 	buffer[custom] = flash
-	buffer[custom + 1] = telegraph
+	buffer[custom + 1] = -1.0 if _stunned[slot] > 0.0 else telegraph
 	buffer[custom + 2] = _phase[slot]
-	buffer[custom + 3] = (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
+	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
 	return k + stride
 
 func _reset_animation(slot: int) -> void:
@@ -1428,6 +1457,9 @@ func _animate(buffer: PackedFloat32Array, at: int, slot: int, type: int, delta: 
 	var p := _pos[slot]
 	var moved := minf(p.distance_to(_anim_prev[slot]) / maxf(delta, 0.0001), 40.0)
 	_anim_prev[slot] = p
+	if _stunned[slot] > 0.0 and _anim_clip[slot] >= 0:
+		_write_clip(buffer, at, _anim_clip[slot], _anim_frame[slot], 0.0)
+		return
 	var speed := _anim_speed[slot] + (moved - _anim_speed[slot]) * minf(1.0, delta * 6.0)
 	_anim_speed[slot] = speed
 	var attack := _t_clip_attack[type]

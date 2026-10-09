@@ -667,7 +667,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -452.0
-offset_top = -184.0
+offset_top = -218.0
 offset_right = -24.0
 offset_bottom = -30.0
 grow_horizontal = 0
@@ -720,7 +720,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 11
-text = "WASD MOVE  ·  SPACE JUMP  ·  LMB FIRE  ·  RMB MINE  ·  Q ABILITY  ·  E INTERACT  ·  1 2 3 / WHEEL FOCUS HAND  ·  ESC PAUSE  ·  CLEAR THE BOSS FOR THE MINERAL SHOP  ·  SHOOT BARRELS AND VALVES"
+text = "WASD MOVE  ·  SPACE JUMP  ·  LMB FOCUSED GUN  ·  RMB ALT / DRILL DEPOSIT  ·  1 2 3 / WHEEL SWAP  ·  Q ABILITY  ·  E INTERACT  ·  ESC PAUSE  ·  HOLSTERED GUNS RELOAD"
 horizontal_alignment = 1
 
 [node name="Warning" type="Control" parent="."]

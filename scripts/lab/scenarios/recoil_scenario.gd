@@ -20,12 +20,12 @@ func run() -> void:
 	var camera := game.player.camera
 	var rest_pitch := game.player.head.rotation.x
 	var rest_camera := camera.rotation
-	# One trigger pull: every hand fires once, then the release stops the next.
+	# Only the focused hand fires; the other two remain stowed.
 	lab.fire(true)
 	await lab.frames(2)
 	lab.fire(false)
 	var kicked := rad_to_deg(camera.rotation.x - rest_camera.x)
-	lab.check(kicked > 0.5, "heavy shot visibly kicks the camera (%.2f deg)" % kicked)
+	lab.check(kicked > 0.0 and kicked < 0.4, "heavy shot stays gentle (%.2f deg)" % kicked)
 	await lab.capture_strip("single_shot", 6, 0.035)
 	await lab.wait(0.6)
 	lab.check(is_equal_approx(game.player.head.rotation.x, rest_pitch), "recoil never moves the player's aim (head pitch unchanged)")

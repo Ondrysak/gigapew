@@ -1,14 +1,15 @@
-[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/minigun.tscn" id="2_view"]
 [ext_resource type="Texture2D" path="res://assets/icons/weapons/minigun.png" id="icon_px"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/secondary/minigun.tscn" id="secondary"]
 
 [resource]
 script = ExtResource("1_definition")
 display_name = "Minigun"
-description = "Hold to spin up / shreds at full rate"
-damage = 11
+description = "Rotary gun / RMB Overspin doubles cadence for 3 seconds"
+damage = 26
 fire_interval = 0.05
 range_meters = 45.0
 pellet_count = 1
@@ -16,10 +17,13 @@ spread_degrees = 0.0
 jitter_degrees = 1.6
 knockback = 2.5
 pierce = 0
-screen_shake = 0.08
-recoil_degrees = 0.15
+screen_shake = 0.015
+recoil_degrees = 0.04
 view_scene = ExtResource("2_view")
 spin_up_time = 0.6
 spin_up_start_multiplier = 4.0
 spin_down_time = 0.8
 icon = ExtResource("icon_px")
+magazine_size = 90
+reload_time = 2.2
+secondary_scene = ExtResource("secondary")

@@ -82,6 +82,17 @@ var _rest: Vector3
 var _rest_rotation := Vector3.ZERO
 var _mining_offset := Vector3.ZERO
 var _kick_strength := 1.0
+var _focused := true
+var _focus_slot := 0
+var _pose_offset := Vector3.ZERO
+var _pose_rotation := Vector3.ZERO
+var _reloading := false
+var _reload_progress := 0.0
+var _magazine: Node3D
+var _magazine_rest := Vector3.ZERO
+var _pump: Node3D
+var _pump_rest := Vector3.ZERO
+var _pump_cycle := 0.0
 var _damage_type := -1
 var _flash_material: StandardMaterial3D
 var _critical_material: StandardMaterial3D
@@ -138,6 +149,15 @@ func _ready() -> void:
 	_rng.randomize()
 	# Each hand rings at a slightly different pitch so hands never move in lockstep.
 	_spring_omega = TAU * recoil_frequency * _rng.randf_range(0.9, 1.1)
+	_magazine = get_node_or_null(^"Model/Magazine") as Node3D
+	if _magazine != null:
+		_magazine_rest = _magazine.position
+	_pump = get_node_or_null(^"Model/Pump") as Node3D
+	if _pump != null:
+		_pump_rest = _pump.position
+	var ejection := get_node_or_null(^"Model/Eject") as Node3D
+	if ejection != null:
+		casing_port = ejection.position
 	if flash != null:
 		_flash_basis = flash.basis
 		_flash_shot_basis = _flash_basis
@@ -280,7 +300,7 @@ func _local_material(source: Material) -> StandardMaterial3D:
 
 ## Called when effective hand upgrades change, never from the shot path.
 func configure(definition: WeaponDefinition) -> void:
-	_kick_strength = lerpf(0.7, 1.35, inverse_lerp(0.15, 0.6, clampf(definition.recoil_degrees, 0.15, 0.6)))
+	_kick_strength = lerpf(0.7, 1.2, inverse_lerp(0.04, 0.3, clampf(definition.recoil_degrees, 0.04, 0.3)))
 	if _damage_type == definition.damage_type:
 		return
 	_damage_type = definition.damage_type
@@ -348,6 +368,12 @@ func set_spin(ratio: float) -> void:
 	if not _spin_audio.playing:
 		_spin_audio.play()
 
+func set_focus(focused: bool, slot: int, reloading: bool, progress: float) -> void:
+	_focused = focused
+	_focus_slot = slot
+	_reloading = reloading
+	_reload_progress = progress
+
 func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool, mining: bool = false) -> void:
 	var blend := 1.0 - exp(-18.0 * delta)
 	_step_kick(delta)
@@ -358,10 +384,18 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio
 	# A spinning gun hums with a slight shake.
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
-	# The drill raises on the left; yield space without hiding a weapon/hand.
-	_mining_offset = _mining_offset.lerp(Vector3(-0.16, -0.12, 0.0) if mining else Vector3.ZERO, blend)
-	position = _rest + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
-	rotation = _rest_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
+	var holster := Vector3(-0.75 if _focus_slot == 0 else 0.44 if _focus_slot == 1 else 0.04, -0.36 if _focus_slot == 2 else -0.24, 0.14)
+	var reload_dip := sin(clampf(_reload_progress, 0.0, 1.0) * PI) if _reloading and _focused else 0.0
+	_pose_offset = _pose_offset.lerp(Vector3(0, -reload_dip * 0.075, reload_dip * 0.025) if _focused else holster, 1.0 - exp(-15.0 * delta))
+	_pose_rotation = _pose_rotation.lerp(Vector3(-0.13 * reload_dip, 0, 0.18 * reload_dip) if _focused else Vector3(-0.12, 0, -0.15 if _focus_slot == 0 else 0.15), blend)
+	_mining_offset = _mining_offset.lerp(Vector3(0.13, -0.15, 0.04) if mining else Vector3.ZERO, blend)
+	position = _rest + _pose_offset + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
+	rotation = _rest_rotation + _pose_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
+	if _magazine != null:
+		_magazine.position = _magazine_rest + Vector3.DOWN * (reload_dip * 0.11)
+	if _pump != null:
+		_pump_cycle = maxf(0.0, _pump_cycle - delta)
+		_pump.position = _pump_rest + Vector3.BACK * (sin(_pump_cycle / 0.26 * PI) * 0.07)
 	if _casing_root != null:
 		_casing_root.transform = transform.affine_inverse()
 	if not active:
@@ -466,6 +500,7 @@ func _update_traces() -> void:
 func begin_shot(sound: CombatAudio) -> void:
 	_play(_shot_audio, sound, shot_cue)
 	_kick()
+	_pump_cycle = 0.26
 	_flash_time = flash_duration
 	if flash != null:
 		# Every flash gets its own roll, size and length.

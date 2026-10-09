@@ -23,12 +23,11 @@ const MINING_SHARE := 0.35
 const COMBO_WINDOW := 2.5
 const COMBO_MAX_BONUS := 0.4
 ## Visual camera kick spring (radians, Hz-derived) and its accumulation cap.
-const CAMERA_KICK_OMEGA := TAU * 3.5
-const CAMERA_KICK_DAMPING := 0.55
-const CAMERA_KICK_MAX := 0.052
-const FOV_PUNCH_MAX := 4.0
+const CAMERA_KICK_OMEGA := TAU * 5.0
+const CAMERA_KICK_DAMPING := 0.85
+const CAMERA_KICK_MAX := 0.012
 
-## Up to three simultaneous guns; selection focuses HUD/shop, not firing.
+## Only the focused gun fires; holstered guns reload and collect cross-charge.
 @export var weapons: Array[WeaponDefinition] = []
 ## Class ability; the root must be an ActiveAbility. Instanced in _ready.
 @export var ability_scene: PackedScene
@@ -48,6 +47,16 @@ var active := true
 var max_health := 100
 var health := 100
 var _fire_cooldowns := PackedFloat32Array()
+signal secondary_fired(hand: int)
+var secondary_charge := PackedFloat32Array()
+var secondaries: Array[SecondaryFire] = []
+var mining_tool: MiningTool
+var _secondary_scenes: Array[PackedScene] = []
+var _magazines := PackedInt32Array()
+var _reloads := PackedFloat32Array()
+var _draw_left := 0.0
+var _alternate_held := false
+var _alternate_drilling := false
 var combo_hits := 0
 var _combo_left := 0.0
 var _quickdraw_left := 0.0
@@ -64,7 +73,6 @@ var _camera_rest_rotation := Vector3.ZERO
 # Visual-only camera kick (pitch, yaw, roll) on a damped spring; never the player's aim.
 var _camera_kick := Vector3.ZERO
 var _camera_kick_velocity := Vector3.ZERO
-var _fov_punch := 0.0
 ## 0..1 crosshair bloom from recent shots' spread and recoil; recovers over time.
 var aim_bloom := 0.0
 var _trauma := 0.0
@@ -117,58 +125,76 @@ func _ready() -> void:
 			add_child(ability)
 			ability.setup(self, horde, run_state)
 
-## Refresh effective hand definitions and caches outside the firing path.
-## Cooldowns/spin survive upgrades and changes of focus.
+## Refresh effective definitions outside the shot path. Upgrades preserve rounds,
+## reload progress and charge; replacing a gun resets its magazine and meter.
 func refresh_weapons() -> void:
 	if not is_node_ready() and _query == null:
 		return
-	if weapons.size() > 3:
-		weapons.resize(3)
+	weapons.resize(mini(3, weapons.size()))
 	while _views.size() > weapons.size():
 		var old := _views.pop_back() as WeaponView
 		if old != null:
 			old.queue_free()
+		var alt := secondaries.pop_back() as SecondaryFire
+		if alt != null:
+			alt.cancel()
+			alt.queue_free()
+		_secondary_scenes.pop_back()
 		_view_scenes.pop_back()
 		_directions.pop_back()
 	_fire_cooldowns.resize(weapons.size())
 	_spins.resize(weapons.size())
+	_magazines.resize(weapons.size())
+	_reloads.resize(weapons.size())
+	secondary_charge.resize(weapons.size())
 	for slot in range(weapons.size()):
 		var definition := weapons[slot]
-		if slot >= _views.size():
+		var fresh := slot >= _views.size()
+		if fresh:
 			_views.append(null)
 			_view_scenes.append(null)
+			secondaries.append(null)
+			_secondary_scenes.append(null)
 			var directions := PackedVector3Array()
 			directions.resize(WeaponHand.MAX_PROJECTILES)
 			_directions.append(directions)
 		var scene := definition.view_scene if definition != null else null
-		if _view_scenes[slot] != scene:
+		if fresh or _view_scenes[slot] != scene:
 			if _views[slot] != null:
 				_views[slot].queue_free()
 				_views[slot] = null
 			_view_scenes[slot] = scene
+			_magazines[slot] = definition.magazine_size if definition != null else 0
+			_reloads[slot] = 0.0
+			secondary_charge[slot] = 35.0
+			_fire_cooldowns[slot] = 0.0
+			_spins[slot] = 0.0
 			if scene != null:
-				var node := scene.instantiate()
-				var view := node as WeaponView
-				if view == null:
-					node.free()
-					push_error("Weapon view_scene root must be a WeaponView")
-				else:
-					# Set BEFORE _ready captures the authored resting transform.
-					view.position = Vector3(-0.44, -0.27, -0.66) if slot == 0 \
-							else Vector3(0.44, -0.27, -0.66) if slot == 1 \
-							else Vector3(0.0, -0.35, -0.70)
-					if slot == 2:
-						view.scale *= 0.75
-					camera.add_child(view)
-					view.prepare(WeaponHand.MAX_PROJECTILES)
-					_views[slot] = view
+				var view := scene.instantiate() as WeaponView
+				view.position = Vector3(0.24, -0.22, -0.38)
+				camera.add_child(view)
+				view.prepare(WeaponHand.MAX_PROJECTILES)
+				_views[slot] = view
 		if definition == null:
 			continue
 		if _views[slot] != null:
 			_views[slot].configure(definition)
+		if fresh or _secondary_scenes[slot] != definition.secondary_scene:
+			if secondaries[slot] != null:
+				secondaries[slot].cancel()
+				secondaries[slot].queue_free()
+			secondaries[slot] = null
+			_secondary_scenes[slot] = definition.secondary_scene
+			if definition.secondary_scene != null:
+				var alternate := definition.secondary_scene.instantiate() as SecondaryFire
+				camera.add_child(alternate)
+				alternate.setup(self, horde, run_state, slot, _views[slot], definition)
+				alternate.fired.connect(_on_secondary_fired.bind(slot))
+				secondaries[slot] = alternate
+		elif secondaries[slot] != null:
+			secondaries[slot].configure(definition)
 		var count := _projectile_count(definition)
 		var radius := tan(deg_to_rad(definition.spread_degrees))
-		# Bonus rays on precision guns still diverge enough to read as multishot.
 		if count > definition.pellet_count:
 			radius = maxf(radius, tan(deg_to_rad(1.5)))
 		_directions[slot][0] = Vector3.FORWARD
@@ -188,10 +214,42 @@ func select_weapon(index: int) -> void:
 		return
 	if selected_weapon == index:
 		return
+	if secondaries[selected_weapon] != null:
+		secondaries[selected_weapon].cancel()
+	_alternate_held = Input.is_action_pressed("mine")
+	_alternate_drilling = false
+	_draw_left = 0.2
 	selected_weapon = index
 	_quickdraw_left = 1.5 if run_state != null \
 			and run_state.upgrade_levels.get(&"mod_quickdraw", 0) > 0 else 0.0
 	weapon_changed.emit(weapons[index], index)
+
+func ammo(hand: int) -> int:
+	return _magazines[hand]
+
+func is_reloading(hand: int) -> bool:
+	return _reloads[hand] > 0.0
+
+func reload_progress(hand: int) -> float:
+	return 1.0 - _reloads[hand] / maxf(0.01, weapons[hand].reload_time)
+
+func add_secondary_charge(hand: int, amount: float) -> void:
+	if hand >= 0 and hand < secondary_charge.size():
+		secondary_charge[hand] = clampf(secondary_charge[hand] + amount, 0.0, 100.0)
+
+func _on_secondary_fired(hand: int) -> void:
+	add_secondary_charge(hand, -secondaries[hand].charge_cost)
+	secondary_fired.emit(hand)
+
+func cancel_secondaries() -> void:
+	for alternate in secondaries:
+		if alternate != null:
+			alternate.cancel()
+	_alternate_held = false
+	_alternate_drilling = false
+
+func drilling() -> bool:
+	return _alternate_drilling and Input.is_action_pressed("mine")
 
 ## Re-reads run upgrades; keeps current damage taken when max health grows.
 func refresh_stats() -> void:
@@ -204,6 +262,8 @@ func refresh_stats() -> void:
 ## Blocks firing until the fire button is released (after menus and recapture).
 func suppress_fire_until_release() -> void:
 	_waiting_for_fire_release = Input.is_action_pressed("fire")
+	_alternate_held = Input.is_action_pressed("mine")
+	_alternate_drilling = false
 
 func heal(amount: int) -> void:
 	if not active or amount <= 0 or health >= max_health:
@@ -268,18 +328,17 @@ func _mouse_sensitivity() -> float:
 
 func _process(delta: float) -> void:
 	var speed_ratio := clampf(Vector2(velocity.x, velocity.z).length() / SPEED, 0.0, 1.0)
-	var mining := active and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and Input.is_action_pressed("mine")
+	var mining := active and drilling()
 	for slot in range(_views.size()):
 		var view := _views[slot]
 		if view != null:
-			view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active, mining and slot == 0)
+			view.set_focus(slot == selected_weapon, slot, is_reloading(slot), reload_progress(slot))
+			view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active, mining and slot == selected_weapon)
 			view.set_spin(_spins[slot] if active else 0.0)
 	_step_camera_kick(delta)
 	camera.rotation = _camera_rest_rotation + _camera_kick
-	# Abilities add to camera.fov directly; the shot punch rides on top and decays faster.
-	var fov_base := camera.fov - _fov_punch
-	_fov_punch *= exp(-11.0 * delta)
-	camera.fov = lerpf(fov_base, 90.0 + speed_ratio * 2.5, 1.0 - exp(-5.0 * delta)) + _fov_punch
+	# Abilities may change FOV; ease back without an additional firing punch.
+	camera.fov = lerpf(camera.fov, 90.0 + speed_ratio * 2.5, 1.0 - exp(-5.0 * delta))
 	aim_bloom *= exp(-5.0 * delta)
 	_trauma = maxf(0.0, _trauma - delta * 1.8)
 	_shake_clock += delta
@@ -335,27 +394,62 @@ func _physics_process(delta: float) -> void:
 		_move(delta)
 	_stay_in_arena()
 
-	var trigger := captured and not _waiting_for_fire_release and Input.is_action_pressed("fire")
+	_draw_left = maxf(0.0, _draw_left - delta)
+	var alternate := secondaries[selected_weapon] if not secondaries.is_empty() else null
+	var held := captured and Input.is_action_pressed("mine")
+	if held and not _alternate_held:
+		_alternate_drilling = mining_tool != null and mining_tool.has_target()
+		if not _alternate_drilling and alternate != null and _draw_left <= 0.0 \
+				and alternate.is_ready() and secondary_charge[selected_weapon] >= alternate.charge_cost:
+			alternate.press()
+	elif not held and _alternate_held:
+		if not _alternate_drilling and alternate != null:
+			alternate.release()
+		_alternate_drilling = false
+	_alternate_held = held
+	var overspin := alternate != null and alternate.primary_rate_multiplier() > 1.0
+	var trigger := captured and not _waiting_for_fire_release and not held \
+			and Input.is_action_pressed("fire") and _draw_left <= 0.0
+	if alternate != null and alternate.is_active() and not overspin:
+		trigger = false
+	# RMB starts Overspin; LMB remains its trigger even if RMB stays held.
+	if overspin:
+		trigger = captured and Input.is_action_pressed("fire") and _draw_left <= 0.0
 	for slot in range(weapons.size()):
 		if not active:
-			break # A boss kill may synchronously open the round shop.
+			break
 		var definition := weapons[slot]
 		if definition == null or _views[slot] == null:
 			continue
+		var focused := slot == selected_weapon
+		var shooting := trigger and focused
+		if _reloads[slot] > 0.0:
+			_reloads[slot] = maxf(0.0, _reloads[slot] - delta / (1.6 if focused else 1.0))
+			if _reloads[slot] == 0.0:
+				_magazines[slot] = definition.magazine_size
+		elif not focused and _magazines[slot] < definition.magazine_size:
+			_reloads[slot] = definition.reload_time
 		if definition.spin_up_time > 0.0:
-			if trigger:
+			if focused and overspin:
+				_spins[slot] = 1.0
+			elif shooting:
 				_spins[slot] = minf(1.0, _spins[slot] + delta / definition.spin_up_time)
 			else:
 				_spins[slot] = maxf(0.0, _spins[slot] - delta / maxf(0.01, definition.spin_down_time))
 		_fire_cooldowns[slot] = maxf(-delta, _fire_cooldowns[slot] - delta)
-		if trigger and _fire_cooldowns[slot] <= 0.0:
+		if shooting and _reloads[slot] == 0.0 and _magazines[slot] > 0 and _fire_cooldowns[slot] <= 0.0:
 			var interval := definition.fire_interval
 			if definition.spin_up_time > 0.0:
 				var eased := 1.0 - (1.0 - _spins[slot]) * (1.0 - _spins[slot])
 				interval *= lerpf(definition.spin_up_start_multiplier, 1.0, eased)
 			var rate := run_state.fire_rate_multiplier if run_state != null else 1.0
-			_fire_cooldowns[slot] += maxf(0.01, interval / maxf(0.1, rate))
+			if focused and alternate != null:
+				rate *= alternate.primary_rate_multiplier()
+			_fire_cooldowns[slot] += maxf(0.025, interval / maxf(0.1, rate))
+			_magazines[slot] -= 1
 			_shoot(slot)
+			if _magazines[slot] == 0:
+				_reloads[slot] = definition.reload_time
 
 ## Grapples and dashes from raised decks can clear the perimeter walls; the
 ## player never leaves the stage's play area.
@@ -438,13 +532,15 @@ func _shoot(hand: int) -> void:
 		_hit_lookup[_hit_slots[n]] = -1
 	_hit_count = 0
 	var origin := camera.global_position
-	var aim := camera.global_basis
+	# Camera kick is presentation only: ray aim is the head's stable basis.
+	var aim := head.global_basis
 	var forward := -aim.z
 	var roll := Basis.IDENTITY
 	var pellet_count := _projectile_count(definition)
 	if pellet_count > 1 and definition.jitter_degrees > 0.0:
 		roll = Basis(Vector3.FORWARD, _rng.randf() * TAU)
-	var jitter := tan(deg_to_rad(definition.jitter_degrees))
+	var alternate := secondaries[hand]
+	var jitter := tan(deg_to_rad(definition.jitter_degrees)) * (alternate.primary_spread_multiplier() if alternate != null else 1.0)
 	var space := get_world_3d().direct_space_state
 	var directions := _directions[hand]
 	var explosive := definition.explosion_radius > 0.0
@@ -535,23 +631,21 @@ func _shoot(hand: int) -> void:
 		hit_confirmed.emit(killed)
 		view.confirm_hit(killed, sound, combo_hits, critical_at != Vector3.INF)
 		add_shake(0.095 if killed else 0.035)
+		# Landed fire feeds the OTHER guns: damage upgrades cannot farm faster.
+		var charge := minf(definition.fire_interval, 0.8) * 22.0 + (8.0 if killed else 0.0)
+		for other in weapons.size():
+			if other != hand:
+				add_secondary_charge(other, charge)
 	if critical_at != Vector3.INF:
 		critical_hit.emit(critical_at)
 	# Camera kick is a bounded temporary child rotation, never player/head aim.
-	var kick := deg_to_rad(clampf(definition.recoil_degrees, 0.15, 0.6)) * 2.4
-	# Kicks landing on an already-raised view add less, so sustained fire plateaus.
+	var kick := deg_to_rad(clampf(definition.recoil_degrees, 0.04, 0.3))
 	var room := 1.0 - clampf(_camera_kick.x / CAMERA_KICK_MAX, 0.0, 1.0)
-	var side := -1.0 if hand == 0 else 1.0 if hand == 1 else _rng.randf_range(-1.0, 1.0)
-	var impulse := Vector3(kick * room, kick * (side * 0.25 + _rng.randf_range(-0.15, 0.15)), kick * _rng.randf_range(-0.4, 0.4))
+	var impulse := Vector3(kick * room, kick * _rng.randf_range(-0.08, 0.08), kick * _rng.randf_range(-0.1, 0.1))
 	_camera_kick += impulse * 0.5
 	_camera_kick_velocity += impulse * CAMERA_KICK_OMEGA
 	_clamp_camera_kick()
 	camera.rotation = _camera_rest_rotation + _camera_kick
-	if definition.recoil_degrees >= 0.4:
-		var punch := minf((definition.recoil_degrees - 0.3) * 6.0, FOV_PUNCH_MAX - _fov_punch)
-		if punch > 0.0:
-			_fov_punch += punch
-			camera.fov += punch
 	var bloom := 0.08 + definition.spread_degrees / 14.0 + definition.jitter_degrees / 10.0 + definition.recoil_degrees * 0.5
 	aim_bloom = minf(1.0, aim_bloom + bloom * (1.0 - aim_bloom * 0.6))
 
@@ -598,6 +692,7 @@ func take_damage(amount: int) -> void:
 	sound.play_cue(&"hurt")
 	if health == 0:
 		active = false
+		cancel_secondaries()
 		velocity = Vector3.ZERO
 		_dash_time = 0.0
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

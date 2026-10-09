@@ -1,7 +1,7 @@
 [gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
-[ext_resource type="Script" path="res://scripts/weapons/firearm_model.gd" id="2_model"]
+[ext_resource type="PackedScene" path="res://assets/guns/pulse.glb" id="2_model"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_flash"]
 shading_mode = 0
@@ -33,19 +33,17 @@ flash_light = NodePath("MuzzleLight")
 trace_material = SubResource("Mat_trace")
 impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
-recoil_distance = 0.038
-recoil_angle = 0.055
+recoil_distance = 0.022
+recoil_angle = 0.027
 recoil_frequency = 8.0
-recoil_damping = 0.45
+recoil_damping = 0.78
 trace_duration = 0.08
 
-[node name="Model" type="Node3D" parent="."]
-script = ExtResource("2_model")
-kind = "pulse"
+[node name="Model" parent="." instance=ExtResource("2_model")]
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.49)
+position = Vector3(0, 0.052, -0.613)
 rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_flash")
 material_override = SubResource("Mat_flash")
@@ -53,7 +51,7 @@ cast_shadow = 0
 
 [node name="MuzzleLight" type="OmniLight3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.49)
+position = Vector3(0, 0.052, -0.613)
 light_color = Color(0.3, 1, 0.91, 1)
 light_energy = 1.7
 omni_range = 3.0

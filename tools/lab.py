@@ -73,7 +73,8 @@ def main() -> int:
         return 2
     failures = [line for line in report.read_text().splitlines() if line.startswith("FAIL")]
     print(f"lab: {out}  ({report.read_text().splitlines()[0]})")
-    return 1 if failures else 0
+    engine_error = any(line.startswith("SCRIPT ERROR") or line.startswith("ERROR:") for line in process.stdout.splitlines())
+    return 1 if failures or engine_error or process.returncode != 0 else 0
 
 
 if __name__ == "__main__":

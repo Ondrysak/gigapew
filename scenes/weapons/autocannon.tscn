@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
-[ext_resource type="Script" path="res://scripts/weapons/firearm_model.gd" id="2_model"]
+[ext_resource type="PackedScene" path="res://assets/guns/autocannon.glb" id="2_model"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_glow"]
 shading_mode = 0
@@ -55,11 +55,11 @@ impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
 synth_shot = &"autocannon"
 shot_volume_db = -7.0
-recoil_distance = 0.067
-recoil_angle = 0.1
-recoil_lift = 0.35
-recoil_frequency = 3.8
-recoil_damping = 0.42
+recoil_distance = 0.035
+recoil_angle = 0.047
+recoil_lift = 0.2
+recoil_frequency = 5.5
+recoil_damping = 0.8
 trace_width = 0.034
 trace_duration = 0.11
 flash_duration = 0.07
@@ -75,13 +75,11 @@ casing_lifetime = 0.7
 casing_port = Vector3(0, 0.06, -0.02)
 casing_speed = 1.4
 
-[node name="Model" type="Node3D" parent="."]
-script = ExtResource("2_model")
-kind = "autocannon"
+[node name="Model" parent="." instance=ExtResource("2_model")]
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.49)
+position = Vector3(0, 0.079, -0.703)
 rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_flash")
 material_override = SubResource("Mat_glow")
@@ -89,7 +87,7 @@ cast_shadow = 0
 
 [node name="MuzzleLight" type="OmniLight3D" parent="."]
 visible = false
-position = Vector3(0, 0, -0.49)
+position = Vector3(0, 0.079, -0.703)
 light_color = Color(1, 0.55, 0.18, 1)
 light_energy = 3.0
 omni_range = 4.5

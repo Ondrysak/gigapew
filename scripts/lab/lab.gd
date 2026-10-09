@@ -18,6 +18,9 @@ const SCENARIOS := {
 	&"combat": preload("res://scripts/lab/scenarios/combat_scenario.gd"),
 	&"weapons": preload("res://scripts/lab/scenarios/weapons_scenario.gd"),
 	&"recoil": preload("res://scripts/lab/scenarios/recoil_scenario.gd"),
+	&"guns": preload("res://scripts/lab/scenarios/guns_scenario.gd"),
+	&"gunplay": preload("res://scripts/lab/scenarios/gunplay_scenario.gd"),
+	&"secondary": preload("res://scripts/lab/scenarios/secondary_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"levelup": preload("res://scripts/lab/scenarios/level_up_scenario.gd"),
 	&"shop": preload("res://scripts/lab/scenarios/shop_scenario.gd"),
@@ -115,6 +118,30 @@ func aim_at(point: Vector3) -> void:
 	player.rotation.y = atan2(-direction.x, -direction.z)
 	var flat := Vector2(direction.x, direction.z).length()
 	player.head.rotation.x = clampf(atan2(direction.y, flat), deg_to_rad(-85.0), deg_to_rad(85.0))
+
+## Geodes have hollow centres. Aim at a live section tip, then prove the physics
+## ray actually hits that deposit before a mining scenario presses RMB.
+func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
+	var player := game.player
+	var stand := deposit.global_position + deposit.global_basis.z.normalized() * distance
+	player.velocity = Vector3.ZERO
+	player.global_position = Vector3(stand.x, game.horde.ground_height(Vector2(stand.x, stand.z)) + 1.0, stand.z)
+	for n in 24:
+		await get_tree().physics_frame
+	var query := PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 0xFFFFFFFF, [player.get_rid()])
+	for section: Dictionary in deposit._sections:
+		if float(section["health"]) <= 0.0:
+			continue
+		var mesh: MeshInstance3D = section["mesh"]
+		var point: Vector3 = section["weak_position"].lerp(mesh.get_aabb().get_center(), 0.12)
+		aim_at(deposit.to_global(point))
+		await get_tree().physics_frame
+		query.from = player.camera.global_position
+		query.to = query.from - player.head.global_basis.z * (3.05 if distance <= 3.2 else distance + 3.0)
+		var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
+		if not hit.is_empty() and hit["collider"] == deposit:
+			return true
+	return false
 
 func fire(held: bool) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

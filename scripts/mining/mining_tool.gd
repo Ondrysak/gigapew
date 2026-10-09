@@ -1,10 +1,8 @@
 class_name MiningTool
 extends Node3D
 
-## Hand drill parented to the player camera. Holding `mine` raises it and
-## progressively cuts the aimed mineral section; it also shoves and chips at
-## enemies in a short cone, doubling as a panic melee. Reskin by replacing
-## the scene nodes behind `model` and `spinner`.
+## Contextual hand drill: RMB raises it only while aiming at a deposit in reach.
+## Successful cuts charge the focused gun's alternate fire meter.
 const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 
 ## Node moved between the stowed and raised poses.
@@ -25,22 +23,14 @@ const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 ## Same-section contact ramps to a 35% faster cut; changing sections resets it.
 @export_range(0.3, 1.2) var resonance_seconds := 0.65
 
-@export_group("Melee")
-## Per tick, scaled by run_state.damage_multiplier.
-@export var enemy_damage := 5.0
-@export var enemy_knockback := 9.0
-@export_range(0.0, 90.0) var cone_degrees := 40.0
-@export var max_enemies_per_tick := 8
 
 @export_group("Effects")
 @export var spark_mesh: Mesh
 ## Should use vertex color as albedo.
 @export var spark_material: Material
 @export var rock_spark_color := Color(1.0, 0.72, 0.3)
-@export var enemy_spark_color := Color(1.0, 0.3, 0.45)
 @export var drill_sound: AudioStream
 @export var rock_sound: AudioStream
-@export var enemy_sound: AudioStream
 @export var drill_volume_db := -17.0
 @export var sound_bus: StringName = &"SFX"
 ## Zero disables the temporal halo without removing target information.
@@ -55,7 +45,6 @@ var feedback: MiningFeedback
 var _player: ArenaPlayer
 var _run_state: RunState
 var _query: PhysicsRayQueryParameters3D
-var _enemies := PackedInt32Array()
 var _tick := 0.0
 var _using := false
 var _raise := 0.0
@@ -67,7 +56,6 @@ var _next_spark := 0
 var _drill_voice: AudioStreamPlayer
 var _impact_voice: AudioStreamPlayer
 var _rock_stream: AudioStream
-var _enemy_stream: AudioStream
 var _break_stream: AudioStream
 var _fracture_progress := 0.0
 var _weak_contact := false
@@ -103,7 +91,6 @@ func _ready() -> void:
 	_drill_voice.bus = sound_bus
 	add_child(_drill_voice)
 	_rock_stream = rock_sound if rock_sound != null else MiningSynth.cue(&"clank")
-	_enemy_stream = enemy_sound if enemy_sound != null else MiningSynth.cue(&"thud")
 	_break_stream = MiningSynth.cue(&"section")
 	_impact_voice = AudioStreamPlayer.new()
 	_impact_voice.volume_db = -13.0
@@ -120,11 +107,23 @@ func setup(player: ArenaPlayer, run_state: RunState) -> void:
 	_run_state = run_state
 	_query = PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 0xFFFFFFFF, [player.get_rid()])
 	feedback.setup(player)
+	_player.mining_tool = self
+
+## Called in physics ticks by the player, before deciding RMB's purpose.
+func has_target() -> bool:
+	if _query == null:
+		return false
+	_query.from = _player.camera.global_position
+	_query.to = _query.from - _player.head.global_basis.z * reach
+	var hit := get_world_3d().direct_space_state.intersect_ray(_query)
+	if hit.is_empty() or not hit["collider"] is MineralDeposit:
+		return false
+	return not (hit["collider"] as MineralDeposit).feedback_at(hit["position"], int(hit["shape"])).is_empty()
 
 func _physics_process(delta: float) -> void:
 	var enabled := _player != null and is_instance_valid(_player) and _player.active \
 			and not get_tree().paused and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-	var using := enabled and Input.is_action_pressed("mine")
+	var using := enabled and _player.drilling()
 	if using != _using:
 		_using = using
 		if using:
@@ -139,7 +138,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var camera := _player.camera
 	_query.from = camera.global_position
-	_query.to = _query.from - camera.global_basis.z * reach
+	_query.to = _query.from - _player.head.global_basis.z * reach
 	var hit := get_world_3d().direct_space_state.intersect_ray(_query)
 	var data: Dictionary = {}
 	var deposit: MineralDeposit
@@ -182,7 +181,6 @@ func _clear_target() -> void:
 	_weak_contact = false
 
 func _strike(hit: Dictionary, data: Dictionary) -> void:
-	var origin := _player.camera.global_position
 	var struck := false
 	if not hit.is_empty():
 		var collider: Object = hit["collider"]
@@ -193,6 +191,7 @@ func _strike(hit: Dictionary, data: Dictionary) -> void:
 			var multiplier := _run_state.mining_multiplier if _run_state != null else 1.0
 			var cut_rate := mining_per_second * (1.0 + resonance * 0.35)
 			deposit.take_mining_damage(cut_rate * tick_interval * multiplier, point, int(hit["shape"]))
+			_player.add_secondary_charge(_player.selected_weapon, tick_interval * 20.0 * (1.35 if bool(data.get("weak", false)) else 1.0))
 			var color: Color = data["color"]
 			var broken := deposit.last_chunk_broken
 			var weak := deposit.last_hit_weak
@@ -206,46 +205,9 @@ func _strike(hit: Dictionary, data: Dictionary) -> void:
 		elif _contact == 0.0:
 			# Scraping plain walls: sparks, no damage.
 			_spark(point, normal, rock_spark_color)
-	if _melee(origin):
-		struck = true
-		_kick = maxf(_kick, 1.0)
 	if struck:
 		_contact = tick_interval * 1.5
 
-func _melee(origin: Vector3) -> bool:
-	var horde := _player.horde
-	if horde == null or not is_instance_valid(horde):
-		return false
-	# Yaw-only facing so looking down still sweeps the cone ahead.
-	var facing := -_player.global_basis.z
-	facing.y = 0.0
-	facing = facing.normalized()
-	var min_dot := cos(deg_to_rad(cone_degrees))
-	var count := horde.query_radius(origin, reach, _enemies)
-	var damage_scale := _run_state.damage_multiplier if _run_state != null else 1.0
-	var hits := 0
-	var killed := false
-	var spark_at := Vector3.ZERO
-	for n in count:
-		if hits >= max_enemies_per_tick:
-			break
-		var index := _enemies[n]
-		var enemy_at := horde.enemy_position(index)
-		var offset := Vector3(enemy_at.x - origin.x, 0.0, enemy_at.z - origin.z)
-		var distance := offset.length()
-		# Enemies hugging the player always count; the rest must be in the cone.
-		if distance > 0.9 and offset.dot(facing) < distance * min_dot:
-			continue
-		hits += 1
-		spark_at = enemy_at
-		if horde.damage(index, enemy_damage * damage_scale, facing * enemy_knockback):
-			killed = true
-	if hits == 0:
-		return false
-	_play(_enemy_stream)
-	_spark(spark_at, -facing, enemy_spark_color)
-	_player.hit_confirmed.emit(killed)
-	return true
 
 func _play(stream: AudioStream) -> void:
 	_impact_voice.stream = stream

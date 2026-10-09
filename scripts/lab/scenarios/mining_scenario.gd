@@ -18,17 +18,16 @@ func run() -> void:
 	lab.check(deposit != null, "stage placed a reachable deposit")
 	if deposit == null:
 		return
-	var normal := deposit.global_basis.z
-	normal.y = 0.0
-	var stand := deposit.global_position + normal.normalized() * 2.2
-	game.player.global_position = Vector3(stand.x, game.player.global_position.y, stand.z)
-	await lab.frames(2)
-	lab.aim_at(deposit.global_position)
+	lab.check(await lab.aim_deposit(deposit, 2.2), "aimed ray reaches a real mineral section")
+	var before := deposit.health
+	var meter := game.player.secondary_charge[game.player.selected_weapon]
 	await lab.wait(0.3)
 	await lab.capture("approach")
 	Input.action_press(&"mine")
 	await lab.wait(0.8)
 	await lab.capture("drilling")
+	lab.check(deposit.health < before, "drill cuts a real section")
+	lab.check(game.player.secondary_charge[game.player.selected_weapon] > meter, "successful drilling charges the focused alternate")
 	await lab.wait(1.6)
 	await lab.capture("cut")
 	Input.action_release(&"mine")

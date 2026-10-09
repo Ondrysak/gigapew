@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/secondary/gun_secondary.gd" id="script"]
+[ext_resource type="Texture2D" path="res://assets/icons/weapons/autocannon.png" id="icon"]
+
+[node name="Secondary" type="Node3D"]
+script = ExtResource("script")
+mode = 4
+display_name = "Breach Grenade"
+description = "Lob a heavy grenade: a 4-metre blast plus a deep cut into the mineral section it strikes."
+icon = ExtResource("icon")
