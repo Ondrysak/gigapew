@@ -14,6 +14,10 @@ const TRAIL_SPEED := 0.6
 ## Seconds the WARNING banner rests after blinking, before it folds away.
 const WARNING_HOLD := 0.3
 const HAND_SLOT_SIZE := Vector2(136, 0)
+const PICKUP_NOTICE_SECONDS := 3.0
+const AUTO_SWAP_NOTICE_SECONDS := 1.4
+const NOTICE_FADE_SECONDS := 0.4
+const PICKUP_KINDS: Array[StringName] = [&"ammo", &"magnet", &"repair", &"supply"]
 
 @export var healthy_color := Color(0.3, 0.9, 0.62)
 @export var critical_color := Color(1.0, 0.24, 0.32)
@@ -61,6 +65,8 @@ const HAND_SLOT_SIZE := Vector2(136, 0)
 @onready var hand_title: Label = $Hands/Header/Title
 @onready var mod_row: HBoxContainer = $Hands/Header/Mods
 @onready var hand_row: HBoxContainer = $Hands/Slots
+@onready var pickup_notices: VBoxContainer = $PickupNotices
+@onready var auto_swap_notice: HBoxContainer = $AutoSwap
 @onready var warning: Control = $Warning
 @onready var warning_band: Control = $Warning/Band
 @onready var warning_title: Label = $Warning/Content/Text/Title
@@ -99,6 +105,14 @@ var _boss_trail := 1.0
 var _boss_hold := 0.0
 var _boss_flash := 0.0
 var _warning_tween: Tween
+# Four fixed loot rows aggregate independently; auto fire has its own readout.
+var _pickup_rows: Array[Dictionary] = []
+var _pickup_amounts := PackedInt32Array([0, 0, 0, 0])
+var _pickup_times := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+var _pickup_dirty := false
+var _auto_swap_label: Label
+var _auto_swap_icon: TextureRect
+var _auto_swap_time := 0.0
 
 func _ready() -> void:
 	_health_fill = (health_bar.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate()
@@ -113,6 +127,7 @@ func _ready() -> void:
 	warning_band.draw.connect(_draw_warning_band)
 	death_keys.add_child(_key_hint("R", "RETRY"))
 	death_keys.add_child(_key_hint("ENTER", "MENU"))
+	_build_notices()
 
 ## Builds one counter per banked resource, styled by its definition.
 func setup_resources(definitions: Array[ResourceDefinition]) -> void:
@@ -199,6 +214,7 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	timer_icon.texture = GameIcons.lookup(&"hud", &"timer")
 	timer_label.remove_theme_color_override(&"font_color")
 	feedback.reset()
+	_reset_notices()
 
 func set_aiming(captured: bool) -> void:
 	feedback.aiming = captured
@@ -315,17 +331,46 @@ func set_gunplay(player: ArenaPlayer) -> void:
 		var slot: Dictionary = _slots[index]
 		var gun := player.weapons[index]
 		if gun == null:
+			(slot.ammo as Label).text = "—"
+			(slot.reserve as Label).text = ""
+			(slot.status as Label).text = "NO GUN"
 			continue
 		var reload := player.is_reloading(index)
 		var focused := index == player.selected_weapon
 		var rounds := player.ammo(index)
+		var reserve := player.reserve_ammo(index)
+		var capacity := player.reserve_capacity(index)
 		var text := "%d / %d" % [rounds, gun.magazine_size]
-		if reload:
-			text = "EMPTY · SWAP" if focused and rounds == 0 else "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
 		if (slot.ammo as Label).text != text:
 			(slot.ammo as Label).text = text
-		(slot.ammo as Label).modulate = focus_color if reload else Color.WHITE
-		(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 100.0
+		text = "RES %d / %d" % [reserve, capacity]
+		if (slot.reserve as Label).text != text:
+			(slot.reserve as Label).text = text
+		var status := "READY"
+		var tint := Color(0.65, 0.76, 0.8)
+		if reload:
+			status = "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
+			tint = focus_color
+		elif rounds == 0:
+			status = "OUT OF AMMO" if reserve == 0 else "EMPTY"
+			tint = critical_color.lightened(0.25)
+			if focused and reserve > 0:
+				for other in player.weapons.size():
+					if other != index and player.weapons[other] != null and player.ammo(other) > 0 and not player.is_reloading(other):
+						status = "EMPTY · AUTO"
+						break
+		elif rounds <= maxi(1, gun.magazine_size / 4):
+			status = "LOW AMMO"
+			tint = focus_color
+		elif reserve == 0:
+			status = "LAST MAG"
+			tint = focus_color
+		if (slot.status as Label).text != status:
+			(slot.status as Label).text = status
+		(slot.status as Label).modulate = tint
+		(slot.ammo as Label).modulate = tint if rounds == 0 or status == "LOW AMMO" else Color.WHITE
+		(slot.reserve as Label).modulate = focus_color if reserve == 0 else Color.WHITE
+		(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 0.0
 		var alternate := player.secondaries[index]
 		var charge := player.secondary_charge[index]
 		(slot.charge as ProgressBar).value = charge
@@ -335,7 +380,7 @@ func set_gunplay(player: ArenaPlayer) -> void:
 			if focused and player.drilling():
 				hint = "DRILL → CHARGE"
 			elif alternate.charge_progress() > 0.0:
-				hint = "LANCE %d%% · RELEASE" % roundi(alternate.charge_progress() * 100.0)
+				hint = "RELEASE · %d%%" % roundi(alternate.charge_progress() * 100.0)
 			elif alternate.is_active():
 				hint = "ALT ACTIVE"
 			elif focused and charge >= alternate.charge_cost:
@@ -388,9 +433,79 @@ func show_hit(killed: bool) -> void:
 func show_combo(hits: int, bonus: float) -> void:
 	feedback.show_combo(hits, bonus)
 
+## A bounded row per kind preserves loot feedback during rapid automatic swaps.
+func show_pickup(kind: StringName, amount: int) -> void:
+	if feedback.terminal or amount <= 0:
+		return
+	var index := PICKUP_KINDS.find(kind)
+	if index < 0:
+		return
+	_pickup_amounts[index] += amount
+	_pickup_times[index] = PICKUP_NOTICE_SECONDS
+	_pickup_dirty = true
+
+func show_auto_swap(hand: int) -> void:
+	if feedback.terminal or hand < 0:
+		return
+	var caption := "HAND %d" % [hand + 1]
+	if _state != null and hand < _state.hands.size():
+		var gun := _state.hands[hand].definition
+		if gun != null:
+			caption = gun.display_name.to_upper()
+			_auto_swap_icon.texture = gun.icon
+	_auto_swap_label.text = "AUTO → %d · %s" % [hand + 1, caption]
+	_auto_swap_time = AUTO_SWAP_NOTICE_SECONDS
+	auto_swap_notice.modulate.a = 1.0
+	auto_swap_notice.show()
+
+func _reset_notices() -> void:
+	_pickup_amounts.fill(0)
+	_pickup_times.fill(0.0)
+	_pickup_dirty = false
+	for row in _pickup_rows:
+		(row.root as Control).hide()
+	_auto_swap_time = 0.0
+	auto_swap_notice.hide()
+
+func _advance_notices(delta: float) -> void:
+	# Menus, uncaptured aim and death must not consume a gameplay notification.
+	if get_tree().paused or feedback.terminal or not feedback.aiming:
+		return
+	for index in _pickup_rows.size():
+		var row: Dictionary = _pickup_rows[index]
+		var root: Control = row.root
+		if _pickup_times[index] <= 0.0:
+			continue
+		if _pickup_dirty:
+			var amount := _pickup_amounts[index]
+			var caption := ""
+			match PICKUP_KINDS[index]:
+				&"ammo":
+					caption = "AMMO REPLENISHED" if amount == 1 else "AMMO · %d REFILLS" % amount
+				&"magnet":
+					caption = "%d XP GEMS PULLED" % amount
+				&"repair":
+					caption = "+%d HP REPAIRED" % amount
+				&"supply":
+					caption = "AMMO LANDED NEARBY" if amount == 1 else "%d AMMO SUPPLIES LANDED" % amount
+			(row.label as Label).text = caption
+			root.show()
+		_pickup_times[index] = maxf(0.0, _pickup_times[index] - delta)
+		root.modulate.a = minf(1.0, _pickup_times[index] / NOTICE_FADE_SECONDS)
+		if _pickup_times[index] <= 0.0:
+			root.hide()
+			_pickup_amounts[index] = 0
+	_pickup_dirty = false
+	if _auto_swap_time > 0.0:
+		_auto_swap_time = maxf(0.0, _auto_swap_time - delta)
+		auto_swap_notice.modulate.a = minf(1.0, _auto_swap_time / NOTICE_FADE_SECONDS)
+		if _auto_swap_time <= 0.0:
+			auto_swap_notice.hide()
+
 ## Run-over panel: summary tiles plus the minerals moved into the Profile.
 func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
 	feedback.terminal = true
+	_reset_notices()
 	boss_panel.hide()
 	warning.hide()
 	timer_box.hide()
@@ -427,6 +542,7 @@ func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, ban
 
 func _process(delta: float) -> void:
 	_time += delta
+	_advance_notices(delta)
 	# Low health: the bar, heart and vitals border pulse red.
 	var low := _health_fraction <= LOW_HEALTH_FRACTION and _last_health > 0
 	var pulse := 0.5 + 0.5 * sin(_time * 7.0)
@@ -548,6 +664,35 @@ func _refresh_armor() -> void:
 	armor_value.text = str(roundi(armor))
 
 # ------------------------------------------------------------------ builders
+func _build_notices() -> void:
+	var glyphs: Array[StringName] = [&"ammo", &"magnet", &"health", &"supply"]
+	var colors: Array[Color] = [Color(1.0, 0.83, 0.46), Color(0.65, 1.0, 0.9), Color(0.65, 1.0, 0.68), Color(1.0, 0.83, 0.46)]
+	for index in PICKUP_KINDS.size():
+		var root := HBoxContainer.new()
+		root.custom_minimum_size.y = 24
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_theme_constant_override(&"separation", 8)
+		root.add_child(_icon(GameIcons.lookup(&"hud", glyphs[index]), 24))
+		var label := _label("", 14, colors[index])
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		label.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.95))
+		label.add_theme_constant_override(&"shadow_offset_x", 1)
+		label.add_theme_constant_override(&"shadow_offset_y", 1)
+		root.add_child(label)
+		pickup_notices.add_child(root)
+		root.hide()
+		_pickup_rows.append({"root": root, "label": label})
+	_auto_swap_icon = _icon(GameIcons.lookup(&"hud", &"ammo"), 24)
+	auto_swap_notice.add_child(_auto_swap_icon)
+	_auto_swap_label = _label("", 13, focus_color)
+	_auto_swap_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_auto_swap_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_auto_swap_label.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.95))
+	_auto_swap_label.add_theme_constant_override(&"shadow_offset_x", 1)
+	_auto_swap_label.add_theme_constant_override(&"shadow_offset_y", 1)
+	auto_swap_notice.add_child(_auto_swap_label)
+	auto_swap_notice.hide()
 
 func _add_hand_slot() -> void:
 	var index := _slots.size()
@@ -583,6 +728,12 @@ func _add_hand_slot() -> void:
 	var ammo := _label("", 14, Color(0.87, 0.95, 0.98))
 	ammo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rows.add_child(ammo)
+	var reserve := _label("", 10, Color(0.7, 0.81, 0.84))
+	reserve.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rows.add_child(reserve)
+	var status := _label("", 10, Color.WHITE)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rows.add_child(status)
 	var reload := _gun_meter(focus_color)
 	rows.add_child(reload)
 	var alternate := _label("", 10, Color.WHITE)
@@ -598,7 +749,7 @@ func _add_hand_slot() -> void:
 	mods.add_theme_constant_override(&"separation", 2)
 	rows.add_child(mods)
 	hand_row.add_child(root)
-	_slots.append({"root": root, "key": key, "type": type, "pellets": pellets, "weapon": weapon, "mods": mods, "ammo": ammo, "reload": reload, "alternate": alternate, "charge": charge})
+	_slots.append({"root": root, "key": key, "type": type, "pellets": pellets, "weapon": weapon, "mods": mods, "ammo": ammo, "reserve": reserve, "status": status, "reload": reload, "alternate": alternate, "charge": charge})
 
 func _stat_tile(texture: Texture2D, value: String, caption: String) -> Control:
 	var tile := PanelContainer.new()

@@ -25,10 +25,10 @@
 - Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
   exit; rendered smoke runs reported up to 20, and the virtual display still
   warns about unsupported V-Sync. These changes are not claimed warning-free.
-- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 13 scenarios,
-  including gun model gallery, rotation and alternate-fire checks. The rendered
-  Radeon GPU run produced 84 captures with 0 failures. Script/engine errors
-  also fail the runner. Lab content is excluded from the Linux export.
+- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 15 scenarios,
+  including gun models, rotation, alternate fire, finite ammo and survival
+  pickups. Script/engine errors fail the runner. Lab content is excluded
+  from the Linux export.
 - Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
   upgrade, mineral, workshop recipe, shop item and HUD glyph, generated from
   `tools/icons/art_*.py` (`make icons`).
@@ -48,7 +48,7 @@
   1.6× slower; partial reload progress survives swaps and upgrades.
 - Each class now starts with three different guns; crafted slot overrides remain.
   Hits charge the other two alternates; drilling charges the focused gun.
-  HUD cards show ammo, reload progress, alternate meters and an EMPTY · SWAP hint.
+  HUD cards show magazine/reserve ammo, reload progress and alternate meters.
 - Six RMB modes: Pulse Tag Burst (+35% exposure window), charged Rail Lance,
   Scatter Concussion (shorter boss stagger), Minigun Overspin, ballistic
   Autocannon Breach Grenade and persistent slowing Flamethrower Napalm.
@@ -60,9 +60,32 @@
   Generation is reproducible with `tools/guns/build_guns.py`.
 - Rendered recoil checks measured 0.16° for a Rail shot and approximately
   0.04–0.05° during sustained minigun fire, without aim drift. Controlled
-  fresh-Scout primary-only rotation killed a stationary Yard boss in
-  11.72 s with body fire / 3.90 s with weak-spot fire (zero random crits,
-  60 Hz simulated timing, swaps on empty magazines). Not campaign certification.
+  fresh-Scout primary-only rotation before the reserve/auto-swap pass killed
+  a stationary Yard boss in 11.72 s body / 3.90 s weak-spot (zero random crits,
+  60 Hz simulation, manual empty swaps). Historical baseline, not certification.
+- Automatic empty-primary swapping picks the next loaded, non-reloading gun,
+  preserving draw timing and manual selection. Idle, drilling and active
+  alternates keep focus; an all-dry loadout never cycles or fires free rounds.
+- Finite reserves: three spare magazines per gun at stage start, cap six.
+  Holstered and in-hand reloads consume only rounds actually transferred.
+  Ammo crates restore one magazine to each equipped gun's reserve; capped
+  packs remain available. Regular kills drop ammo every 12 and magnets every 50;
+  bosses drop both.
+- XP magnets attract all currently loose gems without an instant XP grant or
+  permanent global vacuum. Saturated gem pools merge value even while homing.
+  Red-cross repair kits report actual healing and remain at full health.
+- Timed ammo supply every 25 gameplay seconds, at most two separated waiting packs,
+  independent of ordinary loot. Grounded route checks reject obstacles and
+  cliffs; a nearer placement fallback serves small raised decks.
+- Pickup radar glyphs, compact aggregated ammo/magnet/repair/supply notices,
+  separate automatic-swap feedback and low/dry/reserve weapon readouts.
+  New ammo and magnet pixel icons use the existing reproducible generator.
+- Verification: all 15 rendered lab scenarios produced 93 captures with zero
+  failures on the Radeon GPU; precision and nested-blast regressions passed.
+  Checks cover actual ammo collection and recovered firing, finite/partial
+  reloads, swap boundaries, full-cap pickup preservation, exact XP conservation,
+  homing-pool overflow, later loose gems, boss loot, paused/inactive supply
+  timers and real raised-deck supply fallback.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.

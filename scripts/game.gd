@@ -114,7 +114,7 @@ func _process(delta: float) -> void:
 	hud.set_aiming(Input.mouse_mode == Input.MOUSE_MODE_CAPTURED)
 	hud.set_timer(director.remaining(), director.boss_phase)
 	hud.set_hostiles(horde.alive_count)
-	hud.radar.refresh(horde, player, horde.boss_index)
+	hud.radar.refresh(horde, player, horde.boss_index, pickups)
 	hud.set_ability(player.ability)
 	hud.set_gunplay(player)
 	if round_state == RoundState.PLAYING:
@@ -206,6 +206,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	pickups = pickup_scene.instantiate() as PickupField
 	_round.add_child(pickups)
 	pickups.setup(horde, player, run_state)
+	pickups.collected.connect(hud.show_pickup)
 	rack = AutoWeaponRack.new()
 	rack.name = "AutoWeapons"
 	_round.add_child(rack)
@@ -234,6 +235,7 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	hud.set_hands(run_state, player.selected_weapon)
 	hud.set_weapon_mods(run_state)
 	player.weapon_changed.connect(func(_definition: WeaponDefinition, hand: int): hud.set_hands(run_state, hand))
+	player.auto_swapped.connect(hud.show_auto_swap)
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
 	hud.set_kills(kills)

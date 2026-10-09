@@ -8,6 +8,8 @@ signal hit_confirmed(killed: bool)
 ## Consecutive direct-hit shots; misses, taking damage or a 2.5 s gap reset it.
 signal combo_changed(hits: int, bonus: float)
 signal weapon_changed(definition: WeaponDefinition, index: int)
+## Automatic rotation after an empty primary magazine; manual changes use weapon_changed only.
+signal auto_swapped(hand: int)
 ## Emitted after the class ability activates successfully.
 signal ability_used(ability: ActiveAbility)
 ## A main-gun shot landed at least one critical hit (first critical target).
@@ -22,6 +24,8 @@ const MOUSE_SENSITIVITY := 0.0025
 const MINING_SHARE := 0.35
 const COMBO_WINDOW := 2.5
 const COMBO_MAX_BONUS := 0.4
+const STARTING_RESERVE_MAGAZINES := 3
+const MAX_RESERVE_MAGAZINES := 6
 ## Visual camera kick spring (radians, Hz-derived) and its accumulation cap.
 const CAMERA_KICK_OMEGA := TAU * 5.0
 const CAMERA_KICK_DAMPING := 0.85
@@ -53,6 +57,7 @@ var secondaries: Array[SecondaryFire] = []
 var mining_tool: MiningTool
 var _secondary_scenes: Array[PackedScene] = []
 var _magazines := PackedInt32Array()
+var _reserves := PackedInt32Array()
 var _reloads := PackedFloat32Array()
 var _draw_left := 0.0
 var _alternate_held := false
@@ -125,8 +130,8 @@ func _ready() -> void:
 			add_child(ability)
 			ability.setup(self, horde, run_state)
 
-## Refresh effective definitions outside the shot path. Upgrades preserve rounds,
-## reload progress and charge; replacing a gun resets its magazine and meter.
+## Refresh effective definitions outside the shot path. Upgrades preserve ammo,
+## reload progress and charge; replacing a gun resets its magazine, reserve and meter.
 func refresh_weapons() -> void:
 	if not is_node_ready() and _query == null:
 		return
@@ -145,6 +150,7 @@ func refresh_weapons() -> void:
 	_fire_cooldowns.resize(weapons.size())
 	_spins.resize(weapons.size())
 	_magazines.resize(weapons.size())
+	_reserves.resize(weapons.size())
 	_reloads.resize(weapons.size())
 	secondary_charge.resize(weapons.size())
 	for slot in range(weapons.size()):
@@ -165,6 +171,7 @@ func refresh_weapons() -> void:
 				_views[slot] = null
 			_view_scenes[slot] = scene
 			_magazines[slot] = definition.magazine_size if definition != null else 0
+			_reserves[slot] = definition.magazine_size * STARTING_RESERVE_MAGAZINES if definition != null else 0
 			_reloads[slot] = 0.0
 			secondary_charge[slot] = 35.0
 			_fire_cooldowns[slot] = 0.0
@@ -226,6 +233,38 @@ func select_weapon(index: int) -> void:
 
 func ammo(hand: int) -> int:
 	return _magazines[hand]
+
+func reserve_ammo(hand: int) -> int:
+	return _reserves[hand]
+
+func reserve_capacity(hand: int) -> int:
+	return weapons[hand].magazine_size * MAX_RESERVE_MAGAZINES if weapons[hand] != null else 0
+
+## Ammo packs restore one magazine's worth to every equipped gun's reserve.
+## A pack stays in the world if all reserves are full.
+func add_ammo(magazines: int = 1) -> bool:
+	if not active or magazines <= 0:
+		return false
+	var gained := false
+	for hand in weapons.size():
+		if weapons[hand] == null:
+			continue
+		var before := _reserves[hand]
+		_reserves[hand] = mini(reserve_capacity(hand), before + weapons[hand].magazine_size * magazines)
+		gained = gained or _reserves[hand] > before
+	return gained
+
+## Pick a loaded, ready gun in hand order. Never bounce between empty guns.
+func _auto_swap_empty() -> void:
+	if _magazines[selected_weapon] > 0:
+		return
+	for offset in range(1, weapons.size()):
+		var hand := (selected_weapon + offset) % weapons.size()
+		if weapons[hand] != null and _views[hand] != null \
+				and _magazines[hand] > 0 and _reloads[hand] == 0.0:
+			select_weapon(hand)
+			auto_swapped.emit(hand)
+			return
 
 func is_reloading(hand: int) -> bool:
 	return _reloads[hand] > 0.0
@@ -426,8 +465,11 @@ func _physics_process(delta: float) -> void:
 		if _reloads[slot] > 0.0:
 			_reloads[slot] = maxf(0.0, _reloads[slot] - delta / (1.6 if focused else 1.0))
 			if _reloads[slot] == 0.0:
-				_magazines[slot] = definition.magazine_size
-		elif not focused and _magazines[slot] < definition.magazine_size:
+				var transferred := mini(definition.magazine_size - _magazines[slot], _reserves[slot])
+				_magazines[slot] += transferred
+				_reserves[slot] -= transferred
+		elif _reserves[slot] > 0 and _magazines[slot] < definition.magazine_size \
+				and (not focused or _magazines[slot] == 0):
 			_reloads[slot] = definition.reload_time
 		if definition.spin_up_time > 0.0:
 			if focused and overspin:
@@ -448,8 +490,12 @@ func _physics_process(delta: float) -> void:
 			_fire_cooldowns[slot] += maxf(0.025, interval / maxf(0.1, rate))
 			_magazines[slot] -= 1
 			_shoot(slot)
-			if _magazines[slot] == 0:
+			if _magazines[slot] == 0 and _reserves[slot] > 0:
 				_reloads[slot] = definition.reload_time
+	# Rotate only after the entire shot/reload loop, avoiding two guns firing in
+	# the same physics tick. Held RMB and active alternate effects retain focus.
+	if active and trigger and not held and (alternate == null or not alternate.is_active()):
+		_auto_swap_empty()
 
 ## Grapples and dashes from raised decks can clear the perimeter walls; the
 ## player never leaves the stage's play area.

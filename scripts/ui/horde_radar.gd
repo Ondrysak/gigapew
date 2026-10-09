@@ -17,15 +17,20 @@ var _count := 0
 var _player := Vector2.ZERO
 var _yaw := 0.0
 var _boss := Vector2.INF
+var _loot: PickupField
+@onready var _ammo_icon := GameIcons.lookup(&"hud", &"ammo")
+@onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
+@onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
-func refresh(horde: Horde, player: Node3D, boss_index: int) -> void:
+func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField) -> void:
 	_count = horde.sample_positions(_positions, max_dots)
 	_player = Vector2(player.global_position.x, player.global_position.z)
 	_yaw = player.global_rotation.y
+	_loot = loot
 	_boss = Vector2.INF
 	if boss_index >= 0 and horde.is_alive(boss_index):
 		var at := horde.enemy_position(boss_index)
@@ -47,6 +52,11 @@ func _draw() -> void:
 	draw_arc(center, radius * 0.5, 0.0, TAU, 32, Color(ring_color, ring_color.a * 0.5), 1.0, true)
 	for n in _count:
 		draw_rect(Rect2(_map(_positions[n]) - Vector2.ONE, Vector2(2.5, 2.5)), dot_color)
+	if is_instance_valid(_loot):
+		_draw_pickups(_loot._ammo, _ammo_icon)
+		_draw_pickups(_loot._supplies, _ammo_icon)
+		_draw_pickups(_loot._magnets, _magnet_icon)
+		_draw_pickups(_loot._repairs, _repair_icon)
 	if _boss != Vector2.INF:
 		var at := _map(_boss)
 		var skull := GameIcons.lookup(&"hud", &"boss")
@@ -57,3 +67,12 @@ func _draw() -> void:
 			draw_circle(at, 5.0, boss_color)
 	# Player marker: a small forward-pointing wedge.
 	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -7), center + Vector2(5, 5), center + Vector2(-5, 5)]), player_color)
+
+func _draw_pickups(pool: PickupField.PickupSet, icon: Texture2D) -> void:
+	if icon == null:
+		return
+	var range_squared := range_meters * range_meters
+	for index in pool.count:
+		var point := Vector2(pool.positions[index].x, pool.positions[index].z)
+		if point.distance_squared_to(_player) <= range_squared:
+			draw_texture_rect(icon, Rect2(_map(point) - Vector2(5, 5), Vector2(10, 10)), false)

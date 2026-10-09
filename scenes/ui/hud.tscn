@@ -667,7 +667,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -452.0
-offset_top = -218.0
+offset_top = -246.0
 offset_right = -24.0
 offset_bottom = -30.0
 grow_horizontal = 0
@@ -705,6 +705,32 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 alignment = 2
 
+[node name="PickupNotices" type="VBoxContainer" parent="."]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -270.0
+offset_right = 376.0
+offset_bottom = -150.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="AutoSwap" type="HBoxContainer" parent="."]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -452.0
+offset_top = -278.0
+offset_right = -24.0
+offset_bottom = -250.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
 [node name="Controls" type="Label" parent="."]
 anchor_top = 1.0
 anchor_right = 1.0
@@ -720,7 +746,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 11
-text = "WASD MOVE  ·  SPACE JUMP  ·  LMB FOCUSED GUN  ·  RMB ALT / DRILL DEPOSIT  ·  1 2 3 / WHEEL SWAP  ·  Q ABILITY  ·  E INTERACT  ·  ESC PAUSE  ·  HOLSTERED GUNS RELOAD"
+text = "WASD MOVE · SPACE JUMP · LMB FIRE / AUTO EMPTY SWAP · RMB ALT / DRILL · 1/2/3 / WHEEL MANUAL SWAP · AMMO REFILLS RESERVES · Q ABILITY · E INTERACT · ESC PAUSE"
 horizontal_alignment = 1
 
 [node name="Warning" type="Control" parent="."]

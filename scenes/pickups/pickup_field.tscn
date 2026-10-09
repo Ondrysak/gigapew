@@ -13,19 +13,29 @@ shading_mode = 0
 vertex_color_use_as_albedo = true
 albedo_color = Color(1, 1, 1, 1)
 
-[sub_resource type="BoxMesh" id="Mesh_repair"]
-size = Vector3(0.34, 0.34, 0.34)
-
 [sub_resource type="StandardMaterial3D" id="Mat_repair"]
 vertex_color_use_as_albedo = true
 albedo_color = Color(1, 1, 1, 1)
 emission_enabled = true
 emission = Color(0.6, 0.08, 0.1, 1)
-roughness = 0.4
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_ammo"]
+vertex_color_use_as_albedo = true
+albedo_color = Color(1, 1, 1, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_magnet"]
+vertex_color_use_as_albedo = true
+albedo_color = Color(1, 1, 1, 1)
+emission_enabled = true
+emission = Color(0.12, 0.02, 0.04, 1)
+roughness = 0.55
 
 [node name="PickupField" type="Node3D"]
 script = ExtResource("1_field")
 gem_mesh = SubResource("Mesh_gem")
 gem_material = SubResource("Mat_gem")
-repair_mesh = SubResource("Mesh_repair")
 repair_material = SubResource("Mat_repair")
+ammo_material = SubResource("Mat_ammo")
+magnet_material = SubResource("Mat_magnet")

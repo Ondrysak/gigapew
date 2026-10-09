@@ -20,6 +20,8 @@ const SCENARIOS := {
 	&"recoil": preload("res://scripts/lab/scenarios/recoil_scenario.gd"),
 	&"guns": preload("res://scripts/lab/scenarios/guns_scenario.gd"),
 	&"gunplay": preload("res://scripts/lab/scenarios/gunplay_scenario.gd"),
+	&"ammo": preload("res://scripts/lab/scenarios/ammo_scenario.gd"),
+	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
 	&"secondary": preload("res://scripts/lab/scenarios/secondary_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"levelup": preload("res://scripts/lab/scenarios/level_up_scenario.gd"),
