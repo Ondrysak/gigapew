@@ -9,6 +9,10 @@ const ISLAND_CLEARANCE := 5.0
 const LANE_HALF_WIDTH := 3.0
 const WALL_THICKNESS := 0.8
 const SITE_SPACING := 7.0
+## Ramp pitch matches the authored Yard ramps; walkable for player and horde.
+const RAMP_ANGLE := 0.29
+const RAMP_WIDTH := 4.2
+const RAMP_THICKNESS := 0.6
 const ModuleBatch = preload("res://scenes/levels/yard/module_batch.gd")
 const YARD_FLOOR = preload("res://shaders/yard_floor.gdshader")
 const FOUNDRY_FLOOR = preload("res://shaders/foundry_floor.gdshader")
@@ -21,11 +25,15 @@ const FOUNDRY_DARK = preload("res://scenes/levels/foundry/materials/foundry_dark
 
 var level_seed: int
 var mining_sites: Array[Dictionary] = []
+## {center (deck top), size, height, foot, direction} per generated overlook.
+var overlooks: Array[Dictionary] = []
+var outcrops: Array[StaticBody3D] = []
 var _stage: StageDefinition
 var _rng := RandomNumberGenerator.new()
 var _area: Rect2
 var _theme: StringName
 var _obstacles: Node3D
+var _elevation: Node3D
 var _decoration: Node3D
 var _occupied: Array[Rect2] = []
 var _lane_center: Vector2
@@ -61,6 +69,10 @@ func _ready() -> void:
 	_obstacles = Node3D.new()
 	_obstacles.name = "Obstacles"
 	add_child(_obstacles)
+	# Decks and ramps: the horde rasterises their top faces into walkable height.
+	_elevation = Node3D.new()
+	_elevation.name = "Elevation"
+	add_child(_elevation)
 	_decoration = Node3D.new()
 	_decoration.name = "Architecture"
 	add_child(_decoration)
@@ -68,6 +80,8 @@ func _ready() -> void:
 	_build_floor()
 	_build_perimeter()
 	_build_spawn()
+	_lane_center = _area.get_center() + Vector2(_rng.randf_range(-3.0, 3.0), _rng.randf_range(-3.0, 3.0))
+	_build_set_pieces()
 	_build_islands()
 	_build_lighting()
 	_flush_visual_batches()
@@ -168,7 +182,6 @@ func _build_spawn() -> void:
 	_visual(_box, _accent, Vector3(x, 0.006, z + 1.8), Vector3(3.6, 0.01, 0.08))
 
 func _build_islands() -> void:
-	_lane_center = _area.get_center() + Vector2(_rng.randf_range(-3.0, 3.0), _rng.randf_range(-3.0, 3.0))
 	var interior := _area.grow(-PERIMETER_CLEARANCE)
 	# Large landmarks first; smaller islands fill remaining space without ever
 	# joining one another. Box yaw stays axis-aligned for the horde's parser.
@@ -200,6 +213,139 @@ func _build_islands() -> void:
 	_visual(_box, _secondary, Vector3(_lane_center.x + LANE_HALF_WIDTH, 0.006, _area.get_center().y), Vector3(0.045, 0.01, _area.size.y - 4.0))
 	_visual(_box, _accent, Vector3(_area.get_center().x, 0.006, _lane_center.y - LANE_HALF_WIDTH), Vector3(_area.size.x - 4.0, 0.01, 0.045))
 	_visual(_box, _accent, Vector3(_area.get_center().x, 0.006, _lane_center.y + LANE_HALF_WIDTH), Vector3(_area.size.x - 4.0, 0.01, 0.045))
+
+## Overlooks first, then ore outcrops, dealt round-robin over the four
+## lane-bounded quadrants so every seed gets distinct, spread-out destinations.
+func _build_set_pieces() -> void:
+	var interior := _area.grow(-PERIMETER_CLEARANCE)
+	var quadrants: Array[Rect2] = []
+	for xs: Vector2 in [Vector2(interior.position.x, _lane_center.x - LANE_HALF_WIDTH), Vector2(_lane_center.x + LANE_HALF_WIDTH, interior.end.x)]:
+		for zs: Vector2 in [Vector2(interior.position.y, _lane_center.y - LANE_HALF_WIDTH), Vector2(_lane_center.y + LANE_HALF_WIDTH, interior.end.y)]:
+			quadrants.append(Rect2(xs.x, zs.x, xs.y - xs.x, zs.y - zs.x))
+	for index in range(quadrants.size() - 1, 0, -1):
+		var pick := _rng.randi_range(0, index)
+		var swap := quadrants[index]
+		quadrants[index] = quadrants[pick]
+		quadrants[pick] = swap
+	var slot := 0
+	for _index in _stage.overlook_count:
+		_place_piece(quadrants, slot, _try_overlook)
+		slot += 1
+	for _index in _stage.outcrop_count:
+		_place_piece(quadrants, slot, _try_outcrop)
+		slot += 1
+
+## Prefers the dealt quadrant, then any other; a piece that fits nowhere is skipped.
+func _place_piece(quadrants: Array[Rect2], slot: int, attempt: Callable) -> void:
+	for offset in quadrants.size():
+		if attempt.call(quadrants[(slot + offset) % quadrants.size()]):
+			return
+
+func _try_overlook(quadrant: Rect2) -> bool:
+	var height := 1.8
+	match _theme:
+		&"foundry": height = 2.2
+		&"reactor": height = 2.6
+	height += _rng.randf_range(0.0, 0.3)
+	var run := height / tan(RAMP_ANGLE)
+	var size := Vector2(_rng.randf_range(7.5, 10.0), _rng.randf_range(7.5, 10.0))
+	var directions: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]
+	for index in range(directions.size() - 1, 0, -1):
+		var pick := _rng.randi_range(0, index)
+		var swap := directions[index]
+		directions[index] = directions[pick]
+		directions[pick] = swap
+	for direction in directions:
+		var along_x := absf(direction.x) > 0.5
+		var extent := size + (Vector2(run, 0.0) if along_x else Vector2(0.0, run))
+		if extent.x > quadrant.size.x or extent.y > quadrant.size.y:
+			continue
+		for _attempt in 24:
+			var corner := Vector2(_rng.randf_range(quadrant.position.x, quadrant.end.x - extent.x), _rng.randf_range(quadrant.position.y, quadrant.end.y - extent.y))
+			var footprint := Rect2(corner, extent)
+			if not _can_place(footprint):
+				continue
+			_occupied.append(footprint)
+			# The deck holds the end opposite the ramp's outward direction.
+			var deck := Rect2(corner + Vector2(run if direction.x < 0.0 else 0.0, run if direction.y < 0.0 else 0.0), size)
+			_build_overlook(deck, height, direction, run)
+			return true
+	return false
+
+func _build_overlook(deck: Rect2, height: float, direction: Vector2, run: float) -> void:
+	var center := deck.get_center()
+	var label := "Overlook%d" % overlooks.size()
+	_box_body(_elevation, label, Vector3(center.x, height * 0.5, center.y), Vector3(deck.size.x, height, deck.size.y), _steel)
+	var outward := Vector3(direction.x, 0.0, direction.y)
+	var edge := Vector3(center.x, 0.0, center.y) + outward * (deck.size.x if absf(direction.x) > 0.5 else deck.size.y) * 0.5
+	var foot := edge + outward * run
+	# Box axes: X across the ramp, Y the surface normal, Z climbing toward the deck.
+	var slope := Vector3.UP * sin(RAMP_ANGLE) - outward * cos(RAMP_ANGLE)
+	var normal := Vector3.UP * cos(RAMP_ANGLE) + outward * sin(RAMP_ANGLE)
+	var basis := Basis(normal.cross(slope), normal, slope)
+	var length := run / cos(RAMP_ANGLE)
+	var surface_mid := (foot + edge + Vector3.UP * height) * 0.5
+	var ramp_size := Vector3(RAMP_WIDTH, RAMP_THICKNESS, length)
+	var shape := BoxShape3D.new()
+	shape.size = ramp_size
+	var ramp := _body(_elevation, label + "Ramp", surface_mid - normal * RAMP_THICKNESS * 0.5, shape)
+	ramp.basis = basis
+	_visual(_box, _steel, ramp.position, ramp_size, basis)
+	var treads := maxi(3, floori(length / 1.6))
+	for index in treads:
+		var along := (float(index) + 0.5) / float(treads) - 0.5
+		_visual(_box, _accent, surface_mid + slope * length * along + normal * 0.012, Vector3(RAMP_WIDTH * 0.86, 0.02, 0.16), basis)
+	_visual(_box, _secondary, Vector3(foot.x, 0.006, foot.z) - outward * 0.2, Vector3(RAMP_WIDTH, 0.01, 0.3) if absf(direction.y) > 0.5 else Vector3(0.3, 0.01, RAMP_WIDTH))
+	# Flush dressing only: nothing visible may stand where nothing collides.
+	var top := Vector3(center.x, height, center.y)
+	_visual(_box, _dark, top + Vector3.UP * 0.006, Vector3(deck.size.x * 0.94, 0.012, deck.size.y * 0.94))
+	for sign_value in [-1.0, 1.0]:
+		_visual(_box, _accent, top + Vector3(0.0, 0.014, sign_value * (deck.size.y * 0.5 - 0.35)), Vector3(deck.size.x - 0.7, 0.012, 0.08))
+		_visual(_box, _accent, top + Vector3(sign_value * (deck.size.x * 0.5 - 0.35), 0.014, 0.0), Vector3(0.08, 0.012, deck.size.y - 0.7))
+	_visual(_box, _secondary, Vector3(center.x, 0.4, center.y), Vector3(deck.size.x + 0.02, 0.12, deck.size.y + 0.02))
+	for corner: Vector2 in [Vector2(-1, -1), Vector2(-1, 1), Vector2(1, -1), Vector2(1, 1)]:
+		var at := center + corner * (deck.size * 0.5 - Vector2(0.17, 0.17))
+		_visual(_box, _dark, Vector3(at.x, height * 0.5, at.y), Vector3(0.36, height + 0.01, 0.36))
+	_add_fill(top + Vector3.UP * 3.0, _accent_color, 1.4, 12.0)
+	overlooks.append({"center": top, "size": deck.size, "height": height, "foot": foot, "direction": outward})
+
+func _try_outcrop(quadrant: Rect2) -> bool:
+	var length := _rng.randf_range(6.4, 8.0)
+	var depth := _rng.randf_range(2.8, 3.6)
+	var height := _rng.randf_range(3.4, 4.4)
+	var along_x := _rng.randf() < 0.5
+	for _orientation in 2:
+		var extent := Vector2(length, depth) if along_x else Vector2(depth, length)
+		if extent.x <= quadrant.size.x and extent.y <= quadrant.size.y:
+			for _attempt in 40:
+				var corner := Vector2(_rng.randf_range(quadrant.position.x, quadrant.end.x - extent.x), _rng.randf_range(quadrant.position.y, quadrant.end.y - extent.y))
+				var footprint := Rect2(corner, extent)
+				if not _can_place(footprint):
+					continue
+				_occupied.append(footprint)
+				_build_outcrop(footprint, height, along_x)
+				return true
+		along_x = not along_x
+	return false
+
+## Both long faces are real, broad supports for contract ore in the open arena.
+func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
+	var center := footprint.get_center()
+	var position := Vector3(center.x, height * 0.5, center.y)
+	var body := _box_body(_obstacles, "OreOutcrop%d" % outcrops.size(), position, Vector3(footprint.size.x, height, footprint.size.y), _rock)
+	outcrops.append(body)
+	var half_depth := (footprint.size.y if along_x else footprint.size.x) * 0.5
+	for sign_value in [-1.0, 1.0]:
+		var normal := Vector3(0.0, 0.0, sign_value) if along_x else Vector3(sign_value, 0.0, 0.0)
+		mining_sites.append({"position": Vector3(center.x, 1.5, center.y) + normal * half_depth, "normal": normal, "support": body, "interior": true})
+	_visual(_box, _dark, position + Vector3.UP * (height * 0.5), Vector3(footprint.size.x * 0.96, 0.012, footprint.size.y * 0.96))
+	# Glowing seams on the short ends and a beacon above mark it from range.
+	var end_offset := Vector3(footprint.size.x * 0.5, 0.0, 0.0) if along_x else Vector3(0.0, 0.0, footprint.size.y * 0.5)
+	for sign_value in [-1.0, 1.0]:
+		var seam := Vector3(0.012, height * 0.7, footprint.size.y * 0.5) if along_x else Vector3(footprint.size.x * 0.5, height * 0.7, 0.012)
+		_visual(_box, _secondary, position + end_offset * sign_value, seam)
+	_visual(_cylinder, _secondary, position + Vector3.UP * (height * 0.5 + 0.45), Vector3(0.12, 0.9, 0.12))
+	_add_fill(position + Vector3.UP * (height * 0.5 + 1.5), _secondary_color, 1.2, 11.0)
 
 func _island_size(landmark: bool, circular: bool) -> Vector3:
 	if circular:
@@ -332,7 +478,7 @@ func _body(parent: Node, label: String, position: Vector3, shape: Shape3D) -> St
 	parent.add_child(body)
 	return body
 
-func _visual(mesh: Mesh, material: Material, position: Vector3, size: Vector3) -> void:
+func _visual(mesh: Mesh, material: Material, position: Vector3, size: Vector3, basis := Basis()) -> void:
 	if not _visual_batches.has(mesh):
 		_visual_batches[mesh] = {}
 	var materials: Dictionary = _visual_batches[mesh]
@@ -340,7 +486,7 @@ func _visual(mesh: Mesh, material: Material, position: Vector3, size: Vector3) -
 		var copy := mesh.duplicate() as PrimitiveMesh
 		copy.material = material
 		materials[material] = {"mesh": copy, "transforms": []}
-	materials[material]["transforms"].append(Transform3D(Basis.from_scale(size), position))
+	materials[material]["transforms"].append(Transform3D(basis * Basis.from_scale(size), position))
 
 func _flush_visual_batches() -> void:
 	for materials: Dictionary in _visual_batches.values():

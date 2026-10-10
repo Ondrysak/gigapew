@@ -1,5 +1,11 @@
 # Unreleased source changes
 
+- Level design: generated sectors now deal set pieces across the four
+  lane-bounded quadrants. Raised overlooks (1 Yard, 2 Foundry/Reactor) are
+  reached by one walkable ramp the horde must funnel up. Ore outcrops (2 / 3 / 3)
+  are interior rocks whose faces receive contract ore first, so mining pulls
+  players off the safe perimeter. Rendered checks prove players climb ramps
+  with W, enemies follow onto decks, and connectivity and ore guarantees hold.
 - Reworked the core loop around one unlimited-ammo primary firearm and five
   independently cooled-down hero abilities. Removed player melee weapons,
   magazines/reserves/reloads, ammunition drops, charged RMB secondaries and

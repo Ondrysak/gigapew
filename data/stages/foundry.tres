@@ -13,5 +13,7 @@ world_scene = ExtResource("world")
 play_area = Rect2(-48, -26, 96, 52)
 layout_theme = &"foundry"
 cover_count = 20
+overlook_count = 2
+outcrop_count = 3
 quest_scale = 1.35
 schedule = ExtResource("schedule")

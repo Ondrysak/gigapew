@@ -13,5 +13,7 @@ world_scene = ExtResource("world")
 play_area = Rect2(-38, -38, 76, 76)
 layout_theme = &"reactor"
 cover_count = 24
+overlook_count = 2
+outcrop_count = 3
 quest_scale = 1.7
 schedule = ExtResource("schedule")

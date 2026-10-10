@@ -321,10 +321,24 @@ func _populate_quest_deposits() -> bool:
 		var swap := order[index]
 		order[index] = order[pick]
 		order[pick] = swap
+	# Interior outcrops first: contract ore should pull the player into the
+	# arena, with perimeter walls as the dependable remainder.
+	var interior_order: Array[int] = []
+	var wall_order: Array[int] = []
+	for index in order:
+		if bool(sites[index].get("interior", false)):
+			interior_order.append(index)
+		else:
+			wall_order.append(index)
+	interior_order.append_array(wall_order)
+	order = interior_order
 	var used: Dictionary = {}
 	var space := get_world_3d().direct_space_state
 	var requirements := _quests.requirements()
+	# Each resource gets a fair share of the interior faces.
+	var interior_share := ceili(float(interior_order.size()) / float(maxi(1, requirements.size())))
 	for resource: ResourceDefinition in requirements:
+		var interior_used := 0
 		var definition: DepositDefinition
 		for candidate in deposit_types:
 			if candidate != null and candidate.resource == resource and candidate.yield_min > 0:
@@ -339,6 +353,9 @@ func _populate_quest_deposits() -> bool:
 			if available >= desired or not _can_place_more(definition):
 				break
 			if used.has(index):
+				continue
+			var interior := bool(sites[index].get("interior", false))
+			if interior and interior_used >= interior_share:
 				continue
 			var site: Dictionary = sites[index]
 			var support := site.get("support") as StaticBody3D
@@ -359,6 +376,8 @@ func _populate_quest_deposits() -> bool:
 			var deposit := _spawn_deposit(definition, point, normal, 1.0)
 			available += deposit.total_yield
 			used[index] = true
+			if interior:
+				interior_used += 1
 			var radius := Vector2(bounds.x * 0.5, bounds.z).length()
 			reserve_authored_space(point, maxf(min_spacing * 0.5, radius))
 		if available < target:
