@@ -65,7 +65,7 @@ func _stage_pressure() -> void:
 		# Release the deliberately unopposed early crowd so later specialists
 		# can be admitted instead of being blocked by a cap with no player kills.
 		horde.clear()
-		director.elapsed = schedule.duration * 0.75
+		director.elapsed = schedule.ramp_duration * 0.75
 		for tick in 24:
 			director._physics_process(0.5)
 		ordinary = 0
@@ -88,7 +88,6 @@ func _scarce_loot() -> void:
 	var field := game.pickup_scene.instantiate() as PickupField
 	field.max_gems = 2
 	field.xp_kill_interval = 3
-	field.ammo_kill_interval = 30
 	field.magnet_kill_interval = 120
 	field.repair_chance = 0.004
 	field.supply_interval = 50.0
@@ -117,23 +116,18 @@ func _scarce_loot() -> void:
 			expected_repairs += 1
 	_kill(game, lab.enemy("robot_tank"))
 	_kill(game, lab.enemy("robot_spitter"))
-	lab.check(field._gems.count == 0 and field._ammo.count == 0 and field._magnets.count == 0, "two real high-XP victims do not bank XP or admit early regular utility loot")
+	lab.check(field._gems.count == 0 and field._magnets.count == 0, "two real high-XP victims do not bank XP or admit early regular utility loot")
 	var boss := game.campaign[0].schedule.boss
 	_kill(game, boss)
 	lab.check(field._nonboss_kills == 2 and field._gems.count == 1 and _ground_xp(field) == boss.xp_value, "boss admits exactly its authored XP reward without advancing regular kill cadence")
-	lab.check(field._ammo.count == 1 and field._magnets.count == 0, "boss admits one ammo pack and no guaranteed magnet")
 	_kill(game, lab.enemy("robot_grunt"))
 	lab.check(field._nonboss_kills == 3 and field._gems.count == 2 and _ground_xp(field) == boss.xp_value + 1, "third regular kill earns only its own victim XP, not the skipped tank and spitter values")
 	field.magnetize_xp()
 	for regular_kill in range(4, 121):
 		_kill(game, lab.enemy("robot_grunt"))
-		if regular_kill == 29:
-			lab.check(field._ammo.count == 1, "regular ammo does not arrive at kill 29")
-		elif regular_kill == 30:
-			lab.check(field._ammo.count == 2, "regular ammo arrives exactly at kill 30")
-		elif regular_kill == 119:
-			lab.check(field._magnets.count == 0, "regular magnet does not arrive at kill 119")
-	lab.check(field._ammo.count == 5 and field._magnets.count == 1, "120 ordinary kills admit four ammo packs and one magnet, independently of the boss")
+		if regular_kill == 119:
+			lab.check(field._magnets.count == 1, "configured regular magnet does not arrive at kill 119")
+	lab.check(field._magnets.count == 2, "configured 120-kill magnet admission remains independent of the boss reward")
 	var admitted_xp := boss.xp_value + 40
 	lab.check(field._gems.count == 2 and _ground_xp(field) == admitted_xp and field._gems.speeds[0] > 0.0 and field._gems.speeds[1] > 0.0, "sparse admissions overflow into an entirely homing pool without losing or inventing XP")
 	lab.check(expected_repairs > 0 and field._repairs.count == expected_repairs, "seeded real kill repair admissions match the reduced probability (%d kits)" % expected_repairs)
@@ -159,7 +153,7 @@ func _scarce_loot() -> void:
 	lab.check(field._supplies.count == 1, "timed supply admits one reachable grounded pack at its boundary")
 	if field._supplies.count > 0:
 		var at := field._supplies.positions[0]
-		lab.check(not game.horde.is_blocked(Vector2(at.x, at.z), 0.4) and is_equal_approx(at.y, game.horde.ground_height(Vector2(at.x, at.z)) + field.ammo_height), "scarce timed supply retains real bounded ground placement")
+		lab.check(not game.horde.is_blocked(Vector2(at.x, at.z), 0.4) and is_equal_approx(at.y, game.horde.ground_height(Vector2(at.x, at.z)) + field.repair_height), "scarce timed repair retains real bounded ground placement")
 	field._supply_elapsed = 0.0
 	lab.get_tree().paused = true
 	field._physics_process(100.0)
@@ -179,7 +173,6 @@ func _scarce_loot() -> void:
 func _live_wave() -> void:
 	var game := await _new_game(&"gunner")
 	var player := game.player
-	lab.check(player.weapons.size() == 3 and player.weapons[2].kind == WeaponDefinition.Kind.MELEE, "normal live class keeps its actual third-hand melee loadout")
 	game.director._rng.seed = 20261009
 	game.pickups._rng.seed = 20261009
 	game.director.set_physics_process(true)
@@ -193,14 +186,14 @@ func _live_wave() -> void:
 	lab.fire(true)
 	await _observe(game, seen, 48.0)
 	lab.fire(false)
-	player.select_weapon(2)
+	player.cycle_weapon(1)
 	await lab.wait(0.15)
 	_aim_crowd(game)
 	lab.fire(true)
 	await _observe(game, seen, 12.0)
 	lab.fire(false)
-	await lab.capture("live_melee_crowd")
-	player.select_weapon(0)
+	await lab.capture("live_swapped_primary")
+	player.cycle_weapon(-1)
 	await _observe(game, seen, 50.0)
 	Engine.time_scale = 1.0
 	_aim_crowd(game)
@@ -208,7 +201,7 @@ func _live_wave() -> void:
 	var late := game.horde.alive_count
 	lab.check(late > early * 3 and late <= game.campaign[0].schedule.max_alive and game.kills > 0, "accelerated normal gameplay ramps a larger real crowd while held weapons kill actual enemies (%d early, %d late, %d kills)" % [early, late, game.kills])
 	lab.check(seen.size() >= late and game.pickups._gems.count <= game.kills / 3, "observed live identities and actual kills leave sparse XP gems instead of a gem for every victim")
-	lab.log_line("normal elapsed=%.1f crowd=%d observed_lives=%d kills=%d ground_xp_gems=%d ammo=%d magnets=%d repairs=%d supplies=%d" % [game.director.elapsed, late, seen.size(), game.kills, game.pickups._gems.count, game.pickups._ammo.count, game.pickups._magnets.count, game.pickups._repairs.count, game.pickups._supplies.count])
+	lab.log_line("normal elapsed=%.1f crowd=%d observed_lives=%d kills=%d ground_xp_gems=%d magnets=%d repairs=%d supplies=%d" % [game.director.elapsed, late, seen.size(), game.kills, game.pickups._gems.count, game.pickups._magnets.count, game.pickups._repairs.count, game.pickups._supplies.count])
 	# Inspect the same stress crowd from the authored 3m overlook rather than
 	# inside the unopposed robots surrounding the original camera.
 	var lookout := Vector2(25.0, 25.0)

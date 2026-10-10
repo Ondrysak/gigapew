@@ -65,6 +65,9 @@ var _area := Rect2()
 var _player: ArenaPlayer
 var _run_state: RunState
 var _rng := RandomNumberGenerator.new()
+var _quests: LevelQuests
+var _level_seed := -1
+var _seed_configured := false
 var _query: PhysicsRayQueryParameters3D
 var _clearance_box := BoxShape3D.new()
 var _clearance_query := PhysicsShapeQueryParameters3D.new()
@@ -109,6 +112,13 @@ var _break_voice: AudioStreamPlayer3D
 var _collect_voice: AudioStreamPlayer
 var _collect_cooldown := 0.0
 
+## Configure campaign objectives before setup. Authored lab worlds retain their
+## existing random/authored placement API when they have no procedural anchors.
+func configure_quests(quests: LevelQuests, seed: int) -> void:
+	_quests = quests
+	_level_seed = seed
+	_seed_configured = true
+
 ## Call once after the world scene is in the tree. Deposits appear after the
 ## first physics frames, once the world colliders are queryable.
 func setup(world: Node3D, play_area: Rect2, player: ArenaPlayer, run_state: RunState) -> void:
@@ -116,10 +126,16 @@ func setup(world: Node3D, play_area: Rect2, player: ArenaPlayer, run_state: RunS
 	_area = play_area
 	_player = player
 	_run_state = run_state
-	_rng.randomize()
+	if not _seed_configured:
+		_rng.randomize()
+	else:
+		_rng.seed = _level_seed
 	_cap = clampi(roundi(play_area.get_area() * deposits_per_square_meter), min_deposits, max_deposits)
 	_respawn_timer = _rng.randf_range(respawn_interval_min, respawn_interval_max)
-	_query = PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 1, [player.get_rid()])
+	var excluded: Array[RID] = []
+	if is_instance_valid(player):
+		excluded.append(player.get_rid())
+	_query = PhysicsRayQueryParameters3D.create(Vector3.ZERO, Vector3.ZERO, 1, excluded)
 	_clearance_query.shape = _clearance_box
 	_clearance_query.collision_mask = 1
 	for definition in deposit_types:
@@ -179,7 +195,7 @@ func _on_authored_depleted(deposit: MineralDeposit) -> void:
 	deposit_broken.emit(deposit.definition, deposit.last_hit_position)
 
 func _physics_process(delta: float) -> void:
-	if _world == null:
+	if not is_instance_valid(_world) or get_tree().paused:
 		return
 	if _populate_delay > 0:
 		_populate_delay -= 1
@@ -275,6 +291,11 @@ func _populate() -> void:
 	var spawn := _world.get_node_or_null("PlayerSpawn") as Node3D
 	_spawn_point = spawn.global_position if spawn != null else Vector3(_area.get_center().x, 0.0, _area.get_center().y)
 	_read_obstacles(_world.get_node_or_null("Obstacles"))
+	if _quests != null and _world is ProceduralWorld:
+		if not _populate_quest_deposits():
+			set_physics_process(false)
+			return
+		_cap = maxi(_cap, _alive.size())
 	for definition in deposit_types:
 		if definition == null or definition.resource == null:
 			continue
@@ -287,6 +308,67 @@ func _populate() -> void:
 		if definition == null:
 			break
 		_try_place(definition, 24, false)
+
+## Prove the initial extraction budget on real, reachable collider faces before
+## any random placement can consume their space. No respawn or rare roll is needed.
+func _populate_quest_deposits() -> bool:
+	var sites := (_world as ProceduralWorld).mining_sites
+	var order: Array[int] = []
+	for index in sites.size():
+		order.append(index)
+	for index in order.size():
+		var pick := _rng.randi_range(index, order.size() - 1)
+		var swap := order[index]
+		order[index] = order[pick]
+		order[pick] = swap
+	var used: Dictionary = {}
+	var space := get_world_3d().direct_space_state
+	var requirements := _quests.requirements()
+	for resource: ResourceDefinition in requirements:
+		var definition: DepositDefinition
+		for candidate in deposit_types:
+			if candidate != null and candidate.resource == resource and candidate.yield_min > 0:
+				definition = candidate
+				break
+		if definition == null:
+			return _quest_population_failed("No mineable deposit definition for %s." % resource.display_name)
+		var target := int(requirements[resource])
+		var desired := maxi(ceili(target * 1.2), target + definition.yield_min)
+		var available := 0
+		for index in order:
+			if available >= desired or not _can_place_more(definition):
+				break
+			if used.has(index):
+				continue
+			var site: Dictionary = sites[index]
+			var support := site.get("support") as StaticBody3D
+			if not is_instance_valid(support):
+				continue
+			var point: Vector3 = site.get("position", Vector3.ZERO)
+			var normal: Vector3 = site.get("normal", Vector3.ZERO)
+			normal.y = 0.0
+			if normal.length_squared() < 0.5:
+				continue
+			normal = normal.normalized()
+			var bounds := definition.formation_size
+			point.y = maxf(point.y, maxf(definition.min_height, bounds.y * 0.5 + 0.15))
+			if not _is_clear(point, bounds, false):
+				continue
+			if not _formation_clear(space, point, normal, bounds, support):
+				continue
+			var deposit := _spawn_deposit(definition, point, normal, 1.0)
+			available += deposit.total_yield
+			used[index] = true
+			var radius := Vector2(bounds.x * 0.5, bounds.z).length()
+			reserve_authored_space(point, maxf(min_spacing * 0.5, radius))
+		if available < target:
+			return _quest_population_failed("Seed %d: only %d/%d %s can be mined on the generated safe sites." % [_level_seed, available, target, resource.display_name])
+	return true
+
+func _quest_population_failed(message: String) -> bool:
+	push_error(message)
+	assert(false, message)
+	return false
 
 func _read_obstacles(root: Node) -> void:
 	if root == null:
@@ -498,10 +580,12 @@ func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: 
 	# Reserve real walkable room beyond the whole deposit, not just its origin.
 	_clearance_box.size = Vector3(bounds.x + 0.3, bounds.y - 0.12, bounds.z + 1.25)
 	_clearance_query.transform = Transform3D(Basis(right, Vector3.UP, normal), point + normal * (0.18 + _clearance_box.size.z * 0.5))
-	_clearance_query.exclude = [_player.get_rid(), support.get_rid()]
+	_clearance_query.exclude = [support.get_rid()]
+	if is_instance_valid(_player):
+		_clearance_query.exclude.append(_player.get_rid())
 	return space.intersect_shape(_clearance_query, 1).is_empty()
 
-func _spawn_deposit(definition: DepositDefinition, point: Vector3, normal: Vector3, size_scale: float) -> void:
+func _spawn_deposit(definition: DepositDefinition, point: Vector3, normal: Vector3, size_scale: float) -> MineralDeposit:
 	var deposit := MineralDeposit.new()
 	deposit.name = "%sDeposit" % String(definition.resource.id).capitalize()
 	deposit.configure(definition, _rng.randi(), size_scale)
@@ -514,6 +598,7 @@ func _spawn_deposit(definition: DepositDefinition, point: Vector3, normal: Vecto
 	deposit.depleted.connect(_on_deposit_depleted)
 	_alive.append(deposit)
 	_placed[definition] = int(_placed[definition]) + 1
+	return deposit
 
 func _on_deposit_struck(deposit: MineralDeposit) -> void:
 	if _chip_cooldown > 0.0 or _chips.is_empty():
@@ -527,6 +612,10 @@ func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -
 	var definition := deposit.definition
 	var normal := deposit.global_basis.z
 	_spill(definition.resource, amount, center, normal)
+	# Currency, pickup overflow and bonus multipliers are not mining progress.
+	# Spill the conserved fracture loot before completion observers can clear a level.
+	if _quests != null:
+		_quests.record_mined(definition.resource, amount)
 	if not _bursts.is_empty():
 		_fire_emitter(_bursts[_next_burst], center, normal, definition.resource.color)
 		_next_burst = (_next_burst + 1) % _bursts.size()

@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DepositDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="DepositDefinition" format=3 uid="uid://dg83cgujm30v4"]
 
-[ext_resource type="Script" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
-[ext_resource type="Resource" path="res://data/resources/crystal.tres" id="2_resource"]
+[ext_resource type="Script" uid="uid://dseg3btyvwqnf" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
+[ext_resource type="Resource" uid="uid://bv3q7r331q43s" path="res://data/resources/crystal.tres" id="2_resource"]
 
 [sub_resource type="CylinderMesh" id="Mesh_pickup"]
 top_radius = 0.0
@@ -17,9 +17,4 @@ max_health = 290.0
 yield_min = 5
 yield_max = 8
 weight = 0.9
-guaranteed = 0
-max_per_stage = 0
-min_height = 1.5
-max_height = 1.8
 pickup_mesh = SubResource("Mesh_pickup")
-pickup_scale = 1.0

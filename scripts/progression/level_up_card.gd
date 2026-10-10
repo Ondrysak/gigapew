@@ -14,6 +14,7 @@ const FALLBACK_ICONS := {
 	UpgradeDefinition.Kind.OVERCLOCK: &"shock",
 	UpgradeDefinition.Kind.PERK: &"xp",
 	UpgradeDefinition.Kind.GUN_MOD: &"kinetic",
+	UpgradeDefinition.Kind.ABILITY: &"ability",
 }
 
 @export var accent_bar: ColorRect
@@ -38,10 +39,14 @@ var _base_hover := Color()
 var _base_shadow := Color()
 var _base_shadow_size := 0
 var _gaining: Control
+var _description_size: int
+var _description_spacing: int
 var _time := 0.0
 
 func _ready() -> void:
 	# Own copies so each card can carry its offer's accent.
+	_description_size = description_label.get_theme_font_size(&"font_size")
+	_description_spacing = description_label.get_theme_constant(&"line_spacing")
 	_normal = _own_style(self, &"normal")
 	_hover = _own_style(self, &"hover")
 	add_theme_stylebox_override(&"pressed", _hover)
@@ -81,9 +86,13 @@ func show_offer(upgrade: UpgradeDefinition, current_level: int, key: int) -> voi
 	name_label.add_theme_color_override(&"font_color", accent.lightened(0.25 if overclock else 0.35))
 	_show_rank(upgrade, current_level, accent)
 	description_label.text = upgrade.describe(current_level + 1)
+	description_label.add_theme_font_size_override(&"font_size", 14 if upgrade.kind == UpgradeDefinition.Kind.ABILITY else _description_size)
+	description_label.add_theme_constant_override(&"line_spacing", -2 if upgrade.kind == UpgradeDefinition.Kind.ABILITY else _description_spacing)
 
 static func kind_text(upgrade: UpgradeDefinition) -> String:
 	match upgrade.kind:
+		UpgradeDefinition.Kind.ABILITY:
+			return "ABILITY %d" % (upgrade.ability_slot + 1)
 		UpgradeDefinition.Kind.WEAPON:
 			return "AUTO WEAPON"
 		UpgradeDefinition.Kind.GUN_MOD:
@@ -112,11 +121,12 @@ func _show_rank(upgrade: UpgradeDefinition, current_level: int, accent: Color) -
 		_new.bg_color = accent
 		pips.hide()
 		return
-	# Chip: NEW for a first pick, MAX when this pick completes the upgrade.
+	# Skills already exist at rank zero; this pick upgrades rather than unlocks.
+	var ability := upgrade.kind == UpgradeDefinition.Kind.ABILITY
 	var maxing := current_level + 1 >= upgrade.max_level and upgrade.max_level > 1
-	new_badge.visible = current_level == 0 or maxing
-	new_label.text = "NEW" if current_level == 0 else "MAX"
-	_new.bg_color = Color(1, 0.58, 0.2) if current_level == 0 else OVERCLOCK_GOLD
+	new_badge.visible = ability or current_level == 0 or maxing
+	new_label.text = "RANK %d" % (current_level + 1) if ability else ("NEW" if current_level == 0 else "MAX")
+	_new.bg_color = accent if ability else (Color(1, 0.58, 0.2) if current_level == 0 else OVERCLOCK_GOLD)
 	pips.show()
 	var owned := _pip_style(accent.darkened(0.1), accent.darkened(0.1))
 	var gaining := _pip_style(accent.lightened(0.65), Color.WHITE)

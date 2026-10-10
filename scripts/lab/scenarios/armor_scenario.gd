@@ -27,7 +27,7 @@ func run() -> void:
 	horde.damage_reported.connect(_on_damage)
 	_equip(game, "rail")
 	var slot := _target(game)
-	var base := player.weapons[0].damage * game.run_state.damage_multiplier
+	var base := player.weapon.damage * game.run_state.damage_multiplier
 	player.global_position = Vector3(0, 1, 4)
 	var removed := _shot(game, Vector3(0, 0.65, 9))
 	lab.check(_close(removed, base * 0.25), "actual frontal Rail body shot loses 75% to the visible plate")
@@ -88,14 +88,8 @@ func run() -> void:
 	player.set_physics_process(true)
 	horde.set_physics_process(true)
 
-func _equip(game: ArenaGame, id: String) -> void:
-	game.player.cancel_secondaries()
-	var guns: Array[WeaponDefinition] = [lab.weapon(id), lab.weapon("rail"), lab.weapon("scatter")]
-	game.run_state.initialize_hands(guns)
-	game.player.weapons = game.run_state.hand_definitions()
-	game.player.refresh_weapons()
-	game.player.select_weapon(0)
-	game.hud.set_hands(game.run_state, 0)
+func _equip(_game: ArenaGame, id: String) -> void:
+	lab.equip_weapon(id)
 
 func _target(game: ArenaGame) -> int:
 	game.horde.target = null
@@ -114,7 +108,7 @@ func _shot(game: ArenaGame, point: Vector3) -> float:
 	_reported_total = 0.0
 	_reported_events = 0
 	lab.aim_at(point)
-	game.player._shoot(0)
+	game.player._shoot()
 	return before - game.horde._hp[slot]
 
 func _tag_and_area(game: ArenaGame) -> void:
@@ -122,20 +116,17 @@ func _tag_and_area(game: ArenaGame) -> void:
 	var player := game.player
 	var slot := _target(game)
 	player.global_position = Vector3(0, 1, 4)
-	_equip(game, "pulse")
-	lab.aim_at(Vector3(0, 0.65, 9))
-	var alternate: Variant = player.secondaries[0]
-	var before := horde._hp[slot]
-	alternate._line(player.weapons[0].damage, 3, true)
-	lab.check(horde.is_exposed(slot) and _close(before - horde._hp[slot], player.weapons[0].damage * game.run_state.damage_multiplier * 0.25 * 1.35), "real Tag ray is plated first, then receives its +35% exposure multiplier")
+	# Exposure is now an ability effect, independent of the gun being carried.
+	horde.expose(slot, 4.0)
 	_equip(game, "rail")
-	var base := player.weapons[0].damage * game.run_state.damage_multiplier
-	lab.check(_close(_shot(game, Vector3(0, 0.65, 9)), base * 0.25 * 1.35), "a different gun's frontal shot retains the same armor-then-tag order")
+	var base := player.weapon.damage * game.run_state.damage_multiplier
+	lab.check(_close(_shot(game, Vector3(0, 0.65, 9)), base * 0.25 * 1.35), "exposed frontal shot retains the armor-then-exposure order")
 	horde._knock[slot] = Vector2.ZERO
 	horde._physics_process(4.1)
-	lab.check(not horde.is_exposed(slot), "Tag exposure expires independently of permanent front armor")
+	lab.check(not horde.is_exposed(slot), "exposure expires independently of permanent front armor")
+	var before := horde._hp[slot]
 	_equip(game, "autocannon")
-	var gun := player.weapons[0]
+	var gun := player.weapon
 	before = horde._hp[slot]
 	var removed := _shot(game, Vector3(0, 0.65, 9))
 	lab.check(_close(removed, gun.damage * game.run_state.damage_multiplier * (0.25 + gun.explosion_damage_fraction)), "actual Autocannon combines plated direct damage with unplated splash in one transaction")
@@ -145,12 +136,12 @@ func _tag_and_area(game: ArenaGame) -> void:
 	lab.check(_close(before - horde._hp[slot], 20.0), "environmental and explosion radius damage bypass frontal armor")
 	# An actual FIRE ray installs a burn with unplated potency. Tick execution
 	# goes through the horde's real status updater, not a manually subtracted HP.
-	_equip(game, "flamethrower")
-	alternate = player.secondaries[0]
-	lab.aim_at(Vector3(0, 0.65, 9))
+	_equip(game, "pulse")
+	game.run_state.primary.upgrade(&"fire")
+	player.refresh_weapon()
+	var fire_amount := player.weapon.damage * game.run_state.damage_multiplier
 	before = horde._hp[slot]
-	alternate._line(40.0, 4)
-	var fire_amount := 40.0 * game.run_state.damage_multiplier
+	_shot(game, Vector3(0, 0.65, 9))
 	lab.check(_close(before - horde._hp[slot], fire_amount * 0.25), "a direct FIRE ray remains blocked by the front plate")
 	before = horde._hp[slot]
 	horde._update_burns(Horde.BURN_TICK + 0.001)
@@ -237,22 +228,17 @@ func _stun_and_turn(game: ArenaGame) -> void:
 	var horde := game.horde
 	var player := game.player
 	var slot := _target(game)
-	_equip(game, "scatter")
+	horde.stun(slot, 1.2)
 	player.global_position = Vector3(0, 1, 4)
-	lab.aim_at(horde.enemy_position(slot))
-	var alternate: Variant = player.secondaries[0]
-	var before := horde._hp[slot]
-	alternate._concussion()
-	lab.check(horde.is_stunned(slot) and _close(before - horde._hp[slot], player.weapons[0].damage * game.run_state.damage_multiplier * 2.0), "real Concussion cone bypasses the plate and applies finite stun")
 	horde._knock[slot] = Vector2.ZERO
 	var feet := horde._pos[slot]
 	var yaw := horde._yaw[slot]
 	player.global_position = Vector3(0, 1, 14)
 	horde.target = player
 	horde._physics_process(0.4)
-	lab.check(horde._pos[slot].is_equal_approx(feet) and is_equal_approx(horde._yaw[slot], yaw), "Concussion freezes pursuit and plate rotation while player repositions")
+	lab.check(horde._pos[slot].is_equal_approx(feet) and is_equal_approx(horde._yaw[slot], yaw), "stun freezes pursuit and plate rotation while player repositions")
 	_equip(game, "rail")
-	var base := player.weapons[0].damage * game.run_state.damage_multiplier
+	var base := player.weapon.damage * game.run_state.damage_multiplier
 	lab.check(_close(_shot(game, horde.weak_spot_position(slot)), base * (game.run_state.crit_multiplier + RunState.WEAK_SPOT_CRIT_BONUS)), "repositioning during stun earns real rear-core precision")
 	player.global_position = Vector3(0, 1, 4)
 	lab.check(_close(_shot(game, Vector3(0, 0.65, 9)), base * 0.25), "stun never creates a fake unlocked frontal weakness")
@@ -287,7 +273,7 @@ func _reuse_and_gallery(game: ArenaGame) -> void:
 	horde._rebuild_grid()
 	_equip(game, "rail")
 	game.player.global_position = Vector3(0, 1, 4)
-	var base := game.player.weapons[0].damage * game.run_state.damage_multiplier
+	var base := game.player.weapon.damage * game.run_state.damage_multiplier
 	lab.check(_close(_shot(game, Vector3(0, 0.4, 9)), base), "actual frontal gun damage on recycled unarmored slot has no armor leak")
 	horde.clear()
 	horde._update_dying(1.0)

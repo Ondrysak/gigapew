@@ -81,7 +81,7 @@ func _activate() -> bool:
 		direction.y = 0.0
 	_direction = direction.normalized()
 	player.dash(_direction * (dash_distance / dash_duration), dash_duration)
-	player.grant_invulnerability(dash_duration + invulnerability_tail)
+	player.grant_invulnerability((dash_duration + invulnerability_tail) * duration_scale())
 	player.camera.fov += fov_punch
 	player.add_shake(0.3)
 	_dashing = dash_duration
@@ -116,6 +116,11 @@ func _finish() -> void:
 
 func _exit_tree() -> void:
 	_finish()
+
+func _cancel_effects() -> void:
+	_finish()
+	_debris_age.fill(-1.0)
+	_ring_age = -1.0
 
 func _grind_around(center: Vector3) -> void:
 	if horde == null:
@@ -179,6 +184,8 @@ func _spit_debris(center: Vector3, force: float) -> void:
 	chunk.show()
 
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _dashing > 0.0 and drill_bit != null:
 		drill_bit.rotation.z = fmod(drill_bit.rotation.z + spin_speed * delta, TAU)
 		# Slight judder sells the grinding.

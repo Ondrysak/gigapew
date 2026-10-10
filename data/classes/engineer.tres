@@ -1,15 +1,14 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/pulse.tres" id="3_pulse"]
-[ext_resource type="Resource" path="res://data/weapons/autocannon.tres" id="4_autocannon"]
-[ext_resource type="Resource" path="res://data/weapons/baton.tres" id="third"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/overdrive.tscn" id="5_ability"]
 [ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="6_upgrade"]
 [ext_resource type="Resource" path="res://data/upgrades/sentry.tres" id="7_sentry"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/platform_turret.tscn" id="8_alt"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/repair_drone.tscn" id="9_alt"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/gravity_well.tscn" id="gravity"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/pulse_barrier.tscn" id="barrier"]
 [ext_resource type="Texture2D" path="res://assets/icons/classes/engineer.png" id="icon_px"]
 
 [resource]
@@ -18,13 +17,11 @@ cooldown_multiplier = -0.1
 id = &"engineer"
 display_name = "Engineer"
 tagline = "Let the machines do the killing."
-description = "Pulse exposes targets, Autocannon bursts packs and Shock Baton stuns nearby threats without ammunition. Starts with a Sentry, -10% auto cooldown. Overdrive boosts every automated weapon."
+description = "A deployable support kit: Overdrive accelerates automated weapons, Platform Turret holds a firing lane, and Repair Drone heals, shields and zaps nearby enemies. Gravity Well gathers packs; Pulse Barrier covers repositioning. Starts with a Sentry and -10% auto cooldown."
 accent_color = Color(0.5, 1, 0.38, 1)
-starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_pulse"), ExtResource("4_autocannon"), ExtResource("third")])
+primary_weapon = ExtResource("3_pulse")
 starting_upgrades = Array[ExtResource("6_upgrade")]([ExtResource("7_sentry")])
-ability_scene = ExtResource("5_ability")
-alternate_abilities = Array[PackedScene]([ExtResource("8_alt"), ExtResource("9_alt")])
-alternate_ability_costs = PackedInt32Array(6, 8)
+ability_scenes = Array[PackedScene]([ExtResource("5_ability"), ExtResource("8_alt"), ExtResource("9_alt"), ExtResource("gravity"), ExtResource("barrier")])
 unlock_cost = 14
 unlock_currency = &"shard"
 icon = ExtResource("icon_px")

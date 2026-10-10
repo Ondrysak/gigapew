@@ -6,7 +6,7 @@ extends CanvasLayer
 
 signal chosen(upgrade: UpgradeDefinition)
 
-const KEY_ACTIONS: Array[StringName] = [&"weapon_1", &"weapon_2", &"weapon_3"]
+const KEY_ACTIONS: Array[StringName] = [&"ability_1", &"ability_2", &"ability_3", &"ability_4", &"ability_5"]
 ## Entrance: cards rise in one after another.
 const CARD_STAGGER := 0.05
 const CARD_RISE := 46.0
@@ -45,7 +45,9 @@ func present(offers: Array[UpgradeDefinition], run_state: RunState, title: Strin
 	for index in range(_cards.size()):
 		var card := _cards[index]
 		if index < _offers.size():
-			card.show_offer(_offers[index], run_state.level_of(_offers[index]), index + 1)
+			var upgrade := _offers[index]
+			var rank := run_state.ability_rank(upgrade.ability_slot) if upgrade.kind == UpgradeDefinition.Kind.ABILITY else run_state.level_of(upgrade)
+			card.show_offer(upgrade, rank, index + 1)
 			card.show()
 		else:
 			card.hide()
@@ -107,6 +109,10 @@ func _choose(index: int) -> void:
 	_presentation += 1
 	_settle()
 	hide()
+	# Numeric keys also trigger combat skills. Clear their pressed/just-pressed
+	# state before the consumer resumes gameplay; the UI already owns the event.
+	for action in KEY_ACTIONS:
+		Input.action_release(action)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	chosen.emit(_offers[index])
 

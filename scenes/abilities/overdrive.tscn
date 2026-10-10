@@ -39,7 +39,7 @@ size = Vector3(0.9, 0.012, 0.012)
 [node name="Overdrive" type="Node3D" node_paths=PackedStringArray("aura", "orbit")]
 script = ExtResource("1_ability")
 display_name = "Overdrive"
-description = "Overclock every drone, turret and coil: auto weapons recharge twice as fast for 6 s."
+description = "Overclock automated weapons: your Sentry, drones and coils recharge faster while the visible power aura holds. Upgrades extend the boost."
 base_cooldown = 18.0
 accent_color = Color(0.5, 1, 0.38, 1)
 synth_activate = &"overdrive"

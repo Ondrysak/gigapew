@@ -130,10 +130,10 @@ func _ability_physics(delta: float) -> void:
 		_mark()
 
 func _land() -> void:
-	_lit = zone_duration
+	_lit = zone_duration * duration_scale()
 	_pulse = 0.0
 	if run_state != null:
-		run_state.set_exposure_zone(_to, zone_radius, exposure_bonus)
+		run_state.add_exposure_zone(self, _to, zone_radius, exposure_bonus * ability_damage_scale(rank()))
 	if flare != null:
 		flare.global_position = _to + Vector3.UP * 0.12
 		flare.rotation = Vector3.ZERO
@@ -156,7 +156,7 @@ func _finish() -> void:
 	_flight = -1.0
 	_lit = 0.0
 	if run_state != null:
-		run_state.clear_exposure_zone()
+		run_state.remove_exposure_zone(self)
 	if flare != null:
 		flare.hide()
 	if zone != null:
@@ -167,14 +167,19 @@ func _exit_tree() -> void:
 	if _lit > 0.0 or _flight >= 0.0:
 		_finish()
 
+func _cancel_effects() -> void:
+	_finish()
+
 func _process(_delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _flight >= 0.0 and flare != null:
 		var t := minf(_flight / flight_time, 1.0)
 		flare.global_position = _from.lerp(_to, t) + Vector3.UP * (_arc * 4.0 * t * (1.0 - t) + 0.12 * t)
 		flare.rotation = Vector3(t * 11.0, t * 4.0, 0.0)
 	if _lit <= 0.0 or zone == null:
 		return
-	var elapsed := zone_duration - _lit
+	var elapsed := zone_duration * duration_scale() - _lit
 	var grow := minf(1.0, elapsed / 0.25)
 	if zone_ring != null:
 		var pulse := zone_radius * grow * (1.0 + sin(elapsed * 9.0) * 0.025)

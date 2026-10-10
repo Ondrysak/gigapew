@@ -1,24 +1,21 @@
-[gd_resource type="Resource" script_class="HordeVertexAnimation" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="HordeVertexAnimation" format=3 uid="uid://bvgf47mv5yamm"]
 
-[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation.gd" id="1_vat"]
-[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation_clip.gd" id="2_clip"]
-[ext_resource type="Texture2D" path="res://assets/monsters/robot_grunt/robot_grunt_positions.exr" id="3_positions"]
-[ext_resource type="Texture2D" path="res://assets/monsters/robot_grunt/robot_grunt_normals.exr" id="4_normals"]
+[ext_resource type="Script" uid="uid://luovvbwa18r0" path="res://scripts/data/horde_vertex_animation.gd" id="1_vat"]
+[ext_resource type="Script" uid="uid://cwc2gpae2b8k3" path="res://scripts/data/horde_vertex_animation_clip.gd" id="2_clip"]
+[ext_resource type="Texture2D" uid="uid://beyxk8hxknpci" path="res://assets/monsters/robot_grunt/robot_grunt_positions.exr" id="3_positions"]
+[ext_resource type="Texture2D" uid="uid://cu7xjwpwgrcf4" path="res://assets/monsters/robot_grunt/robot_grunt_normals.exr" id="4_normals"]
 
 [sub_resource type="Resource" id="Clip_0"]
 script = ExtResource("2_clip")
 name = &"move"
-start_frame = 0
 frame_count = 67
 fps = 20.1
-loop = true
 
 [sub_resource type="Resource" id="Clip_1"]
 script = ExtResource("2_clip")
 name = &"attack"
 start_frame = 67
 frame_count = 13
-fps = 20.0
 loop = false
 
 [resource]

@@ -4,7 +4,7 @@ func title() -> String:
 	return "Boss"
 
 func summary() -> String:
-	return "Robot and alien bosses: arrival, fight, low health, kill into the shop"
+	return "Robot and alien bosses: arrival, fight, low health, kill without bypassing an unfinished contract"
 
 func run() -> void:
 	for stage in [0, 2]:
@@ -35,10 +35,7 @@ func _fight(stage: int) -> void:
 	game.horde.damage(slot, maxf(0.0, maximum * game.horde.enemy_health_fraction(slot) - maximum * 0.12))
 	await lab.wait(0.3)
 	await lab.capture("%s_low" % tag)
-	var ammo_before := game.pickups._ammo.count
-	var magnets_before := game.pickups._magnets.count
 	game.horde.damage(slot, maximum)
 	await lab.wait(0.6)
-	lab.check(game.round_state == ArenaGame.RoundState.SHOP, "%s boss kill opens the round shop" % tag)
-	lab.check(game.pickups._ammo.count == ammo_before + 1 and game.pickups._magnets.count == magnets_before, "%s boss drops one ammo pack without a guaranteed XP magnet before the shop" % tag)
+	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "%s boss death cannot bypass unfinished mining and kill objectives" % tag)
 	await lab.capture("%s_cleared" % tag)

@@ -46,7 +46,7 @@ func is_burning() -> bool:
 	return _remaining > 0.0
 
 func _activate() -> bool:
-	_remaining = duration
+	_remaining = duration * duration_scale()
 	_travelled = 0.0
 	_last_position = player.global_position
 	_drop_patch(_last_position)
@@ -101,7 +101,7 @@ func _burn(delta: float) -> void:
 		if age < 0.0:
 			continue
 		age += delta
-		if age >= patch_lifetime:
+		if age >= patch_lifetime * duration_scale():
 			_patch_age[index] = -1.0
 			_patches[index].hide()
 			_live -= 1
@@ -126,8 +126,15 @@ func _exit_tree() -> void:
 		_patches[index].hide()
 	_live = 0
 
+func _cancel_effects() -> void:
+	_finish()
+	_patch_age.fill(-1.0)
+	_live = 0
+
 func _process(delta: float) -> void:
-	var time := Time.get_ticks_msec() * 0.001
+	if not effects_allowed() or get_tree().paused:
+		return
+	var time := effect_time()
 	if aura != null and _remaining > 0.0:
 		aura.rotation.y = fmod(aura.rotation.y + delta * 2.5, TAU)
 		var breathe := 1.0 + sin(time * 9.0) * 0.08
@@ -142,7 +149,8 @@ func _process(delta: float) -> void:
 			continue
 		var patch := _patches[index]
 		var grow := minf(1.0, age / 0.18)
-		var fade := clampf((patch_lifetime - age) / (patch_lifetime * 0.35), 0.0, 1.0)
+		var lifetime := patch_lifetime * duration_scale()
+		var fade := clampf((lifetime - age) / (lifetime * 0.35), 0.0, 1.0)
 		var pulse := 1.0 + sin(time * 7.0 + float(index) * 1.7) * 0.06
 		var radius := patch_radius * (0.2 + 0.8 * grow) * (0.35 + 0.65 * fade) * pulse
 		patch.scale = Vector3(radius, maxf(0.05, fade), radius)

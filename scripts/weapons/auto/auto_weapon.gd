@@ -46,7 +46,7 @@ func damage_amount() -> float:
 
 func cooldown_time() -> float:
 	var scale_by_level := maxf(0.2, 1.0 - cooldown_per_level * (level - 1))
-	return maxf(min_cooldown, base_cooldown * scale_by_level * run_state.cooldown_multiplier * run_state.cooldown_boost)
+	return maxf(min_cooldown, base_cooldown * scale_by_level * run_state.cooldown_multiplier)
 
 func area_scale() -> float:
 	return run_state.area_multiplier

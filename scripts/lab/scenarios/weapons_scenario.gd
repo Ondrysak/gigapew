@@ -6,18 +6,14 @@ func title() -> String:
 	return "Weapons"
 
 func summary() -> String:
-	return "Every main gun in all three hands, mid-burst against a pack"
+	return "Every primary firearm, mid-burst against a pack"
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")
 	for id in WEAPONS:
 		var definition := lab.weapon(id)
 		game.horde.clear()
-		var hand_definitions: Array[WeaponDefinition] = [definition, definition, definition]
-		game.run_state.initialize_hands(hand_definitions)
-		game.player.weapons = game.run_state.hand_definitions()
-		game.player.refresh_weapons()
-		game.hud.set_hands(game.run_state, game.player.selected_weapon)
+		lab.equip_weapon(id)
 		var distance := 7.0 if id == "flamethrower" else 12.0
 		lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(distance), 14, 2.5)
 		var target := lab.ahead(distance)

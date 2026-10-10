@@ -19,25 +19,25 @@ func run() -> void:
 	lab.aim_at(Vector3(target.x, 1.0, target.y))
 	await lab.wait(0.8)
 	await lab.capture("play")
-	# Gear: shop armor, per-hand upgrades, a gun mod, focus on hand 2, ability cooling down.
+	# Primary upgrades and independent ranked ability cooldowns.
 	state.buy_shop_stat(&"armor")
 	state.buy_shop_stat(&"armor")
-	state.hands[1].upgrade(&"fire")
-	state.hands[1].upgrade(&"projectiles")
-	state.hands[1].upgrade(&"damage")
-	state.hands[2].upgrade(&"splash")
+	state.primary.upgrade(&"fire")
+	state.primary.upgrade(&"projectiles")
+	state.primary.upgrade(&"damage")
+	state.primary.upgrade(&"splash")
 	for upgrade in game.upgrade_pool.upgrades:
 		if upgrade.kind == UpgradeDefinition.Kind.GUN_MOD:
 			game.grant_upgrade(upgrade)
 			break
 	var player := game.player
-	player.select_weapon(1)
-	game.hud.set_hands(state, 1)
-	if player.ability != null:
-		player.ability._cooldown = player.ability.cooldown_total() * 0.6
+	player.refresh_weapon()
+	game.hud.set_primary(state)
+	for slot in player.abilities.size():
+		state.upgrade_ability(slot)
+		player.abilities[slot]._cooldown = player.abilities[slot].cooldown_total() * (0.2 + slot * 0.12)
 	await lab.wait(0.3)
 	lab.check(game.hud.armor_box.visible, "armor readout appears once armor > 0")
-	lab.check(game.hud.mod_row.get_child_count() > 0, "installed gun mod shows in the hands header")
 	await lab.capture("gear")
 	player._invulnerable = 0.0
 	player.take_damage(player.health - 18)

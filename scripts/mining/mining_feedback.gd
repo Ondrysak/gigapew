@@ -217,7 +217,7 @@ func _update_telemetry() -> void:
 	_status.text = "FRACTURE %d%%  ·  %d / %d SECTIONS" % [roundi(progress * 100.0), int(_data["remaining"]), int(_data["total"])]
 	_bar.value = progress
 	_hint.text = "WEAK SEAM ×1.75  ·  RESONANCE +%d%%" % roundi(_resonance * 35.0) if weak \
-			else "Hold RMB · Aim for ◇ seam · Resonance +%d%%" % roundi(_resonance * 35.0)
+			else "Hold F · Aim for ◇ seam · Resonance +%d%%" % roundi(_resonance * 35.0)
 	_hint.modulate = Color(0.6, 1.0, 0.85) if weak else Color(0.8, 0.87, 0.95)
 	var point: Vector3 = _data["weak_position"]
 	if _camera == null or _camera.is_position_behind(point):

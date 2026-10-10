@@ -54,8 +54,9 @@ func _check_precision(game) -> void:
 	var gun = load("res://data/weapons/pulse.tres").duplicate()
 	gun.damage = 10
 	gun.pierce = 0
-	player.weapons.assign([gun, null, null])
-	player.refresh_weapons()
+	state.initialize_primary(gun)
+	gun = state.primary.definition
+	player.refresh_weapon()
 	player.global_position = Vector3(0, 1, 12)
 	state.crit_chance = 0.0
 	horde.clear()
@@ -64,25 +65,25 @@ func _check_precision(game) -> void:
 	horde._rebuild_grid()
 	player._reset_combo()
 	player.head.look_at(Vector3(0, 0.65, 9), Vector3.UP)
-	player._shoot(0)
+	player._shoot()
 	_check(is_equal_approx(horde._hp[slot], 990.0), "Body hit changed unmodified base damage")
 	horde._hp[slot] = 1000.0
 	player._process(1.0)
 	player._reset_combo()
 	player.head.look_at(Vector3(0, 1.7, 9), Vector3.UP)
-	player._shoot(0)
+	player._shoot()
 	_check(is_equal_approx(horde._hp[slot], 970.0), "Aimed headshot must earn x3 without a random crit roll")
 	horde._hp[slot] = 1000.0
 	state.crit_chance = 1.0
 	player._process(1.0)
 	player._reset_combo()
-	player._shoot(0)
+	player._shoot()
 	_check(is_equal_approx(horde._hp[slot], 970.0), "Random and aimed crits must not double-stack")
 	horde._hp[slot] = 1000.0
 	player._process(1.0)
 	player._reset_combo()
 	player.head.look_at(Vector3(0, 0.65, 9), Vector3.UP)
-	player._shoot(0)
+	player._shoot()
 	_check(is_equal_approx(horde._hp[slot], 980.0), "Rolled body crit must deal x2")
 	state.crit_chance = 0.0
 	horde._hp[slot] = 1000.0
@@ -102,7 +103,7 @@ func _check_precision(game) -> void:
 	gun.pierce = 0
 	gun.explosion_radius = 1.0
 	gun.explosion_damage_fraction = 0.5
-	player.refresh_weapons()
+	player.refresh_weapon()
 	slot = horde.spawn(definition, Vector2(0, 9), 1000.0 / definition.max_health)
 	horde._yaw[slot] = 0.0
 	var collateral: int = horde.spawn(definition, Vector2(0.8, 9), 1000.0 / definition.max_health)
@@ -110,7 +111,7 @@ func _check_precision(game) -> void:
 	_shoot_at(player, Vector3(0, 1.7, 9))
 	_check(is_equal_approx(horde._hp[slot], 965.0) and is_equal_approx(horde._hp[collateral], 995.0), "Aimed headshot must not multiply collateral splash damage")
 	gun.explosion_radius = 0.0
-	player.refresh_weapons()
+	player.refresh_weapon()
 	horde.clear()
 	slot = horde.spawn(definition, Vector2(0, 9), 1000.0 / definition.max_health)
 	horde._yaw[slot] = 0.0
@@ -150,4 +151,4 @@ func _shoot_at(player, at: Vector3) -> void:
 	player._process(1.0)
 	player._reset_combo()
 	player.head.look_at(at, Vector3.UP)
-	player._shoot(0)
+	player._shoot()

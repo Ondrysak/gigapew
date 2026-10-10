@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="SpawnSchedule" load_steps=15 format=3]
+[gd_resource type="Resource" script_class="SpawnSchedule" format=3 uid="uid://di2keg18d1ccr"]
 
-[ext_resource type="Script" path="res://scripts/data/spawn_schedule.gd" id="1_schedule"]
-[ext_resource type="Script" path="res://scripts/data/spawn_wave.gd" id="2_wave"]
+[ext_resource type="Script" uid="uid://c3qr1t5rorfvo" path="res://scripts/data/spawn_schedule.gd" id="1_schedule"]
+[ext_resource type="Script" uid="uid://cqwqc0wlem0yf" path="res://scripts/data/spawn_wave.gd" id="2_wave"]
 [ext_resource type="Resource" path="res://data/enemies/robot_boss.tres" id="3_dreadnought"]
 [ext_resource type="Resource" path="res://data/enemies/robot_grunt.tres" id="4_grunt"]
 [ext_resource type="Resource" path="res://data/enemies/robot_runner.tres" id="5_runner"]
@@ -12,12 +12,10 @@
 [sub_resource type="Resource" id="Wave_1"]
 script = ExtResource("2_wave")
 enemy = ExtResource("4_grunt")
-start_time = 0.0
 end_time = 180.0
 rate_start = 4.5
 rate_end = 26.0
 group_size = 6
-health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Wave_2"]
 script = ExtResource("2_wave")
@@ -27,7 +25,6 @@ end_time = 130.0
 rate_start = 3.0
 rate_end = 8.7
 group_size = 10
-health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Wave_3"]
 script = ExtResource("2_wave")
@@ -37,7 +34,6 @@ end_time = 180.0
 rate_start = 1.5
 rate_end = 7.25
 group_size = 5
-health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Wave_4"]
 script = ExtResource("2_wave")
@@ -47,7 +43,6 @@ end_time = 180.0
 rate_start = 0.24
 rate_end = 0.72
 group_size = 1
-health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Wave_5"]
 script = ExtResource("2_wave")
@@ -57,7 +52,6 @@ end_time = 180.0
 rate_start = 0.12
 rate_end = 0.3
 group_size = 1
-health_multiplier = 1.0
 
 [sub_resource type="Resource" id="Wave_Bulwark"]
 script = ExtResource("2_wave")
@@ -67,14 +61,11 @@ end_time = 180.0
 rate_start = 0.042
 rate_end = 0.09
 group_size = 1
-health_multiplier = 1.0
 
 [resource]
 script = ExtResource("1_schedule")
-duration = 180.0
+ramp_duration = 180.0
 max_alive = 1000
 waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5"), SubResource("Wave_Bulwark")])
 boss = ExtResource("3_dreadnought")
-boss_health_multiplier = 1.0
 spawn_distance_min = 20.0
-spawn_distance_max = 34.0

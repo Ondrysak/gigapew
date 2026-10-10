@@ -36,14 +36,6 @@ const SUPPLY_SEPARATION_SQUARED := 1.44
 @export var max_repairs := 64
 @export var repair_height := 0.45
 
-@export_group("Ammo")
-@export var ammo_mesh: Mesh
-@export var ammo_material: Material
-@export var ammo_color := Color.WHITE
-@export var max_ammo := 64
-@export var ammo_height := 0.3
-@export_range(1, 1000) var ammo_kill_interval := 30
-
 @export_group("Magnets")
 @export var magnet_mesh: Mesh
 @export var magnet_material: Material
@@ -70,7 +62,6 @@ var _run_state: RunState
 var _rng := RandomNumberGenerator.new()
 var _gems := PickupSet.new()
 var _repairs := PickupSet.new()
-var _ammo := PickupSet.new()
 var _magnets := PickupSet.new()
 ## Separate pool: ordinary kill drops cannot consume timed supply slots.
 var _supplies := PickupSet.new()
@@ -83,21 +74,13 @@ func setup(horde: Horde, player: ArenaPlayer, run_state: RunState) -> void:
 	_run_state = run_state
 	if repair_mesh == null:
 		repair_mesh = Geometry.repair()
-	if ammo_mesh == null:
-		ammo_mesh = Geometry.ammo()
 	if magnet_mesh == null:
 		magnet_mesh = Geometry.magnet()
 	_gems.build(self, gem_mesh, gem_material, maxi(1, max_gems))
 	_repairs.build(self, repair_mesh, repair_material, maxi(0, max_repairs))
-	_ammo.build(self, ammo_mesh, ammo_material, maxi(0, max_ammo))
 	_magnets.build(self, magnet_mesh, magnet_material, maxi(0, max_magnets))
-	_supplies.build(self, ammo_mesh, ammo_material, MAX_TIMED_SUPPLIES)
+	_supplies.build(self, repair_mesh, repair_material, MAX_TIMED_SUPPLIES)
 	horde.enemy_killed.connect(_on_enemy_killed)
-
-func spawn_ammo(at: Vector3, magazines: int = 1) -> bool:
-	if _horde == null or magazines <= 0:
-		return false
-	return _spawn(_ammo, at, ammo_height, magazines, ammo_color)
 
 func spawn_magnet(at: Vector3) -> bool:
 	if _horde == null:
@@ -132,11 +115,9 @@ func _on_enemy_killed(definition: HordeEnemyDefinition, at: Vector3) -> void:
 	if _rng.randf() < repair_chance:
 		spawn_repair(at)
 	if definition.is_boss:
-		spawn_ammo(at)
+		spawn_magnet(at)
 	else:
 		_nonboss_kills += 1
-		if _nonboss_kills % maxi(1, ammo_kill_interval) == 0:
-			spawn_ammo(at)
 		if _nonboss_kills % maxi(1, magnet_kill_interval) == 0:
 			spawn_magnet(at)
 		if _nonboss_kills % maxi(1, xp_kill_interval) != 0:
@@ -168,19 +149,8 @@ func _physics_process(delta: float) -> void:
 				_style_gem(index)
 		else:
 			index += 1
-	index = 0
-	while index < _repairs.count:
-		if _within_reach(_repairs.positions[index], target) and _player.health < _player.max_health:
-			var previous_health := _player.health
-			_player.heal(repair_heal)
-			var healed := _player.health - previous_health
-			if healed > 0:
-				_remove_styled(_repairs, index, repair_color)
-				collected.emit(&"repair", healed)
-				continue
-		index += 1
-	_collect_ammo(_ammo, target)
-	_collect_ammo(_supplies, target)
+	_collect_repairs(_repairs, target)
+	_collect_repairs(_supplies, target)
 	index = 0
 	while index < _magnets.count:
 		if _within_reach(_magnets.positions[index], target):
@@ -192,7 +162,6 @@ func _physics_process(delta: float) -> void:
 	_tick_supply(delta)
 	_gems.flush()
 	_repairs.flush()
-	_ammo.flush()
 	_magnets.flush()
 	_supplies.flush()
 	if collected_xp > 0:
@@ -208,15 +177,18 @@ func _remove_styled(pickups: PickupSet, index: int, color: Color) -> void:
 	if index < pickups.count:
 		pickups.write(index, 1.0, color)
 
-func _collect_ammo(pickups: PickupSet, target: Vector3) -> void:
+func _collect_repairs(pickups: PickupSet, target: Vector3) -> void:
 	var index := 0
 	while index < pickups.count:
-		if _within_reach(pickups.positions[index], target) and _player.add_ammo(pickups.values[index]):
-			var magazines := pickups.values[index]
-			_remove_styled(pickups, index, ammo_color)
-			collected.emit(&"ammo", magazines)
-		else:
-			index += 1
+		if _within_reach(pickups.positions[index], target) and _player.health < _player.max_health:
+			var previous_health := _player.health
+			_player.heal(repair_heal)
+			var healed := _player.health - previous_health
+			if healed > 0:
+				_remove_styled(pickups, index, repair_color)
+				collected.emit(&"repair", healed)
+				continue
+		index += 1
 
 func _tick_supply(delta: float) -> void:
 	var interval := maxf(0.1, supply_interval)
@@ -253,7 +225,7 @@ func _try_supply() -> bool:
 		var candidate := origin + Vector2(cos(angle), sin(angle)) * distance
 		if not area.has_point(candidate) or _horde.is_blocked(candidate, SUPPLY_CLEARANCE):
 			continue
-		# Two waiting crates must not stack into one silhouette or one pickup.
+		# Two waiting repair packs must not stack into one pickup.
 		var occupied := false
 		for index in _supplies.count:
 			var at := _supplies.positions[index]
@@ -264,7 +236,7 @@ func _try_supply() -> bool:
 			continue
 		if not _supply_path_clear(origin, candidate, start_height):
 			continue
-		return _spawn(_supplies, Vector3(candidate.x, 0.0, candidate.y), ammo_height, 1, ammo_color)
+		return _spawn(_supplies, Vector3(candidate.x, 0.0, candidate.y), repair_height, 1, repair_color)
 	return false
 
 func _supply_path_clear(origin: Vector2, destination: Vector2, start_height: float) -> bool:

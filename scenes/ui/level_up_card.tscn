@@ -92,7 +92,7 @@ corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
 [node name="Card" type="Button" node_paths=PackedStringArray("accent_bar", "key_label", "kind_chip", "kind_label", "badge", "icon_rect", "name_label", "new_badge", "new_label", "pips", "description_label")]
-custom_minimum_size = Vector2(300, 404)
+custom_minimum_size = Vector2(300, 440)
 focus_mode = 0
 theme_override_styles/normal = SubResource("Style_normal")
 theme_override_styles/hover = SubResource("Style_hover")

@@ -132,7 +132,15 @@ func _blast(at: Vector3, lead: bool) -> void:
 		scorch.show()
 		_next_scorch = (_next_scorch + 1) % _scorches.size()
 
+func _cancel_effects() -> void:
+	_pending = 0
+	_blast_time.fill(-1.0)
+	_flash_age.fill(-1.0)
+	_scorch_age.fill(-1.0)
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	for index in range(_flashes.size()):
 		var age := _flash_age[index]
 		if age < 0.0:

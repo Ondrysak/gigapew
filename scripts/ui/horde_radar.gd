@@ -21,7 +21,6 @@ var _loot: PickupField
 var _vein := Vector2.INF
 var _vein_ready := false
 @onready var _vein_icon := GameIcons.lookup(&"resources", &"gold")
-@onready var _ammo_icon := GameIcons.lookup(&"hud", &"ammo")
 @onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
 @onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
 
@@ -60,10 +59,9 @@ func _draw() -> void:
 	for n in _count:
 		draw_rect(Rect2(_map(_positions[n]) - Vector2.ONE, Vector2(2.5, 2.5)), dot_color)
 	if is_instance_valid(_loot):
-		_draw_pickups(_loot._ammo, _ammo_icon)
-		_draw_pickups(_loot._supplies, _ammo_icon)
 		_draw_pickups(_loot._magnets, _magnet_icon)
 		_draw_pickups(_loot._repairs, _repair_icon)
+		_draw_pickups(_loot._supplies, _repair_icon)
 	if _vein != Vector2.INF:
 		var point := _map(_vein)
 		var color := Color(0.35, 1.0, 0.78) if _vein_ready else Color(1.0, 0.7, 0.24)

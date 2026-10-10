@@ -53,13 +53,13 @@ func _earned_choice_and_clear() -> void:
 	Input.action_press(&"mine")
 	await lab.wait(0.5)
 	Input.action_release(&"mine")
-	lab.check(vein.health == untouched and encounter.state == MiningDefense.State.WAITING, "idle RMB away from real sections grants no mining or response progress")
+	lab.check(vein.health == untouched and encounter.state == MiningDefense.State.WAITING, "held F away from real sections grants no mining or response progress")
 	lab.check(not encounter.claim_reward(), "waiting cannot claim an upgrade")
-	lab.check(await lab.aim_deposit(vein, 2.2), "ranged mining ray reacquires a real section")
-	lab.fire(true)
+	lab.check(await lab.aim_deposit(vein, 2.2), "close drill ray reacquires a real section")
+	Input.action_press(&"mine")
 	await lab.wait(0.2)
-	lab.fire(false)
-	lab.check(vein.health < untouched and encounter.state == MiningDefense.State.MINING, "actual gun section damage starts response")
+	Input.action_release(&"mine")
+	lab.check(vein.health < untouched and encounter.state == MiningDefense.State.MINING, "actual F-drilled section damage starts response")
 	var timer_before := encounter.remaining()
 	var admitted_before := encounter.spawned_count
 	var progress_before := encounter.progress()
@@ -111,7 +111,7 @@ func _earned_choice_and_clear() -> void:
 		return
 	var selected: UpgradeDefinition = game.level_up._offers[0]
 	var upgrade_before := game.run_state.level_of(selected)
-	# Exercise clear while the earned choice is open; it must precede shop and preserve XP.
+	# Earned encounter and XP choices remain independent of the level contract.
 	game.run_state.add_xp(game.run_state.xp_required - game.run_state.xp)
 	var xp_pending := game.run_state.pending_level_ups
 	var schedule := game.campaign[0].schedule
@@ -122,17 +122,15 @@ func _earned_choice_and_clear() -> void:
 		return
 	game.horde.damage(boss, schedule.boss.max_health * schedule.boss_health_multiplier * 2.0)
 	await lab.wait(0.2)
-	lab.check(game.round_state == ArenaGame.RoundState.ENCOUNTER_REWARD and game.level_up.visible, "boss clear does not replace the earned encounter chooser")
+	lab.check(game.round_state == ArenaGame.RoundState.ENCOUNTER_REWARD and game.level_up.visible, "boss death cannot replace the earned encounter chooser")
 	game.level_up._choose(0)
 	await lab.wait(0.5)
 	lab.check(game.run_state.level_of(selected) == upgrade_before + 1, "choosing applies the actual selected upgrade to the run")
-	lab.check(game.round_state == ArenaGame.RoundState.SHOP, "completed earned choice then continues normal boss/shop flow")
-	lab.check(game.run_state.pending_level_ups == xp_pending, "round-end XP choices stay banked while shop opens")
-	await lab.capture("reward_then_shop")
-	game._on_shop_continue(0)
-	await lab.wait(0.8)
-	lab.check(game.stage_index == 1 and game.round_state == ArenaGame.RoundState.LEVEL_UP, "shop advance presents preserved XP choice on the normal next stage")
-	lab.check(game.mining_encounter == null, "Foundry does not inherit the Yard-only defense vein")
+	lab.check(game.round_state == ArenaGame.RoundState.LEVEL_UP and game.run_state.pending_level_ups == xp_pending - 1, "earned choice preserves and then presents the queued XP upgrade")
+	await lab.capture("reward_then_levelup")
+	game.level_up._choose(0)
+	await lab.wait(0.3)
+	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "encounter and boss rewards do not skip unfinished level objectives")
 
 func _combat_first_and_cancel() -> void:
 	var game := await _new_game()

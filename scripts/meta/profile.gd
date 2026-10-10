@@ -1,7 +1,7 @@
 extends Node
 
 ## Persistent player profile (autoload `Profile`): currencies, class unlocks,
-## ability unlocks and loadouts, permanent upgrade levels, records and
+## primary/gadget loadout, permanent upgrade levels, records and
 ## settings. Stored as JSON in user://profile.json and saved after every
 ## mutation. A missing, corrupt or incompatible file resets to defaults (a
 ## corrupt file is kept as .bak); keys missing from older saves keep defaults.
@@ -57,14 +57,10 @@ var settings: Dictionary = {}
 var _currencies: Dictionary = {}
 var _unlocked_classes: Dictionary = {}
 var _meta_levels: Dictionary = {}
-# "class_id/ability_key" -> true for bought alternate abilities.
-var _unlocked_abilities: Dictionary = {}
-# class_id -> ability_key of the equipped ability (missing = class default).
-var _equipped_abilities: Dictionary = {}
 var _crafted_ranks: Dictionary = {}
 var _equipped_armor: StringName = &""
-var _equipped_weapons: Dictionary = {}
-var _equipped_gadgets: Dictionary = {}
+var _equipped_primary: StringName = &""
+var _equipped_gadget: StringName = &""
 var _loading := false
 # False in the visual test lab: the player's save is neither read nor written.
 var _persistent := true
@@ -188,84 +184,79 @@ func craft(id: StringName) -> bool:
 	_emit_payment(payment)
 	return true
 
-func equip_craft(id: StringName, hand: int = 0) -> bool:
-	if hand < 0 or hand >= 3 or craft_rank(id) <= 0:
-		return false
+func equip_craft(id: StringName) -> bool:
 	var recipe := CraftingCatalog.find(id)
+	if recipe == null or craft_rank(id) <= 0:
+		return false
 	match recipe.category:
 		&"armor":
 			_equipped_armor = id
 		&"weapon":
 			if recipe.weapon == null:
 				return false
-			_equipped_weapons[str(hand)] = String(id)
+			_equipped_primary = id
 		&"gadget":
-			if recipe.hand_upgrade == &"":
+			if not can_equip_gadget(id):
 				return false
-			if not can_equip_gadget(id, hand):
-				return false
-			_equipped_gadgets[str(hand)] = String(id)
+			_equipped_gadget = id
 		_:
 			return false
 	_mutated()
 	return true
 
-func unequip_craft(category: StringName, hand: int = 0) -> bool:
-	if hand < 0 or hand >= 3:
-		return false
+func unequip_craft(category: StringName) -> bool:
 	match category:
 		&"armor":
 			_equipped_armor = &""
 		&"weapon":
-			_equipped_weapons.erase(str(hand))
+			_equipped_primary = &""
 		&"gadget":
-			_equipped_gadgets.erase(str(hand))
+			_equipped_gadget = &""
 		_:
 			return false
 	_mutated()
 	return true
 
-func is_craft_equipped(id: StringName, hand: int = 0) -> bool:
-	if hand < 0 or hand >= 3 or craft_rank(id) <= 0:
-		return false
+func is_craft_equipped(id: StringName) -> bool:
 	var recipe := CraftingCatalog.find(id)
+	if recipe == null or craft_rank(id) <= 0:
+		return false
 	match recipe.category:
 		&"armor":
 			return _equipped_armor == id
 		&"weapon":
-			return _equipped_weapons.get(str(hand), "") == String(id)
+			return _equipped_primary == id
 		&"gadget":
-			return _equipped_gadgets.get(str(hand), "") == String(id)
+			return _equipped_gadget == id
 		&"perk", &"talent":
 			return true
 	return false
 
-## Checks the actual hand definition through the run's shared upgrade rules.
-## Saved gadgets are retained when a new weapon makes them ineligible.
-func can_equip_gadget(id: StringName, hand: int) -> bool:
-	if hand < 0 or hand >= 3:
-		return false
+func can_equip_gadget(id: StringName) -> bool:
 	var recipe := CraftingCatalog.find(id)
-	if recipe == null or recipe.category != &"gadget":
+	if recipe == null or recipe.category != &"gadget" or recipe.weapon_upgrade.is_empty():
 		return false
-	var preview := WeaponHand.new()
-	preview.setup(hand_loadout(selected_class())[hand])
-	return preview.can_upgrade(recipe.hand_upgrade)
+	var build := WeaponBuild.new()
+	build.setup(primary_loadout(selected_class()))
+	return build.can_upgrade(recipe.weapon_upgrade)
 
-func hand_loadout(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
-	var fallback := load("res://data/weapons/pulse.tres") as WeaponDefinition
+func primary_loadout(class_definition: ClassDefinition) -> WeaponDefinition:
+	var recipe := CraftingCatalog.find(_equipped_primary)
+	if recipe != null and recipe.category == &"weapon" and recipe.weapon != null and craft_rank(recipe.id) > 0:
+		return recipe.weapon
+	if class_definition != null and class_definition.primary_weapon != null:
+		return class_definition.primary_weapon
+	return load("res://data/weapons/pulse.tres") as WeaponDefinition
+
+func available_primary_weapons(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
 	var result: Array[WeaponDefinition] = []
-	for slot in 3:
-		var gun := fallback
-		if class_definition != null and slot < class_definition.starting_weapons.size() \
-				and class_definition.starting_weapons[slot] != null:
-			gun = class_definition.starting_weapons[slot]
-		result.append(gun)
-	for hand in range(3):
-		var id := StringName(str(_equipped_weapons.get(str(hand), "")))
-		var recipe := CraftingCatalog.find(id)
-		if recipe != null and recipe.category == &"weapon" and recipe.weapon != null and craft_rank(id) > 0:
-			result[hand] = recipe.weapon
+	for path in ["pulse", "scatter", "rail", "minigun", "autocannon", "flamethrower"]:
+		result.append(load("res://data/weapons/%s.tres" % path) as WeaponDefinition)
+	if class_definition != null and class_definition.primary_weapon != null and not result.has(class_definition.primary_weapon):
+		result.append(class_definition.primary_weapon)
+	for recipe in CraftingCatalog.recipes():
+		if recipe.category == &"weapon" and recipe.weapon != null and craft_rank(recipe.id) > 0 and not result.has(recipe.weapon):
+			result.append(recipe.weapon)
 	return result
 
 func crafting_modifiers() -> Dictionary:
@@ -280,13 +271,10 @@ func crafting_modifiers() -> Dictionary:
 			modifiers[recipe] = 1
 	return modifiers
 
-func apply_hand_gadgets(hands: Array[WeaponHand]) -> void:
-	for hand in mini(3, hands.size()):
-		var id := StringName(str(_equipped_gadgets.get(str(hand), "")))
-		var recipe := CraftingCatalog.find(id)
-		if recipe != null and recipe.category == &"gadget" and craft_rank(id) > 0 \
-				and hands[hand].can_upgrade(recipe.hand_upgrade):
-			hands[hand].upgrade(recipe.hand_upgrade)
+func apply_primary_gadget(primary: WeaponBuild) -> void:
+	var recipe := CraftingCatalog.find(_equipped_gadget)
+	if primary != null and recipe != null and recipe.category == &"gadget" and craft_rank(recipe.id) > 0:
+		primary.upgrade(recipe.weapon_upgrade)
 
 ## The normal run perk machinery instantiates these effects once at deployment.
 func starting_craft_upgrades() -> Array[UpgradeDefinition]:
@@ -329,55 +317,6 @@ func selected_class() -> ClassDefinition:
 			return definition
 	return roster.find(selected_class_id)
 
-# --- class abilities ----------------------------------------------------------
-
-## True for the class default and for bought alternates.
-func is_ability_unlocked(definition: ClassDefinition, scene: PackedScene) -> bool:
-	if definition == null or scene == null or not definition.ability_options().has(scene):
-		return false
-	return definition.ability_cost(scene) <= 0 or _unlocked_abilities.has(_ability_slot(definition, scene))
-
-func can_afford_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
-	return definition != null and currency(definition.ability_unlock_currency) >= definition.ability_cost(scene)
-
-## Spends the ability's cost (class must be unlocked); returns true when the
-## ability is (now) unlocked.
-func unlock_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
-	if definition == null or scene == null or not definition.ability_options().has(scene):
-		return false
-	if is_ability_unlocked(definition, scene):
-		return true
-	if not is_class_unlocked(definition) or not can_afford_ability(definition, scene):
-		return false
-	_unlocked_abilities[_ability_slot(definition, scene)] = true
-	# spend() saves, so the unlock is written together with the payment.
-	spend(definition.ability_unlock_currency, definition.ability_cost(scene))
-	return true
-
-## Makes an unlocked ability the one the class deploys with.
-func equip_ability(definition: ClassDefinition, scene: PackedScene) -> bool:
-	if not is_ability_unlocked(definition, scene):
-		return false
-	var key := String(ClassDefinition.ability_key(scene))
-	if _equipped_abilities.get(String(definition.id), "") != key:
-		_equipped_abilities[String(definition.id)] = key
-		_mutated()
-	return true
-
-## The class's equipped ability; falls back to definition.ability_scene when
-## nothing (or something no longer available) is equipped.
-func equipped_ability_scene(definition: ClassDefinition) -> PackedScene:
-	if definition == null:
-		return null
-	var key := StringName(str(_equipped_abilities.get(String(definition.id), "")))
-	if key != &"":
-		for scene in definition.ability_options():
-			if ClassDefinition.ability_key(scene) == key and is_ability_unlocked(definition, scene):
-				return scene
-	return definition.ability_scene
-
-func _ability_slot(definition: ClassDefinition, scene: PackedScene) -> String:
-	return "%s/%s" % [definition.id, ClassDefinition.ability_key(scene)]
 
 # --- permanent upgrades ------------------------------------------------------
 
@@ -484,12 +423,10 @@ func save() -> void:
 		"currencies": _currencies,
 		"unlocked_classes": _unlocked_classes.keys(),
 		"meta_levels": _meta_levels,
-		"unlocked_abilities": _unlocked_abilities.keys(),
-		"equipped_abilities": _equipped_abilities,
 		"crafted_ranks": _crafted_ranks,
 		"equipped_armor": String(_equipped_armor),
-		"equipped_weapons": _equipped_weapons,
-		"equipped_gadgets": _equipped_gadgets,
+		"equipped_primary": String(_equipped_primary),
+		"equipped_gadget": String(_equipped_gadget),
 		"records": records,
 		"settings": settings,
 	}
@@ -535,15 +472,6 @@ func _apply_data(data: Dictionary) -> void:
 		for id in unlocked:
 			_unlocked_classes[str(id)] = true
 	var levels: Variant = data.get("meta_levels", {})
-	# Saves from before ability loadouts lack these keys: defaults stay.
-	var abilities: Variant = data.get("unlocked_abilities", [])
-	if abilities is Array:
-		for slot in abilities:
-			_unlocked_abilities[str(slot)] = true
-	var equipped: Variant = data.get("equipped_abilities", {})
-	if equipped is Dictionary:
-		for key in equipped:
-			_equipped_abilities[str(key)] = str(equipped[key])
 	if levels is Dictionary:
 		for key in levels:
 			_meta_levels[str(key)] = maxi(int(_number(levels[key])), 0)
@@ -559,8 +487,8 @@ func _apply_data(data: Dictionary) -> void:
 	var armor_recipe := CraftingCatalog.find(armor_id)
 	if armor_recipe != null and armor_recipe.category == &"armor" and craft_rank(armor_id) > 0:
 		_equipped_armor = armor_id
-	_load_craft_slots(data.get("equipped_weapons", {}), &"weapon", _equipped_weapons)
-	_load_craft_slots(data.get("equipped_gadgets", {}), &"gadget", _equipped_gadgets)
+	_equipped_primary = _load_craft_id(data.get("equipped_primary", data.get("equipped_weapons", {})), &"weapon")
+	_equipped_gadget = _load_craft_id(data.get("equipped_gadget", data.get("equipped_gadgets", {})), &"gadget")
 	var saved_records: Variant = data.get("records", {})
 	if saved_records is Dictionary:
 		for key in DEFAULT_RECORDS:
@@ -583,23 +511,31 @@ func _reset() -> void:
 	_currencies.clear()
 	_unlocked_classes.clear()
 	_meta_levels.clear()
-	_unlocked_abilities.clear()
-	_equipped_abilities.clear()
 	_crafted_ranks.clear()
 	_equipped_armor = &""
-	_equipped_weapons.clear()
-	_equipped_gadgets.clear()
+	_equipped_primary = &""
+	_equipped_gadget = &""
 	records = DEFAULT_RECORDS.duplicate()
 	settings = DEFAULT_SETTINGS.duplicate()
 
-func _load_craft_slots(saved: Variant, category: StringName, slots: Dictionary) -> void:
-	if not saved is Dictionary:
-		return
-	for hand in range(3):
-		var id := StringName(str(saved.get(str(hand), "")))
+## Legacy saves stored three slots; take the first surviving crafted entry.
+## Removed melee recipes are absent from the catalog and skipped safely.
+func _load_craft_id(saved: Variant, category: StringName) -> StringName:
+	var ids: Array[StringName] = []
+	if saved is Dictionary:
+		for slot in range(3):
+			ids.append(StringName(str(saved.get(str(slot), ""))))
+	elif saved is String or saved is StringName:
+		ids.append(StringName(saved))
+	for id in ids:
 		var recipe := CraftingCatalog.find(id)
 		if recipe != null and recipe.category == category and craft_rank(id) > 0:
-			slots[str(hand)] = String(id)
+			if category == &"weapon" and recipe.weapon == null:
+				continue
+			if category == &"gadget" and recipe.weapon_upgrade.is_empty():
+				continue
+			return id
+	return &""
 
 func _sanitize_setting(key: String, value: Variant) -> Variant:
 	match key:

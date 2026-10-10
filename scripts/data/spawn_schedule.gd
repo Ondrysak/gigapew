@@ -1,8 +1,8 @@
 class_name SpawnSchedule
 extends Resource
 
-## Survive `duration` seconds; the boss then spawns and must be destroyed.
-@export var duration := 240.0
+## Ordinary spawn pressure stops increasing at this horizon; the level has no timer.
+@export var ramp_duration := 240.0
 ## Regular spawning pauses while this many enemies are alive.
 @export var max_alive := 1200
 @export var waves: Array[SpawnWave] = []

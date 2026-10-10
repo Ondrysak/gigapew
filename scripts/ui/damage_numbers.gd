@@ -221,6 +221,8 @@ func _clear_of_hud(point: Vector2, viewport_size: Vector2) -> bool:
 		return false
 	if point.y < 150.0 and point.x < 440.0:
 		return false
+	if point.y >= 148.0 and point.y < 402.0 and point.x < 340.0:
+		return false
 	if point.y < 300.0 and point.x > viewport_size.x - 230.0:
 		return false
 	if point.y > viewport_size.y - 160.0 and point.x < 390.0:

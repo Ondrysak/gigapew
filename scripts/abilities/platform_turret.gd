@@ -103,7 +103,7 @@ func _activate() -> bool:
 		return false
 	var space := player.get_world_3d().direct_space_state
 	_spot = _pick_spot(space)
-	_remaining = duration
+	_remaining = duration * duration_scale()
 	_drop = 0.0
 	_fire_timer = 0.0
 	_flash = 0.0
@@ -244,7 +244,14 @@ func _finish() -> void:
 func _exit_tree() -> void:
 	_finish()
 
+func _cancel_effects() -> void:
+	_finish()
+	_tracer_age.fill(-1.0)
+	_shock_age = -1.0
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _remaining > 0.0 and turret != null:
 		if _drop >= 0.0:
 			var t := minf(_drop / drop_time, 1.0)

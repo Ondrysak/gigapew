@@ -1,13 +1,12 @@
-[gd_resource type="Resource" script_class="ClassDefinition" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="2_weapon"]
 [ext_resource type="Resource" path="res://data/weapons/flamethrower.tres" id="3_flamethrower"]
-[ext_resource type="Resource" path="res://data/weapons/scatter.tres" id="4_scatter"]
-[ext_resource type="Resource" path="res://data/weapons/cleaver.tres" id="third"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/seismic_charge.tscn" id="5_ability"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/drill_dash.tscn" id="6_alt"]
 [ext_resource type="PackedScene" path="res://scenes/abilities/magma_trail.tscn" id="7_alt"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/gravity_well.tscn" id="gravity"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/pulse_barrier.tscn" id="barrier"]
 [ext_resource type="Texture2D" path="res://assets/icons/classes/driller.png" id="icon_px"]
 
 [resource]
@@ -17,12 +16,10 @@ mining_multiplier = 1.5
 id = &"driller"
 display_name = "Driller"
 tagline = "Burn the swarm. Crack the rock. Bank the loot."
-description = "Flamethrower burns and slows lanes; Scatter staggers; Cleaver cuts a broad close-range arc without ammunition. +5% damage, +150% mining. Seismic Charge lobs a demolition blast."
+description = "An explosive area-control kit: Seismic Charge demolishes a pack, Drill Dash carves a protected path with an eruption, and Magma Trail leaves damaging ground behind. Gravity Well gathers threats; Pulse Barrier protects close-range mining. +5% damage and +150% mining."
 accent_color = Color(1, 0.48, 0.14, 1)
-starting_weapons = Array[ExtResource("2_weapon")]([ExtResource("3_flamethrower"), ExtResource("4_scatter"), ExtResource("third")])
-ability_scene = ExtResource("5_ability")
-alternate_abilities = Array[PackedScene]([ExtResource("6_alt"), ExtResource("7_alt")])
-alternate_ability_costs = PackedInt32Array(5, 7)
+primary_weapon = ExtResource("3_flamethrower")
+ability_scenes = Array[PackedScene]([ExtResource("5_ability"), ExtResource("6_alt"), ExtResource("7_alt"), ExtResource("gravity"), ExtResource("barrier")])
 unlock_cost = 10
 unlock_currency = &"shard"
 icon = ExtResource("icon_px")

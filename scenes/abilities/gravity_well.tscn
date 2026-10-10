@@ -1,0 +1,107 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/gravity_well.gd" id="1_ability"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/gravity_well.png" id="icon_px"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_field"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.55, 0.25, 1, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="Mat_core"]
+shading_mode = 0
+albedo_color = Color(0.09, 0.025, 0.2, 1)
+emission_enabled = true
+emission = Color(0.4, 0.1, 0.9, 1)
+emission_energy_multiplier = 1.8
+
+[sub_resource type="TorusMesh" id="Mesh_ring"]
+inner_radius = 0.94
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[sub_resource type="TorusMesh" id="Mesh_vortex"]
+inner_radius = 0.82
+outer_radius = 1.0
+rings = 24
+ring_segments = 4
+
+[sub_resource type="SphereMesh" id="Mesh_core"]
+radius = 0.45
+height = 0.9
+radial_segments = 12
+rings = 6
+
+[sub_resource type="BoxMesh" id="Mesh_spoke"]
+size = Vector3(0.12, 0.015, 0.55)
+
+[node name="GravityWell" type="Node3D" node_paths=PackedStringArray("field", "boundary", "vortex", "core")]
+script = ExtResource("1_ability")
+display_name = "Gravity Well"
+description = "Aim a 5 s singularity: its visible field pulls enemies inward, slows their movement and repeatedly interrupts attacks. Follow with an area attack."
+base_cooldown = 18.0
+accent_color = Color(0.65, 0.35, 1, 1)
+synth_activate = &"blink"
+field = NodePath("Field")
+boundary = NodePath("Field/Boundary")
+vortex = NodePath("Field/Vortex")
+core = NodePath("Field/Core")
+icon = ExtResource("icon_px")
+
+[node name="Field" type="Node3D" parent="."]
+visible = false
+
+[node name="Boundary" type="MeshInstance3D" parent="Field"]
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="Vortex" type="Node3D" parent="Field"]
+
+[node name="Sweep" type="MeshInstance3D" parent="Field/Vortex"]
+mesh = SubResource("Mesh_vortex")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="SpokeA" type="MeshInstance3D" parent="Field/Vortex"]
+position = Vector3(0, 0, -0.65)
+rotation = Vector3(0, 0.5, 0)
+mesh = SubResource("Mesh_spoke")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="SpokeB" type="MeshInstance3D" parent="Field/Vortex"]
+position = Vector3(0.56, 0, 0.325)
+rotation = Vector3(0, 2.6, 0)
+mesh = SubResource("Mesh_spoke")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="SpokeC" type="MeshInstance3D" parent="Field/Vortex"]
+position = Vector3(-0.56, 0, 0.325)
+rotation = Vector3(0, 4.7, 0)
+mesh = SubResource("Mesh_spoke")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="Core" type="MeshInstance3D" parent="Field"]
+position = Vector3(0, 0.9, 0)
+mesh = SubResource("Mesh_core")
+material_override = SubResource("Mat_core")
+cast_shadow = 0
+
+[node name="Halo" type="MeshInstance3D" parent="Field/Core"]
+rotation = Vector3(0.5, 0, 0.3)
+scale = Vector3(0.8, 0.8, 0.8)
+mesh = SubResource("Mesh_ring")
+material_override = SubResource("Mat_field")
+cast_shadow = 0
+
+[node name="Glow" type="OmniLight3D" parent="Field"]
+position = Vector3(0, 1, 0)
+light_color = Color(0.55, 0.25, 1, 1)
+light_energy = 2.0
+omni_range = 8.0

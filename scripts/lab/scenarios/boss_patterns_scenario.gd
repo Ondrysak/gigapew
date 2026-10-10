@@ -30,11 +30,7 @@ func _fresh() -> ArenaGame:
 	_last_health = player.health
 	_damage_events.clear()
 	player.health_changed.connect(_record_damage)
-	var definitions: Array[WeaponDefinition] = [lab.weapon("rail"), lab.weapon("pulse"), lab.weapon("scatter")]
-	game.run_state.initialize_hands(definitions)
-	player.weapons = game.run_state.hand_definitions()
-	player.refresh_weapons()
-	player.select_weapon(0)
+	lab.equip_weapon("rail")
 	var patch := _open_patch(game)
 	player.global_position = Vector3(patch.x, 1.0, patch.y + 5.0)
 	player.velocity = Vector3.ZERO
@@ -89,7 +85,7 @@ func _body_shot(game: ArenaGame) -> float:
 	game.player._quickdraw_left = 0.0
 	await lab.frames(2)
 	var before := game.horde._hp[boss]
-	game.player._shoot(0)
+	game.player._shoot()
 	return before - game.horde._hp[boss]
 
 func _side_step(game: ArenaGame, seconds: float = 0.6) -> void:
@@ -296,9 +292,7 @@ func _cancellation() -> void:
 	game.horde.damage(game.horde.boss_index, 1.0e9)
 	health = game.player.health
 	await lab.wait(1.8)
-	lab.check(game.round_state == ArenaGame.RoundState.SHOP and game.player.health == health and (not is_instance_valid(fight) or fight.state == YardBossFight.State.CANCELLED), "actual boss death/stage clear cancels pending mortar impacts through the shop menu")
-	# Lab remains PROCESS_MODE_ALWAYS while the shop pauses the game tree.
-	lab.get_tree().paused = false
+	lab.check(game.player.health == health and (not is_instance_valid(fight) or fight.state == YardBossFight.State.CANCELLED), "actual boss death cancels pending mortar impacts without late damage")
 	game = await _mortar_game()
 	fight = game.boss_fight
 	if not is_instance_valid(fight) or not await _until(fight, YardBossFight.State.MORTAR_WINDUP):

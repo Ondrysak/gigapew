@@ -5,9 +5,10 @@ extends StatModifier
 ## RunState once per owned level; WEAPON upgrades grant and level an AutoWeapon;
 ## OVERCLOCK upgrades change how their target weapon behaves once it is maxed;
 ## PERK upgrades grant and level a PerkEffect (plus optional inherited stats);
-## GUN_MOD upgrades alter player-fired shots without occupying an auto-weapon slot.
+## GUN_MOD upgrades alter player-fired shots without an auto-weapon slot;
+## ABILITY upgrades raise one independent hero skill's run rank.
 
-enum Kind { STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD }
+enum Kind { STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD, ABILITY }
 
 @export var id: StringName
 @export var display_name := ""
@@ -24,6 +25,8 @@ enum Kind { STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD }
 @export var weight := 1.0
 ## Health restored immediately by the consumer when chosen.
 @export var instant_heal := 0
+## Zero-based hero ability slot; ABILITY upgrades never occupy auto-weapon slots.
+@export_range(0, 4) var ability_slot := 0
 
 @export_group("Presentation")
 @export var accent_color := Color(0.1, 0.85, 0.9)

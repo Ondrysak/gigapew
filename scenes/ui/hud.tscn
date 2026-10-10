@@ -4,14 +4,12 @@
 [ext_resource type="Script" path="res://scripts/combat_feedback.gd" id="2_feedback"]
 [ext_resource type="Script" path="res://scripts/ui/horde_radar.gd" id="3_radar"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/supply.png" id="4_supply"]
-[ext_resource type="Texture2D" path="res://assets/icons/hud/timer.png" id="5_timer"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/boss.png" id="6_boss"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/hostiles.png" id="7_hostiles"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/kills.png" id="8_kills"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/health.png" id="9_health"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/armor.png" id="10_armor"]
 [ext_resource type="Texture2D" path="res://assets/icons/hud/xp.png" id="11_xp"]
-[ext_resource type="Texture2D" path="res://assets/icons/hud/ability.png" id="12_ability"]
 [ext_resource type="Texture2D" path="res://assets/icons/resources/gold.png" id="16_vein"]
 
 [sub_resource type="StyleBoxFlat" id="Style_panel"]
@@ -83,27 +81,6 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.3, 1, 0.78, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="StyleBoxFlat" id="Style_ability"]
-bg_color = Color(0.015, 0.04, 0.055, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.1, 0.4, 0.45, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="Style_key"]
-content_margin_left = 6.0
-content_margin_right = 6.0
-bg_color = Color(1, 0.55, 0.2, 1)
 corner_radius_top_left = 3
 corner_radius_top_right = 3
 corner_radius_bottom_right = 3
@@ -233,7 +210,7 @@ theme_override_colors/font_color = Color(0.55, 0.62, 0.66, 1)
 theme_override_font_sizes/font_size = 11
 text = "0 / 60"
 
-[node name="Timer" type="HBoxContainer" parent="."]
+[node name="Contract" type="HBoxContainer" parent="."]
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -160.0
@@ -245,24 +222,14 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Icon" type="TextureRect" parent="Timer"]
-texture_filter = 1
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-texture = ExtResource("5_timer")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Label" type="Label" parent="Timer"]
+[node name="Label" type="Label" parent="Contract"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.98, 1, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 34
-text = "3:00"
+theme_override_font_sizes/font_size = 23
+text = "CONTRACT  0 / 4"
 
 [node name="Boss" type="PanelContainer" parent="."]
 visible = false
@@ -563,127 +530,41 @@ theme_override_font_sizes/font_size = 18
 text = "0"
 vertical_alignment = 1
 
-[node name="Ability" type="Control" parent="."]
+[node name="Abilities" type="HBoxContainer" parent="."]
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -36.0
-offset_top = -116.0
-offset_right = 36.0
-offset_bottom = -44.0
+offset_left = -231.0
+offset_top = -142.0
+offset_right = 231.0
+offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
+theme_override_constants/separation = 8
 
-[node name="Slot" type="Panel" parent="Ability"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("Style_ability")
-
-[node name="Icon" type="TextureRect" parent="Ability"]
-texture_filter = 1
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -24.0
-offset_top = -24.0
-offset_right = 24.0
-offset_bottom = 24.0
-mouse_filter = 2
-texture = ExtResource("12_ability")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Cooldown" type="Control" parent="Ability"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Seconds" type="Label" parent="Ability"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0.02, 0.03, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 24
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Key" type="PanelContainer" parent="Ability"]
-layout_mode = 0
-offset_left = -10.0
-offset_top = -10.0
-offset_right = 12.0
-offset_bottom = 12.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("Style_key")
-
-[node name="Label" type="Label" parent="Ability/Key"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.06, 0.03, 0.01, 1)
-theme_override_font_sizes/font_size = 13
-text = "Q"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Name" type="Label" parent="Ability"]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -120.0
-offset_top = 4.0
-offset_right = 120.0
-offset_bottom = 22.0
-grow_horizontal = 2
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 12
-text = "ABILITY"
-horizontal_alignment = 1
-
-[node name="Hands" type="VBoxContainer" parent="."]
+[node name="Primary" type="VBoxContainer" parent="."]
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -452.0
-offset_top = -246.0
+offset_left = -362.0
+offset_top = -142.0
 offset_right = -24.0
 offset_bottom = -30.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 6
-alignment = 2
 
-[node name="Header" type="HBoxContainer" parent="Hands"]
+[node name="Header" type="HBoxContainer" parent="Primary"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Hands/Header"]
+[node name="Title" type="Label" parent="Primary/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.75, 0.97, 1, 1)
@@ -691,20 +572,19 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 17
-text = "PULSE"
+text = "PRIMARY"
 vertical_alignment = 1
 
-[node name="Mods" type="HBoxContainer" parent="Hands/Header"]
+[node name="Mods" type="HBoxContainer" parent="Primary/Header"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 alignment = 2
 
-[node name="Slots" type="HBoxContainer" parent="Hands"]
+[node name="Details" type="HBoxContainer" parent="Primary"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
-alignment = 2
 
 [node name="PickupNotices" type="VBoxContainer" parent="."]
 anchor_top = 1.0
@@ -717,20 +597,23 @@ grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="AutoSwap" type="HBoxContainer" parent="."]
+[node name="MiningPrompt" type="Label" parent="."]
 visible = false
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -452.0
-offset_top = -278.0
-offset_right = -24.0
-offset_bottom = -250.0
-grow_horizontal = 0
-grow_vertical = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = 14.0
+offset_right = 150.0
+offset_bottom = 40.0
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
+text = "HOLD F  ·  MINE"
+horizontal_alignment = 1
 
 [node name="Controls" type="Label" parent="."]
 anchor_top = 1.0
@@ -747,7 +630,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 11
-text = "WASD MOVE · SPACE JUMP · LMB FIRE / SWING · RMB ALT / DRILL · 1/2/3 / WHEEL SWAP · EMPTY GUNS AUTO-SWAP · Q ABILITY · E INTERACT · ESC PAUSE"
+text = "WASD MOVE · SPACE JUMP · LMB FIRE · 1–5 ABILITIES · WHEEL CHANGE PRIMARY · F HOLD MINE · E INTERACT · ESC PAUSE"
 horizontal_alignment = 1
 
 [node name="Warning" type="Control" parent="."]
@@ -1041,3 +924,44 @@ theme_override_styles/background = SubResource("Bar_background")
 theme_override_styles/fill = SubResource("Bar_supply")
 max_value = 1.0
 show_percentage = false
+
+[node name="Quests" type="PanelContainer" parent="."]
+visible = false
+offset_left = 0.0
+offset_top = 148.0
+offset_right = 320.0
+offset_bottom = 390.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Rows" type="VBoxContainer" parent="Quests"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="Quests/Rows"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="Quests/Rows/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_font_sizes/font_size = 14
+text = "LEVEL CONTRACT"
+
+[node name="Seed" type="Label" parent="Quests/Rows/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.62, 0.66, 1)
+theme_override_font_sizes/font_size = 11
+
+[node name="List" type="VBoxContainer" parent="Quests/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Hint" type="Label" parent="Quests/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.76, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Aim nearby ore · hold F to mine · finish all to extract"

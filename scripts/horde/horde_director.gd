@@ -1,9 +1,8 @@
 class_name HordeDirector
 extends Node
 
-## Runs a SpawnSchedule: ramps each wave's spawn rate over time, places groups
-## on a ring around the player (biased behind them), then releases the boss.
-
+## Ordinary species spawn indefinitely; elapsed only controls the pressure ramp.
+## Boss release is explicit for authored encounters, never a campaign countdown.
 signal boss_phase_started(definition: HordeEnemyDefinition)
 
 ## Share of groups placed behind the player's view rather than anywhere.
@@ -17,35 +16,45 @@ var _player: ArenaPlayer
 var _accumulated := PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 
-func setup(horde: Horde, schedule: SpawnSchedule, player: ArenaPlayer) -> void:
+func setup(horde: Horde, schedule: SpawnSchedule, player: ArenaPlayer, seed: int = -1) -> void:
 	_horde = horde
 	_schedule = schedule
 	_player = player
+	elapsed = 0.0
+	boss_phase = false
 	_accumulated.resize(schedule.waves.size())
 	_accumulated.fill(0.0)
-	_rng.randomize()
+	if seed == -1:
+		_rng.randomize()
+	else:
+		_rng.seed = seed
 
-func remaining() -> float:
-	return maxf(0.0, _schedule.duration - elapsed)
+## Returns false when there is currently no safe boss placement; callers may retry.
+func release_boss() -> bool:
+	if boss_phase or _schedule == null or _schedule.boss == null:
+		return false
+	if not is_instance_valid(_player) or not _player.active or not is_instance_valid(_horde):
+		return false
+	if not _spawn_group(_schedule.boss, 1, _schedule.boss_health_multiplier):
+		return false
+	boss_phase = true
+	boss_phase_started.emit(_schedule.boss)
+	return true
 
 func _physics_process(delta: float) -> void:
-	if not is_instance_valid(_player) or not _player.active:
+	if get_tree().paused or _schedule == null or not is_instance_valid(_horde) or not is_instance_valid(_player) or not _player.active:
 		return
-	elapsed += delta
-	if not boss_phase and elapsed >= _schedule.duration:
-		boss_phase = true
-		if _schedule.boss != null:
-			_spawn_group(_schedule.boss, 1, _schedule.boss_health_multiplier)
-		boss_phase_started.emit(_schedule.boss)
+	elapsed = minf(elapsed + delta, maxf(0.0, _schedule.ramp_duration))
 	for w in _schedule.waves.size():
 		var wave := _schedule.waves[w]
-		# Waves reaching the stage end keep their final rate through the boss fight.
-		var open_ended := wave.end_time >= _schedule.duration
-		if elapsed < wave.start_time or (elapsed > wave.end_time and not open_ended):
+		if wave == null or wave.enemy == null or wave.enemy.is_boss:
 			continue
+		# Start/end mark a pressure ramp, not availability windows. Every ordinary
+		# species has its opening rate immediately and retains its final rate forever.
 		var span := maxf(0.001, wave.end_time - wave.start_time)
 		var progress := clampf((elapsed - wave.start_time) / span, 0.0, 1.0)
-		_accumulated[w] += lerpf(wave.rate_start, wave.rate_end, progress) * delta
+		var rate := maxf(0.0, lerpf(wave.rate_start, wave.rate_end, progress))
+		_accumulated[w] += rate * delta
 		var group := maxi(1, wave.group_size)
 		while _accumulated[w] >= group:
 			_accumulated[w] -= group
@@ -53,32 +62,48 @@ func _physics_process(delta: float) -> void:
 				# Full crowd: drop the backlog instead of bursting later.
 				_accumulated[w] = 0.0
 				break
-			_spawn_group(wave.enemy, group, wave.health_multiplier)
+			if not _spawn_group(wave.enemy, group, wave.health_multiplier):
+				# A blocked ring is not permission to spawn inside cover or store a burst.
+				_accumulated[w] = 0.0
+				break
 
-func _spawn_group(definition: HordeEnemyDefinition, count: int, health_multiplier: float) -> void:
-	var center := _pick_point(definition.radius)
-	var spread := sqrt(float(count)) * (definition.radius * 2.2)
+func _spawn_group(definition: HordeEnemyDefinition, count: int, health_multiplier: float) -> bool:
+	if definition == null or count <= 0:
+		return false
+	var spread := sqrt(float(count)) * (definition.radius * 2.2) if count > 1 else 0.0
+	# Reserve clearance for the entire group, not just its center.
+	var center := _pick_point(definition.radius + spread)
+	if not center.is_finite():
+		return false
+	var spawned := false
 	for n in count:
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * _rng.randf() * spread
-		_horde.spawn(definition, center + offset, health_multiplier)
+		var point := center + offset
+		if _horde.is_blocked(point, definition.radius):
+			continue
+		if _horde.spawn(definition, point, health_multiplier) >= 0:
+			spawned = true
+	return spawned
 
 func _pick_point(radius: float) -> Vector2:
 	var player := Vector2(_player.global_position.x, _player.global_position.z)
 	var forward := -_player.global_basis.z
 	var facing := atan2(forward.z, forward.x)
-	var best := player
-	for attempt in 8:
+	var minimum := _horde_area_min(radius)
+	var maximum := _horde_area_max(radius)
+	if minimum.x > maximum.x or minimum.y > maximum.y:
+		return Vector2.INF
+	for attempt in 24:
 		var angle := _rng.randf() * TAU
 		if _rng.randf() < behind_bias:
 			angle = facing + PI + _rng.randf_range(-1.9, 1.9)
 		var distance := _rng.randf_range(_schedule.spawn_distance_min, _schedule.spawn_distance_max)
 		var point := player + Vector2.from_angle(angle) * distance
 		# Near a wall the ring leaves the arena: pull the point back inside.
-		point = point.clamp(_horde_area_min(radius), _horde_area_max(radius))
-		best = point
+		point = point.clamp(minimum, maximum)
 		if point.distance_to(player) >= _schedule.spawn_distance_min * 0.6 and not _horde.is_blocked(point, radius):
 			return point
-	return best
+	return Vector2.INF
 
 func _horde_area_min(radius: float) -> Vector2:
 	return _horde.play_area.position + Vector2.ONE * (radius + 1.0)

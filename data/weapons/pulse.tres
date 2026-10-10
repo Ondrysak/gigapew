@@ -1,24 +1,15 @@
-[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="WeaponDefinition" format=3 uid="uid://cctyomj61j7s0"]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="Script" uid="uid://cf1j8m68ikt2x" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/pulse.tscn" id="2_view"]
-[ext_resource type="Texture2D" path="res://assets/icons/weapons/pulse.png" id="icon_px"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/secondary/pulse.tscn" id="secondary"]
+[ext_resource type="Texture2D" uid="uid://da00pjquvxs7x" path="res://assets/icons/weapons/pulse.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Pulse"
-description = "Precision carbine / RMB Tag Burst exposes targets"
+description = "Rapid precision carbine"
 damage = 60
+recoil_degrees = 0.1
 fire_interval = 0.09
-range_meters = 40.0
-pellet_count = 1
-spread_degrees = 0.0
-knockback = 6.5
 pierce = 1
-recoil_degrees = 0.10
 view_scene = ExtResource("2_view")
 icon = ExtResource("icon_px")
-magazine_size = 24
-reload_time = 1.0
-secondary_scene = ExtResource("secondary")

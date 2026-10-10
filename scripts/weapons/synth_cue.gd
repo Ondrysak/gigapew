@@ -26,11 +26,6 @@ static func _build(cue: StringName) -> AudioStreamWAV:
 		&"minigun": duration = 0.075
 		&"autocannon": duration = 0.46
 		&"flame": duration = 0.16
-		&"melee_swish": duration = 0.13
-		&"cleaver_swish": duration = 0.2
-		&"melee_hit": duration = 0.16
-		&"melee_kill": duration = 0.25
-		&"shock_discharge": duration = 0.28
 		&"spin":
 			duration = 0.5
 			looped = true
@@ -69,15 +64,6 @@ static func _build(cue: StringName) -> AudioStreamWAV:
 				low += 0.18 * (noise - low)
 				low2 += 0.05 * (noise - low2)
 				sample = (low * 1.3 + low2 * 1.8) * sin(PI * progress) * 0.55
-			&"melee_swish", &"cleaver_swish":
-				low += lerpf(0.035, 0.65, sin(PI * progress)) * (noise - low)
-				sample = low * sin(PI * progress) * (0.7 if cue == &"melee_swish" else 1.0)
-			&"melee_hit", &"melee_kill":
-				var tone := 760.0 if cue == &"melee_hit" else 540.0
-				sample = (sin(TAU * tone * t) * 0.4 + sin(TAU * tone * 2.73 * t) * 0.22) * exp(-t * 24.0) + noise * exp(-t * 65.0) * 0.5
-			&"shock_discharge":
-				phase += TAU * lerpf(1400.0, 90.0, sqrt(progress)) / SAMPLE_RATE
-				sample = (sin(phase) * 0.45 + noise * 0.25) * pow(1.0 - progress, 1.5)
 			&"spin":
 				# Whole cycles of every partial over 0.5 s keep the loop seamless.
 				var hum := sin(TAU * 110.0 * t) + sin(TAU * 220.0 * t) * 0.35 + sin(TAU * 440.0 * t) * 0.12

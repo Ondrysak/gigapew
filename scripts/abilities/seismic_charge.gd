@@ -137,7 +137,13 @@ func _detonate() -> void:
 		_flash.scale = Vector3.ONE * 0.3
 		_flash.visible = distance > flash_radius + min_view_clearance
 
+func _cancel_effects() -> void:
+	_flight = -1.0
+	_blast_age = -1.0
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _flight >= 0.0:
 		var t := minf(_flight / flight_time, 1.0)
 		if charge != null:

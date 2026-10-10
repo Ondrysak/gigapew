@@ -1,9 +1,6 @@
 class_name WeaponDefinition
 extends Resource
 
-enum Kind { FIREARM, MELEE }
-@export var kind := Kind.FIREARM
-
 @export var display_name := "Pulse"
 @export var description := "Rapid precision fire"
 @export var damage := 25
@@ -25,10 +22,6 @@ enum Kind { FIREARM, MELEE }
 @export var view_scene: PackedScene
 ## Pixel-art icon for HUD, shop and workshop listings.
 @export var icon: Texture2D
-## A finite magazine encourages rotation; holstered guns refill automatically.
-@export_range(1, 200) var magazine_size := 24
-@export var reload_time := 1.6
-@export var secondary_scene: PackedScene
 
 @export_group("Explosive")
 ## Blast radius at the end of every ray; 0 disables the blast.
@@ -46,8 +39,3 @@ enum Kind { FIREARM, MELEE }
 ## Seconds to spin down fully after releasing fire.
 @export var spin_down_time := 0.5
 
-@export_group("Melee")
-## Real forward sweep; guns retain their ray/pellet behavior.
-@export_range(10.0, 180.0) var melee_arc_degrees := 100.0
-@export_range(0.0, 0.5) var melee_windup := 0.06
-@export_range(0.0, 2.0) var melee_stun := 0.0

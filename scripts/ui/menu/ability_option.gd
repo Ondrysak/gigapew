@@ -1,13 +1,10 @@
 class_name AbilityOption
 extends Button
 
-## One tile of the class-select ability picker. Layout lives in
-## ability_option.tscn; the script writes text/colors, the ability icon and
-## the equipped, previewed and locked looks (dimmed icon plus lock glyph).
+## A class kit skill tile. Clicking changes only the mechanics preview.
 
 @export var accent_bar: ColorRect
 @export var icon_rect: TextureRect
-@export var lock_icon: TextureRect
 @export var name_label: Label
 @export var status_label: Label
 
@@ -24,27 +21,15 @@ func _ready() -> void:
 	add_theme_stylebox_override(&"hover", _hover)
 	add_theme_stylebox_override(&"pressed", _hover)
 
-## `status` is the short state line (EQUIPPED / OWNED / cost); locked tiles
-## show the lock glyph in front of it.
-func show_option(ability_scene: PackedScene, ability_name: String, icon: Texture2D, accent: Color, unlocked: bool, equipped: bool, previewed: bool, status: String) -> void:
+func show_option(ability_scene: PackedScene, ability_name: String, icon: Texture2D, accent: Color, previewed: bool, status: String) -> void:
 	scene = ability_scene
-	var shown := accent if unlocked else accent.darkened(0.55)
-	accent_bar.color = shown
+	accent_bar.color = accent
 	icon_rect.texture = icon
 	icon_rect.visible = icon != null
-	icon_rect.modulate = Color.WHITE if unlocked else Color(0.42, 0.44, 0.5)
-	lock_icon.visible = not unlocked
 	name_label.text = ability_name
-	name_label.add_theme_color_override(&"font_color", accent.lightened(0.35) if unlocked else Color(0.5, 0.56, 0.6))
+	name_label.add_theme_color_override(&"font_color", accent.lightened(0.35))
 	status_label.text = status
-	if equipped:
-		status_label.add_theme_color_override(&"font_color", accent.lightened(0.2))
-	elif unlocked:
-		status_label.add_theme_color_override(&"font_color", Color(0.5, 0.66, 0.72))
-	else:
-		status_label.add_theme_color_override(&"font_color", Color(1, 0.62, 0.3))
-	_normal.border_color = accent if previewed else shown.darkened(0.35)
+	status_label.add_theme_color_override(&"font_color", Color(0.5, 0.66, 0.72))
+	_normal.border_color = accent if previewed else accent.darkened(0.35)
 	_normal.set_border_width_all(3 if previewed else 2)
-	_normal.shadow_color = Color(accent, 0.28 if equipped else 0.0)
-	_normal.shadow_size = 10 if equipped else 0
 	_hover.border_color = accent.lightened(0.3)

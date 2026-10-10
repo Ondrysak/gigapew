@@ -29,8 +29,14 @@ var owned_weapons: Array[UpgradeDefinition] = []
 ## PERK upgrades in pick order; they never use weapon slots.
 var owned_perks: Array[UpgradeDefinition] = []
 
-## Three effective hand resources retained across stage loads.
-var hands: Array[WeaponHand] = []
+## Effective primary and ordered hero skills retained across stage loads.
+var primary: WeaponBuild
+var available_weapons: Array[WeaponDefinition] = []
+var ability_scenes: Array[PackedScene] = []
+const MAX_ABILITY_RANK := 3
+var ability_ranks := PackedInt32Array([0, 0, 0, 0, 0])
+var _ability_offers: Dictionary = {}
+var _ability_metadata: Dictionary = {}
 var shop_levels: Dictionary = {}
 var _shop_modifiers: Array[StatModifier] = []
 
@@ -53,8 +59,6 @@ var mining_multiplier := 1.0
 ## Lower recharges the class ability faster.
 var ability_cooldown_multiplier := 1.0
 var resource_multiplier := 1.0
-## Temporary auto-weapon recharge factor set by abilities (1 = none).
-var cooldown_boost := 1.0
 ## Chance (0..1) that a hit is critical.
 var crit_chance := 0.0
 ## Damage factor of a critical hit.
@@ -73,10 +77,8 @@ var _definitions: Dictionary = {}
 var _xp_remainder := 0.0
 # Short-lived modifiers (abilities, conditional perks), each counted once.
 var _temporary: Array[StatModifier] = []
-# One exposure zone at a time (e.g. Recon Flare): hits inside deal extra damage.
-var _exposure_center := Vector2.ZERO
-var _exposure_radius := 0.0
-var _exposure_bonus := 0.0
+# Independent exposure zones: overlapping skills use the strongest bonus.
+var _exposure_zones: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 func _init() -> void:
@@ -111,21 +113,65 @@ func consume_level_up() -> bool:
 	return true
 
 
-func initialize_hands(definitions: Array[WeaponDefinition]) -> void:
-	hands.clear()
-	# Runtime load avoids a resource cycle through gun alternates' RunState type.
-	var fallback := load("res://data/weapons/pulse.tres") as WeaponDefinition
-	for index in range(3):
-		var source := definitions[index] if index < definitions.size() else fallback
-		var hand := WeaponHand.new()
-		hand.setup(source if source != null else fallback)
-		hands.append(hand)
+func initialize_primary(source: WeaponDefinition) -> void:
+	primary = WeaponBuild.new()
+	primary.setup(source if source != null else load("res://data/weapons/pulse.tres") as WeaponDefinition)
+	if not available_weapons.has(primary.source):
+		available_weapons.append(primary.source)
 
-func hand_definitions() -> Array[WeaponDefinition]:
-	var definitions: Array[WeaponDefinition] = []
-	for hand in hands:
-		definitions.append(hand.definition)
-	return definitions
+func swap_primary(source: WeaponDefinition) -> bool:
+	if primary == null or source == null or not available_weapons.has(source):
+		return false
+	primary.swap(source)
+	return true
+
+func ability_rank(slot: int) -> int:
+	return ability_ranks[slot] if slot >= 0 and slot < ability_ranks.size() else 0
+
+func can_upgrade_ability(slot: int) -> bool:
+	return slot >= 0 and slot < 5 and slot < ability_scenes.size() \
+			and ability_scenes[slot] != null and ability_rank(slot) < MAX_ABILITY_RANK
+
+func upgrade_ability(slot: int) -> bool:
+	if not can_upgrade_ability(slot):
+		return false
+	ability_ranks[slot] += 1
+	return true
+
+## Read scene presentation once without putting an effect in the live tree.
+func ability_metadata(slot: int) -> Dictionary:
+	if slot < 0 or slot >= 5 or slot >= ability_scenes.size() or ability_scenes[slot] == null:
+		return {}
+	var scene := ability_scenes[slot]
+	if not _ability_metadata.has(scene):
+		var ability := scene.instantiate() as ActiveAbility
+		if ability == null:
+			return {}
+		_ability_metadata[scene] = {
+			"name": ability.display_name, "description": ability.description,
+			"icon": ability.icon, "color": ability.accent_color,
+			"cooldown": ability.base_cooldown,
+		}
+		ability.free()
+	return _ability_metadata[scene]
+
+func ability_upgrade_offer(slot: int) -> UpgradeDefinition:
+	var metadata := ability_metadata(slot)
+	if metadata.is_empty():
+		return null
+	if not _ability_offers.has(slot):
+		var offer := UpgradeDefinition.new()
+		offer.id = StringName("ability_slot_%d" % slot)
+		offer.kind = UpgradeDefinition.Kind.ABILITY
+		offer.ability_slot = slot
+		offer.max_level = MAX_ABILITY_RANK
+		_ability_offers[slot] = offer
+	var offer: UpgradeDefinition = _ability_offers[slot]
+	offer.display_name = "%s Mastery" % metadata.name
+	offer.icon = metadata.icon
+	offer.accent_color = metadata.color
+	offer.description = "%s\n+25%% damage · -12%% base cooldown · +15%% duration per rank." % metadata.description
+	return offer
 
 ## Round-shop boosts are run-local and survive stage changes.
 func can_buy_shop_stat(id: StringName) -> bool:
@@ -203,9 +249,18 @@ func take_bankable(banked_ids: Array[StringName], fraction: float) -> Dictionary
 	return taken
 
 func level_of(upgrade: UpgradeDefinition) -> int:
+	if upgrade.kind == UpgradeDefinition.Kind.ABILITY:
+		return ability_rank(upgrade.ability_slot)
 	return int(upgrade_levels.get(upgrade.id, 0))
 
 func apply_upgrade(upgrade: UpgradeDefinition) -> void:
+	if upgrade == null:
+		return
+	if upgrade.kind == UpgradeDefinition.Kind.ABILITY:
+		upgrade_ability(upgrade.ability_slot)
+		return
+	if not upgrade.repeatable and not _is_eligible(upgrade):
+		return
 	_definitions[upgrade.id] = upgrade
 	upgrade_levels[upgrade.id] = level_of(upgrade) + 1
 	if upgrade.kind == UpgradeDefinition.Kind.WEAPON and not owned_weapons.has(upgrade):
@@ -229,6 +284,10 @@ func roll_offers(pool: UpgradePool, count: int, rng: RandomNumberGenerator) -> A
 				overclocks.append(upgrade)
 			else:
 				candidates.append(upgrade)
+	for slot in range(5):
+		var ability_offer := ability_upgrade_offer(slot)
+		if ability_offer != null and can_upgrade_ability(slot):
+			candidates.append(ability_offer)
 	# A ready overclock is always offered; any others compete normally.
 	var featured: Array[UpgradeDefinition] = []
 	_draw_weighted(overclocks, featured, mini(1, count), rng)
@@ -265,22 +324,21 @@ func remove_temporary_modifier(modifier: StatModifier) -> void:
 func refresh_modifiers() -> void:
 	_recompute()
 
-## Marks a floor zone: hits on enemies inside deal (1 + bonus) damage.
-func set_exposure_zone(center: Vector3, radius: float, bonus: float) -> void:
-	_exposure_center = Vector2(center.x, center.z)
-	_exposure_radius = maxf(0.0, radius)
-	_exposure_bonus = bonus
+## Each skill owns its zone, so cancelling one never clears another.
+func add_exposure_zone(source: ActiveAbility, center: Vector3, radius: float, bonus: float) -> void:
+	_exposure_zones[source] = {"center": Vector2(center.x, center.z), "radius_squared": radius * radius, "bonus": bonus}
 
-func clear_exposure_zone() -> void:
-	_exposure_radius = 0.0
-	_exposure_bonus = 0.0
+func remove_exposure_zone(source: ActiveAbility) -> void:
+	_exposure_zones.erase(source)
 
-## Damage factor from the exposure zone for a hit at `at` (1 outside).
 func exposure_scale(at: Vector3) -> float:
-	if _exposure_radius <= 0.0:
-		return 1.0
-	var offset := Vector2(at.x, at.z) - _exposure_center
-	return 1.0 + _exposure_bonus if offset.length_squared() <= _exposure_radius * _exposure_radius else 1.0
+	var point := Vector2(at.x, at.z)
+	var strongest := 0.0
+	for source in _exposure_zones:
+		var zone: Dictionary = _exposure_zones[source]
+		if point.distance_squared_to(zone.center) <= float(zone.radius_squared):
+			strongest = maxf(strongest, float(zone.bonus))
+	return 1.0 + strongest
 
 ## Rolls crit_chance once.
 func roll_critical() -> bool:
@@ -292,6 +350,8 @@ func hit_scale(at: Vector3) -> float:
 	return scale * crit_multiplier if roll_critical() else scale
 
 func _is_eligible(upgrade: UpgradeDefinition) -> bool:
+	if upgrade.kind == UpgradeDefinition.Kind.ABILITY:
+		return can_upgrade_ability(upgrade.ability_slot)
 	if level_of(upgrade) >= upgrade.max_level:
 		return false
 	if upgrade.kind == UpgradeDefinition.Kind.WEAPON:

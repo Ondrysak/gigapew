@@ -2,17 +2,6 @@ class_name PickupGeometry
 extends RefCounted
 
 ## Built once per field: block silhouettes remain readable without textures.
-static func ammo() -> ArrayMesh:
-	var tool := _begin()
-	_box(tool, Vector3.ZERO, Vector3(0.52, 0.34, 0.36), Color(0.48, 0.27, 0.06))
-	_box(tool, Vector3(0.0, 0.19, 0.0), Vector3(0.58, 0.08, 0.4), Color(1.0, 0.7, 0.16))
-	for x in [-0.17, 0.17]:
-		_box(tool, Vector3(x, -0.01, 0.19), Vector3(0.05, 0.3, 0.03), Color(1.0, 0.7, 0.16))
-	for x in [-0.12, 0.0, 0.12]:
-		_box(tool, Vector3(x, 0.29, 0.0), Vector3(0.07, 0.14, 0.07), Color(1.0, 0.87, 0.45))
-		_box(tool, Vector3(x, 0.38, 0.0), Vector3(0.04, 0.04, 0.04), Color(1.0, 0.96, 0.78))
-	return tool.commit()
-
 static func magnet() -> ArrayMesh:
 	var tool := _begin()
 	var red := Color(1.0, 0.12, 0.2)

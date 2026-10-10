@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Stage-clear stock, paid from banked minerals. CATALOG is the single table of
 ## every shop upgrade: WEAPON MODS (FIREPOWER, PAYLOAD, ELEMENT tracks) are
-## applied to one hand by WeaponHand; SUIT SYSTEMS last the whole run through
+## applied to the primary by WeaponBuild; SUIT SYSTEMS last the run through
 ## RunState. Stock is rolled per section and every purchase validates the full
 ## price before anything is applied or charged.
 
@@ -19,8 +19,8 @@ const SUIT_SLOTS := 2
 const BASE_GOLD := 6
 const GOLD_PER_STAGE := 2
 const GOLD_STAGE_CAP := 5
-## `stat` names the hand/run stat the preview compares. ELEMENT conversions are
-## mutually exclusive: a hand has one damage type, each conversion swaps it.
+## `stat` names the primary/run stat the preview compares. ELEMENT conversions
+## are mutually exclusive: each conversion replaces the primary's damage type.
 const CATALOG := {
 	&"damage": {"name": "Hardened Output", "effect": "+20% base damage per rank", "track": Track.FIREPOWER, "stat": "DMG", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
 	&"cadence": {"name": "Accelerated Cycling", "effect": "+15% attack rate per rank", "track": Track.FIREPOWER, "stat": "RATE", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
@@ -48,7 +48,7 @@ var _rng := RandomNumberGenerator.new()
 static func track(id: StringName) -> int:
 	return int(CATALOG[id].track) if CATALOG.has(id) else -1
 
-static func is_hand_mod(id: StringName) -> bool:
+static func is_weapon_mod(id: StringName) -> bool:
 	return CATALOG.has(id) and int(CATALOG[id].track) != Track.SUIT
 
 static func max_rank(id: StringName) -> int:
@@ -64,19 +64,17 @@ static func ids_in_track(value: int) -> Array[StringName]:
 			ids.append(id)
 	return ids
 
-## Weapon stats; ARC/REACH replace pellet/pierce readouts for melee hands.
-static func hand_stats(definition: WeaponDefinition, projectile_bonus: int) -> Dictionary:
+static func weapon_stats(definition: WeaponDefinition, projectile_bonus: int) -> Dictionary:
+	if definition == null:
+		return {}
 	var rate := 1.0 / maxf(definition.fire_interval, 0.001)
-	var melee := definition.kind == WeaponDefinition.Kind.MELEE
 	return {
 		"DMG": str(definition.damage),
 		"RATE": "%.1f/s" % rate if rate < 100.0 else "%d/s" % roundi(rate),
-		"PELLETS": "—" if melee else str(clampi(definition.pellet_count + projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)),
+		"PELLETS": str(clampi(definition.pellet_count + projectile_bonus, 1, WeaponBuild.MAX_PROJECTILES)),
 		"SPLASH": "%.1fm" % definition.explosion_radius if definition.explosion_radius > 0.0 else "—",
-		"PIERCE": "—" if melee else str(definition.pierce),
+		"PIERCE": str(definition.pierce),
 		"TYPE": DamageType.label(definition.damage_type).to_upper(),
-		"ARC": "%.0f°" % definition.melee_arc_degrees,
-		"REACH": "%.1fm" % definition.range_meters,
 	}
 
 ## Whole numbers without decimals, otherwise one decimal.
@@ -96,54 +94,93 @@ func setup(state: RunState, stage: int, seed: int) -> void:
 func section_of(index: int) -> int:
 	return Section.MODS if index < MOD_SLOTS else Section.SUIT
 
-## Current rank of `id` on `hand` (weapon mods) or for the run (suit systems).
-func rank(id: StringName, hand: int) -> int:
-	if is_hand_mod(id):
-		return _state.hands[hand].rank(id) if _valid_hand(hand) else 0
+func rank(id: StringName) -> int:
+	if _state == null:
+		return 0
+	if is_weapon_mod(id):
+		return _state.primary.rank(id) if _state.primary != null else 0
 	return int(_state.shop_levels.get(id, 0))
 
-func is_maxed(id: StringName, hand: int) -> bool:
-	return rank(id, hand) >= max_rank(id)
+func is_maxed(id: StringName) -> bool:
+	return CATALOG.has(id) and rank(id) >= max_rank(id)
 
-func can_buy(index: int, hand: int) -> bool:
-	if _state == null or index < 0 or index >= offers.size() or not _valid_hand(hand):
+func can_buy(index: int) -> bool:
+	if _state == null or index < 0 or index >= offers.size():
 		return false
 	var offer := offers[index]
-	if bool(offer.sold) or not _effect_available(StringName(offer.id), hand):
+	if bool(offer.sold) or not _effect_available(StringName(offer.id)):
 		return false
 	return Profile.can_pay(offer.cost)
 
-func buy(index: int, hand: int) -> bool:
-	if not can_buy(index, hand):
+func buy(index: int) -> bool:
+	if not can_buy(index):
 		return false
 	var offer := offers[index]
 	var id := StringName(offer.id)
-	# Neither effective-hand updates nor run-stat updates emit signals, so the
-	# validated balance cannot change before pay; paid observers see sold stock.
-	var applied := _state.hands[hand].upgrade(id) if is_hand_mod(id) else _state.buy_shop_stat(id)
+	# Neither build nor suit mutations emit signals. Pay after the effect,
+	# so currency observers see a complete purchase; validation cannot drift.
+	var applied := _state.primary.upgrade(id) if is_weapon_mod(id) else _state.buy_shop_stat(id)
 	if not applied:
 		return false
 	offer.sold = true
 	return Profile.pay(offer.cost)
 
-## {stat, from, to}: what buying `id` changes for `hand` (weapon mods) or the
-## run (suit systems). `to` is empty when the effect cannot be bought.
-func preview(id: StringName, hand: int) -> Dictionary:
+func preview(id: StringName) -> Dictionary:
+	if _state == null or not CATALOG.has(id):
+		return {}
 	var stat := String(CATALOG[id].stat)
-	if is_hand_mod(id):
-		var weapon := _state.hands[hand]
-		if not weapon.supports(id):
+	if is_weapon_mod(id):
+		var weapon := _state.primary
+		if weapon == null or not weapon.supports(id):
 			return {"stat": stat, "from": "—", "to": ""}
-		var now := hand_stats(weapon.definition, _state.projectile_bonus)
+		var now := weapon_stats(weapon.definition, _state.projectile_bonus)
 		var next := weapon.preview(id)
-		return {"stat": stat, "from": now[stat], "to": hand_stats(next, _state.projectile_bonus)[stat] if next != null else ""}
-	var available := _effect_available(id, hand)
+		return {"stat": stat, "from": now[stat], "to": weapon_stats(next, _state.projectile_bonus)[stat] if next != null else ""}
+	var available := _effect_available(id)
 	match id:
 		&"armor":
 			return {"stat": stat, "from": number(_state.armor), "to": number(_state.armor + 1.0) if available else ""}
 		&"health":
 			return {"stat": stat, "from": "+%d" % _state.max_health_bonus, "to": "+%d" % (_state.max_health_bonus + 15) if available else ""}
 	return {"stat": stat, "from": "×%.2f" % _state.damage_multiplier, "to": "×%.2f" % (_state.damage_multiplier + 0.1) if available else ""}
+
+func ability_cost(slot: int) -> Dictionary:
+	if _state == null or not _state.can_upgrade_ability(slot):
+		return {}
+	var next := _state.ability_rank(slot) + 1
+	return {&"gold": BASE_GOLD + mini(_stage, GOLD_STAGE_CAP) * GOLD_PER_STAGE + 3 * next,
+		&"crystal": 2 * next, &"shard": next - 1}
+
+func can_buy_ability(slot: int) -> bool:
+	return _state != null and _state.can_upgrade_ability(slot) and Profile.can_pay(ability_cost(slot))
+
+func buy_ability(slot: int) -> bool:
+	if not can_buy_ability(slot):
+		return false
+	var cost := ability_cost(slot)
+	if not _state.upgrade_ability(slot):
+		return false
+	return Profile.pay(cost)
+
+func ability_preview(slot: int) -> Dictionary:
+	if _state == null:
+		return {}
+	var metadata := _state.ability_metadata(slot)
+	if metadata.is_empty():
+		return {}
+	var current := _state.ability_rank(slot)
+	return {"name": metadata.name, "icon": metadata.icon, "description": metadata.description,
+		"rank": current, "max_rank": RunState.MAX_ABILITY_RANK, "stat": "ABILITY",
+		"effect": "+25% base damage · -12% base cooldown · +15% duration per rank",
+		"from": _ability_stats(slot, current),
+		"to": _ability_stats(slot, current + 1) if _state.can_upgrade_ability(slot) else ""}
+
+func _ability_stats(slot: int, ability_rank: int) -> String:
+	var metadata := _state.ability_metadata(slot)
+	var cooldown: float = metadata.cooldown * ActiveAbility.ability_cooldown_scale(ability_rank) * _state.ability_cooldown_multiplier
+	return "DMG %d%% · CD %.1fs · TIME %d%%" % [
+		roundi(100.0 * ActiveAbility.ability_damage_scale(ability_rank) * _state.damage_multiplier),
+		cooldown, roundi(100.0 * ActiveAbility.ability_duration_scale(ability_rank))]
 
 func reroll_cost() -> Dictionary:
 	return {&"gold": 3 + _rerolls * 3, &"crystal": 1 + _rerolls}
@@ -158,7 +195,7 @@ func can_reroll() -> bool:
 	if not unsold:
 		return false
 	for id: StringName in CATALOG:
-		if _available_for_any_hand(id):
+		if _effect_available(id):
 			return true
 	return false
 
@@ -172,23 +209,12 @@ func reroll() -> bool:
 	_restock()
 	return true
 
-func _valid_hand(hand: int) -> bool:
-	return _state != null and hand >= 0 and hand < _state.hands.size()
-
-func _effect_available(id: StringName, hand: int) -> bool:
-	if not CATALOG.has(id):
+func _effect_available(id: StringName) -> bool:
+	if _state == null or not CATALOG.has(id):
 		return false
-	if is_hand_mod(id):
-		return _state.hands[hand].can_upgrade(id)
-	return rank(id, hand) < max_rank(id) and _state.can_buy_shop_stat(id)
-
-func _available_for_any_hand(id: StringName) -> bool:
-	if _state == null:
-		return false
-	for hand in _state.hands.size():
-		if _effect_available(id, hand):
-			return true
-	return false
+	if is_weapon_mod(id):
+		return _state.primary != null and _state.primary.can_upgrade(id)
+	return rank(id) < max_rank(id) and _state.can_buy_shop_stat(id)
 
 func _restock() -> void:
 	var previous := offers.duplicate()
@@ -218,7 +244,7 @@ func _restock_section(section: int, first: int, count: int, ids: Array[StringNam
 	for id in ids:
 		if id in kept:
 			continue
-		if not _available_for_any_hand(id):
+		if not _effect_available(id):
 			exhausted.append(id)
 		elif id in shown:
 			repeat.append(id)

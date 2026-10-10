@@ -1,10 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://cp0q50wligxe7"]
 
-[ext_resource type="Script" path="res://scripts/ui/menu/intro.gd" id="1_intro"]
+[ext_resource type="Script" uid="uid://caoiub5101w1" path="res://scripts/ui/menu/intro.gd" id="1_intro"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/stage_backdrop.tscn" id="2_backdrop"]
-[ext_resource type="Theme" path="res://scenes/ui/menu/menu_theme.tres" id="3_theme"]
+[ext_resource type="Theme" uid="uid://b3j1wsgjn2pc3" path="res://scenes/ui/menu/menu_theme.tres" id="3_theme"]
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/menu_logo.tscn" id="4_logo"]
-[ext_resource type="Shader" path="res://shaders/crt_overlay.gdshader" id="5_crt"]
+[ext_resource type="Shader" uid="uid://cwmakeaq288kn" path="res://shaders/crt_overlay.gdshader" id="5_crt"]
 
 [sub_resource type="ShaderMaterial" id="Material_crt"]
 shader = ExtResource("5_crt")
@@ -16,7 +16,7 @@ shader_parameter/sweep_speed = 0.18
 shader_parameter/glitch = 0.8
 shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
 
-[node name="Intro" type="Node" node_paths=PackedStringArray("backdrop", "logo", "fade", "crt", "skip_hint")]
+[node name="Intro" type="Node" unique_id=1712859928 node_paths=PackedStringArray("backdrop", "logo", "fade", "crt", "skip_hint")]
 script = ExtResource("1_intro")
 backdrop = NodePath("StageBackdrop")
 logo = NodePath("Overlay/Frame/Center/Logo")
@@ -24,7 +24,8 @@ fade = NodePath("Overlay/Frame/Fade")
 crt = NodePath("Overlay/Frame/CRT")
 skip_hint = NodePath("Overlay/Frame/SkipHint")
 
-[node name="StageBackdrop" parent="." instance=ExtResource("2_backdrop")]
+[node name="StageBackdrop" parent="." unique_id=540573425 instance=ExtResource("2_backdrop")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25470734, 0.06814003, -0.18156815)
 orbit_radius = 30.0
 orbit_height = 1.1
 orbit_speed = 0.02
@@ -32,9 +33,9 @@ orbit_angle = 0.0
 look_height = 1.0
 march_speed = 2.2
 
-[node name="Overlay" type="CanvasLayer" parent="."]
+[node name="Overlay" type="CanvasLayer" parent="." unique_id=458019678]
 
-[node name="Frame" type="Control" parent="Overlay"]
+[node name="Frame" type="Control" parent="Overlay" unique_id=1752320718]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -44,7 +45,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme = ExtResource("3_theme")
 
-[node name="CRT" type="ColorRect" parent="Overlay/Frame"]
+[node name="CRT" type="ColorRect" parent="Overlay/Frame" unique_id=1999452062]
 material = SubResource("Material_crt")
 layout_mode = 1
 anchors_preset = 15
@@ -54,7 +55,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="LetterboxTop" type="ColorRect" parent="Overlay/Frame"]
+[node name="LetterboxTop" type="ColorRect" parent="Overlay/Frame" unique_id=107601325]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -63,7 +64,7 @@ grow_horizontal = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 1)
 
-[node name="LetterboxBottom" type="ColorRect" parent="Overlay/Frame"]
+[node name="LetterboxBottom" type="ColorRect" parent="Overlay/Frame" unique_id=657118023]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -75,7 +76,7 @@ grow_vertical = 0
 mouse_filter = 2
 color = Color(0, 0, 0, 1)
 
-[node name="Center" type="CenterContainer" parent="Overlay/Frame"]
+[node name="Center" type="CenterContainer" parent="Overlay/Frame" unique_id=1310398158]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -84,11 +85,11 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Logo" parent="Overlay/Frame/Center" instance=ExtResource("4_logo")]
+[node name="Logo" parent="Overlay/Frame/Center" unique_id=367639751 instance=ExtResource("4_logo")]
 layout_mode = 2
 idle_burst_interval = Vector2(0, 0)
 
-[node name="SkipHint" type="Label" parent="Overlay/Frame"]
+[node name="SkipHint" type="Label" parent="Overlay/Frame" unique_id=1146729870]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
@@ -106,7 +107,7 @@ text = "PRESS ANY KEY TO SKIP"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Fade" type="ColorRect" parent="Overlay/Frame"]
+[node name="Fade" type="ColorRect" parent="Overlay/Frame" unique_id=1173995780]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

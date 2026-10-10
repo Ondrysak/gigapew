@@ -1,23 +1,19 @@
-[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="WeaponDefinition" format=3 uid="uid://dl7q81yto8fyk"]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="Script" uid="uid://cf1j8m68ikt2x" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/scatter.tscn" id="2_view"]
-[ext_resource type="Texture2D" path="res://assets/icons/weapons/scatter.png" id="icon_px"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/secondary/scatter.tscn" id="secondary"]
+[ext_resource type="Texture2D" uid="uid://dgedv65n4uvep" path="res://assets/icons/weapons/scatter.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
 display_name = "Scatter"
-description = "Seven-pellet shotgun / RMB Concussion Blast clears space"
+description = "Seven-pellet close-range shotgun"
 damage = 32
+recoil_degrees = 0.2
 fire_interval = 0.38
 range_meters = 24.0
 pellet_count = 7
 spread_degrees = 5.0
 knockback = 12.0
-recoil_degrees = 0.20
 view_scene = ExtResource("2_view")
 icon = ExtResource("icon_px")
-magazine_size = 6
-reload_time = 1.1
-secondary_scene = ExtResource("secondary")

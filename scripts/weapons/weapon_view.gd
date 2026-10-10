@@ -3,7 +3,6 @@ extends Node3D
 
 # Scene-assigned references keep the actor independent of model hierarchy.
 @export var muzzle: Node3D
-@export var melee_view := false
 @export var flash: GeometryInstance3D
 @export var flash_light: Light3D
 ## Tracer line material; leave empty to draw no tracers (e.g. flame weapons).
@@ -76,21 +75,12 @@ extends Node3D
 ## Ejection point in view space.
 @export var casing_port := Vector3(0.0, 0.05, -0.03)
 @export var casing_speed := 1.6
-## Ejection direction in view space; X mirrors for left-hand views.
+## Ejection direction in view space.
 @export var casing_direction := Vector3(0.9, 1.0, 0.15)
 
 var _rest: Vector3
 var _rest_rotation := Vector3.ZERO
-var _mining_offset := Vector3.ZERO
 var _kick_strength := 1.0
-var _focused := true
-var _focus_slot := 0
-var _pose_offset := Vector3.ZERO
-var _pose_rotation := Vector3.ZERO
-var _reloading := false
-var _reload_progress := 0.0
-var _magazine: Node3D
-var _magazine_rest := Vector3.ZERO
 var _pump: Node3D
 var _pump_rest := Vector3.ZERO
 var _pump_cycle := 0.0
@@ -104,8 +94,6 @@ var _kick_offset_velocity := Vector3.ZERO
 var _kick_angle := Vector3.ZERO
 var _kick_angle_velocity := Vector3.ZERO
 var _spring_omega := TAU * 6.0
-## -1 for a left-hand view, +1 otherwise: wobble and casings lean outward.
-var _side := 1.0
 var _rng := RandomNumberGenerator.new()
 var _flash_basis := Basis.IDENTITY
 var _flash_shot_basis := Basis.IDENTITY
@@ -142,23 +130,13 @@ var _puff_next := 0
 var _blasts: Array[Node3D] = []
 var _blast_times := PackedFloat32Array()
 var _blast_radii := PackedFloat32Array()
-var _melee_time := -1.0
-var _melee_windup := 0.0
-var _melee_recovery := 0.0
-var _melee_heavy := false
-var _melee_charge := 0.0
-var _melee_contact_next := 0
 
 func _ready() -> void:
 	_rest = position
 	_rest_rotation = rotation
-	_side = -1.0 if _rest.x < -0.01 else 1.0
 	_rng.randomize()
-	# Each hand rings at a slightly different pitch so hands never move in lockstep.
+	# A small variation keeps the firearm's recoil spring organic.
 	_spring_omega = TAU * recoil_frequency * _rng.randf_range(0.9, 1.1)
-	_magazine = get_node_or_null(^"Model/Magazine") as Node3D
-	if _magazine != null:
-		_magazine_rest = _magazine.position
 	_pump = get_node_or_null(^"Model/Pump") as Node3D
 	if _pump != null:
 		_pump_rest = _pump.position
@@ -172,8 +150,8 @@ func _ready() -> void:
 		_flash_energy = flash_light.light_energy
 	_shot_audio = _make_audio(shot_sound if shot_sound != null else SynthCue.make(synth_shot))
 	_shot_audio.volume_db = shot_volume_db
-	_hit_audio = _make_audio(hit_sound if hit_sound != null else SynthCue.make(&"melee_hit") if melee_view else null)
-	_kill_audio = _make_audio(kill_sound if kill_sound != null else SynthCue.make(&"melee_kill") if melee_view else null)
+	_hit_audio = _make_audio(hit_sound)
+	_kill_audio = _make_audio(kill_sound)
 	var hum := spin_sound if spin_sound != null else SynthCue.make(synth_spin)
 	if hum != null:
 		_spin_audio = _make_audio(hum)
@@ -243,7 +221,7 @@ func prepare(pellet_count: int) -> void:
 		_puff_to.resize(puff_pool_size)
 		_puff_age.resize(puff_pool_size)
 		_puff_age.fill(-1.0)
-	var blast_count := 0 if melee_view else maxi(pellet_count, blast_pool_size)
+	var blast_count := maxi(pellet_count, blast_pool_size)
 	var blast_mesh := _sphere_mesh(12, 6) if blast_count > 0 else null
 	if blast_template != null:
 		blast_template.hide()
@@ -305,7 +283,7 @@ func _local_material(source: Material) -> StandardMaterial3D:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return material
 
-## Called when effective hand upgrades change, never from the shot path.
+## Called when effective firearm upgrades change, never from the shot path.
 func configure(definition: WeaponDefinition) -> void:
 	_kick_strength = lerpf(0.7, 1.2, inverse_lerp(0.04, 0.3, clampf(definition.recoil_degrees, 0.04, 0.3)))
 	if _damage_type == definition.damage_type:
@@ -375,13 +353,7 @@ func set_spin(ratio: float) -> void:
 	if not _spin_audio.playing:
 		_spin_audio.play()
 
-func set_focus(focused: bool, slot: int, reloading: bool, progress: float) -> void:
-	_focused = focused
-	_focus_slot = slot
-	_reloading = reloading
-	_reload_progress = progress
-
-func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool, mining: bool = false) -> void:
+func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool) -> void:
 	var blend := 1.0 - exp(-18.0 * delta)
 	_step_kick(delta)
 	_landing_dip = lerpf(_landing_dip, 0.0, 1.0 - exp(-12.0 * delta))
@@ -391,20 +363,8 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio
 	# A spinning gun hums with a slight shake.
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
-	var holster := Vector3(-0.75 if _focus_slot == 0 else 0.44 if _focus_slot == 1 else 0.04, -0.36 if _focus_slot == 2 else -0.24, 0.14)
-	var reload_dip := sin(clampf(_reload_progress, 0.0, 1.0) * PI) if _reloading and _focused else 0.0
-	_pose_offset = _pose_offset.lerp(Vector3(0, -reload_dip * 0.075, reload_dip * 0.025) if _focused else holster, 1.0 - exp(-15.0 * delta))
-	_pose_rotation = _pose_rotation.lerp(Vector3(-0.13 * reload_dip, 0, 0.18 * reload_dip) if _focused else Vector3(-0.12, 0, -0.15 if _focus_slot == 0 else 0.15), blend)
-	_mining_offset = _mining_offset.lerp(Vector3(0.13, -0.15, 0.04) if mining else Vector3.ZERO, blend)
-	position = _rest + _pose_offset + bob + buzz + _mining_offset + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
-	rotation = _rest_rotation + _pose_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
-	if melee_view:
-		# Upright tools expose their broad side instead of presenting a knife
-		# edge along the camera's -Z axis, including while holstered.
-		rotation += Vector3(0.0, deg_to_rad(55.0), 0.08)
-		_animate_melee(delta)
-	if _magazine != null:
-		_magazine.position = _magazine_rest + Vector3.DOWN * (reload_dip * 0.11)
+	position = _rest + bob + buzz + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
+	rotation = _rest_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
 	if _pump != null:
 		_pump_cycle = maxf(0.0, _pump_cycle - delta)
 		_pump.position = _pump_rest + Vector3.BACK * (sin(_pump_cycle / 0.26 * PI) * 0.07)
@@ -448,7 +408,7 @@ func _kick() -> void:
 	var punch := _kick_strength * room * _rng.randf_range(0.85, 1.15)
 	var shove := Vector3(_rng.randf_range(-0.15, 0.15), recoil_lift, 1.0) * (recoil_distance * punch)
 	var wobble := recoil_angle * recoil_wobble * punch
-	var twist := Vector3(recoil_angle * punch, _rng.randf_range(-wobble, wobble), (0.5 * _side + _rng.randf_range(-0.7, 0.7)) * wobble)
+	var twist := Vector3(recoil_angle * punch, _rng.randf_range(-wobble, wobble), (0.5 + _rng.randf_range(-0.7, 0.7)) * wobble)
 	_kick_offset += shove * 0.65
 	_kick_offset_velocity += shove * _spring_omega
 	_kick_angle += twist * 0.65
@@ -509,71 +469,7 @@ func _update_traces() -> void:
 		trace.global_position = (tail + head) * 0.5
 		trace.scale = Vector3(width, width, maxf(0.001, tail.distance_to(head)))
 
-## Timed pose only: the actor owns impact timing and cancellation.
-func melee_swing(windup: float, recovery: float, heavy: bool = false) -> void:
-	_melee_time = 0.0
-	_melee_windup = windup
-	_melee_recovery = recovery
-	_melee_heavy = heavy
-	_melee_charge = 0.0
-
-func melee_charge(progress: float) -> void:
-	_melee_charge = progress
-
-func cancel_melee() -> void:
-	_melee_time = -1.0
-	_melee_charge = 0.0
-
-func _animate_melee(delta: float) -> void:
-	var offset := Vector3.ZERO
-	var twist := Vector3.ZERO
-	if _melee_time >= 0.0:
-		_melee_time += delta
-		var prepared := Vector3(-0.3, -0.65, -0.5) * (1.3 if _melee_heavy else 1.0)
-		var finish := Vector3(0.2, 0.8, 0.45) * (1.3 if _melee_heavy else 1.0)
-		if _melee_time < _melee_windup:
-			var t := clampf(_melee_time / maxf(0.001, _melee_windup), 0.0, 1.0)
-			twist = prepared * sin(t * PI * 0.5)
-			offset = Vector3(0.08, 0.035, 0.08) * t
-		elif _melee_time < _melee_windup + ArenaPlayer.MELEE_SWEEP_TIME:
-			var t := (_melee_time - _melee_windup) / ArenaPlayer.MELEE_SWEEP_TIME
-			twist = prepared.lerp(finish, t)
-			offset = Vector3(0.08, 0.035, 0.08).lerp(Vector3(-0.18, -0.025, -0.24), t)
-		else:
-			var t := clampf((_melee_time - _melee_windup - ArenaPlayer.MELEE_SWEEP_TIME) / maxf(0.001, _melee_recovery), 0.0, 1.0)
-			twist = finish * (1.0 - smoothstep(0.0, 1.0, t))
-			offset = Vector3(-0.18, -0.025, -0.24) * (1.0 - t)
-			if t >= 1.0:
-				_melee_time = -1.0
-	elif _melee_charge > 0.0:
-		twist = Vector3(-0.25, -0.45, -0.35) * _melee_charge
-		offset = Vector3(0.04, 0.04, 0.08) * _melee_charge
-	position += offset
-	rotation += twist
-
-func melee_release(sound: CombatAudio) -> void:
-	_play(_shot_audio, sound, shot_cue)
-	_impact_time = 0.13
-	for impact in _impacts:
-		impact.hide()
-	for spark in _sparks:
-		spark.hide()
-
-func melee_contact(at: Vector3, enemy: bool, critical: bool) -> void:
-	if _impacts.is_empty():
-		return
-	var index := _melee_contact_next % _impacts.size()
-	_melee_contact_next += 1
-	_impact_time = 0.13
-	show_ray(index, at, Vector3.UP, true, enemy, critical)
-	if not enemy and _hit_audio.stream != null:
-		_hit_audio.pitch_scale = 1.0
-		_hit_audio.play()
-
 func begin_shot(sound: CombatAudio) -> void:
-	if melee_view:
-		melee_release(sound)
-		return
 	_play(_shot_audio, sound, shot_cue)
 	_kick()
 	_pump_cycle = 0.26
@@ -602,7 +498,7 @@ func _eject_casing() -> void:
 	var axes := transform.basis.orthonormalized()
 	casing.position = transform * casing_port
 	casing.basis = axes * Basis(Vector3.BACK, PI * 0.5)
-	var direction := Vector3(casing_direction.x * _side, casing_direction.y, casing_direction.z) \
+	var direction := casing_direction \
 			+ Vector3(_rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.15, 0.15))
 	_casing_velocity[slot] = axes * direction * (casing_speed * _rng.randf_range(0.85, 1.15))
 	_casing_spin[slot] = Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-0.4, 0.4), _rng.randf_range(-1.0, 1.0)).normalized() * _rng.randf_range(14.0, 28.0)

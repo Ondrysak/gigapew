@@ -30,7 +30,7 @@ mining_tool_scene = ExtResource("12_tool")
 deposit_field_scene = ExtResource("13_deposits")
 upgrade_pool = ExtResource("11_pool")
 resources = Array[ExtResource("14_resource")]([ExtResource("15_gold"), ExtResource("16_shard"), ExtResource("17_crystal")])
-boss_reward = ExtResource("16_shard")
+stage_reward = ExtResource("16_shard")
 
 [node name="Level" type="Node3D" parent="."]
 

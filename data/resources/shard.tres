@@ -1,13 +1,11 @@
-[gd_resource type="Resource" script_class="ResourceDefinition" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="ResourceDefinition" format=3 uid="uid://bnbnbxyh8csn5"]
 
-[ext_resource type="Script" path="res://scripts/data/resource_definition.gd" id="1_definition"]
-[ext_resource type="Texture2D" path="res://assets/icons/resources/shard.png" id="icon_px"]
+[ext_resource type="Script" uid="uid://do61y3vcdkicx" path="res://scripts/data/resource_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" uid="uid://co4gquhliy5pe" path="res://assets/icons/resources/shard.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
 id = &"shard"
 display_name = "Void Shard"
 color = Color(0.68, 0.36, 1, 1)
-banked = true
-supply_value = 0
 icon = ExtResource("icon_px")

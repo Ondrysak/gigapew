@@ -43,8 +43,8 @@ func is_shielded() -> bool:
 	return _remaining > 0.0
 
 func _activate() -> bool:
-	player.grant_invulnerability(duration)
-	_remaining = duration
+	player.set_ability_protection(self, true)
+	_remaining = duration * duration_scale()
 	_aura_timer = aura_interval
 	_pop = 1.0
 	var center := player.global_position
@@ -62,9 +62,7 @@ func _ability_physics(delta: float) -> void:
 		return
 	_remaining -= delta
 	if _remaining <= 0.0 or not player.active:
-		_remaining = 0.0
-		if bubble != null:
-			bubble.hide()
+		_finish()
 		if _end_audio.stream != null:
 			_end_audio.play()
 		return
@@ -84,10 +82,26 @@ func _emit_shock(center: Vector3) -> void:
 	shock.scale = Vector3.ONE * 0.5
 	shock.show()
 
+func _finish() -> void:
+	_remaining = 0.0
+	if is_instance_valid(player):
+		player.set_ability_protection(self, false)
+	if bubble != null:
+		bubble.hide()
+
+func _cancel_effects() -> void:
+	_finish()
+	_shock_age.fill(-1.0)
+
+func _exit_tree() -> void:
+	_finish()
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if bubble != null and _remaining > 0.0:
 		_pop = maxf(0.0, _pop - delta * 4.0)
-		var time := Time.get_ticks_msec() * 0.001
+		var time := effect_time()
 		var breathe := 1.0 + sin(time * 6.0) * 0.03 + _pop * 0.35
 		bubble.scale = Vector3.ONE * breathe
 		bubble.rotation.y = fmod(bubble.rotation.y + delta * 1.6, TAU)

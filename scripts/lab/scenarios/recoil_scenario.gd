@@ -8,11 +8,7 @@ func summary() -> String:
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")
-	var rail := lab.weapon("rail")
-	var hand_definitions: Array[WeaponDefinition] = [rail, rail, rail]
-	game.run_state.initialize_hands(hand_definitions)
-	game.player.weapons = game.run_state.hand_definitions()
-	game.player.refresh_weapons()
+	lab.equip_weapon("rail")
 	var target := lab.ahead(14.0)
 	lab.spawn_pack(lab.enemy("robot_grunt"), target, 8, 2.0)
 	lab.aim_at(Vector3(target.x, 1.0, target.y))
@@ -20,7 +16,6 @@ func run() -> void:
 	var camera := game.player.camera
 	var rest_pitch := game.player.head.rotation.x
 	var rest_camera := camera.rotation
-	# Only the focused hand fires; the other two remain stowed.
 	lab.fire(true)
 	await lab.frames(2)
 	lab.fire(false)
@@ -31,11 +26,7 @@ func run() -> void:
 	lab.check(is_equal_approx(game.player.head.rotation.x, rest_pitch), "recoil never moves the player's aim (head pitch unchanged)")
 	var settled := rad_to_deg((camera.rotation - rest_camera).length())
 	lab.check(settled < 0.05, "camera kick recovers to rest (%.3f deg left)" % settled)
-	var minigun := lab.weapon("minigun")
-	hand_definitions = [minigun, minigun, minigun]
-	game.run_state.initialize_hands(hand_definitions)
-	game.player.weapons = game.run_state.hand_definitions()
-	game.player.refresh_weapons()
+	lab.equip_weapon("minigun")
 	lab.fire(true)
 	await lab.wait(1.0)
 	var climb := 0.0

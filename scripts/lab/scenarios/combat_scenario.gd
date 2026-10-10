@@ -4,7 +4,7 @@ func title() -> String:
 	return "Combat"
 
 func summary() -> String:
-	return "Scout hands firing into a mixed robot pack (muzzle, tracers, hits, numbers)"
+	return "Primary gun firing into a mixed robot pack (muzzle, tracers, hits, numbers)"
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")

@@ -1,8 +1,8 @@
-[gd_resource type="Resource" script_class="StageDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StageDefinition" format=3 uid="uid://cp0t6rdqbwyxu"]
 
-[ext_resource type="Script" path="res://scripts/data/stage_definition.gd" id="definition"]
-[ext_resource type="PackedScene" path="res://scenes/levels/reactor.tscn" id="world"]
-[ext_resource type="Resource" path="res://data/schedules/reactor.tres" id="schedule"]
+[ext_resource type="Script" uid="uid://bl5danccr3amv" path="res://scripts/data/stage_definition.gd" id="definition"]
+[ext_resource type="Resource" uid="uid://bxq2glnrq58c2" path="res://data/schedules/reactor.tres" id="schedule"]
+[ext_resource type="PackedScene" path="res://scenes/levels/procedural.tscn" id="world"]
 
 [resource]
 script = ExtResource("definition")
@@ -11,4 +11,7 @@ display_name = "Reactor Core"
 subtitle = "Sector 03 / containment chamber"
 world_scene = ExtResource("world")
 play_area = Rect2(-38, -38, 76, 76)
+layout_theme = &"reactor"
+cover_count = 24
+quest_scale = 1.7
 schedule = ExtResource("schedule")

@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DepositDefinition" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="DepositDefinition" format=3 uid="uid://cyoaxrpy2rbbo"]
 
-[ext_resource type="Script" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
-[ext_resource type="Resource" path="res://data/resources/shard.tres" id="2_resource"]
+[ext_resource type="Script" uid="uid://dseg3btyvwqnf" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
+[ext_resource type="Resource" uid="uid://bnbnbxyh8csn5" path="res://data/resources/shard.tres" id="2_resource"]
 
 [sub_resource type="SphereMesh" id="Mesh_pickup"]
 radius = 0.13
@@ -18,7 +18,5 @@ yield_max = 1
 weight = 0.025
 guaranteed = 1
 max_per_stage = 1
-min_height = 1.5
-max_height = 1.8
 pickup_mesh = SubResource("Mesh_pickup")
 pickup_scale = 1.3

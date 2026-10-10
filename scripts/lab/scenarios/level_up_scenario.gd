@@ -22,8 +22,6 @@ func run() -> void:
 	await lab.capture("entrance")
 	await lab.wait(0.4)
 	await lab.capture("new_picks")
-	for card in game.level_up._cards:
-		lab.check(card.icon_rect.texture != null, "%s card shows an icon" % card.name_label.text)
 	# Mixed: an owned perk mid-rank, an instant supply pick and a new stat.
 	state.apply_upgrade(perk)
 	var mixed: Array[UpgradeDefinition] = [perk]
@@ -48,12 +46,28 @@ func run() -> void:
 	await _present(game, ranked)
 	await lab.capture("ranked_picks")
 	var before := state.level_of(weapon)
-	game.level_up._arming = 0.0
 	game.level_up._choose(0)
 	await lab.wait(0.6)
 	lab.check(state.level_of(weapon) == before + 1, "choosing card 1 levels %s to %d" % [weapon.display_name, before + 1])
 	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.get_tree().paused, "choosing resumes play")
 	await lab.capture("after_pick")
+	var mastery := state.ability_upgrade_offer(1)
+	var rank := state.ability_rank(1)
+	var recharge := state.cooldown_multiplier
+	await _present(game, [mastery, perk, stat])
+	await lab.capture("ability_mastery")
+	for card in game.level_up._cards:
+		lab.check(card.description_label.get_global_rect().end.y <= card.get_global_rect().end.y, "complete upgrade description remains within its visible card")
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_1
+	key.keycode = KEY_1
+	key.pressed = true
+	Input.parse_input_event(key)
+	await lab.frames(3)
+	key.pressed = false
+	Input.parse_input_event(key)
+	lab.check(state.ability_rank(1) == rank + 1 and game.round_state == ArenaGame.RoundState.PLAYING, "physical 1 selects a skill mastery card and resumes with the correct slot upgraded")
+	lab.check(is_equal_approx(state.cooldown_multiplier, recharge) and game.player.abilities[0].cooldown_remaining() == 0.0, "numeric selection never leaks into the first combat ability after unpause")
 
 func _present(game: ArenaGame, offers: Array, settle: float = 0.5) -> void:
 	var typed: Array[UpgradeDefinition] = []

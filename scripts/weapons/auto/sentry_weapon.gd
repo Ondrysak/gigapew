@@ -86,7 +86,7 @@ func _refresh() -> void:
 
 func shot_interval() -> float:
 	var scale_by_level := maxf(0.2, 1.0 - fire_interval_per_level * (level - 1))
-	return maxf(min_fire_interval, fire_interval * scale_by_level * run_state.cooldown_multiplier * run_state.cooldown_boost)
+	return maxf(min_fire_interval, fire_interval * scale_by_level * run_state.cooldown_multiplier)
 
 func _tick(delta: float) -> void:
 	_timer -= delta

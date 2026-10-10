@@ -21,7 +21,7 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="ClassSelect" type="Control" node_paths=PackedStringArray("card_row", "currency_bar", "accent_bar", "class_badge", "class_icon", "name_label", "tagline_label", "description_label", "loadout_row", "extras_label", "ability_option_row", "ability_icon", "ability_name_label", "ability_description_label", "ability_action_button", "stats_label", "action_button", "status_label", "back_button")]
+[node name="ClassSelect" type="Control" node_paths=PackedStringArray("card_row", "currency_bar", "accent_bar", "class_badge", "class_icon", "name_label", "tagline_label", "description_label", "loadout_row", "extras_label", "ability_option_row", "ability_icon", "ability_name_label", "ability_description_label", "stats_label", "action_button", "status_label", "back_button")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,7 +46,6 @@ ability_option_row = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityOpti
 ability_icon = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader/AbilityIcon")
 ability_name_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader/AbilityName")
 ability_description_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityDescription")
-ability_action_button = NodePath("Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader/AbilityAction")
 stats_label = NodePath("Margin/Rows/Detail/Rows/Columns/Right/Stats")
 action_button = NodePath("Margin/Rows/Footer/Action")
 status_label = NodePath("Margin/Rows/Footer/Status")
@@ -85,7 +84,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 8
 theme_type_variation = &"SectionLabel"
-text = "CLASS  ·  LOADOUT  ·  ABILITY [Q]"
+text = "CLASS · PRIMARY · FIVE SKILLS [1–5]"
 
 [node name="CurrencyBar" parent="Margin/Rows/Header" instance=ExtResource("3_currency")]
 layout_mode = 2
@@ -188,11 +187,13 @@ theme_override_constants/separation = 4
 [node name="AbilityTitle" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "ACTIVE ABILITY  [Q]  ·  PICK ONE"
+text = "FIVE-SKILL KIT  [1–5]  ·  ALL INCLUDED"
 
-[node name="AbilityOptions" type="HBoxContainer" parent="Margin/Rows/Detail/Rows/Columns/Right"]
+[node name="AbilityOptions" type="GridContainer" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2
-theme_override_constants/separation = 8
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 6
 
 [node name="AbilityHeader" type="HBoxContainer" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2
@@ -215,20 +216,15 @@ theme_override_font_sizes/font_size = 20
 text = "ABILITY"
 text_overrun_behavior = 3
 
-[node name="AbilityAction" type="Button" parent="Margin/Rows/Detail/Rows/Columns/Right/AbilityHeader"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_font_sizes/font_size = 15
-text = "EQUIPPED"
 
 [node name="AbilityDescription" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.78, 0.9, 0.94, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 14
 text = "Ability description"
 autowrap_mode = 2
+max_lines_visible = 3
 
 [node name="StatsTitle" type="Label" parent="Margin/Rows/Detail/Rows/Columns/Right"]
 layout_mode = 2

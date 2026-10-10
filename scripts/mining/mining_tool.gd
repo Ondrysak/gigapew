@@ -1,8 +1,7 @@
 class_name MiningTool
 extends Node3D
 
-## Contextual hand drill: RMB raises it only while aiming at a deposit in reach.
-## Successful cuts charge the focused gun's alternate fire meter.
+## Proximity drill: aiming at visible ore raises it automatically; held F cuts.
 const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 
 ## Node moved between the stowed and raised poses.
@@ -16,7 +15,7 @@ const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 @export var raise_speed := 7.0
 
 @export_group("Mining")
-@export var reach := 3.2
+@export var reach := 2.6
 @export var mining_per_second := 45.0
 @export var tick_interval := 0.15
 
@@ -109,20 +108,38 @@ func setup(player: ArenaPlayer, run_state: RunState) -> void:
 	feedback.setup(player)
 	_player.mining_tool = self
 
-## Called in physics ticks by the player, before deciding RMB's purpose.
+## The first physics surface must be a live ore fragment within drill reach.
 func has_target() -> bool:
-	if _query == null:
+	if not _enabled() or _query == null:
 		return false
-	_query.from = _player.camera.global_position
-	_query.to = _query.from - _player.head.global_basis.z * reach
-	var hit := get_world_3d().direct_space_state.intersect_ray(_query)
+	var hit := _target_hit()
 	if hit.is_empty() or not hit["collider"] is MineralDeposit:
 		return false
 	return not (hit["collider"] as MineralDeposit).feedback_at(hit["position"], int(hit["shape"])).is_empty()
 
-func _physics_process(delta: float) -> void:
-	var enabled := _player != null and is_instance_valid(_player) and _player.active \
+func _enabled() -> bool:
+	return _player != null and is_instance_valid(_player) and _player.active \
 			and not get_tree().paused and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+func _target_hit() -> Dictionary:
+	_query.from = _player.camera.global_position
+	_query.to = _query.from - _player.head.global_basis.z * reach
+	return get_world_3d().direct_space_state.intersect_ray(_query)
+
+func cancel() -> void:
+	_using = false
+	_tick = 0.0
+	_contact = 0.0
+	_clear_target()
+	if _drill_voice != null:
+		_drill_voice.stop()
+	if _impact_voice != null:
+		_impact_voice.stop()
+	if feedback != null:
+		feedback.reset()
+
+func _physics_process(delta: float) -> void:
+	var enabled := _enabled()
 	var using := enabled and _player.drilling()
 	if using != _using:
 		_using = using
@@ -136,10 +153,7 @@ func _physics_process(delta: float) -> void:
 		feedback.reset()
 		_tick = 0.0
 		return
-	var camera := _player.camera
-	_query.from = camera.global_position
-	_query.to = _query.from - _player.head.global_basis.z * reach
-	var hit := get_world_3d().direct_space_state.intersect_ray(_query)
+	var hit := _target_hit()
 	var data: Dictionary = {}
 	var deposit: MineralDeposit
 	if not hit.is_empty():
@@ -191,7 +205,6 @@ func _strike(hit: Dictionary, data: Dictionary) -> void:
 			var multiplier := _run_state.mining_multiplier if _run_state != null else 1.0
 			var cut_rate := mining_per_second * (1.0 + resonance * 0.35)
 			deposit.take_mining_damage(cut_rate * tick_interval * multiplier, point, int(hit["shape"]))
-			_player.add_secondary_charge(_player.selected_weapon, tick_interval * 20.0 * (1.35 if bool(data.get("weak", false)) else 1.0))
 			var color: Color = data["color"]
 			var broken := deposit.last_chunk_broken
 			var weak := deposit.last_hit_weak
@@ -229,9 +242,10 @@ func _process(delta: float) -> void:
 	feedback.strength = feedback_strength
 	if model == null:
 		return
-	_raise = move_toward(_raise, 1.0 if _using else 0.0, delta * raise_speed)
+	var ready := _player != null and _player.mining_ready()
+	_raise = move_toward(_raise, 1.0 if ready else 0.0, delta * raise_speed)
 	_kick = move_toward(_kick, 0.0, delta * 9.0)
-	model.visible = _raise > 0.001
+	model.visible = ready
 	if not model.visible:
 		return
 	var eased := _raise * _raise * (3.0 - 2.0 * _raise)
@@ -248,13 +262,4 @@ func _process(delta: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PAUSED:
-		_using = false
-		_tick = 0.0
-		_contact = 0.0
-		_clear_target()
-		if _drill_voice != null:
-			_drill_voice.stop()
-		if _impact_voice != null:
-			_impact_voice.stop()
-		if feedback != null:
-			feedback.reset()
+		cancel()

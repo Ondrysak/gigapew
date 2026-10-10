@@ -1,153 +1,82 @@
 # Unreleased source changes
 
-- Removed `DOWN` from enemy finisher numbers; actual damage, critical labels and
-  hit/kill feedback remain.
-- Authored head/core weak volumes for all ten enemy types. Main-gun precision
-  hits guarantee ×3 base damage; ordinary rolled crits now deal ×2. Crit-damage
-  upgrades improve both, without multiplying the two critical bonuses together.
-- Weak volumes follow yaw, scale and feet height, including exposed features
-  above the old body bounds. World blockers limit precision hits. Pierced enemies
-  resolve their own critical state; precision does not boost collateral splash.
-- Spitter base health increased to 180, tank health to 420 and boss health to
-  6000, retaining schedule scaling and unchanged grunt/runner health. Lucky
-  Strike cards describe the new body and precision damage factors.
-- `tools/check_combat.gd` passed real-shot regressions for body/head damage,
-  random-crit non-stacking, piercing, splash, wall blocking, elevation, yaw and
-  Lucky Strike, alongside nested-blast coverage.
-- An isolated 1280×720 Mesa llvmpipe run rendered and hit the weak feature on all
-  ten enemy types, inspected boss head/eye alignment, showed a noncritical
-  finisher as its actual damage alone and rendered all three Lucky Strike cards.
-  It exited with code 0.
-- Historical **triple-volley** fresh-Scout checks measured stationary-boss
-  body/weak-spot times of 9.62/3.22 s (Yard), 15.68/5.13 s (Foundry), and
-  23.37/7.85 s (Reactor). They predate the focused-gun rotation below and are
-  not current balance claims or full-campaign certification.
-- Repeated combat regression runs reported 33–42 ObjectDB instances leaked at
-  exit; rendered smoke runs reported up to 20, and the virtual display still
-  warns about unsupported V-Sync. These changes are not claimed warning-free.
-- Visual test lab (`make lab`, `make lab-shots`, `tools/lab.py`): 21 scenarios,
-  including gun models, rotation, alternate fire, finite ammo, melee contact and
-  tempo, scarce loot, crowd pressure, armor, mining defense and Yard boss patterns.
-  Script/engine errors fail the runner. Lab content is excluded
-  from the Linux export.
-- Pixel-art icons (16 × 16) for every upgrade, gun, class, ability, Armory
-  upgrade, mineral, workshop recipe, shop item and HUD glyph, generated from
-  `tools/icons/art_*.py` (`make icons`).
-- Gun feel: gentle, more strongly damped weapon and camera springs, no firing
-  FOV punch, stable head-based ray aim, varied muzzle flashes, fading tracers,
-  casings and a blooming crosshair. Point-blank impact flashes and enemy spit
-  no longer fill the screen.
-- Round shop rebuilt: hand loadout cards with stats and rank pips, 4 weapon-mod
-  offers for the selected hand plus 2 suit-system offers, live effect previews
-  and icon prices. Rerolls keep sold cards. Hand upgrades live in one catalog.
-- HUD, boss and level-up pass: icon-based HUD, boss WARNING banner and
-  segmented bar with damage trail and ENRAGED state, death stat panel, level-up
-  cards with icons, rank pips and gold overclocks, and less overlap between
-  damage numbers. Menus show class, ability, recipe, loadout and Armory icons.
-- Focused firing replaces the triple volley. Finite magazines, automatic
-  holstered reloads and a 0.2 s draw encourage rotation. In-hand reloads are
-  1.6× slower; partial reload progress survives swaps and upgrades.
-- Each class starts with two complementary guns and one ammo-free melee weapon;
-  crafted slot overrides remain. Hits charge the other two alternates; drilling
-  charges the focused hand.
-  HUD cards show magazine/reserve ammo, reload progress and alternate meters.
-- Eight RMB modes: Pulse Tag Burst (+35% exposure window), charged Rail Lance,
-  Scatter Concussion (shorter boss stagger), Minigun Overspin, ballistic
-  Autocannon Breach Grenade, persistent slowing Flamethrower Napalm, charged
-  Shock Baton Discharge and Heavy Cleave.
-  RMB near an aimed mineral section remains the drill, without an open-field
-  drill shove. Rail Lance and Breach Grenade can fracture sections at range.
-- Original Blender-built firearm assets replace runtime primitive gun geometry.
-  Models have open bores, detailed receivers/rails/sights, magazines, pump,
-  rotary barrels and gloved grips; static geometry is batched by material.
-  Generation is reproducible with `tools/guns/build_guns.py`.
-- Rendered recoil checks measured 0.16° for a Rail shot and approximately
-  0.04–0.05° during sustained minigun fire, without aim drift. Controlled
-  fresh-Scout primary-only rotation before the reserve/auto-swap pass killed
-  a stationary Yard boss in 11.72 s body / 3.90 s weak-spot (zero random crits,
-  60 Hz simulation, manual empty swaps). Historical baseline, not certification.
-- Automatic empty-primary swapping picks the next loaded, non-reloading gun or
-  ammo-free melee hand, preserving draw timing and manual selection. Idle,
-  drilling and active alternates retain focus; all-dry firearm-only kits wait.
-- Finite reserves: three spare magazines per gun at stage start, cap six.
-  Holstered and in-hand reloads consume only rounds actually transferred.
-  Ammo crates restore one magazine to each equipped gun's reserve; capped
-  packs remain available. Regular kills drop ammo every 30 and magnets every 120;
-  bosses drop one ammo pack without a guaranteed magnet.
-- XP magnets attract all currently loose gems without an instant XP grant or
-  permanent global vacuum. Saturated gem pools merge value even while homing.
-  Red-cross repair kits report actual healing and remain at full health.
-- Timed ammo supply every 50 gameplay seconds, at most two separated waiting packs,
-  independent of ordinary loot. Grounded route checks reject obstacles and
-  cliffs; a nearer placement fallback serves small raised decks.
-- Pickup radar glyphs, compact aggregated ammo/magnet/repair/supply notices,
-  separate automatic-swap feedback and low/dry/reserve weapon readouts.
-  New ammo and magnet pixel icons use the existing reproducible generator.
-- Pickup-loop verification: all 15 rendered lab scenarios produced 93 captures with zero
-  failures on the Radeon GPU; precision and nested-blast regressions passed.
-  Checks cover actual ammo collection and recovered firing, finite/partial
-  reloads, swap boundaries, full-cap pickup preservation, exact XP conservation,
-  homing-pool overflow, later loose gems, boss loot, paused/inactive supply
-  timers and real raised-deck supply fallback.
-- Optional Yard defense vein: real, persistent mineral sections and conserved
-  fragments; three escalating response packs; one upgrade choice after both
-  mining and defense finish. E claims once; boss clear escrows earned choices
-  before the shop without consuming or fabricating XP levels.
-- Rare Bulwark role: batched amber front plate, teal rear precision core, slow
-  capped turning and directional direct-hit reduction. Flanks, splash, burn
-  ticks and area hazards remain counters. Auto guns, piercing beams and blades
-  use their actual sources; mixed direct/splash remains one damage transaction.
-- Yard Dreadnought alternates a locked ram lane and three staggered, cover-clipped
-  mortar footprints. Both have harmless warnings and a teal +50% recovery
-  window; stagger interrupts windups/rushes. Terrain, height and actual warned
-  footprints constrain hits. Pausing, death, node removal and stage clear
-  release controller state and prevent late attacks.
-- Authored mining formations reserve placement space outside random respawn
-  budgets; bounded response reservations and lifetime generations keep full
-  crowds and recycled enemy slots from corrupting encounter completion.
-- Game-root pause semantics are explicit even under the lab's always-processing
-  shell. Encounter HUD, radar discovery and the earned-choice picker use the
-  existing presentation conventions.
-- Encounter verification: all 18 rendered lab scenarios produced 114 captures
-  with zero failures and no script/engine errors on the Radeon GPU. Precision
-  and nested-blast regressions passed (the existing ObjectDB exit warning remains).
-  An accelerated live-director smoke from 90–122 Yard seconds observed 492
-  hostiles including a scheduled Bulwark, with the defense vein still optional.
-  This is encounter/integration evidence, not full-campaign balance certification.
-- Faster main fire without changing any of the six firearm models: Pulse .09 s,
-  Rail .45 s, Scatter .38 s, Minigun .032 s, Autocannon .19 s, Flamethrower .045 s.
-  Reloads are shorter; Minigun reaches full spin in .2 s. Fractional cooldown
-  overshoot and bounded multi-shot ticks preserve boosted cadence above 60 Hz
-  without idle/hitch bursts, free ammo or a second-hand shot on rotation.
-- Two original Blender-authored melee models and pixel icons: Shock Baton
-  (fast shock/stun) and Cleaver (broad kinetic cut). Real cancellable windup,
-  swept forward contact, recovery, body/height/range/cover boundaries, source-aware
-  armor, rolled crits, mineral hits, status/splash upgrades and cross-charge.
-  Melee shock conduction cannot leak behind the player or through solid cover.
-- Charged Shock Discharge costs 70 meter and Heavy Cleave 65, paid at completed
-  impact only. Swapping, menus, pause and death cancel unlanded attacks for free.
-  Synchronous impact callbacks also stop remaining contact and firearm queues.
-- Melee uses the normal three-hand inventory and Workshop; Baton blueprint is
-  free, Cleaver costs 6 Gold and 2 Cinder. Saves retain crafted weapon overrides
-  and gadgets; unsupported saved gadgets are inactive, not silently lost.
-  Shop/HUD show melee arc/reach and no-ammo/swing state; firearm-only pellet and
-  pierce purchases are explicitly unavailable and never debit minerals.
-- Ordinary campaign wave rates increased about 45%, with earlier runners and
-  rare specialists; crowd caps are Yard 1000, Foundry 1500, Reactor 2100.
-  Enemy/boss health, stage duration, terrain routing and contact tuning remain.
-- XP is earned only on each third ordinary victim, without banking skipped XP.
-  Repair chance .4%; Gold yields 14–20, Cinder 5–8, Void 1. Natural deposits
-  have 11–18 caps and 35–50 s respawns, with one rare formation per stage.
-  Stage-clear Void reward reduced to 1; Scavenger ordinary chances are
-  2% / 3.5% / 5%, with 2 guaranteed boss crystals.
-- Combat-loop verification: all 21 rendered scenarios produced 126 captures
-  with zero failures and no script/engine errors on the Radeon GPU. Precision
-  and nested-blast checks passed. Upgraded Overspin emitted 143 paid shots in
-  .65 s. Normal accelerated Yard combat reached 1000 live hostiles at 123.8 s
-  with 659 real kills and 14 loose XP gems, one magnet and one repair kit.
-  A synchronous impact-pause probe damaged three victims before the fix and
-  exactly one afterward; permanent coverage also proves no replay on resume.
-  This is isolated integration/stress evidence, not campaign-balance certification.
+- Reworked the core loop around one unlimited-ammo primary firearm and five
+  independently cooled-down hero abilities. Removed player melee weapons,
+  magazines/reserves/reloads, ammunition drops, charged RMB secondaries and
+  three-hand charge/rotation state. The six existing firearm models remain.
+- Mouse wheel or the free shop selector swaps the primary. Purchased mod ranks
+  follow the new gun and rebuild from an immutable authored snapshot without
+  compounding damage, cadence, pellets or element conversions.
+- Aiming at visible ore within 2.6 m automatically equips the drill; held F is
+  the only extraction input. Look away to return to the gun. Firearms and
+  abilities cannot mine at range or through cover. Persistent section health,
+  conserved yield, weak seams, resonance and mining feedback remain.
+- Ability keys are **1–5**, preserving WASD movement. Every unlocked operator
+  includes its entire kit: Scout Blink/Recon/Grapple, Gunner Bulwark/Barrage/
+  Battle Frenzy, Driller Seismic/Drill Dash/Magma Trail, Engineer Overdrive/
+  Platform Turret/Repair Drone; all include Gravity Well and Pulse Barrier.
+  Old single-ability purchase/equipment controls have been removed.
+- Gravity Well visibly pulls, slows, interrupts and damages a crowd. Pulse
+  Barrier provides a short source-owned protective shield and a damaging
+  knockback pulse. Battle Frenzy strengthens fire rate and pierce, not ammo.
+- Each ability supports three run-upgrade ranks through the shop and level-up
+  cards: +25% damage, -12% base cooldown and +15% duration per rank where
+  applicable. Combat and previews share the same scaling. Pause freezes
+  cooldowns and persistent effects; inactive/dead players release their effects.
+  Overlapping protection, exposure and temporary cooldown buffs do not erase
+  another source when one ends.
+- HUD now shows one primary, five numbered readiness/cooldown/rank tiles and
+  an F mining prompt, with a raised drill pose clear of the expanded HUD.
+  Numeric card selection is consumed before resuming so it cannot cast a skill.
+  Mastery descriptions use compact body text instead of overflowing cards.
+- Round exchange has a primary comparison/swap panel, five individually priced
+  skill upgrade cards, and scrollable Primary Mods / Suit Systems tabs.
+  Sold, capped, duplicate and unaffordable purchases never debit minerals.
+  Rerolls retain sold stock; the primary build and five skill ranks carry forward.
+- Workshop uses one saved starting primary and one gadget. Legacy saves migrate
+  the first valid crafted firearm/gadget, skip removed melee blueprints and keep
+  currency, class unlocks, crafting, Armory/talent ranks, records and settings.
+  Saved single-ability selections no longer hide the complete hero kit.
+- Survival loot retains XP on every third ordinary kill, magnets every 120,
+  .4% repair drops and actual arrival-based XP collection with overflow
+  conservation. Bosses award a magnet instead of ammunition. Timed supplies are
+  grounded repair packs every 50 gameplay seconds, in a separate two-pack pool.
+  Full-health packs remain; paused/inactive players cannot advance supply timers.
+- Gun cadence remains Pulse .09 s, Rail .45 s, Scatter .38 s, Minigun .032 s
+  after .2 s spin-up, Autocannon .19 s and Flamethrower .045 s. Fractional
+  cooldown overshoot preserves boosted rates above 60 shots/s with bounded
+  hitch catch-up. Stable head-based aim, gentle recoil, pooled contact feedback,
+  casings, tracers and the six original Blender firearm models are preserved.
+- Campaign sectors retain seeded industrial layouts, connected cross-lanes and
+  a clear mining perimeter. No countdown: two conserved-resource mining
+  objectives and two exact ordinary-species kill objectives gate extraction.
+  Initial ore budgets and sustained required-species spawning avoid random
+  respawn gates; completion is one-shot and preserves earned upgrade choices.
+- Precision head/core hits retain guaranteed ×3 base damage versus ×2 ordinary
+  rolled crits, without stacking the critical bonuses. World blockers, yaw,
+  scale, feet height and individual pierced victims determine valid precision.
+  Spitters have 180 base health, tanks 420 and bosses 6000 before schedule scaling.
+  Damage numbers report actual health removed and do not show `DOWN`/`CRIT` text.
+- Authored Lab fixtures retain defense-vein response packs, interaction hazards,
+  directional Bulwark armor/rear cores, and warned ram/mortar boss patterns.
+  These fixed placements are not inserted into procedural campaign worlds.
+  Passive auto weapons, perks, overclocks and main-gun combo/mod mechanics remain.
+- Reproducible 16 × 16 pixel icons cover equipment, upgrades, abilities and UI,
+  including new Gravity Well, Pulse Barrier and Battle Frenzy artwork. Removed
+  obsolete melee assets, ammunition art and old combat scenarios.
+- Visual Lab now has 21 scenarios. The full Radeon GPU pass produced 153 captures
+  with zero failures and no script/engine errors; precision and nested-blast
+  regressions passed. Checks exercise all 20 operator/skill bindings and actual
+  effects, protection overlap, rank scaling, F mining/occlusion, primary swaps,
+  purchases, save-safe workshop gear, procedural contracts and scarce pickups.
+  These are integration checks, not full-campaign balance or FPS certification.
+- Normal generated-Yard GPU smoke exercised live movement, firing, wheel swaps,
+  all five Scout skills and real F mining under spawning pressure: 101 kills,
+  41 live threats, no script/engine errors. Legacy on-disk save migration and
+  a second startup also passed without touching the real player profile.
+- Mastery-layout/quest/encounter follow-up passed 21 captures and all checks.
+  That subset still reported 20 ObjectDB instances leaked at exit; source
+  verification is not claimed universally warning-free.
 
 The published 0.3.0 export and archive below have not been rebuilt for these
 source changes.

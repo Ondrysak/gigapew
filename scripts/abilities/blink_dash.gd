@@ -57,7 +57,7 @@ func _activate() -> bool:
 	_direction = direction.normalized()
 	var start := player.global_position
 	player.dash(_direction * (dash_distance / dash_duration), dash_duration)
-	player.grant_invulnerability(invulnerability)
+	player.grant_invulnerability(invulnerability * duration_scale())
 	player.camera.fov += fov_punch
 	player.add_shake(0.22)
 	_dashing = dash_duration
@@ -128,7 +128,14 @@ func _scatter_streaks(start: Vector3) -> void:
 		_streak_age[index] = _rng.randf_range(-0.04, 0.0)
 		streak.hide()
 
+func _cancel_effects() -> void:
+	_dashing = 0.0
+	_streak_age.fill(-1.0)
+	_ring_age.fill(-1.0)
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	for index in range(_streaks.size()):
 		var age := _streak_age[index]
 		if age == -1.0:

@@ -83,13 +83,13 @@ func is_deployed() -> bool:
 	return _remaining > 0.0
 
 func _activate() -> bool:
-	_remaining = duration
-	_shield = shield_time
+	_remaining = duration * duration_scale()
+	_shield = shield_time * duration_scale()
 	_heal_accum = 0.0
 	_zap_timer = zap_interval * 0.5
 	_pulse_timer = 0.0
 	_pop = 1.0
-	player.grant_invulnerability(shield_time)
+	player.set_ability_protection(self, true)
 	player.add_shake(0.12)
 	if drone != null:
 		drone.show()
@@ -105,6 +105,8 @@ func _ability_physics(delta: float) -> void:
 		return
 	_remaining -= delta
 	_shield = maxf(0.0, _shield - delta)
+	if _shield <= 0.0:
+		player.set_ability_protection(self, false)
 	_heal_accum += heal_total / duration * delta
 	if _heal_accum >= 1.0:
 		var amount := int(_heal_accum)
@@ -169,6 +171,8 @@ static func _place_beam(beam: Node3D, from: Vector3, to: Vector3, width_scale: f
 func _finish() -> void:
 	_remaining = 0.0
 	_shield = 0.0
+	if is_instance_valid(player):
+		player.set_ability_protection(self, false)
 	if drone != null:
 		drone.hide()
 	if bubble != null:
@@ -177,7 +181,14 @@ func _finish() -> void:
 func _exit_tree() -> void:
 	_finish()
 
+func _cancel_effects() -> void:
+	_finish()
+	_beam_age.fill(-1.0)
+	_pulse_age.fill(-1.0)
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _remaining > 0.0:
 		_animate_drone(delta)
 	for index in range(_beams.size()):

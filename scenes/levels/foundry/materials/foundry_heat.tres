@@ -1,4 +1,4 @@
-[gd_resource type="StandardMaterial3D" load_steps=3 format=3]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://vwuymoj2ompd"]
 
 [sub_resource type="Gradient" id="gradient"]
 offsets = PackedFloat32Array(0, 0.45, 1)
@@ -16,8 +16,7 @@ fill_to = Vector2(1, 0.5)
 resource_name = "FoundryHeat"
 transparency = 1
 blend_mode = 1
-shading_mode = 0
 cull_mode = 2
-no_depth_test = false
+shading_mode = 0
 albedo_color = Color(1, 0.36, 0.07, 0.55)
 albedo_texture = SubResource("falloff")

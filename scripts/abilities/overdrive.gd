@@ -1,8 +1,7 @@
 class_name Overdrive
 extends ActiveAbility
 
-## Overclocks every auto weapon: RunState.cooldown_boost drops to `boost` for
-## `duration` seconds, then returns to 1.
+## Overclocks automated weapons with a source-owned temporary cooldown modifier.
 
 @export var duration := 6.0
 ## Auto-weapon recharge factor while active (lower recharges faster).
@@ -19,12 +18,17 @@ extends ActiveAbility
 var _remaining := 0.0
 var _flare := 0.0
 var _end_audio: AudioStreamPlayer
+var _modifier: StatModifier
 
 func _ready() -> void:
 	super()
+	_modifier = StatModifier.new()
 	_end_audio = make_audio(end_sound, synth_end, -8.0)
 	if aura != null:
 		aura.hide()
+
+func is_ready() -> bool:
+	return super() and _remaining <= 0.0
 
 func is_overdriven() -> bool:
 	return _remaining > 0.0
@@ -34,10 +38,12 @@ func remaining() -> float:
 	return maxf(0.0, _remaining)
 
 func _activate() -> bool:
-	_remaining = duration
+	if run_state == null:
+		return false
+	_modifier.cooldown_multiplier = run_state.cooldown_multiplier * (boost - 1.0)
+	run_state.add_temporary_modifier(_modifier)
+	_remaining = duration * duration_scale()
 	_flare = 1.0
-	if run_state != null:
-		run_state.cooldown_boost = boost
 	player.add_shake(0.2)
 	player.camera.fov += 6.0
 	if aura != null:
@@ -55,8 +61,8 @@ func _ability_physics(delta: float) -> void:
 
 func _finish() -> void:
 	_remaining = 0.0
-	if run_state != null:
-		run_state.cooldown_boost = 1.0
+	if run_state != null and _modifier != null:
+		run_state.remove_temporary_modifier(_modifier)
 	if aura != null:
 		aura.hide()
 
@@ -65,7 +71,12 @@ func _exit_tree() -> void:
 	if _remaining > 0.0:
 		_finish()
 
+func _cancel_effects() -> void:
+	_finish()
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	if _remaining <= 0.0 or aura == null:
 		return
 	_flare = maxf(0.0, _flare - delta * 3.0)

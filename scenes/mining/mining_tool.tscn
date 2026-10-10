@@ -63,8 +63,8 @@ vertex_color_use_as_albedo = true
 albedo_color = Color(1, 1, 1, 1)
 
 [node name="MiningTool" type="Node3D" node_paths=PackedStringArray("model", "spinner")]
-position = Vector3(-0.3, -0.27, -0.5)
-rotation = Vector3(0, -0.14, 0)
+position = Vector3(0.22, -0.2, -0.42)
+rotation = Vector3(0, 0.18, 0)
 script = ExtResource("1_tool")
 model = NodePath("Model")
 spinner = NodePath("Model/Spinner")

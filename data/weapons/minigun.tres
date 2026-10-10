@@ -1,29 +1,22 @@
-[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="WeaponDefinition" format=3 uid="uid://bufse10ak6wu8"]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="Script" uid="uid://cf1j8m68ikt2x" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/minigun.tscn" id="2_view"]
-[ext_resource type="Texture2D" path="res://assets/icons/weapons/minigun.png" id="icon_px"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/secondary/minigun.tscn" id="secondary"]
+[ext_resource type="Texture2D" uid="uid://bq5b3p2rg5r5e" path="res://assets/icons/weapons/minigun.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
 display_name = "Minigun"
-description = "Rotary gun / RMB Overspin doubles cadence for 3 seconds"
+description = "Rotary firearm that builds to full cadence"
 damage = 26
+recoil_degrees = 0.04
 fire_interval = 0.032
 range_meters = 45.0
-pellet_count = 1
-spread_degrees = 0.0
 jitter_degrees = 1.6
 knockback = 2.5
-pierce = 0
 screen_shake = 0.015
-recoil_degrees = 0.04
 view_scene = ExtResource("2_view")
+icon = ExtResource("icon_px")
 spin_up_time = 0.2
 spin_up_start_multiplier = 2.0
 spin_down_time = 0.8
-icon = ExtResource("icon_px")
-magazine_size = 90
-reload_time = 1.35
-secondary_scene = ExtResource("secondary")

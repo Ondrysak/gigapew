@@ -14,14 +14,11 @@ var _tabs: TabBar
 var _workshop: HBoxContainer
 var _legacy: MenuScreen
 var _cards: Array[Dictionary] = []
-var _hand_selector: OptionButton
-## Per hand: {button, badge, name, gadget_icon, gadget, stats}.
-var _hands: Array[Dictionary] = []
+var _primary: Dictionary = {}
 var _armor_badge: ICON_BADGE
 var _armor_label: Label
 var _status: Label
 var _currency: CurrencyBar
-var _selected_hand := 0
 
 func _ready() -> void:
 	theme = MENU_THEME
@@ -44,7 +41,7 @@ func _ready() -> void:
 	_currency.font_size = 17
 	_currency.add_theme_constant_override(&"separation", 18)
 	header.add_child(_currency)
-	rows.add_child(_label("Craft permanent equipment with banked minerals. Select a hand before equipping firearms, melee weapons or gadgets.", 16))
+	rows.add_child(_label("Craft permanent equipment with banked minerals. Equip one primary firearm and one compatible gadget.", 16))
 	# Keep a clear strip of the actual workshop visible above its station tabs.
 	var panorama := Control.new()
 	panorama.custom_minimum_size.y = 84
@@ -138,12 +135,7 @@ func _build_loadout() -> void:
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override(&"separation", 10)
 	scroll.add_child(rows)
-	rows.add_child(_label("THREE-HAND LOADOUT", 20))
-	_hand_selector = OptionButton.new()
-	for index in range(3):
-		_hand_selector.add_item("EQUIP TO HAND %d" % (index + 1))
-	_hand_selector.item_selected.connect(_select_hand)
-	rows.add_child(_hand_selector)
+	rows.add_child(_label("PRIMARY LOADOUT", 20))
 	var armor := HBoxContainer.new()
 	armor.add_theme_constant_override(&"separation", 10)
 	rows.add_child(armor)
@@ -154,48 +146,42 @@ func _build_loadout() -> void:
 	_armor_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_armor_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	armor.add_child(_armor_label)
-	for index in range(3):
-		var select := Button.new()
-		select.add_theme_font_size_override(&"font_size", 16)
-		select.pressed.connect(_select_hand.bind(index))
-		rows.add_child(select)
-		var header := HBoxContainer.new()
-		header.add_theme_constant_override(&"separation", 10)
-		rows.add_child(header)
-		var badge := ICON_BADGE.new(null, 32)
-		header.add_child(badge)
-		var titles := VBoxContainer.new()
-		titles.add_theme_constant_override(&"separation", 2)
-		titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		titles.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		header.add_child(titles)
-		var weapon_name := _label("", 17)
-		weapon_name.add_theme_color_override(&"font_color", Color(1, 0.8, 0.5))
-		titles.add_child(weapon_name)
-		var gadget_row := HBoxContainer.new()
-		gadget_row.add_theme_constant_override(&"separation", 6)
-		titles.add_child(gadget_row)
-		var gadget_icon := GameIcons.rect(null, 16)
-		gadget_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		gadget_row.add_child(gadget_icon)
-		var gadget := _label("", 14)
-		gadget.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		gadget.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		gadget_row.add_child(gadget)
-		var stats := _label("", 14)
-		stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rows.add_child(stats)
-		_hands.append({"button": select, "badge": badge, "name": weapon_name, "gadget_icon": gadget_icon, "gadget": gadget, "stats": stats})
-		var actions := HBoxContainer.new()
-		rows.add_child(actions)
-		for category in [&"weapon", &"gadget"]:
-			var clear := Button.new()
-			clear.text = "RESET WEAPON" if category == &"weapon" else "REMOVE GADGET"
-			clear.add_theme_font_size_override(&"font_size", 12)
-			clear.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			clear.pressed.connect(_unequip.bind(category, index))
-			actions.add_child(clear)
-		rows.add_child(HSeparator.new())
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override(&"separation", 10)
+	rows.add_child(header)
+	var badge := ICON_BADGE.new(null, 48)
+	header.add_child(badge)
+	var titles := VBoxContainer.new()
+	titles.add_theme_constant_override(&"separation", 2)
+	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(titles)
+	var weapon_name := _label("", 17)
+	weapon_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	weapon_name.add_theme_color_override(&"font_color", Color(1, 0.8, 0.5))
+	titles.add_child(weapon_name)
+	var gadget_row := HBoxContainer.new()
+	gadget_row.add_theme_constant_override(&"separation", 6)
+	rows.add_child(gadget_row)
+	var gadget_icon := GameIcons.rect(null, 16)
+	gadget_row.add_child(gadget_icon)
+	var gadget := _label("", 14)
+	gadget.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gadget.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gadget_row.add_child(gadget)
+	var stats := _label("", 14)
+	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rows.add_child(stats)
+	_primary = {"badge": badge, "name": weapon_name, "gadget_icon": gadget_icon, "gadget": gadget, "stats": stats}
+	var actions := HBoxContainer.new()
+	rows.add_child(actions)
+	for category in [&"weapon", &"gadget"]:
+		var clear := Button.new()
+		clear.text = "RESET PRIMARY" if category == &"weapon" else "REMOVE GADGET"
+		clear.add_theme_font_size_override(&"font_size", 12)
+		clear.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		clear.pressed.connect(_unequip.bind(category))
+		actions.add_child(clear)
+	rows.add_child(HSeparator.new())
 	rows.add_child(_label("Perks and talents apply automatically.\nArmory upgrades still apply to every run.", 14))
 
 func _add_recipe(parent: Container, recipe: CraftRecipe) -> void:
@@ -241,7 +227,7 @@ func refresh() -> void:
 		var recipe: CraftRecipe = card.recipe
 		var rank := Profile.craft_rank(recipe.id)
 		var maxed := rank >= recipe.max_rank
-		var equipped := Profile.is_craft_equipped(recipe.id, _selected_hand)
+		var equipped := Profile.is_craft_equipped(recipe.id)
 		var cost := Profile.craft_cost(recipe.id)
 		var panel: PanelContainer = card.panel
 		panel.visible = _tabs.current_tab < CATEGORIES.size() and recipe.category == CATEGORIES[mini(_tabs.current_tab, CATEGORIES.size() - 1)]
@@ -250,7 +236,7 @@ func refresh() -> void:
 		card.badge.show_icon(recipe.display_icon(), BADGE_LIVE if equipped else (BADGE_IDLE.lightened(0.15) if rank > 0 else BADGE_IDLE))
 		if recipe.category in [&"perk", &"talent"] and rank > 0:
 			state.text += "  ·  AUTOMATIC AT DEPLOYMENT"
-		var compatible := recipe.category != &"gadget" or Profile.can_equip_gadget(recipe.id, _selected_hand)
+		var compatible := recipe.category != &"gadget" or Profile.can_equip_gadget(recipe.id)
 		if not compatible:
 			state.text += "  ·  INACTIVE FOR THIS WEAPON"
 		var buy: Button = card.buy
@@ -259,7 +245,7 @@ func refresh() -> void:
 		var equip: Button = card.equip
 		equip.visible = recipe.category in [&"armor", &"weapon", &"gadget"]
 		equip.disabled = rank == 0 or (not equipped and not compatible)
-		equip.text = "UNEQUIP" if equipped else ("EQUIP ARMOR" if recipe.category == &"armor" else "EQUIP H%d" % (_selected_hand + 1))
+		equip.text = "UNEQUIP" if equipped else ("EQUIP ARMOR" if recipe.category == &"armor" else ("EQUIP PRIMARY" if recipe.category == &"weapon" else "EQUIP GADGET"))
 	_workshop.visible = _tabs.current_tab != 5
 	_legacy.visible = _tabs.current_tab == 5
 	if _legacy.visible:
@@ -268,43 +254,31 @@ func refresh() -> void:
 
 func _refresh_loadout() -> void:
 	var preview := RunState.new()
-	preview.initialize_hands(Profile.hand_loadout(Profile.selected_class()))
-	Profile.apply_hand_gadgets(preview.hands)
-	var definitions := preview.hand_definitions()
-	var armor := _equipped_recipe(&"armor", 0)
+	preview.initialize_primary(Profile.primary_loadout(Profile.selected_class()))
+	Profile.apply_primary_gadget(preview.primary)
+	var weapon := preview.primary.definition
+	var armor := _equipped_recipe(&"armor")
 	_armor_badge.show_icon(armor.display_icon() if armor != null else GameIcons.lookup(&"hud", &"armor"), BADGE_LIVE if armor != null else BADGE_IDLE)
 	_armor_label.text = "ARMOR  ·  " + (armor.display_name if armor != null else "Operator standard")
-	for index in range(3):
-		var hand := _hands[index]
-		var selected := index == _selected_hand
-		hand.button.text = "HAND %d%s" % [index + 1, "  ·  SELECTED" if selected else "  ·  SELECT"]
-		var weapon := definitions[index]
-		hand.badge.show_icon(weapon.icon, BADGE_LIVE if selected else BADGE_IDLE)
-		hand.name.text = weapon.display_name
-		var gadget := _equipped_recipe(&"gadget", index)
-		var gadget_active := gadget != null and preview.hands[index].rank(gadget.hand_upgrade) > 0
-		hand.gadget_icon.texture = gadget.display_icon() if gadget != null else null
-		hand.gadget_icon.visible = gadget != null
-		hand.gadget_icon.modulate = Color.WHITE if gadget_active else Color(0.5, 0.5, 0.5)
-		hand.gadget.text = "Gadget: %s%s" % [gadget.display_name if gadget != null else "None", " (inactive)" if gadget != null and not gadget_active else ""]
-		if weapon.kind == WeaponDefinition.Kind.MELEE:
-			hand.stats.text = "%d dmg · %.0f° arc · %.1fm reach\n%.2fs swing cadence · %s · no ammo" % [weapon.damage, weapon.melee_arc_degrees, weapon.range_meters, weapon.fire_interval, DamageType.label(weapon.damage_type)]
-		else:
-			hand.stats.text = "%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · %s" % [weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, DamageType.label(weapon.damage_type)]
+	_primary.badge.show_icon(weapon.icon, BADGE_LIVE)
+	_primary.name.text = weapon.display_name
+	var gadget := _equipped_recipe(&"gadget")
+	var gadget_active := gadget != null and preview.primary.rank(gadget.weapon_upgrade) > 0
+	_primary.gadget_icon.texture = gadget.display_icon() if gadget != null else null
+	_primary.gadget_icon.visible = gadget != null
+	_primary.gadget_icon.modulate = Color.WHITE if gadget_active else Color(0.5, 0.5, 0.5)
+	_primary.gadget.text = "Gadget: %s%s" % [gadget.display_name if gadget != null else "None", " (inactive)" if gadget != null and not gadget_active else ""]
+	_primary.stats.text = "%d dmg · %d projectiles · %.2fs cadence\nSplash %.1fm · Pierce %d · %s\nFive class skills on keys 1–5.\nAim nearby ore to select the drill; hold F to mine." % [weapon.damage, weapon.pellet_count, weapon.fire_interval, weapon.explosion_radius, weapon.pierce, DamageType.label(weapon.damage_type)]
 
-func _equipped_recipe(category: StringName, hand: int) -> CraftRecipe:
+func _equipped_recipe(category: StringName) -> CraftRecipe:
 	for recipe in CraftingCatalog.recipes():
-		if recipe.category == category and Profile.is_craft_equipped(recipe.id, hand):
+		if recipe.category == category and Profile.is_craft_equipped(recipe.id):
 			return recipe
 	return null
 
 func _on_category_changed(_tab: int) -> void:
 	refresh()
 
-func _select_hand(hand: int) -> void:
-	_selected_hand = hand
-	_hand_selector.select(hand)
-	refresh()
 
 func _craft(id: StringName) -> void:
 	var recipe := CraftingCatalog.find(id)
@@ -316,20 +290,20 @@ func _craft(id: StringName) -> void:
 
 func _equip(id: StringName) -> void:
 	var recipe := CraftingCatalog.find(id)
-	if Profile.is_craft_equipped(id, _selected_hand):
-		_unequip(recipe.category, _selected_hand)
+	if Profile.is_craft_equipped(id):
+		_unequip(recipe.category)
 		return
-	if Profile.equip_craft(id, _selected_hand):
-		_status.text = "%s equipped%s. Saved for your next run." % [recipe.display_name, "" if recipe.category == &"armor" else " to hand %d" % (_selected_hand + 1)]
+	if Profile.equip_craft(id):
+		_status.text = "%s equipped. Saved for your next run." % recipe.display_name
 	else:
-		_status.text = "This gadget is not compatible with the selected weapon." if recipe.category == &"gadget" and not Profile.can_equip_gadget(id, _selected_hand) else "Craft this item before equipping it."
+		_status.text = "This gadget is not compatible with the primary firearm." if recipe.category == &"gadget" and not Profile.can_equip_gadget(id) else "Craft this item before equipping it."
 	refresh()
 
-func _unequip(category: StringName, hand: int) -> void:
-	if Profile.unequip_craft(category, hand):
-		_status.text = "%s removed%s. Default equipment restored." % [String(category).capitalize(), "" if category == &"armor" else " from hand %d" % (hand + 1)]
+func _unequip(category: StringName) -> void:
+	if Profile.unequip_craft(category):
+		_status.text = "%s removed. Default equipment restored." % String(category).capitalize()
 	else:
-		_status.text = "No crafted %s equipped in this slot." % category
+		_status.text = "No crafted %s equipped." % category
 	refresh()
 
 func _on_wallet_changed(_id: StringName, _amount: int) -> void:

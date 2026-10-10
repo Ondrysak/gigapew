@@ -1,28 +1,20 @@
-[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="WeaponDefinition" format=3 uid="uid://ccxdqbftduims"]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="Script" uid="uid://cf1j8m68ikt2x" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/autocannon.tscn" id="2_view"]
-[ext_resource type="Texture2D" path="res://assets/icons/weapons/autocannon.png" id="icon_px"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/secondary/autocannon.tscn" id="secondary"]
+[ext_resource type="Texture2D" uid="uid://m1335sojkxcv" path="res://assets/icons/weapons/autocannon.png" id="icon_px"]
 
 [resource]
 script = ExtResource("1_definition")
 display_name = "Autocannon"
-description = "Explosive cannon / RMB Breach Grenade blasts and mines"
+description = "Explosive cannon with enemy-clearing splash"
 damage = 78
+recoil_degrees = 0.24
 fire_interval = 0.19
 range_meters = 50.0
-pellet_count = 1
-spread_degrees = 0.0
 knockback = 14.0
-pierce = 0
 screen_shake = 0.06
-recoil_degrees = 0.24
 view_scene = ExtResource("2_view")
-explosion_radius = 2.2
-explosion_damage_fraction = 0.6
-explosion_knockback = 18.0
 icon = ExtResource("icon_px")
-magazine_size = 10
-reload_time = 1.25
-secondary_scene = ExtResource("secondary")
+explosion_radius = 2.2
+explosion_knockback = 18.0

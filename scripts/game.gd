@@ -20,8 +20,8 @@ const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 @export var upgrade_pool: UpgradePool
 ## Every collectible resource; banked ones become Profile currency.
 @export var resources: Array[ResourceDefinition] = []
-@export var boss_reward: ResourceDefinition
-@export var boss_reward_amount := 1
+@export var stage_reward: ResourceDefinition
+@export var stage_reward_amount := 1
 ## Share of unbanked currency kept when the run ends without clearing a stage.
 @export_range(0.0, 1.0) var death_bank_fraction := 0.5
 @export var offers_per_level := 3
@@ -41,6 +41,8 @@ var round_state := RoundState.LOADING
 var kills := 0
 var run_time := 0.0
 var stages_cleared := 0
+var level_seed := 0
+var quests: LevelQuests
 ## Currency banked into the Profile during this run, id -> amount.
 var run_banked: Dictionary = {}
 var player: ArenaPlayer
@@ -72,7 +74,6 @@ func _ready() -> void:
 	pause_menu.resume_requested.connect(_on_resume)
 	pause_menu.abandon_requested.connect(_on_abandon)
 	hud.setup_resources(resources)
-	hud.setup_upgrades(upgrade_pool)
 	var shop_layer := CanvasLayer.new()
 	shop_layer.name = "RoundShopLayer"
 	shop_layer.layer = 20
@@ -91,8 +92,10 @@ func _new_run() -> void:
 	var permanent := Profile.meta_levels()
 	permanent.merge(Profile.crafting_modifiers())
 	run_state.set_permanent_modifiers(class_definition, permanent)
-	run_state.initialize_hands(Profile.hand_loadout(class_definition))
-	Profile.apply_hand_gadgets(run_state.hands)
+	run_state.initialize_primary(Profile.primary_loadout(class_definition))
+	run_state.available_weapons = Profile.available_primary_weapons(class_definition)
+	run_state.ability_scenes = class_definition.ability_scenes
+	Profile.apply_primary_gadget(run_state.primary)
 	for upgrade in class_definition.starting_upgrades:
 		run_state.apply_upgrade(upgrade)
 	for upgrade in Profile.starting_craft_upgrades():
@@ -110,7 +113,7 @@ func _new_run() -> void:
 	for definition in resources:
 		hud.set_resource(definition.id, 0)
 	hud.set_supply(run_state.supply, run_state.supply_required)
-	_load_stage(0, 0)
+	_load_stage(0)
 
 func _process(delta: float) -> void:
 	if round_state == RoundState.LOADING:
@@ -121,10 +124,9 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(boss_fight):
 		boss_fight = null
 	hud.set_aiming(Input.mouse_mode == Input.MOUSE_MODE_CAPTURED)
-	hud.set_timer(director.remaining(), director.boss_phase)
 	hud.set_hostiles(horde.alive_count)
 	hud.radar.refresh(horde, player, horde.boss_index, pickups, mining_encounter)
-	hud.set_ability(player.ability)
+	hud.set_abilities(player.abilities)
 	hud.set_gunplay(player)
 	hud.set_mining_encounter(mining_encounter, player)
 	hud.set_boss_fight(boss_fight)
@@ -162,7 +164,7 @@ func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
 	_cancel_encounters()
 	player.active = false
-	player.cancel_secondaries()
+	player.cancel_actions()
 	# Rebuild outside input/physics callbacks; the whole old round is freed.
 	action.call_deferred()
 
@@ -174,15 +176,15 @@ func _to_base() -> void:
 	get_tree().set_meta(&"open_base", true)
 	_to_menu()
 
-func _on_shop_continue(hand: int) -> void:
+func _on_shop_continue() -> void:
 	if round_state != RoundState.SHOP:
 		return
 	round_shop.hide()
 	get_tree().paused = false
 	var final_stage := stage_index + 1 >= campaign.size()
-	_request(_to_base if final_stage else _load_stage.bind(stage_index + 1, hand))
+	_request(_to_base if final_stage else _load_stage.bind(stage_index + 1))
 
-func _load_stage(index: int, weapon_slot: int) -> void:
+func _load_stage(index: int, seed_value: int = -1) -> void:
 	get_tree().paused = false
 	round_shop.hide()
 	_cancel_encounters()
@@ -194,11 +196,14 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 		_round.free()
 	stage_index = index
 	var stage := campaign[index]
+	level_seed = _rng.randi() if seed_value < 0 else seed_value
 	_round = Node3D.new()
 	_round.name = "Round"
 	level_mount.add_child(_round)
 	world = stage.world_scene.instantiate() as Node3D
 	world.name = "World"
+	if world is ProceduralWorld:
+		(world as ProceduralWorld).configure(stage, level_seed)
 	_round.add_child(world)
 	horde = horde_scene.instantiate() as Horde
 	_round.add_child(horde)
@@ -206,8 +211,8 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.name = "Player"
 	player.run_state = run_state
 	player.horde = horde
-	player.weapons = run_state.hand_definitions()
-	player.ability_scene = Profile.equipped_ability_scene(class_definition)
+	player.weapon = run_state.primary.definition
+	player.ability_scenes = run_state.ability_scenes
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
 	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"))
@@ -218,6 +223,9 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	player.camera.add_child(tool)
 	tool.setup(player, run_state)
 	deposits = deposit_field_scene.instantiate() as DepositField
+	quests = LevelQuests.new()
+	quests.configure(stage, deposits.deposit_types, level_seed)
+	deposits.configure_quests(quests, level_seed)
 	_round.add_child(deposits)
 	deposits.setup(world, stage.play_area, player, run_state)
 	pickups = pickup_scene.instantiate() as PickupField
@@ -232,13 +240,16 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 	director = HordeDirector.new()
 	director.name = "Director"
 	_round.add_child(director)
-	director.setup(horde, stage.schedule, player)
+	director.setup(horde, stage.schedule, player, level_seed)
 	# Level hazards (barrels, consoles, vents...) stay inert until given the round.
 	for hazard in get_tree().get_nodes_in_group(&"hazard"):
 		if world.is_ancestor_of(hazard):
 			hazard.setup(horde, player, run_state)
 
 	hud.show_stage(stage, index, campaign.size())
+	hud.set_quests(quests, level_seed)
+	quests.changed.connect(hud.refresh_quests)
+	quests.completed.connect(_on_quests_completed.bind(quests.get_instance_id()), CONNECT_DEFERRED)
 	player.health_changed.connect(hud.set_health)
 	player.died.connect(_on_player_died)
 	player.shot_fired.connect(hud.show_shot)
@@ -253,11 +264,9 @@ func _load_stage(index: int, weapon_slot: int) -> void:
 		_round.add_child(mining_encounter)
 		mining_encounter.reward_ready.connect(_on_encounter_reward_ready)
 		mining_encounter.setup(horde, player, run_state, deposits, pickups)
-	player.select_weapon(mini(weapon_slot, player.weapons.size() - 1))
-	hud.set_hands(run_state, player.selected_weapon)
+	hud.set_primary(run_state)
 	hud.set_weapon_mods(run_state)
-	player.weapon_changed.connect(func(_definition: WeaponDefinition, hand: int): hud.set_hands(run_state, hand))
-	player.auto_swapped.connect(hud.show_auto_swap)
+	player.weapon_changed.connect(func(_definition: WeaponDefinition): hud.set_primary(run_state))
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
 	hud.set_kills(kills)
@@ -278,9 +287,12 @@ func _stage_enemies(schedule: SpawnSchedule) -> Array[HordeEnemyDefinition]:
 		definitions.append(schedule.boss)
 	return definitions
 
-func _on_enemy_killed(_definition: HordeEnemyDefinition, _position: Vector3) -> void:
+func _on_enemy_killed(definition: HordeEnemyDefinition, _position: Vector3) -> void:
+	if round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
+		return
 	kills += 1
 	hud.set_kills(kills)
+	quests.record_kill(definition)
 
 func _on_boss_spawned(definition: HordeEnemyDefinition) -> void:
 	hud.show_boss(definition)
@@ -306,7 +318,7 @@ func _present_encounter_reward() -> void:
 	_pending_encounter_rewards -= 1
 	round_state = RoundState.ENCOUNTER_REWARD
 	get_tree().paused = true
-	player.cancel_secondaries()
+	player.cancel_actions()
 	Music.stinger(&"level_up")
 	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state, "VEIN SECURED", "DEFENSE REWARD  ·  CHOOSE ONE UPGRADE")
 
@@ -321,7 +333,7 @@ func _present_level_up() -> void:
 		return
 	round_state = RoundState.LEVEL_UP
 	get_tree().paused = true
-	player.cancel_secondaries()
+	player.cancel_actions()
 	Music.stinger(&"level_up")
 	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state)
 
@@ -329,8 +341,8 @@ func _present_level_up() -> void:
 func grant_upgrade(upgrade: UpgradeDefinition) -> void:
 	run_state.apply_upgrade(upgrade)
 	player.refresh_stats()
-	player.refresh_weapons()
-	hud.set_hands(run_state, player.selected_weapon)
+	player.refresh_weapon()
+	hud.set_primary(run_state)
 	if upgrade.instant_heal > 0:
 		player.heal(upgrade.instant_heal)
 	rack.sync()
@@ -347,7 +359,7 @@ func _on_upgrade_chosen(upgrade: UpgradeDefinition) -> void:
 func _open_pause() -> void:
 	round_state = RoundState.PAUSED
 	get_tree().paused = true
-	player.cancel_secondaries()
+	player.cancel_actions()
 	pause_menu.open()
 
 func _on_resume() -> void:
@@ -357,7 +369,7 @@ func _on_resume() -> void:
 	_resume_play()
 
 func _resume_play() -> void:
-	# Preserve earned choices even when the boss dies during a picker callback.
+	# Preserve earned choices when the contract finishes during a picker callback.
 	if _pending_encounter_rewards > 0:
 		_present_encounter_reward()
 		return
@@ -383,14 +395,23 @@ func _on_abandon() -> void:
 # ---------------------------------------------------------------- run end
 
 func _on_boss_killed() -> void:
-	if round_state == RoundState.SHOP or round_state == RoundState.LOST or round_state == RoundState.LOADING:
+	Music.set_boss(false)
+	hud.boss_panel.hide()
+	hud.contract_box.visible = hud.quest_panel.visible and not hud.death.visible
+
+func _on_quests_completed(source_id: int) -> void:
+	# Bind the id, not the RefCounted itself: no self-owned signal reference cycle.
+	# Deferred until the impact finishes; a simultaneous player death wins.
+	if quests == null or source_id != quests.get_instance_id() or not quests.is_complete() or _stage_clear_pending:
+		return
+	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
 		return
 	_stage_clear_pending = true
 	if is_instance_valid(mining_encounter) and mining_encounter.state == MiningDefense.State.READY:
 		mining_encounter.claim_reward()
 	_cancel_encounters()
 	player.active = false
-	player.cancel_secondaries()
+	player.cancel_actions()
 	if round_state == RoundState.PLAYING:
 		_resume_play()
 
@@ -398,14 +419,14 @@ func _finish_stage_clear() -> void:
 	_stage_clear_pending = false
 	round_state = RoundState.SHOP
 	stages_cleared += 1
-	if boss_reward != null:
-		run_state.add_resource(boss_reward, boss_reward_amount)
+	if stage_reward != null:
+		run_state.add_resource(stage_reward, stage_reward_amount)
 	# Loot still on the floor is swept up with the clear.
 	deposits.collect_all()
 	var banked := _bank(1.0)
 	horde.clear()
 	player.active = false
-	player.cancel_secondaries()
+	player.cancel_actions()
 	player.velocity = Vector3.ZERO
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player.sound.play_cue(&"victory")
@@ -417,7 +438,7 @@ func _finish_stage_clear() -> void:
 	hud.feedback.reset()
 	damage_numbers.hide()
 	get_tree().paused = true
-	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked), player.selected_weapon)
+	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked))
 
 func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:

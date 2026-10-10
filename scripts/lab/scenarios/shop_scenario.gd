@@ -1,107 +1,89 @@
 extends LabScenario
 
 func title() -> String:
-	return "Shop"
+	return "Primary and ability shop"
 
 func summary() -> String:
-	return "Round mineral shop after a boss: stock, hand selection, purchase, maxed ranks, empty wallet"
+	return "Weapon swap/mods, independent paid skills, capped ranks, insufficient currency and readable layout"
 
 func run() -> void:
 	var game := await lab.start_game(&"driller")
-	Profile.add_currency(&"gold", 140)
-	Profile.add_currency(&"crystal", 60)
-	Profile.add_currency(&"shard", 6)
-	game._on_boss_killed()
+	Profile.add_currency(&"gold", 240)
+	Profile.add_currency(&"crystal", 100)
+	Profile.add_currency(&"shard", 12)
+	# The quests scenario separately exercises actual contract extraction.
+	game._finish_stage_clear()
 	await lab.wait(0.5)
 	var screen := game.round_shop
 	var shop := screen._shop
-	lab.check(screen.visible, "boss clear opens the shop")
-	var mods := 0
-	var suits := 0
-	for offer in shop.offers:
-		if int(offer.section) == RoundShop.Section.MODS and RoundShop.is_hand_mod(offer.id):
-			mods += 1
-		elif int(offer.section) == RoundShop.Section.SUIT and not RoundShop.is_hand_mod(offer.id):
-			suits += 1
-	lab.check(mods == RoundShop.MOD_SLOTS and suits == RoundShop.SUIT_SLOTS, "stock rolls %d weapon mods and %d suit systems (%d / %d)" % [RoundShop.MOD_SLOTS, RoundShop.SUIT_SLOTS, mods, suits])
 	await lab.capture("open")
 	var rows: Control = screen.get_child(1).get_child(0)
-	var needed := rows.get_combined_minimum_size().y
-	lab.check(needed <= rows.size.y + 0.5, "layout fits the screen without clipping (needs %d of %d px)" % [needed, rows.size.y])
-	screen._select_hand(2)
-	# Real stock on the default Cleaver: unsupported payload must not debit
-	# minerals or mark the offer sold; switching to a gun can still buy it.
-	var projectile_slot := -1
-	for index in RoundShop.MOD_SLOTS:
-		if StringName(shop.offers[index].id) == &"projectiles":
-			projectile_slot = index
-			break
-	if projectile_slot < 0:
-		projectile_slot = 0
-		shop.offers[0] = {"id": &"projectiles", "section": RoundShop.Section.MODS, "cost": shop._price(&"projectiles"), "sold": false}
-	screen._refresh()
-	var wallet := Profile.currency(&"gold")
-	var crystals := Profile.currency(&"crystal")
-	screen._on_buy(projectile_slot)
-	lab.check(not bool(shop.offers[projectile_slot].sold) and Profile.currency(&"gold") == wallet and Profile.currency(&"crystal") == crystals, "firearm-only payload refuses melee purchase without charging or selling stock")
-	lab.check(shop.can_buy(projectile_slot, 0), "the same stock remains available to the equipped firearm")
-	await lab.wait(0.2)
-	await lab.capture("hand_3")
-	var gold := Profile.currency(&"gold")
+	lab.check(rows.get_combined_minimum_size().y <= rows.size.y + 0.5, "shop's primary, five skills and stock fit the viewport without vertical clipping")
+
 	var bought := -1
 	for index in shop.offers.size():
-		if shop.section_of(index) == RoundShop.Section.MODS and shop.can_buy(index, 2):
+		if shop.section_of(index) == RoundShop.Section.MODS and shop.can_buy(index):
 			bought = index
 			break
-	lab.check(bought >= 0, "a full wallet can afford some stock")
-	if bought >= 0:
-		var id := StringName(shop.offers[bought].id)
-		var rank := shop.rank(id, 2)
-		screen._on_buy(bought)
-		await lab.wait(0.2)
-		lab.check(bool(shop.offers[bought].sold), "purchased card is marked sold")
-		lab.check(Profile.currency(&"gold") < gold, "purchase debited gold (%d -> %d)" % [gold, Profile.currency(&"gold")])
-		lab.check(shop.rank(id, 2) == rank + 1, "%s rank on hand 3 rose to %d" % [id, shop.rank(id, 2)])
-		var crystal := Profile.currency(&"crystal")
-		lab.check(shop.reroll() and bool(shop.offers[bought].sold) and Profile.currency(&"crystal") < crystal, "reroll is paid and keeps the sold card")
-		screen._refresh()
-		await lab.wait(0.2)
-		await lab.capture("bought")
-	# Push hand 1 to (near) its caps: offered mods hit the cap, the rest stop one short.
-	var hand := game.run_state.hands[0]
-	var offered: Array[StringName] = []
-	for index in RoundShop.MOD_SLOTS:
-		offered.append(StringName(shop.offers[index].id))
-	for id: StringName in RoundShop.CATALOG:
-		if not RoundShop.is_hand_mod(id) or RoundShop.track(id) == RoundShop.Track.ELEMENT:
+	if bought < 0:
+		lab.check(false, "funded shop supplies a purchasable primary modification")
+		return
+	var id := StringName(shop.offers[bought].id)
+	var rank := shop.rank(id)
+	var gold := Profile.currency(&"gold")
+	screen._offers[bought].buy.pressed.emit()
+	lab.check(bool(shop.offers[bought].sold) and shop.rank(id) == rank + 1 and Profile.currency(&"gold") < gold, "a real mod button installs one primary rank, charges minerals and sells its stock")
+	var paid_gold := Profile.currency(&"gold")
+	screen._offers[bought].buy.pressed.emit()
+	lab.check(shop.rank(id) == rank + 1 and Profile.currency(&"gold") == paid_gold, "a repeated sold-card action cannot install or charge twice")
+	var rail_index := game.run_state.available_weapons.find(lab.weapon("rail"))
+	screen._selector.select(rail_index)
+	screen._selector.item_selected.emit(rail_index)
+	screen._swap.pressed.emit()
+	lab.check(game.run_state.primary.source == lab.weapon("rail") and game.run_state.primary.rank(id) == rank + 1 and Profile.currency(&"gold") == paid_gold, "shop swaps the single primary free without losing its purchased modification")
+	await lab.capture("swapped_primary")
+
+	for slot in range(5):
+		var cost := shop.ability_cost(slot)
+		var before := Profile.currency(&"gold")
+		screen._abilities[slot].buy.pressed.emit()
+		lab.check(game.run_state.ability_rank(slot) == 1 and Profile.currency(&"gold") == before - int(cost[&"gold"]), "ability %d button upgrades its own slot with the displayed mineral price" % (slot + 1))
+	await lab.capture("five_skills_upgraded")
+	while shop.can_buy_ability(4):
+		screen._abilities[4].buy.pressed.emit()
+	var capped_gold := Profile.currency(&"gold")
+	var capped_crystal := Profile.currency(&"crystal")
+	screen._abilities[4].buy.pressed.emit()
+	lab.check(game.run_state.ability_rank(4) == RunState.MAX_ABILITY_RANK and Profile.currency(&"gold") == capped_gold and Profile.currency(&"crystal") == capped_crystal, "maxed skill refuses further ranks without charging any mineral")
+	await lab.capture("maxed_skill")
+	var crystal := Profile.currency(&"crystal")
+	lab.check(shop.reroll() and bool(shop.offers[bought].sold) and Profile.currency(&"crystal") < crystal, "paid reroll changes unsold stock without reselling the purchased mod")
+	screen._refresh()
+
+	for mod: StringName in RoundShop.CATALOG:
+		if not RoundShop.is_weapon_mod(mod) or RoundShop.track(mod) == RoundShop.Track.ELEMENT:
 			continue
-		var target := RoundShop.max_rank(id) - (0 if id in offered else 1)
-		while hand.rank(id) < target and hand.upgrade(id):
+		while game.run_state.primary.upgrade(mod):
 			pass
-	screen._select_hand(0)
-	await lab.wait(0.2)
-	var before := Profile.currency(&"gold")
-	var capped := -1
 	for index in RoundShop.MOD_SLOTS:
-		var id := StringName(shop.offers[index].id)
-		if not bool(shop.offers[index].sold) and RoundShop.track(id) != RoundShop.Track.ELEMENT:
-			capped = index
-			lab.check(shop.is_maxed(id, 0) and not shop.can_buy(index, 0), "%s is maxed on hand 1 and cannot be bought" % id)
-	if capped >= 0:
-		screen._on_buy(capped)
-		lab.check(Profile.currency(&"gold") == before, "refused maxed purchase charges nothing")
-	await lab.wait(0.2)
-	await lab.capture("maxed")
-	screen._select_hand(2)
-	for id: StringName in [&"gold", &"crystal", &"shard"]:
-		Profile.spend(id, Profile.currency(id))
-	await lab.wait(0.2)
-	await lab.capture("broke")
+		var mod := StringName(shop.offers[index].id)
+		if not bool(shop.offers[index].sold) and RoundShop.track(mod) != RoundShop.Track.ELEMENT:
+			var before := Profile.currency(&"gold")
+			screen._offers[index].buy.pressed.emit()
+			lab.check(shop.is_maxed(mod) and Profile.currency(&"gold") == before, "capped primary modification refuses purchase without spending")
+	screen._refresh()
+	await lab.capture("maxed_primary")
+	for mineral: StringName in [&"gold", &"crystal", &"shard"]:
+		Profile.spend(mineral, Profile.currency(mineral))
+	var skill_rank := game.run_state.ability_rank(0)
+	screen._abilities[0].buy.pressed.emit()
+	lab.check(game.run_state.ability_rank(0) == skill_rank, "insufficient currencies cannot grant a free ability rank")
 	for index in shop.offers.size():
-		lab.check(not shop.can_buy(index, 2), "empty wallet cannot buy offer %d" % index)
+		lab.check(not shop.can_buy(index), "empty wallet cannot buy offer %d" % index)
 	lab.check(not shop.can_reroll(), "empty wallet cannot reroll")
+	await lab.capture("broke")
 	screen._unhandled_input(_escape())
-	lab.check(screen.visible, "Esc does not skip the shop")
+	lab.check(screen.visible, "Esc cannot silently skip the extraction shop")
 
 func _escape() -> InputEventAction:
 	var event := InputEventAction.new()

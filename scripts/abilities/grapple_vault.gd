@@ -72,7 +72,7 @@ func _activate() -> bool:
 	var start := player.global_position
 	var leap := _direction * leap_speed + Vector3.UP * lift_speed
 	player.dash(leap, rise_time)
-	player.grant_invulnerability(invulnerability)
+	player.grant_invulnerability(invulnerability * duration_scale())
 	player.camera.fov += fov_punch
 	player.add_shake(0.15)
 	# The hook bites a little past and above the apex of the rise.
@@ -127,7 +127,15 @@ func _flash_ring(at: Vector3, radius: float) -> void:
 	ring.scale = Vector3.ONE * 0.2
 	ring.show()
 
+func _cancel_effects() -> void:
+	_air_time = -1.0
+	_line_age = -1.0
+	_dust_age = -1.0
+	_ring_age.fill(-1.0)
+
 func _process(delta: float) -> void:
+	if not effects_allowed() or get_tree().paused:
+		return
 	_update_line(delta)
 	for index in range(_rings.size()):
 		var age := _ring_age[index]

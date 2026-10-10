@@ -1,9 +1,8 @@
 class_name ArenaHUD
 extends CanvasLayer
 
-## In-run overlay. Static layout lives in hud.tscn; repeated readouts (resource
-## counters, hand slots, mod icons, death-screen tiles) are built here from data
-## and the boss bar / ability cooldown are drawn by this script.
+## In-run overlay. Static layout lives in hud.tscn; the primary firearm,
+## five independent abilities and loot readouts are built from gameplay data.
 
 const LOW_HEALTH_FRACTION := 0.3
 const BOSS_PHASE_FRACTION := 0.3
@@ -13,18 +12,15 @@ const TRAIL_HOLD := 0.45
 const TRAIL_SPEED := 0.6
 ## Seconds the WARNING banner rests after blinking, before it folds away.
 const WARNING_HOLD := 0.3
-const HAND_SLOT_SIZE := Vector2(136, 0)
 const PICKUP_NOTICE_SECONDS := 3.0
-const AUTO_SWAP_NOTICE_SECONDS := 1.4
 const NOTICE_FADE_SECONDS := 0.4
-const PICKUP_KINDS: Array[StringName] = [&"ammo", &"magnet", &"repair", &"supply"]
+const PICKUP_KINDS: Array[StringName] = [&"magnet", &"repair"]
 const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM", "MORTAR SALVO", "MORTAR SALVO", "CORE EXPOSED", ""]
 
 @export var healthy_color := Color(0.3, 0.9, 0.62)
 @export var critical_color := Color(1.0, 0.24, 0.32)
 @export var boss_color := Color(1.0, 0.36, 0.2)
 @export var boss_phase_color := Color(1.0, 0.16, 0.42)
-@export var hold_out_color := Color(1.0, 0.45, 0.25)
 @export var ability_ready_color := Color(0.4, 1.0, 0.85)
 @export var ability_charging_color := Color(0.55, 0.65, 0.7)
 @export var focus_color := Color(1.0, 0.58, 0.22)
@@ -34,9 +30,13 @@ const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM"
 @onready var resource_row: HBoxContainer = $Stage/Rows/Resources
 @onready var supply_bar: ProgressBar = $Stage/Rows/Supply/Bar
 @onready var supply_value: Label = $Stage/Rows/Supply/Value
-@onready var timer_box: Control = $Timer
-@onready var timer_icon: TextureRect = $Timer/Icon
-@onready var timer_label: Label = $Timer/Label
+@onready var contract_box: Control = $Contract
+@onready var contract_label: Label = $Contract/Label
+@onready var quest_panel: PanelContainer = $Quests
+@onready var quest_list: VBoxContainer = $Quests/Rows/List
+@onready var quest_seed: Label = $Quests/Rows/Header/Seed
+var _quests: LevelQuests
+var _quest_rows: Array[Dictionary] = []
 @onready var boss_panel: Control = $Boss
 @onready var boss_name: Label = $Boss/Row/Info/Header/Name
 @onready var boss_phase: Label = $Boss/Row/Info/Header/Phase
@@ -57,17 +57,12 @@ const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM"
 @onready var health_value: Label = $Vitals/Rows/Health/Bar/Value
 @onready var armor_box: Control = $Vitals/Rows/Health/Armor
 @onready var armor_value: Label = $Vitals/Rows/Health/Armor/Value
-@onready var ability_panel: Control = $Ability
-@onready var ability_slot: Panel = $Ability/Slot
-@onready var ability_icon: TextureRect = $Ability/Icon
-@onready var ability_cooldown: Control = $Ability/Cooldown
-@onready var ability_seconds: Label = $Ability/Seconds
-@onready var ability_label: Label = $Ability/Name
-@onready var hand_title: Label = $Hands/Header/Title
-@onready var mod_row: HBoxContainer = $Hands/Header/Mods
-@onready var hand_row: HBoxContainer = $Hands/Slots
+@onready var ability_row: HBoxContainer = $Abilities
+@onready var primary_title: Label = $Primary/Header/Title
+@onready var mod_row: HBoxContainer = $Primary/Header/Mods
+@onready var primary_row: HBoxContainer = $Primary/Details
+@onready var mining_prompt: Label = $MiningPrompt
 @onready var pickup_notices: VBoxContainer = $PickupNotices
-@onready var auto_swap_notice: HBoxContainer = $AutoSwap
 @onready var warning: Control = $Warning
 @onready var warning_band: Control = $Warning/Band
 @onready var warning_title: Label = $Warning/Content/Text/Title
@@ -91,7 +86,6 @@ const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM"
 @onready var boss_cue_progress: ProgressBar = $BossCue/Rows/Progress
 var _resource_labels: Dictionary = {}
 var _definitions: Array[ResourceDefinition] = []
-var _upgrades: Array[UpgradeDefinition] = []
 var _state: RunState
 var _stage_name := ""
 var _time := 0.0
@@ -101,28 +95,21 @@ var _level := 0
 var _health_fill: StyleBoxFlat
 var _vitals_style: StyleBoxFlat
 var _vitals_border := Color()
-# Hand slots: one Dictionary of child controls per hand.
-var _slots: Array[Dictionary] = []
-var _slot_styles: Array[StyleBoxFlat] = []
-# Ability readout.
-var _ability: ActiveAbility
-var _ability_charge := 1.0
-var _ability_ready := true
-var _ability_style: StyleBoxFlat
+var _primary_icon: TextureRect
+var _primary_stats: Label
+var _abilities: Array[ActiveAbility] = []
+var _ability_tiles: Array[Dictionary] = []
 # Boss frame: real fraction, delayed trail and hit flash.
 var _boss_fraction := 1.0
 var _boss_trail := 1.0
 var _boss_hold := 0.0
 var _boss_flash := 0.0
 var _warning_tween: Tween
-# Four fixed loot rows aggregate independently; auto fire has its own readout.
+# Fixed loot rows aggregate independently.
 var _pickup_rows: Array[Dictionary] = []
-var _pickup_amounts := PackedInt32Array([0, 0, 0, 0])
-var _pickup_times := PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
+var _pickup_amounts := PackedInt32Array([0, 0])
+var _pickup_times := PackedFloat32Array([0.0, 0.0])
 var _pickup_dirty := false
-var _auto_swap_label: Label
-var _auto_swap_icon: TextureRect
-var _auto_swap_time := 0.0
 var _boss_cue_style: StyleBoxFlat
 
 func _ready() -> void:
@@ -131,16 +118,15 @@ func _ready() -> void:
 	_vitals_style = (vitals.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate()
 	vitals.add_theme_stylebox_override(&"panel", _vitals_style)
 	_vitals_border = _vitals_style.border_color
-	_ability_style = (ability_slot.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate()
-	ability_slot.add_theme_stylebox_override(&"panel", _ability_style)
 	_boss_cue_style = (boss_cue.get_theme_stylebox(&"panel") as StyleBoxFlat).duplicate()
 	boss_cue.add_theme_stylebox_override(&"panel", _boss_cue_style)
 	boss_bar.draw.connect(_draw_boss_bar)
-	ability_cooldown.draw.connect(_draw_ability_cooldown)
 	warning_band.draw.connect(_draw_warning_band)
 	death_keys.add_child(_key_hint("R", "RETRY"))
 	death_keys.add_child(_key_hint("ENTER", "MENU"))
 	_build_notices()
+	_build_primary()
+	_build_abilities()
 
 ## Builds one counter per banked resource, styled by its definition.
 func setup_resources(definitions: Array[ResourceDefinition]) -> void:
@@ -167,14 +153,6 @@ func setup_resources(definitions: Array[ResourceDefinition]) -> void:
 		_resource_labels[definition.id] = label
 		set_resource(definition.id, 0)
 
-## Upgrade catalog used to show installed gun mods as icons.
-func setup_upgrades(pool: UpgradePool) -> void:
-	_upgrades.clear()
-	if pool != null:
-		for upgrade in pool.upgrades:
-			if upgrade != null and upgrade.kind == UpgradeDefinition.Kind.GUN_MOD:
-				_upgrades.append(upgrade)
-
 func show_class(definition: ClassDefinition) -> void:
 	class_label.text = definition.display_name.to_upper()
 	class_label.add_theme_color_override(&"font_color", definition.accent_color)
@@ -193,27 +171,30 @@ func set_supply(value: int, required: int) -> void:
 	supply_bar.value = value
 	supply_value.text = "%d / %d" % [value, required]
 
-func set_ability(ability: ActiveAbility) -> void:
-	ability_panel.visible = ability != null
-	if ability == null:
-		_ability = null
-		return
-	if ability != _ability:
-		_ability = ability
-		var texture := ability.icon if ability.icon != null else GameIcons.lookup(&"hud", &"ability")
-		ability_icon.texture = texture
-		ability_label.text = ability.display_name.to_upper()
-	var total := maxf(0.001, ability.cooldown_total())
-	var remaining := ability.cooldown_remaining()
-	var ready := ability.is_ready()
-	var charge := clampf(1.0 - remaining / total, 0.0, 1.0)
-	ability_seconds.text = "" if ready or remaining <= 0.0 else str(ceili(remaining))
-	ability_label.add_theme_color_override(&"font_color", ability_ready_color if ready else ability_charging_color)
-	ability_icon.modulate = Color.WHITE if ready else Color(0.55, 0.6, 0.65)
-	if ready != _ability_ready or not is_equal_approx(charge, _ability_charge):
-		_ability_ready = ready
-		_ability_charge = charge
-		ability_cooldown.queue_redraw()
+func set_abilities(abilities: Array[ActiveAbility]) -> void:
+	_abilities = abilities
+	ability_row.visible = not abilities.is_empty()
+	_refresh_abilities()
+
+func _refresh_abilities() -> void:
+	for index in _ability_tiles.size():
+		var tile: Dictionary = _ability_tiles[index]
+		var root: Control = tile.root
+		root.visible = index < _abilities.size()
+		if not root.visible:
+			continue
+		var ability := _abilities[index]
+		var ready := ability.is_ready()
+		var remaining := ability.cooldown_remaining()
+		(tile.icon as TextureRect).texture = ability.icon
+		(tile.icon as TextureRect).modulate = Color.WHITE if ready else Color(0.45, 0.55, 0.6)
+		(tile.name as Label).text = ability.display_name.to_upper()
+		(tile.rank as Label).text = "R%d" % ability.rank()
+		(tile.status as Label).text = "READY" if ready else "%.1fs" % remaining
+		(tile.status as Label).modulate = ability_ready_color if ready else Color.WHITE
+		(tile.meter as ProgressBar).value = clampf(1.0 - remaining / maxf(0.001, ability.cooldown_total()), 0.0, 1.0)
+		(tile.style as StyleBoxFlat).border_color = ability_ready_color if ready else ability_charging_color.darkened(0.45)
+		root.tooltip_text = "%s · key %d · rank %d / %d\n%s" % [ability.display_name, index + 1, ability.rank(), RunState.MAX_ABILITY_RANK, ability.description]
 
 func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()
@@ -221,15 +202,55 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	warning.hide()
 	objective.hide()
 	boss_cue.hide()
-	timer_box.show()
+	contract_box.show()
 	_last_health = 0
 	_stage_name = "SECTOR %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
 	sector_label.text = "%02d / %02d   %s" % [index + 1, total, stage.display_name.to_upper()]
 	subtitle_label.text = stage.subtitle
-	timer_icon.texture = GameIcons.lookup(&"hud", &"timer")
-	timer_label.remove_theme_color_override(&"font_color")
+	quest_panel.hide()
 	feedback.reset()
 	_reset_notices()
+
+## Build once per level; fracture/death signals update the real contract counters.
+func set_quests(state: LevelQuests, seed_value: int) -> void:
+	_quests = state
+	for child in quest_list.get_children():
+		child.free()
+	_quest_rows.clear()
+	quest_seed.text = "#%08X" % seed_value
+	for quest: Dictionary in state.quests:
+		var row := VBoxContainer.new()
+		row.add_theme_constant_override(&"separation", 3)
+		var line := HBoxContainer.new()
+		line.add_theme_constant_override(&"separation", 8)
+		line.add_child(_icon(quest.icon, 24))
+		var text := _label("%s %s" % ["MINE" if quest.kind == &"mine" else "KILL", String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		line.add_child(text)
+		var count := _label("", 13, Color.WHITE)
+		line.add_child(count)
+		row.add_child(line)
+		var bar := _progress_meter(quest.color)
+		bar.max_value = quest.target
+		row.add_child(bar)
+		quest_list.add_child(row)
+		_quest_rows.append({"row": row, "count": count, "bar": bar})
+	quest_panel.show()
+	refresh_quests()
+
+func refresh_quests() -> void:
+	if _quests == null:
+		return
+	contract_label.text = "CONTRACT  %d / %d" % [_quests.completed_count(), _quests.quests.size()]
+	for index in _quest_rows.size():
+		var quest: Dictionary = _quests.quests[index]
+		var row: Dictionary = _quest_rows[index]
+		var done: bool = quest.progress >= quest.target
+		(row.count as Label).text = "DONE" if done else "%d / %d" % [quest.progress, quest.target]
+		(row.count as Label).modulate = ability_ready_color if done else Color.WHITE
+		(row.bar as ProgressBar).value = quest.progress
+		(row.row as Control).modulate.a = 0.65 if done else 1.0
 
 func set_mining_encounter(encounter: MiningDefense, operator: ArenaPlayer) -> void:
 	objective.visible = is_instance_valid(encounter) and encounter.state != MiningDefense.State.CANCELLED and encounter.state != MiningDefense.State.CLAIMED and not death.visible
@@ -241,7 +262,7 @@ func set_mining_encounter(encounter: MiningDefense, operator: ArenaPlayer) -> vo
 	match encounter.state:
 		MiningDefense.State.WAITING:
 			objective_title.text = "OPTIONAL · DEFENSE VEIN"
-			objective_detail.text = "Mine to start · %dm away\nFinish mining + survive for an upgrade." % distance
+			objective_detail.text = "Aim nearby vein + hold F · %dm away\nFinish mining + survive for an upgrade." % distance
 		MiningDefense.State.MINING:
 			objective_title.text = "DEFENSE VEIN · %d%% MINED" % mined
 			objective_detail.text = "Mine between attacks · %d responders\nProgress stays when you stop drilling." % encounter.enemies_remaining()
@@ -285,15 +306,6 @@ func set_hostiles(count: int) -> void:
 func set_kills(count: int) -> void:
 	kills_label.text = str(count)
 
-func set_timer(seconds_left: float, boss_phase: bool) -> void:
-	if boss_phase:
-		timer_box.visible = not boss_panel.visible and not death.visible
-		timer_label.text = "HOLD OUT"
-		timer_icon.texture = GameIcons.lookup(&"hud", &"boss")
-		timer_label.add_theme_color_override(&"font_color", hold_out_color)
-	else:
-		var whole := ceili(seconds_left)
-		timer_label.text = "%d:%02d" % [whole / 60, whole % 60]
 
 func set_xp(xp: int, required: int, level: int) -> void:
 	level_label.text = "LV %d" % level
@@ -312,7 +324,7 @@ func show_boss(definition: HordeEnemyDefinition) -> void:
 	_boss_flash = 0.0
 	boss_phase.hide()
 	boss_percent.text = "100%"
-	timer_box.hide()
+	contract_box.hide()
 	boss_panel.show()
 	boss_panel.pivot_offset = boss_panel.size * 0.5
 	boss_panel.modulate.a = 0.0
@@ -335,122 +347,27 @@ func set_boss_health(current: float, maximum: float) -> void:
 	boss_percent.add_theme_color_override(&"font_color", boss_phase_color.lightened(0.3) if enraged else Color(1, 0.62, 0.45))
 	boss_bar.queue_redraw()
 
-func set_hands(state: RunState, focused: int) -> void:
+func set_primary(state: RunState) -> void:
 	_state = state
-	if state.hands.is_empty():
+	if state.primary == null or state.primary.definition == null:
 		return
-	focused = clampi(focused, 0, state.hands.size() - 1)
-	while _slots.size() < state.hands.size():
-		_add_hand_slot()
-	for index in _slots.size():
-		var slot: Dictionary = _slots[index]
-		var root: Control = slot.root
-		root.visible = index < state.hands.size()
-		if not root.visible:
-			continue
-		var hand := state.hands[index]
-		var gun := hand.definition
-		var is_focused := index == focused
-		(slot.weapon as TextureRect).texture = gun.icon
-		(slot.type as TextureRect).texture = GameIcons.damage_type(gun.damage_type)
-		var pellets := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponHand.MAX_PROJECTILES)
-		(slot.pellets as Label).text = "%.1fm" % gun.range_meters if gun.kind == WeaponDefinition.Kind.MELEE else "×%d" % pellets
-		var mods: HBoxContainer = slot.mods
-		for child in mods.get_children():
-			child.queue_free()
-		for kind: StringName in hand.upgrade_levels:
-			if int(hand.upgrade_levels[kind]) > 0:
-				var icon := _icon(GameIcons.lookup(&"shop", kind), 16)
-				icon.tooltip_text = String(kind)
-				mods.add_child(icon)
-		var style := _slot_styles[index]
-		style.border_color = focus_color if is_focused else Color(0.1, 0.36, 0.4)
-		style.set_border_width_all(2 if is_focused else 1)
-		style.bg_color = Color(0.07, 0.05, 0.03, 0.92) if is_focused else Color(0.012, 0.03, 0.045, 0.82)
-		var key: Label = slot.key
-		key.add_theme_color_override(&"font_color", focus_color if is_focused else Color(0.5, 0.62, 0.66))
-		root.modulate = Color.WHITE if is_focused else Color(1, 1, 1, 0.78)
-	var selected := state.hands[focused].definition
-	hand_title.text = "HAND %d  ·  %s" % [focused + 1, selected.display_name.to_upper()]
+	var gun := state.primary.definition
+	primary_title.text = gun.display_name.to_upper()
+	_primary_icon.texture = gun.icon
+	var projectiles := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponBuild.MAX_PROJECTILES)
+	_primary_stats.text = "%d DMG · %.1f/s · ×%d\n%s · SPLASH %.1fm · PIERCE %d" % [gun.damage, 1.0 / maxf(0.001, gun.fire_interval), projectiles, DamageType.label(gun.damage_type).to_upper(), gun.explosion_radius, gun.pierce + state.pierce_bonus]
 	_refresh_armor()
 
-## Updated from the actual player state; no menu preview drives these meters.
+## The drill prompt follows the same aimed, close-range target as the view model.
 func set_gunplay(player: ArenaPlayer) -> void:
-	for index in mini(_slots.size(), player.weapons.size()):
-		var slot: Dictionary = _slots[index]
-		var gun := player.weapons[index]
-		if gun == null:
-			(slot.ammo as Label).text = "—"
-			(slot.reserve as Label).text = ""
-			(slot.status as Label).text = "NO WEAPON"
-			continue
-		var focused := index == player.selected_weapon
-		if gun.kind == WeaponDefinition.Kind.MELEE:
-			(slot.ammo as Label).text = "MELEE"
-			(slot.reserve as Label).text = "NO AMMO NEEDED"
-			(slot.status as Label).text = ("SWING" if player.melee_busy() else "SELECTED") if focused else "HOLSTERED"
-			(slot.status as Label).modulate = focus_color if focused else Color(0.65, 0.76, 0.8)
-			(slot.ammo as Label).modulate = Color.WHITE
-			(slot.reserve as Label).modulate = Color.WHITE
-			(slot.reload as ProgressBar).value = player.melee_progress() * 100.0 if focused and player.melee_busy() else 0.0
-		else:
-			var reload := player.is_reloading(index)
-			var rounds := player.ammo(index)
-			var reserve := player.reserve_ammo(index)
-			var capacity := player.reserve_capacity(index)
-			var text := "%d / %d" % [rounds, gun.magazine_size]
-			if (slot.ammo as Label).text != text:
-				(slot.ammo as Label).text = text
-			text = "RES %d / %d" % [reserve, capacity]
-			if (slot.reserve as Label).text != text:
-				(slot.reserve as Label).text = text
-			var status := "READY"
-			var tint := Color(0.65, 0.76, 0.8)
-			if reload:
-				status = "RELOAD %d%%" % roundi(player.reload_progress(index) * 100.0)
-				tint = focus_color
-			elif rounds == 0:
-				status = "OUT OF AMMO" if reserve == 0 else "EMPTY"
-				tint = critical_color.lightened(0.25)
-				if focused:
-					for other in player.weapons.size():
-						if other == index or player.weapons[other] == null:
-							continue
-						if player.weapons[other].kind == WeaponDefinition.Kind.MELEE or (player.ammo(other) > 0 and not player.is_reloading(other)):
-							status = "EMPTY · AUTO"
-							break
-			elif rounds <= maxi(1, gun.magazine_size / 4):
-				status = "LOW AMMO"
-				tint = focus_color
-			elif reserve == 0:
-				status = "LAST MAG"
-				tint = focus_color
-			if (slot.status as Label).text != status:
-				(slot.status as Label).text = status
-			(slot.status as Label).modulate = tint
-			(slot.ammo as Label).modulate = tint if rounds == 0 or status == "LOW AMMO" else Color.WHITE
-			(slot.reserve as Label).modulate = focus_color if reserve == 0 else Color.WHITE
-			(slot.reload as ProgressBar).value = player.reload_progress(index) * 100.0 if reload else 0.0
-		var alternate := player.secondaries[index]
-		var charge := player.secondary_charge[index]
-		(slot.charge as ProgressBar).value = charge
-		var hint := ""
-		if alternate != null:
-			hint = alternate.display_name.to_upper()
-			if focused and player.drilling():
-				hint = "DRILL → CHARGE"
-			elif alternate.charge_progress() > 0.0:
-				hint = "RELEASE · %d%%" % roundi(alternate.charge_progress() * 100.0)
-			elif alternate.is_active():
-				hint = "ALT ACTIVE"
-			elif focused and charge >= alternate.charge_cost:
-				hint = "RMB · " + hint
-		if (slot.alternate as Label).text != hint:
-			(slot.alternate as Label).text = hint
-		(slot.alternate as Label).modulate = ability_ready_color if alternate != null and charge >= alternate.charge_cost else Color(0.65, 0.76, 0.8)
+	var ready := player.mining_ready()
+	mining_prompt.visible = ready and not feedback.terminal and not get_tree().paused
+	mining_prompt.text = "F  ·  MINING" if ready and player.drilling() else "HOLD F  ·  MINE"
+	primary_row.modulate = Color(0.55, 0.65, 0.7) if ready else Color.WHITE
 
-func _gun_meter(color: Color) -> ProgressBar:
+func _progress_meter(color: Color) -> ProgressBar:
 	var meter := ProgressBar.new()
+	meter.max_value = 1.0
 	meter.custom_minimum_size.y = 4
 	meter.show_percentage = false
 	meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -462,26 +379,19 @@ func _gun_meter(color: Color) -> ProgressBar:
 	meter.add_theme_stylebox_override(&"fill", fill)
 	return meter
 
-## Shows installed main-gun mods as icons beside the focused hand's name.
+## Shows installed primary-firearm mods.
 func set_weapon_mods(state: RunState) -> void:
 	_state = state
 	for child in mod_row.get_children():
 		child.queue_free()
-	var installed: Array[UpgradeDefinition] = []
-	for upgrade in _upgrades:
-		if state.level_of(upgrade) > 0:
-			installed.append(upgrade)
-	if not installed.is_empty():
-		mod_row.add_child(_label("MODS", 11, Color(0.5, 0.62, 0.66)))
-	for upgrade in installed:
-		var tip := upgrade.display_name.to_upper()
-		if upgrade.icon != null:
-			var icon := _icon(upgrade.icon, 32)
-			icon.tooltip_text = tip
+	if state.primary != null:
+		for id: StringName in state.primary.upgrade_levels:
+			var rank := state.primary.rank(id)
+			if rank <= 0:
+				continue
+			var icon := _icon(RoundShop.icon(id), 20)
+			icon.tooltip_text = "%s · rank %d" % [RoundShop.CATALOG[id].name, rank]
 			mod_row.add_child(icon)
-		else:
-			var chip := _chip(tip.get_slice(" ", 0), upgrade.accent_color)
-			mod_row.add_child(chip)
 	_refresh_armor()
 
 func show_shot() -> void:
@@ -493,7 +403,7 @@ func show_hit(killed: bool) -> void:
 func show_combo(hits: int, bonus: float) -> void:
 	feedback.show_combo(hits, bonus)
 
-## A bounded row per kind preserves loot feedback during rapid automatic swaps.
+## A bounded row per kind preserves loot feedback during rapid pickups.
 func show_pickup(kind: StringName, amount: int) -> void:
 	if feedback.terminal or amount <= 0:
 		return
@@ -504,19 +414,6 @@ func show_pickup(kind: StringName, amount: int) -> void:
 	_pickup_times[index] = PICKUP_NOTICE_SECONDS
 	_pickup_dirty = true
 
-func show_auto_swap(hand: int) -> void:
-	if feedback.terminal or hand < 0:
-		return
-	var caption := "HAND %d" % [hand + 1]
-	if _state != null and hand < _state.hands.size():
-		var gun := _state.hands[hand].definition
-		if gun != null:
-			caption = gun.display_name.to_upper()
-			_auto_swap_icon.texture = gun.icon
-	_auto_swap_label.text = "AUTO → %d · %s" % [hand + 1, caption]
-	_auto_swap_time = AUTO_SWAP_NOTICE_SECONDS
-	auto_swap_notice.modulate.a = 1.0
-	auto_swap_notice.show()
 
 func _reset_notices() -> void:
 	_pickup_amounts.fill(0)
@@ -524,8 +421,6 @@ func _reset_notices() -> void:
 	_pickup_dirty = false
 	for row in _pickup_rows:
 		(row.root as Control).hide()
-	_auto_swap_time = 0.0
-	auto_swap_notice.hide()
 
 func _advance_notices(delta: float) -> void:
 	# Menus, uncaptured aim and death must not consume a gameplay notification.
@@ -540,14 +435,10 @@ func _advance_notices(delta: float) -> void:
 			var amount := _pickup_amounts[index]
 			var caption := ""
 			match PICKUP_KINDS[index]:
-				&"ammo":
-					caption = "AMMO REPLENISHED" if amount == 1 else "AMMO · %d REFILLS" % amount
 				&"magnet":
 					caption = "%d XP GEMS PULLED" % amount
 				&"repair":
 					caption = "+%d HP REPAIRED" % amount
-				&"supply":
-					caption = "AMMO LANDED NEARBY" if amount == 1 else "%d AMMO SUPPLIES LANDED" % amount
 			(row.label as Label).text = caption
 			root.show()
 		_pickup_times[index] = maxf(0.0, _pickup_times[index] - delta)
@@ -556,11 +447,6 @@ func _advance_notices(delta: float) -> void:
 			root.hide()
 			_pickup_amounts[index] = 0
 	_pickup_dirty = false
-	if _auto_swap_time > 0.0:
-		_auto_swap_time = maxf(0.0, _auto_swap_time - delta)
-		auto_swap_notice.modulate.a = minf(1.0, _auto_swap_time / NOTICE_FADE_SECONDS)
-		if _auto_swap_time <= 0.0:
-			auto_swap_notice.hide()
 
 ## Run-over panel: summary tiles plus the minerals moved into the Profile.
 func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
@@ -568,7 +454,8 @@ func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, ban
 	_reset_notices()
 	boss_panel.hide()
 	warning.hide()
-	timer_box.hide()
+	contract_box.hide()
+	quest_panel.hide()
 	death_where.text = "SIGNAL LOST IN %s" % _stage_name if not _stage_name.is_empty() else "SIGNAL LOST"
 	for child in death_stats.get_children():
 		child.queue_free()
@@ -576,7 +463,7 @@ func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, ban
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(level), "LEVEL"))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"kills"), str(kills), "KILLS"))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"timer"), "%d:%02d" % [whole / 60, whole % 60], "SURVIVED"))
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "BOSSES"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "CONTRACTS"))
 	for child in death_banked.get_children():
 		child.queue_free()
 	for definition in _definitions:
@@ -616,10 +503,7 @@ func _process(delta: float) -> void:
 		_health_fill.border_color = healthy_color.darkened(0.45)
 		_vitals_style.border_color = _vitals_border
 		health_icon.modulate = Color.WHITE
-	if _ability != null:
-		_ability_style.border_color = ability_ready_color.lerp(ability_ready_color.darkened(0.5), pulse * 0.5) if _ability_ready else Color(0.1, 0.32, 0.36)
-		_ability_style.shadow_size = 8 if _ability_ready else 0
-		_ability_style.shadow_color = Color(ability_ready_color, 0.25)
+	_refresh_abilities()
 	if boss_panel.visible:
 		if _boss_hold > 0.0:
 			_boss_hold -= delta
@@ -664,24 +548,6 @@ func _draw_boss_bar() -> void:
 		boss_bar.draw_line(Vector2(tx, -3.0), Vector2(tx, rect.size.y + 3.0), Color(1, 0.85, 0.7, 0.5), 1.0)
 	boss_bar.draw_rect(rect, Color(1, 0.4, 0.25, 0.6), false, 1.0)
 
-func _draw_ability_cooldown() -> void:
-	if _ability == null or _ability_ready or _ability_charge >= 1.0:
-		return
-	var size := ability_cooldown.size
-	var center := size * 0.5
-	var half := center - Vector2(3, 3)
-	# Remaining cooldown as a dark wedge sweeping clockwise from 12 o'clock,
-	# cast onto the square slot so it covers the corners too.
-	var points := PackedVector2Array([center])
-	var start := -PI * 0.5 + TAU * _ability_charge
-	var steps := 40
-	for n in steps + 1:
-		var angle := lerpf(start, -PI * 0.5 + TAU, float(n) / steps)
-		var direction := Vector2(cos(angle), sin(angle))
-		var reach := minf(half.x / maxf(absf(direction.x), 0.0001), half.y / maxf(absf(direction.y), 0.0001))
-		points.append(center + direction * reach)
-	ability_cooldown.draw_colored_polygon(points, Color(0.0, 0.02, 0.03, 0.72))
-	ability_cooldown.draw_arc(center, size.x * 0.5 + 6.0, -PI * 0.5, -PI * 0.5 + TAU * _ability_charge, 40, ability_ready_color, 3.0, true)
 
 func _draw_warning_band() -> void:
 	var size := warning_band.size
@@ -725,8 +591,8 @@ func _refresh_armor() -> void:
 
 # ------------------------------------------------------------------ builders
 func _build_notices() -> void:
-	var glyphs: Array[StringName] = [&"ammo", &"magnet", &"health", &"supply"]
-	var colors: Array[Color] = [Color(1.0, 0.83, 0.46), Color(0.65, 1.0, 0.9), Color(0.65, 1.0, 0.68), Color(1.0, 0.83, 0.46)]
+	var glyphs: Array[StringName] = [&"magnet", &"health"]
+	var colors: Array[Color] = [Color(0.65, 1.0, 0.9), Color(0.65, 1.0, 0.68)]
 	for index in PICKUP_KINDS.size():
 		var root := HBoxContainer.new()
 		root.custom_minimum_size.y = 24
@@ -743,73 +609,50 @@ func _build_notices() -> void:
 		pickup_notices.add_child(root)
 		root.hide()
 		_pickup_rows.append({"root": root, "label": label})
-	_auto_swap_icon = _icon(GameIcons.lookup(&"hud", &"ammo"), 24)
-	auto_swap_notice.add_child(_auto_swap_icon)
-	_auto_swap_label = _label("", 13, focus_color)
-	_auto_swap_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_auto_swap_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_auto_swap_label.add_theme_color_override(&"font_shadow_color", Color(0, 0, 0, 0.95))
-	_auto_swap_label.add_theme_constant_override(&"shadow_offset_x", 1)
-	_auto_swap_label.add_theme_constant_override(&"shadow_offset_y", 1)
-	auto_swap_notice.add_child(_auto_swap_label)
-	auto_swap_notice.hide()
 
-func _add_hand_slot() -> void:
-	var index := _slots.size()
-	var style := StyleBoxFlat.new()
-	style.set_corner_radius_all(5)
-	style.content_margin_left = 8
-	style.content_margin_right = 8
-	style.content_margin_top = 5
-	style.content_margin_bottom = 6
-	_slot_styles.append(style)
-	var root := PanelContainer.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.custom_minimum_size = HAND_SLOT_SIZE
-	root.add_theme_stylebox_override(&"panel", style)
-	var rows := VBoxContainer.new()
-	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rows.add_theme_constant_override(&"separation", 2)
-	root.add_child(rows)
-	var top := HBoxContainer.new()
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top.add_theme_constant_override(&"separation", 4)
-	rows.add_child(top)
-	var key := _label(str(index + 1), 14, Color.WHITE)
-	key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(key)
-	var type := _icon(null, 16)
-	top.add_child(type)
-	var pellets := _label("×1", 13, Color(0.75, 0.85, 0.88))
-	top.add_child(pellets)
-	var weapon := _icon(null, 48)
-	weapon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	rows.add_child(weapon)
-	var ammo := _label("", 14, Color(0.87, 0.95, 0.98))
-	ammo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rows.add_child(ammo)
-	var reserve := _label("", 10, Color(0.7, 0.81, 0.84))
-	reserve.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rows.add_child(reserve)
-	var status := _label("", 10, Color.WHITE)
-	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rows.add_child(status)
-	var reload := _gun_meter(focus_color)
-	rows.add_child(reload)
-	var alternate := _label("", 10, Color.WHITE)
-	alternate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	alternate.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	rows.add_child(alternate)
-	var charge := _gun_meter(ability_ready_color)
-	rows.add_child(charge)
-	var mods := HBoxContainer.new()
-	mods.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mods.custom_minimum_size.y = 16
-	mods.alignment = BoxContainer.ALIGNMENT_CENTER
-	mods.add_theme_constant_override(&"separation", 2)
-	rows.add_child(mods)
-	hand_row.add_child(root)
-	_slots.append({"root": root, "key": key, "type": type, "pellets": pellets, "weapon": weapon, "mods": mods, "ammo": ammo, "reserve": reserve, "status": status, "reload": reload, "alternate": alternate, "charge": charge})
+func _build_primary() -> void:
+	_primary_icon = _icon(null, 48)
+	primary_row.add_child(_primary_icon)
+	_primary_stats = _label("", 13, Color(0.75, 0.85, 0.88))
+	primary_row.add_child(_primary_stats)
+
+func _build_abilities() -> void:
+	for index in range(5):
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.012, 0.03, 0.045, 0.92)
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(4)
+		style.set_content_margin_all(5)
+		var root := PanelContainer.new()
+		root.custom_minimum_size = Vector2(86, 106)
+		root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_theme_stylebox_override(&"panel", style)
+		ability_row.add_child(root)
+		var rows := VBoxContainer.new()
+		rows.add_theme_constant_override(&"separation", 2)
+		root.add_child(rows)
+		var header := HBoxContainer.new()
+		rows.add_child(header)
+		var key := _label(str(index + 1), 14, focus_color)
+		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header.add_child(key)
+		var rank_label := _label("R0", 11, Color(0.75, 0.85, 0.88))
+		header.add_child(rank_label)
+		var icon := _icon(null, 32)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		rows.add_child(icon)
+		var name_label := _label("", 10, Color(0.75, 0.85, 0.88))
+		name_label.custom_minimum_size.x = 76
+		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rows.add_child(name_label)
+		var status := _label("READY", 12, ability_ready_color)
+		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rows.add_child(status)
+		var meter := _progress_meter(ability_ready_color)
+		rows.add_child(meter)
+		_ability_tiles.append({"root": root, "style": style, "icon": icon, "name": name_label, "rank": rank_label, "status": status, "meter": meter})
 
 func _stat_tile(texture: Texture2D, value: String, caption: String) -> Control:
 	var tile := PanelContainer.new()

@@ -20,12 +20,12 @@ const SCENARIOS := {
 	&"recoil": preload("res://scripts/lab/scenarios/recoil_scenario.gd"),
 	&"guns": preload("res://scripts/lab/scenarios/guns_scenario.gd"),
 	&"gunplay": preload("res://scripts/lab/scenarios/gunplay_scenario.gd"),
-	&"ammo": preload("res://scripts/lab/scenarios/ammo_scenario.gd"),
-	&"melee": preload("res://scripts/lab/scenarios/melee_scenario.gd"),
 	&"tempo": preload("res://scripts/lab/scenarios/tempo_scenario.gd"),
 	&"pressure": preload("res://scripts/lab/scenarios/pressure_scenario.gd"),
+	&"levels": preload("res://scripts/lab/scenarios/levels_scenario.gd"),
+	&"quests": preload("res://scripts/lab/scenarios/quests_scenario.gd"),
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
-	&"secondary": preload("res://scripts/lab/scenarios/secondary_scenario.gd"),
+	&"abilities": preload("res://scripts/lab/scenarios/abilities_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
 	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),
@@ -74,20 +74,31 @@ func _ready() -> void:
 
 # ------------------------------------------------------------ helpers for scenarios
 
-## Starts a run for `class_id` on campaign stage `stage`. The spawn director is
-## halted, level-ups are only presented by the scenario and the player cannot
-## be hurt, so the scenario controls everything on screen.
-func start_game(class_id: StringName = &"scout", stage: int = 0) -> ArenaGame:
+## By default scenarios use explicit authored arenas to isolate combat fixtures.
+## `procedural` exercises the real generated campaign instead. The director is
+## halted and player invulnerable until the scenario enables normal combat.
+func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: bool = false, seed_value: int = -1) -> ArenaGame:
 	Profile.selected_class_id = class_id
 	game = GAME_SCENE.instantiate() as ArenaGame
+	if not procedural:
+		game.campaign = game.campaign.duplicate()
+		for index in game.campaign.size():
+			var fixture := game.campaign[index].duplicate() as StageDefinition
+			fixture.world_scene = load("res://scenes/levels/%s.tscn" % fixture.id) as PackedScene
+			if fixture.id == &"yard":
+				fixture.mining_encounter_scene = load("res://scenes/encounters/mining_defense.tscn")
+			game.campaign[index] = fixture
 	add_child(game)
 	await frames(2)
-	if stage != 0:
-		game._load_stage(stage, 0)
+	if stage != 0 or seed_value >= 0:
+		game._load_stage(stage, seed_value)
 		await frames(2)
 	game.run_state.level_up_ready.disconnect(game._on_level_up_ready)
 	game.director.set_physics_process(false)
 	game.player.grant_invulnerability(1.0e9)
+	if not procedural:
+		game.hud.quest_panel.hide()
+		game.hud.contract_box.hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	await frames(2)
 	return game
@@ -97,6 +108,14 @@ func enemy(id: String) -> HordeEnemyDefinition:
 
 func weapon(id: String) -> WeaponDefinition:
 	return load("res://data/weapons/%s.tres" % id) as WeaponDefinition
+
+## Fixtures start with a fresh single-primary build, never mutate authored guns.
+func equip_weapon(id: String) -> void:
+	fire(false)
+	game.player.cancel_actions()
+	game.run_state.initialize_primary(weapon(id))
+	game.player.refresh_weapon()
+	game.hud.set_primary(game.run_state)
 
 ## Floor point `distance` m ahead of the player, `lateral` m to its right.
 func ahead(distance: float, lateral: float = 0.0) -> Vector2:
@@ -128,7 +147,7 @@ func aim_at(point: Vector3) -> void:
 	player.head.rotation.x = clampf(atan2(direction.y, flat), deg_to_rad(-85.0), deg_to_rad(85.0))
 
 ## Geodes have hollow centres. Aim at a live section tip, then prove the physics
-## ray actually hits that deposit before a mining scenario presses RMB.
+## ray actually hits that deposit before a mining scenario holds F.
 func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
 	var player := game.player
 	var stand := deposit.global_position + deposit.global_basis.z.normalized() * distance

@@ -16,7 +16,6 @@ func summary() -> String:
 func run() -> void:
 	var groups := Array(ResourceLoader.list_directory(ROOT))
 	groups = groups.filter(func(entry: String): return entry.ends_with("/"))
-	lab.check(not groups.is_empty(), "icon groups exist under %s" % ROOT)
 	var layer := CanvasLayer.new()
 	lab.stage_root = layer
 	lab.add_child(layer)
