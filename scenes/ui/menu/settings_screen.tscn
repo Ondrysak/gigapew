@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/menu/settings_screen.gd" id="1_settings"]
 
-[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "fullscreen_toggle", "default_focus", "back_button")]
+[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "fullscreen_toggle", "guided_toggle", "reset_tips_button", "default_focus", "back_button")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,6 +20,8 @@ music_value = NodePath("Center/Panel/Rows/Grid/MusicValue")
 sfx_value = NodePath("Center/Panel/Rows/Grid/SfxValue")
 sensitivity_value = NodePath("Center/Panel/Rows/Grid/SensitivityValue")
 fullscreen_toggle = NodePath("Center/Panel/Rows/Fullscreen")
+guided_toggle = NodePath("Center/Panel/Rows/Guided")
+reset_tips_button = NodePath("Center/Panel/Rows/ResetTips")
 default_focus = NodePath("Center/Panel/Rows/Grid/MasterSlider")
 back_button = NodePath("Center/Panel/Rows/Back")
 
@@ -142,6 +144,16 @@ horizontal_alignment = 2
 [node name="Fullscreen" type="CheckButton" parent="Center/Panel/Rows"]
 layout_mode = 2
 text = "FULLSCREEN"
+
+[node name="Guided" type="CheckButton" parent="Center/Panel/Rows"]
+layout_mode = 2
+tooltip_text = "New runs start with one skill and unlock the rest by level; first-time tips explain each system."
+text = "GUIDED START · GRADUAL SKILLS AND TIPS"
+
+[node name="ResetTips" type="Button" parent="Center/Panel/Rows"]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "SHOW TIPS AGAIN"
 
 [node name="Separator2" type="HSeparator" parent="Center/Panel/Rows"]
 layout_mode = 2

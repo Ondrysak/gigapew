@@ -12,6 +12,8 @@ var elapsed := 0.0
 var boss_phase := false
 ## Spawn-rate multiplier, raised while the player extracts.
 var surge := 1.0
+## Seconds before spawning starts (a calm arrival); counts down unpaused.
+var grace := 0.0
 var _horde: Horde
 var _schedule: SpawnSchedule
 var _player: ArenaPlayer
@@ -45,6 +47,9 @@ func release_boss() -> bool:
 
 func _physics_process(delta: float) -> void:
 	if get_tree().paused or _schedule == null or not is_instance_valid(_horde) or not is_instance_valid(_player) or not _player.active:
+		return
+	if grace > 0.0:
+		grace = maxf(0.0, grace - delta)
 		return
 	elapsed = minf(elapsed + delta, maxf(0.0, _schedule.ramp_duration))
 	for w in _schedule.waves.size():

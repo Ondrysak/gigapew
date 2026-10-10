@@ -25,6 +25,8 @@ func configure(stage: StageDefinition, deposit_types: Array[DepositDefinition], 
 	rng.seed = seed
 	var scale := clampf(stage.quest_scale, 1.0, 3.0)
 	for resource_id in [&"gold", &"crystal"]:
+		if _mining_indices.size() >= stage.mine_objectives:
+			break
 		for deposit in deposit_types:
 			if deposit == null or deposit.resource == null or deposit.yield_min <= 0:
 				continue
@@ -59,7 +61,7 @@ func configure(stage: StageDefinition, deposit_types: Array[DepositDefinition], 
 		_kill_indices.clear()
 		return
 	# A seeded partial shuffle never chooses the same species twice.
-	for index in 2:
+	for index in mini(2, stage.kill_objectives):
 		var pick := rng.randi_range(index, candidates.size() - 1)
 		var enemy := candidates[pick]
 		candidates[pick] = candidates[index]

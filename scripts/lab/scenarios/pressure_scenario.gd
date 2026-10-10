@@ -28,11 +28,16 @@ func _stage_pressure() -> void:
 		director.elapsed = 0.0
 		director.boss_phase = false
 		director._rng.seed = 310 + stage
+		# The stage's arrival calm admits nothing; ordinary groups follow promptly.
+		director.grace = game.campaign[stage].spawn_grace
+		for tick in ceili(director.grace / 0.5):
+			director._physics_process(0.5)
+		lab.check(_identities(horde).is_empty(), "stage %d keeps its %.0fs arrival calm free of spawns" % [stage, game.campaign[stage].spawn_grace])
 		# Fixed half-second admissions exercise the director, not resource text.
 		for tick in 12:
 			director._physics_process(0.5)
 		var early := _identities(horde)
-		lab.check(not early.is_empty() and early.size() < schedule.max_alive / 4, "stage %d has immediate ordinary groups without filling its crowd cap" % stage)
+		lab.check(not early.is_empty() and early.size() < schedule.max_alive / 4, "stage %d has prompt ordinary groups after the calm without filling its crowd cap" % stage)
 		for tick in 168:
 			director._physics_process(0.5)
 		var later := _identities(horde)

@@ -357,6 +357,8 @@ func _physics_process(delta: float) -> void:
 		cancel_actions()
 	if captured:
 		for skill in abilities:
+			if run_state != null and not run_state.is_ability_unlocked(skill.slot):
+				continue
 			if Input.is_action_pressed(ABILITY_ACTIONS[skill.slot]) and Input.is_action_just_pressed(ABILITY_ACTIONS[skill.slot]) and skill.activate():
 				ability_used.emit(skill)
 	if _dash_time > 0.0:

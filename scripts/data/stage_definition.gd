@@ -19,6 +19,12 @@ extends Resource
 @export_range(0, 6, 1) var outcrop_count := 2
 ## Mining and kill contract difficulty relative to the first campaign stage.
 @export_range(0.1, 5.0, 0.05) var quest_scale := 1.0
+## Contract size: mining objectives (Gold, then Cinder) and enemy-species kill
+## objectives. Early sectors ask for less while the player learns the loop.
+@export_range(1, 2, 1) var mine_objectives := 2
+@export_range(1, 2, 1) var kill_objectives := 2
+## Seconds of calm on arrival before the director starts spawning.
+@export_range(0.0, 30.0, 0.5) var spawn_grace := 0.0
 @export var schedule: SpawnSchedule
 ## Explicit authored encounter fixtures; procedural campaign does not launch them.
 @export var mining_encounter_scene: PackedScene

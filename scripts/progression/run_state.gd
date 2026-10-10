@@ -11,11 +11,18 @@ signal level_up_ready
 ## Unbanked amount of a resource collected so far.
 signal resources_changed(id: StringName, amount: int)
 signal supply_changed(value: int, required: int)
+## A hero skill slot became usable (guided start reveals them by level).
+signal ability_unlocked(slot: int)
 
 const MAX_WEAPONS := 4
 const BASE_CRIT_MULTIPLIER := 2.0
 ## Precision adds one base-damage unit; never stacks a second random multiplier.
 const WEAK_SPOT_CRIT_BONUS := 1.0
+## Guided start: player level at which each skill slot (1–5) unlocks, and the
+## levels at which perk and gun-mod cards join the level-up pool.
+const ABILITY_UNLOCK_LEVELS: Array[int] = [1, 2, 3, 5, 7]
+const PERK_UNLOCK_LEVEL := 3
+const GUN_MOD_UNLOCK_LEVEL := 5
 
 var level := 1
 var xp := 0
@@ -35,6 +42,9 @@ var available_weapons: Array[WeaponDefinition] = []
 var ability_scenes: Array[PackedScene] = []
 const MAX_ABILITY_RANK := 3
 var ability_ranks := PackedInt32Array([0, 0, 0, 0, 0])
+## Guided runs reveal skills and upgrade kinds gradually; otherwise all at once.
+var guided := false
+var unlocked_abilities := 5
 var _ability_offers: Dictionary = {}
 var _ability_metadata: Dictionary = {}
 var shop_levels: Dictionary = {}
@@ -102,6 +112,8 @@ func add_xp(amount: float) -> void:
 		xp_required = required_for(level)
 		gained += 1
 	pending_level_ups += gained
+	if gained > 0:
+		_refresh_unlocks()
 	xp_changed.emit(xp, xp_required, level)
 	for _index in range(gained):
 		level_up_ready.emit()
@@ -112,6 +124,29 @@ func consume_level_up() -> bool:
 	pending_level_ups -= 1
 	return true
 
+## Call once at run start. A guided run begins with only the first skill.
+func start_guided(enabled: bool) -> void:
+	guided = enabled
+	unlocked_abilities = _unlocks_for(level) if enabled else 5
+
+func is_ability_unlocked(slot: int) -> bool:
+	return slot >= 0 and slot < unlocked_abilities
+
+func ability_unlock_level(slot: int) -> int:
+	return ABILITY_UNLOCK_LEVELS[clampi(slot, 0, 4)] if guided else 1
+
+func _unlocks_for(p_level: int) -> int:
+	var count := 0
+	for required in ABILITY_UNLOCK_LEVELS:
+		if p_level >= required:
+			count += 1
+	return count
+
+func _refresh_unlocks() -> void:
+	var reached := _unlocks_for(level) if guided else 5
+	while unlocked_abilities < reached:
+		unlocked_abilities += 1
+		ability_unlocked.emit(unlocked_abilities - 1)
 
 func initialize_primary(source: WeaponDefinition) -> void:
 	primary = WeaponBuild.new()
@@ -129,7 +164,7 @@ func ability_rank(slot: int) -> int:
 	return ability_ranks[slot] if slot >= 0 and slot < ability_ranks.size() else 0
 
 func can_upgrade_ability(slot: int) -> bool:
-	return slot >= 0 and slot < 5 and slot < ability_scenes.size() \
+	return is_ability_unlocked(slot) and slot < ability_scenes.size() \
 			and ability_scenes[slot] != null and ability_rank(slot) < MAX_ABILITY_RANK
 
 func upgrade_ability(slot: int) -> bool:
@@ -353,6 +388,10 @@ func _is_eligible(upgrade: UpgradeDefinition) -> bool:
 	if upgrade.kind == UpgradeDefinition.Kind.ABILITY:
 		return can_upgrade_ability(upgrade.ability_slot)
 	if level_of(upgrade) >= upgrade.max_level:
+		return false
+	if guided and upgrade.kind == UpgradeDefinition.Kind.PERK and level < PERK_UNLOCK_LEVEL:
+		return false
+	if guided and upgrade.kind == UpgradeDefinition.Kind.GUN_MOD and level < GUN_MOD_UNLOCK_LEVEL:
 		return false
 	if upgrade.kind == UpgradeDefinition.Kind.WEAPON:
 		if upgrade.weapon_scene == null:

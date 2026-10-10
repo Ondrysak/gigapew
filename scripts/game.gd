@@ -97,6 +97,8 @@ func _new_run() -> void:
 	run_state.initialize_primary(Profile.primary_loadout(class_definition))
 	run_state.available_weapons = Profile.available_primary_weapons(class_definition)
 	run_state.ability_scenes = class_definition.ability_scenes
+	run_state.start_guided(bool(Profile.settings.get("guided_start", true)))
+	run_state.ability_unlocked.connect(_on_ability_unlocked)
 	Profile.apply_primary_gadget(run_state.primary)
 	for upgrade in class_definition.starting_upgrades:
 		run_state.apply_upgrade(upgrade)
@@ -133,6 +135,8 @@ func _process(delta: float) -> void:
 	hud.set_objectives(mining_encounter, extraction, player)
 	hud.set_boss_fight(boss_fight)
 	if round_state == RoundState.PLAYING:
+		if player.mining_ready():
+			hud.tutor.offer(&"mining")
 		run_time += delta
 		_music_timer -= delta
 		if _music_timer <= 0.0:
@@ -245,6 +249,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	director.name = "Director"
 	_round.add_child(director)
 	director.setup(horde, stage.schedule, player, level_seed)
+	director.grace = stage.spawn_grace
 	# Level hazards (barrels, consoles, vents...) stay inert until given the round.
 	for hazard in get_tree().get_nodes_in_group(&"hazard"):
 		if world.is_ancestor_of(hazard):
@@ -255,6 +260,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	quests.changed.connect(hud.refresh_quests)
 	quests.completed.connect(_on_quests_completed.bind(quests.get_instance_id()), CONNECT_DEFERRED)
 	player.health_changed.connect(hud.set_health)
+	player.health_changed.connect(_on_health_for_tips)
 	player.died.connect(_on_player_died)
 	player.shot_fired.connect(hud.show_shot)
 	player.hit_confirmed.connect(hud.show_hit)
@@ -282,6 +288,28 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	# Level-ups banked while a stage was ending are offered on arrival.
 	if run_state.pending_level_ups > 0:
 		_present_level_up()
+	hud.tutor.clear()
+	if index == 0:
+		hud.tutor.offer(&"basics")
+		hud.tutor.offer(&"contract")
+		if run_state.guided and not player.abilities.is_empty():
+			_offer_skill_tip(player.abilities[0])
+
+## Guided start: a level reveals a new skill slot.
+func _on_ability_unlocked(slot: int) -> void:
+	if not is_instance_valid(player) or slot >= player.abilities.size():
+		return
+	hud.show_skill_unlocked(player.abilities[slot])
+	_offer_skill_tip(player.abilities[slot])
+	if run_state.is_ability_unlocked(3) and run_state.is_ability_unlocked(4):
+		hud.tutor.offer(&"combos")
+
+func _offer_skill_tip(skill: ActiveAbility) -> void:
+	hud.tutor.offer(StringName("skill_" + skill.display_name.to_snake_case()), "NEW SKILL · KEY %d · %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.description)
+
+func _on_health_for_tips(current: int, maximum: int) -> void:
+	if current > 0 and current < maximum * 0.4:
+		hud.tutor.offer(&"repair")
 
 func _stage_enemies(schedule: SpawnSchedule) -> Array[HordeEnemyDefinition]:
 	var definitions: Array[HordeEnemyDefinition] = []
@@ -427,6 +455,7 @@ func _on_quests_completed(source_id: int) -> void:
 	hud.radar.set_extraction_point(Vector2(at.x, at.z))
 	hud.show_extraction_warning()
 	Music.set_boss(true)
+	hud.tutor.offer(&"extraction")
 
 ## The farthest clear room of a generated level; authored arenas use the spawn.
 func _extraction_point() -> Vector3:
@@ -474,6 +503,7 @@ func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:
 		return
 	round_state = RoundState.LOST
+	hud.tutor.clear()
 	_cancel_encounters()
 	var banked := _bank(death_bank_fraction)
 	_record_run(false)

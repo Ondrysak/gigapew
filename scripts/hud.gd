@@ -58,6 +58,10 @@ var _quest_rows: Array[Dictionary] = []
 @onready var armor_box: Control = $Vitals/Rows/Health/Armor
 @onready var armor_value: Label = $Vitals/Rows/Health/Armor/Value
 @onready var ability_row: HBoxContainer = $Abilities
+@onready var controls_label: Label = $Controls
+## First-time tips, built in code above the skill bar.
+var tutor: Tutor
+var _unlocked_shown := -1
 @onready var primary_title: Label = $Primary/Header/Title
 @onready var mod_row: HBoxContainer = $Primary/Header/Mods
 @onready var primary_row: HBoxContainer = $Primary/Details
@@ -136,6 +140,8 @@ func _ready() -> void:
 	_build_primary()
 	_build_abilities()
 	_build_combo_callout()
+	tutor = Tutor.new()
+	add_child(tutor)
 
 func _build_combo_callout() -> void:
 	_combo_callout = Label.new()
@@ -154,13 +160,26 @@ func _build_combo_callout() -> void:
 	_combo_callout.hide()
 	add_child(_combo_callout)
 
-## Pops a short named callout above the crosshair when two skills combine.
+## Pops a short named callout below the crosshair when two skills combine.
 func show_ability_combo(id: StringName) -> void:
 	if feedback.terminal or not COMBO_CALLOUTS.has(id):
 		return
 	var entry: Array = COMBO_CALLOUTS[id]
-	_combo_callout.text = "COMBO  ·  %s" % entry[0]
-	_combo_callout.add_theme_color_override(&"font_color", entry[1])
+	_callout("COMBO  ·  %s" % entry[0], entry[1])
+
+## Guided start: a new skill slot announces itself and its tile pops in.
+func show_skill_unlocked(skill: ActiveAbility) -> void:
+	if feedback.terminal:
+		return
+	_callout("NEW SKILL  ·  %d  %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.accent_color.lightened(0.2))
+	if skill.slot < _ability_tiles.size():
+		var root: Control = _ability_tiles[skill.slot].root
+		root.show()
+		_pop(root, 1.35)
+
+func _callout(text: String, color: Color) -> void:
+	_combo_callout.text = text
+	_combo_callout.add_theme_color_override(&"font_color", color)
 	_combo_callout.modulate.a = 1.0
 	_combo_callout.scale = Vector2(1.35, 1.35)
 	_combo_callout.show()
@@ -168,7 +187,7 @@ func show_ability_combo(id: StringName) -> void:
 		_combo_tween.kill()
 	_combo_tween = create_tween()
 	_combo_tween.tween_property(_combo_callout, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_combo_tween.tween_interval(0.55)
+	_combo_tween.tween_interval(0.9)
 	_combo_tween.tween_property(_combo_callout, "modulate:a", 0.0, 0.3)
 	_combo_tween.tween_callback(_combo_callout.hide)
 
@@ -220,25 +239,50 @@ func set_abilities(abilities: Array[ActiveAbility]) -> void:
 	ability_row.visible = not abilities.is_empty()
 	_refresh_abilities()
 
+## Unlocked skills show live state; under guided start the next locked slot
+## shows as a dim teaser with its unlock level, and later ones stay hidden.
 func _refresh_abilities() -> void:
+	var unlocked_count := 0
 	for index in _ability_tiles.size():
 		var tile: Dictionary = _ability_tiles[index]
 		var root: Control = tile.root
-		root.visible = index < _abilities.size()
-		if not root.visible:
+		if index >= _abilities.size():
+			root.visible = false
 			continue
 		var ability := _abilities[index]
+		var state := ability.run_state
+		var unlocked := state == null or state.is_ability_unlocked(index)
+		var teaser := not unlocked and state.is_ability_unlocked(index - 1)
+		root.visible = unlocked or teaser
+		if unlocked:
+			unlocked_count += 1
+		if not root.visible:
+			continue
+		(tile.name as Label).text = ability.display_name.to_upper()
+		(tile.icon as TextureRect).texture = ability.icon
+		if teaser:
+			var level := state.ability_unlock_level(index)
+			(tile.icon as TextureRect).modulate = Color(0.3, 0.36, 0.42, 0.55)
+			(tile.rank as Label).text = ""
+			(tile.status as Label).text = "LV %d" % level
+			(tile.status as Label).modulate = Color(0.55, 0.62, 0.68)
+			(tile.meter as ProgressBar).value = 0.0
+			(tile.style as StyleBoxFlat).border_color = Color(0.2, 0.26, 0.3)
+			root.tooltip_text = "Unlocks at level %d · key %d\n%s" % [level, index + 1, ability.description]
+			continue
 		var ready := ability.is_ready()
 		var remaining := ability.cooldown_remaining()
-		(tile.icon as TextureRect).texture = ability.icon
 		(tile.icon as TextureRect).modulate = Color.WHITE if ready else Color(0.45, 0.55, 0.6)
-		(tile.name as Label).text = ability.display_name.to_upper()
 		(tile.rank as Label).text = "R%d" % ability.rank()
 		(tile.status as Label).text = "READY" if ready else "%.1fs" % remaining
 		(tile.status as Label).modulate = ability_ready_color if ready else Color.WHITE
 		(tile.meter as ProgressBar).value = clampf(1.0 - remaining / maxf(0.001, ability.cooldown_total()), 0.0, 1.0)
 		(tile.style as StyleBoxFlat).border_color = ability_ready_color if ready else ability_charging_color.darkened(0.45)
 		root.tooltip_text = "%s · key %d · rank %d / %d\n%s" % [ability.display_name, index + 1, ability.rank(), RunState.MAX_ABILITY_RANK, ability.description]
+	if unlocked_count != _unlocked_shown:
+		_unlocked_shown = unlocked_count
+		var skills := "1 SKILL" if unlocked_count <= 1 else "1–%d SKILLS" % unlocked_count
+		controls_label.text = "WASD MOVE · SPACE JUMP · LMB FIRE · WHEEL SWAP GUN · F MINE NEAR ORE · %s · ESC PAUSE" % skills
 
 func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()

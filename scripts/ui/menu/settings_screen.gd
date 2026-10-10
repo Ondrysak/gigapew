@@ -12,6 +12,8 @@ extends MenuScreen
 @export var sfx_value: Label
 @export var sensitivity_value: Label
 @export var fullscreen_toggle: BaseButton
+@export var guided_toggle: BaseButton
+@export var reset_tips_button: BaseButton
 
 func _ready() -> void:
 	super()
@@ -22,6 +24,8 @@ func _ready() -> void:
 	sfx_slider.value_changed.connect(_on_volume_changed.bind("sfx_volume", sfx_value))
 	sensitivity_slider.value_changed.connect(_on_sensitivity_changed)
 	fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
+	guided_toggle.toggled.connect(func(pressed: bool): Profile.set_setting("guided_start", pressed))
+	reset_tips_button.pressed.connect(_on_reset_tips)
 
 func refresh() -> void:
 	var settings := Profile.settings
@@ -30,6 +34,8 @@ func refresh() -> void:
 	sfx_slider.set_value_no_signal(settings.sfx_volume)
 	sensitivity_slider.set_value_no_signal(settings.mouse_sensitivity)
 	fullscreen_toggle.set_pressed_no_signal(settings.fullscreen)
+	guided_toggle.set_pressed_no_signal(settings.guided_start)
+	reset_tips_button.text = "SHOW TIPS AGAIN"
 	_show_volume(master_value, settings.master_volume)
 	_show_volume(music_value, settings.music_volume)
 	_show_volume(sfx_value, settings.sfx_volume)
@@ -45,6 +51,10 @@ func _on_sensitivity_changed(value: float) -> void:
 
 func _on_fullscreen_toggled(pressed: bool) -> void:
 	Profile.set_setting("fullscreen", pressed)
+
+func _on_reset_tips() -> void:
+	Profile.reset_tips()
+	reset_tips_button.text = "TIPS WILL SHOW AGAIN"
 
 func _show_volume(label: Label, value: float) -> void:
 	label.text = "%d%%" % roundi(value * 100.0)

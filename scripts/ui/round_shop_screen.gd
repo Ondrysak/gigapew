@@ -217,6 +217,15 @@ func _refresh() -> void:
 		card.icon.texture = preview.icon
 		card.title.text = preview.name
 		card.rank.text = "R%d / %d" % [preview.rank, preview.max_rank]
+		if not _state.is_ability_unlocked(slot):
+			var level := _state.ability_unlock_level(slot)
+			card.stats.text = "Unlocks at level %d" % level
+			card.panel.tooltip_text = String(preview.description)
+			card.price.text = "LOCKED"
+			card.price.modulate = BAD
+			card.buy.disabled = true
+			card.buy.text = "LV %d" % level
+			continue
 		var maxed := not _state.can_upgrade_ability(slot)
 		card.stats.text = "NOW " + String(preview.from)
 		if not maxed:

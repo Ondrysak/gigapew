@@ -21,6 +21,8 @@ const DEFAULT_SETTINGS := {
 	"sfx_volume": 0.8,
 	"mouse_sensitivity": 1.0,
 	"fullscreen": false,
+	## Gradual skill unlocks, level-gated upgrade kinds and first-time tips.
+	"guided_start": true,
 }
 const DEFAULT_RECORDS := {
 	"best_time": 0.0,
@@ -53,6 +55,8 @@ var records: Dictionary = {}
 ## master_volume, music_volume, sfx_volume (0..1), mouse_sensitivity
 ## (multiplier), fullscreen (bool). Change through set_setting().
 var settings: Dictionary = {}
+## Ids of first-time tips already shown; persisted so each appears once.
+var _seen_tips: Dictionary = {}
 
 var _currencies: Dictionary = {}
 var _unlocked_classes: Dictionary = {}
@@ -395,6 +399,20 @@ func set_setting(key: String, value: Variant) -> void:
 	apply_settings()
 	_mutated()
 
+func tip_seen(id: StringName) -> bool:
+	return _seen_tips.has(String(id))
+
+func mark_tip_seen(id: StringName) -> void:
+	if tip_seen(id):
+		return
+	_seen_tips[String(id)] = true
+	_mutated()
+
+## Settings → Reset tips: every first-time tip appears again.
+func reset_tips() -> void:
+	_seen_tips.clear()
+	_mutated()
+
 func apply_settings() -> void:
 	for key: String in VOLUME_BUSES:
 		var bus := AudioServer.get_bus_index(VOLUME_BUSES[key])
@@ -429,6 +447,7 @@ func save() -> void:
 		"equipped_gadget": String(_equipped_gadget),
 		"records": records,
 		"settings": settings,
+		"seen_tips": _seen_tips.keys(),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -505,6 +524,10 @@ func _apply_data(data: Dictionary) -> void:
 		for key in DEFAULT_SETTINGS:
 			if saved_settings.has(key):
 				settings[key] = _sanitize_setting(key, saved_settings[key])
+	var tips: Variant = data.get("seen_tips", [])
+	if tips is Array:
+		for id in tips:
+			_seen_tips[str(id)] = true
 
 func _reset() -> void:
 	selected_class_id = &""
@@ -517,6 +540,7 @@ func _reset() -> void:
 	_equipped_gadget = &""
 	records = DEFAULT_RECORDS.duplicate()
 	settings = DEFAULT_SETTINGS.duplicate()
+	_seen_tips.clear()
 
 ## Legacy saves stored three slots; take the first surviving crafted entry.
 ## Removed melee recipes are absent from the catalog and skipped safely.
@@ -539,7 +563,7 @@ func _load_craft_id(saved: Variant, category: StringName) -> StringName:
 
 func _sanitize_setting(key: String, value: Variant) -> Variant:
 	match key:
-		"fullscreen":
+		"fullscreen", "guided_start":
 			return value if value is bool else _number(value) != 0.0
 		"mouse_sensitivity":
 			return clampf(_number(value, 1.0), SENSITIVITY_RANGE.x, SENSITIVITY_RANGE.y)

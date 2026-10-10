@@ -170,7 +170,11 @@ func _drill_input(game: ArenaGame) -> void:
 	game.get_tree().paused = false
 
 func _fire_input(game: ArenaGame) -> void:
-	var quest: Dictionary = game.quests.quests[2]
+	var quest: Dictionary = {}
+	for candidate: Dictionary in game.quests.quests:
+		if candidate.kind == &"kill":
+			quest = candidate
+			break
 	var enemy := quest.definition as HordeEnemyDefinition
 	game.horde.set_physics_process(false)
 	game.horde.clear()

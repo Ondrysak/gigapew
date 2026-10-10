@@ -28,6 +28,7 @@ const SCENARIOS := {
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
 	&"abilities": preload("res://scripts/lab/scenarios/abilities_scenario.gd"),
 	&"combos": preload("res://scripts/lab/scenarios/combos_scenario.gd"),
+	&"onboarding": preload("res://scripts/lab/scenarios/onboarding_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
 	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),
@@ -79,8 +80,10 @@ func _ready() -> void:
 ## By default scenarios use explicit authored arenas to isolate combat fixtures.
 ## `procedural` exercises the real generated campaign instead. The director is
 ## halted and player invulnerable until the scenario enables normal combat.
-func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: bool = false, seed_value: int = -1) -> ArenaGame:
+## Fixtures run as an experienced player (all skills, no tips) unless `guided`.
+func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: bool = false, seed_value: int = -1, guided: bool = false) -> ArenaGame:
 	Profile.selected_class_id = class_id
+	Profile.set_setting("guided_start", guided)
 	game = GAME_SCENE.instantiate() as ArenaGame
 	if not procedural:
 		game.campaign = game.campaign.duplicate()

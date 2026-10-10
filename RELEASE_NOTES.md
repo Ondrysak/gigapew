@@ -1,5 +1,15 @@
 # Unreleased source changes
 
+- Guided start (Settings, on by default) introduces the game gradually. Runs
+  begin with one skill; the others unlock at levels 2, 3, 5 and 7 with a NEW
+  SKILL callout, a dim next-skill teaser on the HUD and locked shop cards.
+  Perks join level-up cards at level 3, gun mods at level 5. One-time tips
+  explain movement, the contract, each new skill, mining, low health,
+  extraction and combos; *Show tips again* resets them. Turning it off
+  restores the full kit from the start. Independently, the Yard contract asks
+  for one mining and one kill objective (Foundry 2 + 1, Reactor 2 + 2), and the
+  Yard opens with a 12 s calm before spawning. The controls footer lists only
+  unlocked actions. New `onboarding` lab scenario.
 - Extraction: completing the contract no longer opens the shop instantly. A
   drop pod lands in the farthest clear room, marked by a tall green beam and a
   radar diamond. Hold its ring for 10 s (progress kept while you step out) as

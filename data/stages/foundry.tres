@@ -11,6 +11,7 @@ display_name = "The Foundry"
 subtitle = "Sector 02 / furnace transfer hall"
 world_scene = ExtResource("world")
 play_area = Rect2(-60, -36, 120, 72)
+kill_objectives = 1
 layout_theme = &"foundry"
 cover_count = 20
 overlook_count = 2
