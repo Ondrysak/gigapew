@@ -4,7 +4,7 @@ func title() -> String:
 	return "Mining and kill contracts"
 
 func summary() -> String:
-	return "Real drill and firearm progress, exact species, no deadline and all three extractions"
+	return "Real drill and firearm progress, exact species, no deadline and all three pod extractions"
 
 func run() -> void:
 	var game := await lab.start_game(&"driller", 0, true, 8721)
@@ -51,7 +51,7 @@ func run() -> void:
 			await lab.frames(2)
 			lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "stage %d stays playable when kill objectives finish before mining" % stage)
 			_mine_targets(game)
-		await lab.wait(0.4)
+		await _extract(game, stage)
 		lab.check(game.round_state == ArenaGame.RoundState.SHOP and game.round_shop.visible and game.get_tree().paused, "stage %d extracts into the real shop only after every objective" % stage)
 		lab.check(game.stages_cleared == stage + 1 and complete_signals[0] == 1, "stage %d counts one completed contract and emits completion once" % stage)
 		await lab.capture("%s_extracted" % game.campaign[stage].id)
@@ -72,6 +72,49 @@ func run() -> void:
 			lab.check(game.round_state == ArenaGame.RoundState.PLAYING and game.stages_cleared == cleared, "old-level completion cannot finish the new level")
 			await lab.capture("%s_new_contract" % game.campaign[stage + 1].id)
 	lab.check(game._run_recorded and game.stages_cleared == game.campaign.size(), "all three quest-driven levels produce a recorded campaign victory")
+
+## Completing the contract calls a drop pod; only holding its beam opens the shop.
+func _extract(game: ArenaGame, stage: int) -> void:
+	await lab.wait(0.2)
+	# The last kills can earn XP choices; a player answers them mid-extraction.
+	await _settle_choices(game)
+	var pod := game.extraction
+	lab.check(pod != null and game.round_state == ArenaGame.RoundState.PLAYING and not game.round_shop.visible, "stage %d completion calls a drop pod instead of opening the shop" % stage)
+	if pod == null:
+		return
+	var player := game.player
+	var away := player.global_position
+	var id: StringName = game.campaign[stage].id
+	lab.check(pod.distance_to(away) >= 20.0 and is_equal_approx(game.director.surge, pod.surge_multiplier), "stage %d pod lands %dm away while the director surges" % [stage, roundi(pod.distance_to(away))])
+	# Fixture-length hold; landing, presence, pause and departure rules are real.
+	pod.hold_time = 2.0
+	await lab.wait(pod.landing_time + 0.3)
+	lab.check(pod.state == ExtractionPod.State.WAITING and pod.progress == 0.0, "stage %d pod touches down and earns nothing while the player is away" % stage)
+	await lab.capture("%s_pod_called" % id)
+	_stand(player, pod.global_position)
+	await lab.wait(0.8)
+	lab.check(pod.player_inside() and pod.progress > 0.4, "standing in the beam accumulates extraction")
+	await lab.capture("%s_holding_beam" % id)
+	var held := pod.progress
+	game.get_tree().paused = true
+	await lab.wait(0.4)
+	lab.check(is_equal_approx(pod.progress, held), "pause freezes extraction progress")
+	game.get_tree().paused = false
+	_stand(player, away)
+	await lab.wait(0.4)
+	lab.check(pod.progress >= held and pod.progress < pod.hold_time and game.round_state == ArenaGame.RoundState.PLAYING, "stepping out keeps progress without extracting")
+	_stand(player, pod.global_position)
+	await lab.wait(pod.hold_time - pod.progress + 0.6)
+
+func _stand(player: ArenaPlayer, at: Vector3) -> void:
+	player.velocity = Vector3.ZERO
+	player.global_position = Vector3(at.x, at.y + 0.1, at.z)
+
+func _settle_choices(game: ArenaGame) -> void:
+	while game.round_state == ArenaGame.RoundState.LEVEL_UP:
+		await lab.wait(game.level_up.input_delay + 0.05)
+		game.level_up._choose(0)
+		await lab.frames(2)
 
 func _sustained_pressure(game: ArenaGame) -> void:
 	game.horde.set_physics_process(false)

@@ -29,7 +29,12 @@ func _activate() -> bool:
 	_remaining = duration * duration_scale()
 	player.set_ability_protection(self, true)
 	if horde != null:
-		horde.damage_radius(player.global_position, pulse_radius, pulse_damage * damage_scale(), pulse_knockback)
+		# Combo COLLAPSE: the barrier's pulse detonates the player's nearby well.
+		var well := player.active_gravity_well()
+		if well != null and well.in_collapse_reach(player.global_position):
+			well.collapse()
+			player.announce_combo(&"collapse")
+		blast(player.global_position, pulse_radius, pulse_damage * damage_scale(), pulse_knockback)
 	if shield != null:
 		shield.show()
 	if pulse != null:

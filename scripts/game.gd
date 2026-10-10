@@ -57,6 +57,8 @@ var round_shop: RoundShopScreen
 var damage_numbers: DamageNumbers
 var mining_encounter: MiningDefense
 var boss_fight: YardBossFight
+## Present between contract completion and lift-off; null otherwise.
+var extraction: ExtractionPod
 var _pending_encounter_rewards := 0
 var _stage_clear_pending := false
 var _rng := RandomNumberGenerator.new()
@@ -128,7 +130,7 @@ func _process(delta: float) -> void:
 	hud.radar.refresh(horde, player, horde.boss_index, pickups, mining_encounter)
 	hud.set_abilities(player.abilities)
 	hud.set_gunplay(player)
-	hud.set_mining_encounter(mining_encounter, player)
+	hud.set_objectives(mining_encounter, extraction, player)
 	hud.set_boss_fight(boss_fight)
 	if round_state == RoundState.PLAYING:
 		run_time += delta
@@ -190,6 +192,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	_cancel_encounters()
 	mining_encounter = null
 	boss_fight = null
+	extraction = null
 	_pending_encounter_rewards = 0
 	_stage_clear_pending = false
 	if is_instance_valid(_round):
@@ -256,6 +259,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.shot_fired.connect(hud.show_shot)
 	player.hit_confirmed.connect(hud.show_hit)
 	player.combo_changed.connect(hud.show_combo)
+	player.ability_combo.connect(hud.show_ability_combo)
 	horde.enemy_killed.connect(_on_enemy_killed)
 	horde.boss_spawned.connect(_on_boss_spawned)
 	horde.boss_health_changed.connect(hud.set_boss_health)
@@ -400,17 +404,42 @@ func _on_boss_killed() -> void:
 	hud.boss_panel.hide()
 	hud.contract_box.visible = hud.quest_panel.visible and not hud.death.visible
 
+## Contract done: a drop pod lands far away and the horde surges until the
+## player holds its beam. Only lift-off clears the stage and opens the shop.
 func _on_quests_completed(source_id: int) -> void:
 	# Bind the id, not the RefCounted itself: no self-owned signal reference cycle.
 	# Deferred until the impact finishes; a simultaneous player death wins.
-	if quests == null or source_id != quests.get_instance_id() or not quests.is_complete() or _stage_clear_pending:
+	if quests == null or source_id != quests.get_instance_id() or not quests.is_complete() or _stage_clear_pending or extraction != null:
+		return
+	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
+		return
+	if is_instance_valid(mining_encounter) and mining_encounter.state == MiningDefense.State.READY:
+		mining_encounter.claim_reward()
+	_cancel_encounters()
+	extraction = ExtractionPod.new()
+	extraction.name = "ExtractionPod"
+	extraction.setup(player)
+	_round.add_child(extraction)
+	var at := _extraction_point()
+	extraction.global_position = Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)), at.z)
+	extraction.departed.connect(_on_extraction_departed.bind(extraction.get_instance_id()), CONNECT_DEFERRED)
+	director.surge = extraction.surge_multiplier
+	hud.radar.set_extraction_point(Vector2(at.x, at.z))
+	hud.show_extraction_warning()
+	Music.set_boss(true)
+
+## The farthest clear room of a generated level; authored arenas use the spawn.
+func _extraction_point() -> Vector3:
+	if world is ProceduralWorld:
+		return (world as ProceduralWorld).extraction_point(player.global_position)
+	return world.get_node("PlayerSpawn").global_position
+
+func _on_extraction_departed(source_id: int) -> void:
+	if extraction == null or source_id != extraction.get_instance_id() or _stage_clear_pending:
 		return
 	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
 		return
 	_stage_clear_pending = true
-	if is_instance_valid(mining_encounter) and mining_encounter.state == MiningDefense.State.READY:
-		mining_encounter.claim_reward()
-	_cancel_encounters()
 	player.active = false
 	player.cancel_actions()
 	if round_state == RoundState.PLAYING:

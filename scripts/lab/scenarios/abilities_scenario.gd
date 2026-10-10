@@ -75,15 +75,17 @@ func _check_effect(game: ArenaGame, skill: ActiveAbility, before: Dictionary) ->
 
 func _independent_skills(game: ArenaGame) -> void:
 	_prepare(game)
+	# The barrier is cast beyond collapse reach so both skills stay independent.
 	await _key(3)
 	var gravity := game.player.abilities[3] as GravityWell
 	await lab.wait(0.1)
 	var gravity_cooldown := gravity.cooldown_remaining()
+	game.player.global_position = Vector3(0, 1, 26)
 	await _key(4)
 	var barrier := game.player.abilities[4] as PulseBarrier
 	var health := game.player.health
 	game.player.take_damage(9)
-	lab.check(gravity._remaining > 0.0 and barrier._remaining > 0.0 and game.player.health == health, "keys 4 and 5 coexist as an enemy control field and real player protection")
+	lab.check(gravity._remaining > 0.0 and barrier._remaining > 0.0 and game.player.health == health, "keys 4 and 5 coexist as an enemy control field and real player protection beyond collapse reach")
 	lab.check(gravity.cooldown_remaining() <= gravity_cooldown and not gravity.is_ready() and not barrier.is_ready(), "activating another skill does not reset or bypass the first skill's cooldown")
 	var left := gravity._remaining
 	var shield_left := barrier._remaining

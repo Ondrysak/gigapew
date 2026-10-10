@@ -21,6 +21,8 @@ var _boss := Vector2.INF
 var _loot: PickupField
 var _vein := Vector2.INF
 var _vein_ready := false
+## Drop pod marker; INF when no extraction is running.
+var _pod := Vector2.INF
 @onready var _vein_icon := GameIcons.lookup(&"resources", &"gold")
 @onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
 @onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
@@ -32,9 +34,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
+func set_extraction_point(at: Vector2) -> void:
+	_pod = at
+
 ## Generated levels draw their nearby walls; authored arenas clear the layer.
 func set_layout(world: ProceduralWorld) -> void:
 	_wall_cells.clear()
+	_pod = Vector2.INF
 	if world == null:
 		return
 	_wall_cell_size = ProceduralWorld.CELL_SIZE
@@ -92,6 +98,12 @@ func _draw() -> void:
 		_draw_pickups(_loot._magnets, _magnet_icon)
 		_draw_pickups(_loot._repairs, _repair_icon)
 		_draw_pickups(_loot._supplies, _repair_icon)
+	if _pod != Vector2.INF:
+		# Clamped to the rim when out of range, so it always points the way.
+		var at := _map(_pod)
+		draw_circle(at, 9.0, Color(ExtractionPod.COLOR, 0.35))
+		draw_arc(at, 9.0, 0.0, TAU, 16, ExtractionPod.COLOR, 2.0, true)
+		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -5), at + Vector2(4, 0), at + Vector2(0, 5), at + Vector2(-4, 0)]), ExtractionPod.COLOR)
 	if _vein != Vector2.INF:
 		var point := _map(_vein)
 		var color := Color(0.35, 1.0, 0.78) if _vein_ready else Color(1.0, 0.7, 0.24)

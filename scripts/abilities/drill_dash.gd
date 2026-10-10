@@ -152,7 +152,8 @@ func _was_struck(index: int) -> bool:
 
 func _erupt(at: Vector3) -> void:
 	if horde != null:
-		horde.damage_radius(at, eruption_radius, eruption_damage * damage_scale(), eruption_knockback)
+		blast(at, eruption_radius, eruption_damage * damage_scale(), eruption_knockback)
+	arrive(at)
 	player.add_shake(0.55)
 	player.camera.fov += fov_punch * 0.6
 	if _eruption_audio.stream != null:

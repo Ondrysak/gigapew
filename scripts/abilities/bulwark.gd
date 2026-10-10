@@ -49,7 +49,7 @@ func _activate() -> bool:
 	_pop = 1.0
 	var center := player.global_position
 	if horde != null:
-		horde.damage_radius(center, pulse_radius, pulse_damage * damage_scale(), pulse_knockback)
+		blast(center, pulse_radius, pulse_damage * damage_scale(), pulse_knockback)
 	player.add_shake(0.4)
 	player.camera.fov += 8.0
 	_emit_shock(center)
@@ -70,7 +70,7 @@ func _ability_physics(delta: float) -> void:
 	if _aura_timer <= 0.0:
 		_aura_timer += aura_interval
 		if horde != null:
-			horde.damage_radius(player.global_position, aura_radius, aura_damage * damage_scale(), aura_knockback)
+			blast(player.global_position, aura_radius, aura_damage * damage_scale(), aura_knockback)
 
 func _emit_shock(center: Vector3) -> void:
 	if _shocks.is_empty():

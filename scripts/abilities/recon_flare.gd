@@ -150,7 +150,7 @@ func _mark() -> void:
 	var count := horde.query_radius(_to, zone_radius, _query_buffer)
 	for n in count:
 		horde.slow(_query_buffer[n], slow_factor, slow_duration)
-	horde.damage_radius(_to, zone_radius, reveal_damage * damage_scale(), 0.0)
+	blast(_to, zone_radius, reveal_damage * damage_scale(), 0.0)
 
 func _finish() -> void:
 	_flight = -1.0

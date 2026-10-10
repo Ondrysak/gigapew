@@ -27,6 +27,7 @@ const SCENARIOS := {
 	&"quests": preload("res://scripts/lab/scenarios/quests_scenario.gd"),
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
 	&"abilities": preload("res://scripts/lab/scenarios/abilities_scenario.gd"),
+	&"combos": preload("res://scripts/lab/scenarios/combos_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
 	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),

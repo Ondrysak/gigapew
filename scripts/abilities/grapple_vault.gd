@@ -105,7 +105,8 @@ func _slam() -> void:
 	_air_time = -1.0
 	var at := player.global_position
 	if horde != null:
-		horde.damage_radius(at, landing_radius, landing_damage * damage_scale(), landing_knockback)
+		blast(at, landing_radius, landing_damage * damage_scale(), landing_knockback)
+	arrive(at)
 	player.add_shake(landing_shake)
 	if _land_audio.stream != null:
 		_land_audio.play()

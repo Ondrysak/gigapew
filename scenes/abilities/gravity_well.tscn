@@ -41,7 +41,7 @@ size = Vector3(0.12, 0.015, 0.55)
 [node name="GravityWell" type="Node3D" node_paths=PackedStringArray("field", "boundary", "vortex", "core")]
 script = ExtResource("1_ability")
 display_name = "Gravity Well"
-description = "Aim a 5 s singularity: its visible field pulls enemies inward, slows their movement and repeatedly interrupts attacks. Follow with an area attack."
+description = "Aim a 5 s singularity that pulls, slows and interrupts enemies. Combos: skill blasts inside it CRUSH for +60%; Pulse Barrier nearby makes it COLLAPSE."
 base_cooldown = 18.0
 accent_color = Color(0.65, 0.35, 1, 1)
 synth_activate = &"blink"

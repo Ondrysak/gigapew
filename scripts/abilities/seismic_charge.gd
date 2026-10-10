@@ -122,7 +122,7 @@ func _detonate() -> void:
 	if marker != null:
 		marker.hide()
 	if horde != null:
-		horde.damage_radius(_to, blast_radius, blast_damage * damage_scale(), blast_knockback)
+		blast(_to, blast_radius, blast_damage * damage_scale(), blast_knockback)
 	var distance := player.camera.global_position.distance_to(_to)
 	player.add_shake(clampf(1.0 - distance / 30.0, 0.2, 0.75))
 	if _impact_audio.stream != null:

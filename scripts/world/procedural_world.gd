@@ -468,6 +468,24 @@ func _room_rect(room: Dictionary) -> Rect2:
 	var bounds: Rect2i = room.bounds
 	return Rect2(_cell_world(Vector2(bounds.position)), Vector2(bounds.size) * CELL_SIZE)
 
+## Where a drop pod lands: the clear room spot farthest from `from`, so the
+## extraction is a run through the level rather than a step to the side.
+func extraction_point(from: Vector3) -> Vector3:
+	var best: Vector3 = get_node("PlayerSpawn").position
+	var best_distance := -1.0
+	for room in rooms:
+		for cell: Vector2i in [room.anchor, (room.bounds as Rect2i).get_center()]:
+			if not _open_at(cell):
+				continue
+			var at := _cell_world(Vector2(cell) + Vector2(0.5, 0.5))
+			if not _area_clear(Rect2(at - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), 1.0):
+				continue
+			var distance := at.distance_to(Vector2(from.x, from.z))
+			if distance > best_distance:
+				best_distance = distance
+				best = Vector3(at.x, 0.0, at.y)
+	return best
+
 ## True when the footprint plus margin lies on carved floor clear of other pieces.
 func _area_clear(footprint: Rect2, margin: float) -> bool:
 	var grown := footprint.grow(margin)

@@ -200,7 +200,7 @@ func _ability_physics(delta: float) -> void:
 func _land() -> void:
 	turret.global_position = _spot
 	if horde != null:
-		horde.damage_radius(_spot, landing_radius, landing_damage * damage_scale(), landing_knockback)
+		blast(_spot, landing_radius, landing_damage * damage_scale(), landing_knockback)
 	var distance := player.global_position.distance_to(_spot)
 	player.add_shake(clampf(0.5 - distance / 30.0, 0.08, 0.4))
 	if _landing_audio.stream != null:

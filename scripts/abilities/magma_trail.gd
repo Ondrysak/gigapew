@@ -111,7 +111,7 @@ func _burn(delta: float) -> void:
 		if tick <= 0.0:
 			tick += tick_interval
 			if horde != null:
-				horde.damage_radius(_patch_center[index], patch_radius, amount, 0.0)
+				blast(_patch_center[index], patch_radius, amount, 0.0)
 		_patch_tick[index] = tick
 
 func _finish() -> void:

@@ -111,6 +111,14 @@ var _pickup_amounts := PackedInt32Array([0, 0])
 var _pickup_times := PackedFloat32Array([0.0, 0.0])
 var _pickup_dirty := false
 var _boss_cue_style: StyleBoxFlat
+## Label and colour per skill combo id from ArenaPlayer.ability_combo.
+const COMBO_CALLOUTS := {
+	&"crush": ["CRUSH", Color(0.78, 0.5, 1.0)],
+	&"collapse": ["COLLAPSE", Color(1.0, 0.45, 0.9)],
+	&"ram": ["SHIELD RAM", Color(0.35, 0.92, 1.0)],
+}
+var _combo_callout: Label
+var _combo_tween: Tween
 
 func _ready() -> void:
 	_health_fill = (health_bar.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate()
@@ -127,6 +135,42 @@ func _ready() -> void:
 	_build_notices()
 	_build_primary()
 	_build_abilities()
+	_build_combo_callout()
+
+func _build_combo_callout() -> void:
+	_combo_callout = Label.new()
+	_combo_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_combo_callout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_combo_callout.add_theme_font_size_override(&"font_size", 30)
+	_combo_callout.add_theme_color_override(&"font_outline_color", Color(0.02, 0.02, 0.04, 0.95))
+	_combo_callout.add_theme_constant_override(&"outline_size", 6)
+	_combo_callout.set_anchors_preset(Control.PRESET_CENTER)
+	_combo_callout.offset_left = -220.0
+	_combo_callout.offset_right = 220.0
+	# Below the crosshair, clear of the damage numbers rising from the target.
+	_combo_callout.offset_top = 70.0
+	_combo_callout.offset_bottom = 110.0
+	_combo_callout.pivot_offset = Vector2(220.0, 20.0)
+	_combo_callout.hide()
+	add_child(_combo_callout)
+
+## Pops a short named callout above the crosshair when two skills combine.
+func show_ability_combo(id: StringName) -> void:
+	if feedback.terminal or not COMBO_CALLOUTS.has(id):
+		return
+	var entry: Array = COMBO_CALLOUTS[id]
+	_combo_callout.text = "COMBO  ·  %s" % entry[0]
+	_combo_callout.add_theme_color_override(&"font_color", entry[1])
+	_combo_callout.modulate.a = 1.0
+	_combo_callout.scale = Vector2(1.35, 1.35)
+	_combo_callout.show()
+	if _combo_tween != null:
+		_combo_tween.kill()
+	_combo_tween = create_tween()
+	_combo_tween.tween_property(_combo_callout, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_combo_tween.tween_interval(0.55)
+	_combo_tween.tween_property(_combo_callout, "modulate:a", 0.0, 0.3)
+	_combo_tween.tween_callback(_combo_callout.hide)
 
 ## Builds one counter per banked resource, styled by its definition.
 func setup_resources(definitions: Array[ResourceDefinition]) -> void:
@@ -252,7 +296,13 @@ func refresh_quests() -> void:
 		(row.bar as ProgressBar).value = quest.progress
 		(row.row as Control).modulate.a = 0.65 if done else 1.0
 
-func set_mining_encounter(encounter: MiningDefense, operator: ArenaPlayer) -> void:
+## One objective panel: the extraction once a contract is done, otherwise the
+## authored lab defense vein when present.
+func set_objectives(encounter: MiningDefense, extraction: ExtractionPod, operator: ArenaPlayer) -> void:
+	if is_instance_valid(extraction) and extraction.state != ExtractionPod.State.DEPARTED and not death.visible:
+		objective.visible = true
+		_show_extraction(extraction, operator)
+		return
 	objective.visible = is_instance_valid(encounter) and encounter.state != MiningDefense.State.CANCELLED and encounter.state != MiningDefense.State.CLAIMED and not death.visible
 	if not objective.visible:
 		return
@@ -564,6 +614,26 @@ func _draw_warning_band() -> void:
 			x += stripe * 2.0
 	warning_band.draw_line(Vector2(0, 11), Vector2(size.x, 11), Color(1, 0.4, 0.1, 0.9), 2.0)
 	warning_band.draw_line(Vector2(0, size.y - 11), Vector2(size.x, size.y - 11), Color(1, 0.4, 0.1, 0.9), 2.0)
+
+func show_extraction_warning() -> void:
+	_show_warning("DROP POD")
+
+func _show_extraction(extraction: ExtractionPod, operator: ArenaPlayer) -> void:
+	# The finished contract list gives way to the extraction objective.
+	quest_panel.hide()
+	contract_label.text = "EXTRACTION"
+	var distance := roundi(extraction.distance_to(operator.global_position))
+	var left := extraction.hold_time - extraction.progress
+	objective_progress.value = extraction.fraction()
+	if extraction.state == ExtractionPod.State.LANDING:
+		objective_title.text = "EXTRACTION · DROP POD INBOUND"
+		objective_detail.text = "Head for the green beam · %dm\nThe horde surges until you lift off." % distance
+	elif extraction.player_inside():
+		objective_title.text = "HOLD THE BEAM · %.1fs" % left
+		objective_detail.text = "Stay inside the ring to extract.\nThe horde is surging."
+	else:
+		objective_title.text = "EXTRACTION · REACH THE POD"
+		objective_detail.text = "%dm away · %.0fs in the beam left\nProgress is kept if you step out." % [distance, left]
 
 func _show_warning(boss_title: String) -> void:
 	warning_subtitle.text = "%s INBOUND" % boss_title

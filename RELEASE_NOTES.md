@@ -1,5 +1,16 @@
 # Unreleased source changes
 
+- Extraction: completing the contract no longer opens the shop instantly. A
+  drop pod lands in the farthest clear room, marked by a tall green beam and a
+  radar diamond. Hold its ring for 10 s (progress kept while you step out) as
+  the director spawns at double rate; lift-off banks minerals and opens the
+  shop. Dying mid-extraction still ends the run; XP choices can be answered.
+- Skill combos for every class: CRUSH (skill blasts into your Gravity Well
+  deal +60%), COLLAPSE (Pulse Barrier near the well detonates it, scaling with
+  held enemies) and SHIELD RAM (dash or leap while shielded slams a landing
+  shockwave). Named callouts appear below the crosshair; ability text explains
+  the combos. New `combos` lab scenario; `quests` now drives all three pod
+  extractions through touchdown, beam progress, pause and stepping out.
 - Level design: sectors are now carved from solid rock instead of open boxes.
   Irregular rooms (L, T, cross, chamfered, round, ring and colonnade) join
   through dog-legged corridors of 4/6/8 m with loops and dead-end alcoves.

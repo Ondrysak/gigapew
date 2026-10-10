@@ -10,6 +10,8 @@ signal boss_phase_started(definition: HordeEnemyDefinition)
 
 var elapsed := 0.0
 var boss_phase := false
+## Spawn-rate multiplier, raised while the player extracts.
+var surge := 1.0
 var _horde: Horde
 var _schedule: SpawnSchedule
 var _player: ArenaPlayer
@@ -54,7 +56,7 @@ func _physics_process(delta: float) -> void:
 		var span := maxf(0.001, wave.end_time - wave.start_time)
 		var progress := clampf((elapsed - wave.start_time) / span, 0.0, 1.0)
 		var rate := maxf(0.0, lerpf(wave.rate_start, wave.rate_end, progress))
-		_accumulated[w] += rate * delta
+		_accumulated[w] += rate * surge * delta
 		var group := maxi(1, wave.group_size)
 		while _accumulated[w] >= group:
 			_accumulated[w] -= group

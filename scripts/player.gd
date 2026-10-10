@@ -11,6 +11,8 @@ signal weapon_changed(definition: WeaponDefinition)
 signal ability_used(ability: ActiveAbility)
 ## A main-gun shot landed at least one critical hit (first critical target).
 signal critical_hit(at: Vector3)
+## Two skills combined: `id` is &"crush", &"collapse" or &"ram".
+signal ability_combo(id: StringName)
 
 const SPEED := 9.5
 const JUMP_SPEED := 6.5
@@ -57,6 +59,9 @@ var _invulnerable := 0.0
 var _dash_velocity := Vector3.ZERO
 var _dash_time := 0.0
 var _ability_protection: Dictionary = {}
+## Every combo trigger, for run stats and checks; callouts are rate-limited.
+var combo_counts: Dictionary = {}
+var _combo_quiet: Dictionary = {}
 var _spin := 0.0
 var _camera_rest_rotation := Vector3.ZERO
 # Visual-only camera kick (pitch, yaw, roll) on a damped spring; never the player's aim.
@@ -218,6 +223,28 @@ func set_ability_protection(source: ActiveAbility, enabled: bool) -> void:
 func is_invulnerable() -> bool:
 	return _invulnerable > 0.0 or not _ability_protection.is_empty()
 
+func is_shielded_by_other(source: ActiveAbility) -> bool:
+	for key in _ability_protection:
+		if key != source:
+			return true
+	return false
+
+func active_gravity_well() -> GravityWell:
+	for skill in abilities:
+		if skill is GravityWell and (skill as GravityWell).is_active():
+			return skill
+	return null
+
+## Ticking effects may trigger a combo many times a second; the HUD callout
+## for each combo is spaced out while every trigger still counts.
+func announce_combo(id: StringName) -> void:
+	combo_counts[id] = int(combo_counts.get(id, 0)) + 1
+	if float(_combo_quiet.get(id, 0.0)) > 0.0:
+		return
+	_combo_quiet[id] = 1.2
+	add_shake(0.12)
+	ability_combo.emit(id)
+
 ## Moves at `dash_velocity` for `duration` seconds, overriding input and gravity.
 func dash(dash_velocity: Vector3, duration: float) -> void:
 	_dash_velocity = dash_velocity
@@ -309,6 +336,8 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	_invulnerable = maxf(0.0, _invulnerable - delta)
+	for id: StringName in _combo_quiet:
+		_combo_quiet[id] = maxf(0.0, float(_combo_quiet[id]) - delta)
 	if _combo_left > 0.0:
 		_combo_left -= delta
 		if _combo_left <= 0.0:

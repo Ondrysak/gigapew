@@ -73,6 +73,7 @@ func _ability_physics(delta: float) -> void:
 	_strike_around(player.global_position)
 	if _dashing <= 0.0:
 		_flash_ring(player.global_position)
+		arrive(player.global_position)
 
 func _strike_around(center: Vector3) -> void:
 	if horde == null:

@@ -117,6 +117,30 @@ func _ability_physics(_delta: float) -> void:
 func damage_scale() -> float:
 	return ability_damage_scale(rank()) * (run_state.damage_multiplier if run_state != null else 1.0)
 
+## Combo tuning shared by every skill.
+const CRUSH_MULTIPLIER := 1.6
+const RAM_RADIUS := 5.5
+const RAM_DAMAGE := 45.0
+const RAM_KNOCKBACK := 22.0
+
+## Area damage from a skill. A blast overlapping the player's active Gravity
+## Well hits the held pack for extra damage (combo: CRUSH).
+func blast(center: Vector3, blast_radius: float, amount: float, knockback: float) -> void:
+	if horde == null:
+		return
+	var well := player.active_gravity_well() if is_instance_valid(player) else null
+	if well != null and well != self and well.overlaps(center, blast_radius):
+		amount *= CRUSH_MULTIPLIER
+		player.announce_combo(&"crush")
+	horde.damage_radius(center, blast_radius, amount, knockback)
+
+## Movement skills call this where they arrive. Arriving while another skill's
+## shield holds slams a shockwave (combo: SHIELD RAM), which can itself crush.
+func arrive(at: Vector3) -> void:
+	if is_instance_valid(player) and player.is_shielded_by_other(self):
+		player.announce_combo(&"ram")
+		blast(at, RAM_RADIUS, RAM_DAMAGE * damage_scale(), RAM_KNOCKBACK)
+
 ## Child AudioStreamPlayer on the SFX bus from an override or a SynthCue name.
 func make_audio(stream: AudioStream, synth: StringName, volume_db: float) -> AudioStreamPlayer:
 	var audio := AudioStreamPlayer.new()

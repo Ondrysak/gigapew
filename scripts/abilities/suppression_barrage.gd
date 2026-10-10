@@ -110,7 +110,7 @@ func _ability_physics(delta: float) -> void:
 
 func _blast(at: Vector3, lead: bool) -> void:
 	if horde != null:
-		horde.damage_radius(at, blast_radius, blast_damage * damage_scale(), blast_knockback)
+		blast(at, blast_radius, blast_damage * damage_scale(), blast_knockback)
 	if lead:
 		player.add_shake(wave_shake)
 		if _wave_audio.stream != null:
