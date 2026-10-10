@@ -11,6 +11,7 @@ extends Control
 @export var dot_color := Color(1.0, 0.25, 0.45, 0.9)
 @export var boss_color := Color(1.0, 0.75, 0.2, 1.0)
 @export var player_color := Color(0.7, 1.0, 0.95, 1.0)
+@export var wall_color := Color(0.4, 0.62, 0.7, 0.5)
 
 var _positions := PackedVector2Array()
 var _count := 0
@@ -23,10 +24,29 @@ var _vein_ready := false
 @onready var _vein_icon := GameIcons.lookup(&"resources", &"gold")
 @onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
 @onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
+## World centres of rock cells bordering walkable floor, for the wall layer.
+var _wall_cells := PackedVector2Array()
+var _wall_cell_size := 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+## Generated levels draw their nearby walls; authored arenas clear the layer.
+func set_layout(world: ProceduralWorld) -> void:
+	_wall_cells.clear()
+	if world == null:
+		return
+	_wall_cell_size = ProceduralWorld.CELL_SIZE
+	for z in world.layout_height:
+		for x in world.layout_width:
+			if world.layout_open[z * world.layout_width + x] == 1:
+				continue
+			for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var next := Vector2i(x, z) + step
+				if next.x >= 0 and next.y >= 0 and next.x < world.layout_width and next.y < world.layout_height and world.layout_open[next.y * world.layout_width + next.x] == 1:
+					_wall_cells.append(world.layout_origin + (Vector2(x, z) + Vector2(0.5, 0.5)) * _wall_cell_size)
+					break
 
 func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField, encounter: MiningDefense) -> void:
 	_count = horde.sample_positions(_positions, max_dots)
@@ -56,6 +76,16 @@ func _draw() -> void:
 	draw_circle(center, radius, background)
 	draw_arc(center, radius - 1.0, 0.0, TAU, 48, ring_color, 2.0, true)
 	draw_arc(center, radius * 0.5, 0.0, TAU, 32, Color(ring_color, ring_color.a * 0.5), 1.0, true)
+	if not _wall_cells.is_empty():
+		# Same mapping as _map, applied to whole cells so walls keep their shape.
+		draw_set_transform(center, _yaw, Vector2.ONE * radius / range_meters)
+		var limit := (range_meters - _wall_cell_size) * (range_meters - _wall_cell_size)
+		var half := Vector2.ONE * _wall_cell_size * 0.5
+		for cell in _wall_cells:
+			var local := cell - _player
+			if local.length_squared() <= limit:
+				draw_rect(Rect2(local - half, half * 2.0), wall_color)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for n in _count:
 		draw_rect(Rect2(_map(_positions[n]) - Vector2.ONE, Vector2(2.5, 2.5)), dot_color)
 	if is_instance_valid(_loot):

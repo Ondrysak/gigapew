@@ -181,13 +181,13 @@ func _validate_routes(game: ArenaGame, world: ProceduralWorld) -> void:
 			visited[neighbor] = 1
 			queue.append(neighbor)
 	lab.check(queue.size() == free_count, "generated walkable grid is connected from spawn (%d / %d clear cells)" % [queue.size(), free_count])
-	var sites_reachable := true
+	var unreachable: Array[String] = []
 	for site: Dictionary in world.mining_sites:
 		var stand: Vector3 = site.position + site.normal * 2.5
 		var cell := Vector2i(floori((stand.x - area.position.x) / 2.0), floori((stand.z - area.position.y) / 2.0))
 		if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= depth or visited[cell.y * width + cell.x] == 0:
-			sites_reachable = false
-	lab.check(sites_reachable, "all guaranteed mineral support faces have a route from spawn")
+			unreachable.append("%s at %s" % [(site.support as Node).name, stand])
+	lab.check(unreachable.is_empty(), "all guaranteed mineral support faces have a route from spawn %s" % [unreachable])
 	var feet_reachable := true
 	for overlook: Dictionary in world.overlooks:
 		var approach: Vector3 = overlook.foot + overlook.direction * 1.5

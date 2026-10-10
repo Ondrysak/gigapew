@@ -11,5 +11,6 @@ id = &"yard"
 display_name = "Training Yard"
 subtitle = "Sector 01 / live-fire proving ground"
 world_scene = ExtResource("world")
+play_area = Rect2(-44, -44, 88, 88)
 schedule = ExtResource("schedule")
 boss_fight_scene = ExtResource("boss_fight")

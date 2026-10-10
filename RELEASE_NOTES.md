@@ -1,11 +1,15 @@
 # Unreleased source changes
 
-- Level design: generated sectors now deal set pieces across the four
-  lane-bounded quadrants. Raised overlooks (1 Yard, 2 Foundry/Reactor) are
-  reached by one walkable ramp the horde must funnel up. Ore outcrops (2 / 3 / 3)
-  are interior rocks whose faces receive contract ore first, so mining pulls
-  players off the safe perimeter. Rendered checks prove players climb ramps
-  with W, enemies follow onto decks, and connectivity and ore guarantees hold.
+- Level design: sectors are now carved from solid rock instead of open boxes.
+  Irregular rooms (L, T, cross, chamfered, round, ring and colonnade) join
+  through dog-legged corridors of 4/6/8 m with loops and dead-end alcoves.
+  Yard is a mixed compound, Foundry three stacked furnace halls with transfer
+  passages, Reactor a round hub around a glowing core with spokes and chords.
+  Areas grew to 88², 120×72 and 104² m. Raised overlooks with ramps sit in arena
+  rooms; ore outcrops and broad walls host contract ore. Floor lines trace
+  corridors and flag chokepoints, and the radar draws nearby walls. A 120-seed
+  sweep placed every set piece with clear ore standing room; rendered checks
+  prove connectivity, ramp climbing by player and enemy, and contract ore.
 - Reworked the core loop around one unlimited-ammo primary firearm and five
   independently cooled-down hero abilities. Removed player melee weapons,
   magazines/reserves/reloads, ammunition drops, charged RMB secondaries and

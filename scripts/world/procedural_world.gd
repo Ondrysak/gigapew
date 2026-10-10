@@ -2,17 +2,21 @@ class_name ProceduralWorld
 extends Node3D
 
 ## Built synchronously in _ready, before the game configures horde navigation.
-## Disjoint convex islands, a clear cross and a perimeter circuit deliberately
-## avoid maze generation: every ground-level free region connects to the circuit.
-const PERIMETER_CLEARANCE := 7.0
-const ISLAND_CLEARANCE := 5.0
-const LANE_HALF_WIDTH := 3.0
+## A CELL_SIZE grid, identical to the horde grid, starts as solid rock. A themed
+## plan carves irregular rooms; corridors of varying width (a spanning tree plus
+## extra loops) join them and dead-end alcoves break their outlines. Unreachable
+## pockets are refilled, and the remaining rock merges into exact axis-aligned
+## blocks that physics, the horde and ore placement all read.
+const CELL_SIZE := 2.0
 const WALL_THICKNESS := 0.8
-const SITE_SPACING := 7.0
+## Open floor kept around set pieces, cover islands and pillars (metres).
+const PIECE_MARGIN := 4.0
 ## Ramp pitch matches the authored Yard ramps; walkable for player and horde.
 const RAMP_ANGLE := 0.29
 const RAMP_WIDTH := 4.2
 const RAMP_THICKNESS := 0.6
+## Outward normals of block faces: north, south, west, east.
+const FACE_NORMALS: Array[Vector3] = [Vector3(0, 0, -1), Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(1, 0, 0)]
 const ModuleBatch = preload("res://scenes/levels/yard/module_batch.gd")
 const YARD_FLOOR = preload("res://shaders/yard_floor.gdshader")
 const FOUNDRY_FLOOR = preload("res://shaders/foundry_floor.gdshader")
@@ -28,6 +32,15 @@ var mining_sites: Array[Dictionary] = []
 ## {center (deck top), size, height, foot, direction} per generated overlook.
 var overlooks: Array[Dictionary] = []
 var outcrops: Array[StaticBody3D] = []
+## Walkable cells (1) on the CELL_SIZE grid from `layout_origin`; read by the radar.
+var layout_open := PackedByteArray()
+var layout_width := 0
+var layout_height := 0
+var layout_origin := Vector2.ZERO
+## {bounds: Rect2i, kind: StringName, arena: bool, anchor: Vector2i, core: Rect2i}
+var rooms: Array[Dictionary] = []
+var _corridors: Array[Dictionary] = []
+var _spawn_room := 0
 var _stage: StageDefinition
 var _rng := RandomNumberGenerator.new()
 var _area: Rect2
@@ -36,7 +49,6 @@ var _obstacles: Node3D
 var _elevation: Node3D
 var _decoration: Node3D
 var _occupied: Array[Rect2] = []
-var _lane_center: Vector2
 var _wall_height: float
 var _wall: Material
 var _steel: Material
@@ -79,10 +91,16 @@ func _ready() -> void:
 	_configure_theme()
 	_build_floor()
 	_build_perimeter()
+	_generate_layout()
 	_build_spawn()
-	_lane_center = _area.get_center() + Vector2(_rng.randf_range(-3.0, 3.0), _rng.randf_range(-3.0, 3.0))
+	_build_solids()
+	# The reactor core claims its floor before anything else is placed near it.
+	for room in rooms:
+		if room.kind == &"hub":
+			_build_reactor_core(room)
 	_build_set_pieces()
-	_build_islands()
+	_build_room_features()
+	_build_guides()
 	_build_lighting()
 	_flush_visual_batches()
 
@@ -126,144 +144,514 @@ func _build_floor() -> void:
 	var center := _area.get_center()
 	_box_body(self, "Floor", Vector3(center.x, -0.5, center.y), Vector3(_area.size.x + 2.0, 1.0, _area.size.y + 2.0), material)
 
+## Outer bounds only; the generated rock mass forms every visible inner wall.
 func _build_perimeter() -> void:
 	var center := _area.get_center()
-	var north := _box_body(self, "NorthWall", Vector3(center.x, _wall_height * 0.5, _area.position.y - WALL_THICKNESS * 0.5), Vector3(_area.size.x + WALL_THICKNESS * 2.0, _wall_height, WALL_THICKNESS), _wall)
-	var south := _box_body(self, "SouthWall", Vector3(center.x, _wall_height * 0.5, _area.end.y + WALL_THICKNESS * 0.5), Vector3(_area.size.x + WALL_THICKNESS * 2.0, _wall_height, WALL_THICKNESS), _wall)
-	var west := _box_body(self, "WestWall", Vector3(_area.position.x - WALL_THICKNESS * 0.5, _wall_height * 0.5, center.y), Vector3(WALL_THICKNESS, _wall_height, _area.size.y), _wall)
-	var east := _box_body(self, "EastWall", Vector3(_area.end.x + WALL_THICKNESS * 0.5, _wall_height * 0.5, center.y), Vector3(WALL_THICKNESS, _wall_height, _area.size.y), _wall)
-	_wall_sites(north, Vector3(_area.position.x, 1.5, _area.position.y), Vector3.RIGHT, Vector3.BACK, _area.size.x)
-	_wall_sites(south, Vector3(_area.position.x, 1.5, _area.end.y), Vector3.RIGHT, Vector3.FORWARD, _area.size.x)
-	_wall_sites(west, Vector3(_area.position.x, 1.5, _area.position.y), Vector3.BACK, Vector3.RIGHT, _area.size.y)
-	_wall_sites(east, Vector3(_area.end.x, 1.5, _area.position.y), Vector3.BACK, Vector3.LEFT, _area.size.y)
-	# All facade details stay on the wall, above the ore mounting band.
-	for body: StaticBody3D in [north, south, west, east]:
-		var shape := (body.get_node("Collision") as CollisionShape3D).shape as BoxShape3D
-		var horizontal := shape.size.x > shape.size.z
-		var length: float = shape.size.x if horizontal else shape.size.z
-		var trim_size := Vector3(length, 0.14, WALL_THICKNESS + 0.02) if horizontal else Vector3(WALL_THICKNESS + 0.02, 0.14, length)
-		_visual(_box, _accent, Vector3(body.position.x, _wall_height - 0.4, body.position.z), trim_size)
-		var panel_count := floori(length / 6.0)
-		for index in panel_count:
-			var offset := (float(index) + 0.5) * length / float(panel_count) - length * 0.5
-			var position := body.position + (Vector3.RIGHT if horizontal else Vector3.BACK) * offset
-			position.y = _wall_height * 0.65
-			var panel_size := Vector3(4.8, 1.4, WALL_THICKNESS + 0.01) if horizontal else Vector3(WALL_THICKNESS + 0.01, 1.4, 4.8)
-			_visual(_box, _dark, position, panel_size)
+	_box_body(self, "NorthWall", Vector3(center.x, _wall_height * 0.5, _area.position.y - WALL_THICKNESS * 0.5), Vector3(_area.size.x + WALL_THICKNESS * 2.0, _wall_height, WALL_THICKNESS), _wall)
+	_box_body(self, "SouthWall", Vector3(center.x, _wall_height * 0.5, _area.end.y + WALL_THICKNESS * 0.5), Vector3(_area.size.x + WALL_THICKNESS * 2.0, _wall_height, WALL_THICKNESS), _wall)
+	_box_body(self, "WestWall", Vector3(_area.position.x - WALL_THICKNESS * 0.5, _wall_height * 0.5, center.y), Vector3(WALL_THICKNESS, _wall_height, _area.size.y), _wall)
+	_box_body(self, "EastWall", Vector3(_area.end.x + WALL_THICKNESS * 0.5, _wall_height * 0.5, center.y), Vector3(WALL_THICKNESS, _wall_height, _area.size.y), _wall)
 	_build_skyline()
 
-func _wall_sites(support: StaticBody3D, start: Vector3, along: Vector3, normal: Vector3, length: float) -> void:
-	# Seven metre spacing and corner margins separate even large ore patches.
-	# Every site is on a real inward-facing wall, with continuous floor and no
-	# islands within seven metres. No physics timing or random ray hits required.
-	var count := floori((length - SITE_SPACING * 2.0) / SITE_SPACING) + 1
-	var step := (length - SITE_SPACING * 2.0) / float(maxi(count - 1, 1))
-	for index in count:
-		mining_sites.append({"position": start + along * (SITE_SPACING + float(index) * step), "normal": normal, "support": support})
+# ---------------------------------------------------------------- layout grid
+
+func _generate_layout() -> void:
+	layout_origin = _area.position
+	layout_width = roundi(_area.size.x / CELL_SIZE)
+	layout_height = roundi(_area.size.y / CELL_SIZE)
+	layout_open.resize(layout_width * layout_height)
+	layout_open.fill(0)
+	match _theme:
+		&"foundry": _plan_foundry()
+		&"reactor": _plan_reactor()
+		_: _plan_compound()
+	_add_alcoves()
+	# Ring cores go back in after corridors, which may have tunnelled through.
+	for room in rooms:
+		var core: Rect2i = room.core
+		if core.has_area():
+			_set_cells(core, 0)
+	_spawn_room = _pick_spawn_room()
+	_prune_unreachable(rooms[_spawn_room].anchor)
+
+## Training Yard: a compound of mixed-shape rooms with looping corridors.
+func _plan_compound() -> void:
+	for _index in maxi(1, _stage.overlook_count):
+		_try_room(Vector2i(15, 11), Vector2i(18, 13), [&"hall"], true)
+	for _index in 10 + _rng.randi_range(0, 2):
+		_try_room(Vector2i(6, 6), Vector2i(13, 12), [&"l_shape", &"t_shape", &"cross", &"chamfer", &"ring", &"pillars", &"hall", &"disc"], false)
+	_connect_rooms(0.4)
+
+## Foundry: long stacked furnace halls, transfer passages and side chambers.
+func _plan_foundry() -> void:
+	var heights: Array[int] = []
+	for index in 3:
+		heights.append(10 if index < _stage.overlook_count else 6)
+	_shuffle(heights)
+	var used := 0
+	for height in heights:
+		used += height
+	var gap := maxi(2, (layout_height - 4 - used) / 2)
+	var z := 2
+	var halls: Array[int] = []
+	for height in heights:
+		var length := _rng.randi_range(roundi(layout_width * 0.55), layout_width - 6)
+		var x := _rng.randi_range(2, layout_width - 2 - length)
+		var arena := height >= 10
+		halls.append(_add_room(Rect2i(x, z, length, height), &"hall" if arena else &"pillars", arena))
+		z += height + gap
+	for _index in 4:
+		_try_room(Vector2i(6, 6), Vector2i(9, 8), [&"chamfer", &"l_shape", &"hall", &"disc"], false)
+	_connect_rooms(0.3)
+	# Several short vertical transfer passages between neighbouring halls.
+	for index in halls.size() - 1:
+		var upper: Rect2i = rooms[halls[index]].bounds
+		var lower: Rect2i = rooms[halls[index + 1]].bounds
+		var from := maxi(upper.position.x, lower.position.x) + 2
+		var to := mini(upper.end.x, lower.end.x) - 3
+		if to <= from:
+			continue
+		for _passage in _rng.randi_range(2, 3):
+			var x := _rng.randi_range(from, to)
+			_carve_path([Vector2i(x, upper.get_center().y), Vector2i(x, lower.get_center().y)], _corridor_width())
+
+## Reactor: a round hub around the core, narrow spokes in and a ring of chords out.
+func _plan_reactor() -> void:
+	var center := Vector2i(layout_width / 2, layout_height / 2)
+	var hub := _add_room(Rect2i(center - Vector2i(8, 8), Vector2i(16, 16)), &"hub", false)
+	for _index in maxi(1, _stage.overlook_count):
+		_try_room(Vector2i(15, 11), Vector2i(17, 12), [&"hall"], true)
+	for _index in 6:
+		_try_room(Vector2i(7, 7), Vector2i(11, 10), [&"l_shape", &"chamfer", &"ring", &"pillars", &"disc", &"cross"], false)
+	var outer: Array[int] = []
+	for index in rooms.size():
+		if index != hub:
+			outer.append(index)
+	var middle := Vector2(center)
+	outer.sort_custom(func(a: int, b: int) -> bool:
+		var va := Vector2(rooms[a].anchor) - middle
+		var vb := Vector2(rooms[b].anchor) - middle
+		return atan2(va.y, va.x) < atan2(vb.y, vb.x))
+	for index in outer.size():
+		var a: Vector2i = rooms[outer[index]].anchor
+		var b: Vector2i = rooms[outer[(index + 1) % outer.size()]].anchor
+		if a != b:
+			_carve_line(Vector2(a) + Vector2(0.5, 0.5), Vector2(b) + Vector2(0.5, 0.5), 1.5)
+	for index in outer.size():
+		if index % 2 == 0 or outer.size() <= 3:
+			_carve_line(middle, Vector2(rooms[outer[index]].anchor) + Vector2(0.5, 0.5), 1.0 + _rng.randf_range(0.0, 0.6))
+
+func _try_room(min_size: Vector2i, max_size: Vector2i, kinds: Array[StringName], arena: bool) -> int:
+	var region := Rect2i(2, 2, layout_width - 4, layout_height - 4)
+	# Arenas must exist for their overlook, so they search much harder.
+	for _attempt in 300 if arena else 80:
+		var size := Vector2i(_rng.randi_range(min_size.x, max_size.x), _rng.randi_range(min_size.y, max_size.y))
+		if _rng.randf() < 0.5:
+			size = Vector2i(size.y, size.x)
+		if size.x > region.size.x or size.y > region.size.y:
+			continue
+		var bounds := Rect2i(Vector2i(_rng.randi_range(region.position.x, region.end.x - size.x), _rng.randi_range(region.position.y, region.end.y - size.y)), size)
+		var free := true
+		for room in rooms:
+			if (room.bounds as Rect2i).grow(2).intersects(bounds):
+				free = false
+				break
+		if free:
+			return _add_room(bounds, _pick_kind(kinds, size), arena)
+	return -1
+
+func _pick_kind(kinds: Array[StringName], size: Vector2i) -> StringName:
+	var smallest := mini(size.x, size.y)
+	var allowed: Array[StringName] = []
+	for kind in kinds:
+		var needed := 1
+		match kind:
+			&"ring": needed = 10
+			&"pillars": needed = 9
+			&"disc", &"l_shape", &"t_shape", &"cross": needed = 8
+			&"chamfer": needed = 6
+		if smallest >= needed:
+			allowed.append(kind)
+	return allowed[_rng.randi() % allowed.size()] if not allowed.is_empty() else &"hall"
+
+func _add_room(bounds: Rect2i, kind: StringName, arena: bool) -> int:
+	var room := {"bounds": bounds, "kind": kind, "arena": arena, "anchor": bounds.get_center(), "core": Rect2i()}
+	var arm := Vector2i(maxi(4, roundi(bounds.size.x * 0.45)), maxi(4, roundi(bounds.size.y * 0.45)))
+	match kind:
+		&"l_shape":
+			var band := Rect2i(bounds.position.x, bounds.position.y if _rng.randf() < 0.5 else bounds.end.y - arm.y, bounds.size.x, arm.y)
+			var column := Rect2i(bounds.position.x if _rng.randf() < 0.5 else bounds.end.x - arm.x, bounds.position.y, arm.x, bounds.size.y)
+			_set_cells(band, 1)
+			_set_cells(column, 1)
+			room.anchor = band.get_center()
+		&"t_shape":
+			var band := Rect2i(bounds.position.x, bounds.position.y if _rng.randf() < 0.5 else bounds.end.y - arm.y, bounds.size.x, arm.y)
+			var stem := Rect2i(bounds.position.x + (bounds.size.x - arm.x) / 2, bounds.position.y, arm.x, bounds.size.y)
+			_set_cells(band, 1)
+			_set_cells(stem, 1)
+			room.anchor = stem.get_center()
+		&"cross":
+			_set_cells(Rect2i(bounds.position.x, bounds.position.y + (bounds.size.y - arm.y) / 2, bounds.size.x, arm.y), 1)
+			_set_cells(Rect2i(bounds.position.x + (bounds.size.x - arm.x) / 2, bounds.position.y, arm.x, bounds.size.y), 1)
+		&"disc", &"hub":
+			var middle := Vector2(bounds.position) + Vector2(bounds.size) * 0.5
+			var radii := Vector2(bounds.size) * 0.5
+			for z in range(bounds.position.y, bounds.end.y):
+				for x in range(bounds.position.x, bounds.end.x):
+					if ((Vector2(x + 0.5, z + 0.5) - middle) / radii).length_squared() <= 1.0:
+						_set_cell(Vector2i(x, z), 1)
+		&"ring":
+			_set_cells(bounds, 1)
+			room.core = bounds.grow(-3)
+			room.anchor = Vector2i(bounds.position.x + 1, bounds.position.y + bounds.size.y / 2)
+		&"chamfer":
+			_set_cells(bounds, 1)
+			var cut := maxi(1, mini(bounds.size.x, bounds.size.y) / 4)
+			for corner: Vector2i in [bounds.position, Vector2i(bounds.end.x - cut, bounds.position.y), Vector2i(bounds.position.x, bounds.end.y - cut), bounds.end - Vector2i(cut, cut)]:
+				_set_cells(Rect2i(corner, Vector2i(cut, cut)), 0)
+		_:
+			_set_cells(bounds, 1)
+	rooms.append(room)
+	return rooms.size() - 1
+
+## A spanning tree guarantees one route everywhere; extra links add loops so
+## the horde can flank and the player always has a second way out.
+func _connect_rooms(loop_chance: float) -> void:
+	if rooms.size() < 2:
+		return
+	var linked: Dictionary = {}
+	var joined := PackedByteArray()
+	joined.resize(rooms.size())
+	joined[0] = 1
+	for _step in rooms.size() - 1:
+		var best := INF
+		var pair := Vector2i(-1, -1)
+		for a in rooms.size():
+			if joined[a] == 0:
+				continue
+			for b in rooms.size():
+				if joined[b] == 1:
+					continue
+				var distance := Vector2(rooms[a].anchor).distance_to(Vector2(rooms[b].anchor))
+				if distance < best:
+					best = distance
+					pair = Vector2i(a, b)
+		joined[pair.y] = 1
+		_link(pair.x, pair.y, linked)
+	for a in rooms.size():
+		if _rng.randf() >= loop_chance:
+			continue
+		var best := INF
+		var other := -1
+		for b in rooms.size():
+			if b == a or linked.has(Vector2i(mini(a, b), maxi(a, b))):
+				continue
+			var distance := Vector2(rooms[a].anchor).distance_to(Vector2(rooms[b].anchor))
+			if distance < best:
+				best = distance
+				other = b
+		if other >= 0:
+			_link(a, other, linked)
+
+func _link(a: int, b: int, linked: Dictionary) -> void:
+	linked[Vector2i(mini(a, b), maxi(a, b))] = true
+	var from: Vector2i = rooms[a].anchor
+	var to: Vector2i = rooms[b].anchor
+	var points: Array[Vector2i] = [from]
+	if absi(to.x - from.x) > 8 and absi(to.y - from.y) > 4 and _rng.randf() < 0.45:
+		# A dog-leg: across, down, across again.
+		var bend := _rng.randi_range(mini(from.x, to.x) + 2, maxi(from.x, to.x) - 2)
+		points.append(Vector2i(bend, from.y))
+		points.append(Vector2i(bend, to.y))
+	elif _rng.randf() < 0.5:
+		points.append(Vector2i(to.x, from.y))
+	else:
+		points.append(Vector2i(from.x, to.y))
+	points.append(to)
+	_carve_path(points, _corridor_width())
+
+## 4 m chokepoints, 6 m standard passages and occasional 8 m boulevards.
+func _corridor_width() -> int:
+	var roll := _rng.randf()
+	return 2 if roll < 0.25 else (3 if roll < 0.8 else 4)
+
+func _carve_path(points: Array[Vector2i], width: int) -> void:
+	var offset := width / 2
+	for index in points.size() - 1:
+		var a := points[index]
+		var b := points[index + 1]
+		_set_cells(Rect2i(mini(a.x, b.x) - offset, mini(a.y, b.y) - offset, absi(b.x - a.x) + width, absi(b.y - a.y) + width), 1)
+	# Guide line follows the corridor's true centre, in cell units.
+	var shift := 0.5 if width % 2 == 1 else 0.0
+	var line: Array[Vector2] = []
+	for point in points:
+		line.append(Vector2(point) + Vector2(shift, shift))
+	_corridors.append({"line": line, "width": width})
+
+## Straight (often diagonal) passage between two points in cell units.
+func _carve_line(a: Vector2, b: Vector2, half_width: float) -> void:
+	var low := Vector2i(floori(minf(a.x, b.x) - half_width), floori(minf(a.y, b.y) - half_width))
+	var high := Vector2i(ceili(maxf(a.x, b.x) + half_width), ceili(maxf(a.y, b.y) + half_width))
+	for z in range(low.y, high.y + 1):
+		for x in range(low.x, high.x + 1):
+			var middle := Vector2(x + 0.5, z + 0.5)
+			if middle.distance_to(Geometry2D.get_closest_point_to_segment(middle, a, b)) <= half_width:
+				_set_cell(Vector2i(x, z), 1)
+	var line: Array[Vector2] = [a, b]
+	_corridors.append({"line": line, "width": roundi(half_width * 2.0)})
+
+## Shallow dead-end pockets on room edges: cover to fall back into, or a trap.
+func _add_alcoves() -> void:
+	for _index in _rng.randi_range(3, 6):
+		var bounds: Rect2i = rooms[_rng.randi() % rooms.size()].bounds
+		var depth := _rng.randi_range(2, 3)
+		var length := _rng.randi_range(3, 5)
+		var along_x := _rng.randi_range(bounds.position.x, maxi(bounds.position.x, bounds.end.x - length))
+		var along_z := _rng.randi_range(bounds.position.y, maxi(bounds.position.y, bounds.end.y - length))
+		match _rng.randi_range(0, 3):
+			0: _set_cells(Rect2i(along_x, bounds.position.y - depth, length, depth), 1)
+			1: _set_cells(Rect2i(along_x, bounds.end.y, length, depth), 1)
+			2: _set_cells(Rect2i(bounds.position.x - depth, along_z, depth, length), 1)
+			_: _set_cells(Rect2i(bounds.end.x, along_z, depth, length), 1)
+
+func _pick_spawn_room() -> int:
+	var candidates: Array[int] = []
+	for index in rooms.size():
+		if not rooms[index].arena and rooms[index].kind != &"hub" and _open_at(rooms[index].anchor):
+			candidates.append(index)
+	if candidates.is_empty():
+		for index in rooms.size():
+			if _open_at(rooms[index].anchor):
+				candidates.append(index)
+	return candidates[_rng.randi() % candidates.size()] if not candidates.is_empty() else 0
+
+func _prune_unreachable(start: Vector2i) -> void:
+	var visited := PackedByteArray()
+	visited.resize(layout_open.size())
+	var queue: Array[int] = [start.y * layout_width + start.x]
+	visited[queue[0]] = 1
+	var cursor := 0
+	while cursor < queue.size():
+		var cell := queue[cursor]
+		cursor += 1
+		var x := cell % layout_width
+		var z := cell / layout_width
+		for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var next := Vector2i(x, z) + step
+			if not _open_at(next):
+				continue
+			var index := next.y * layout_width + next.x
+			if visited[index] == 0:
+				visited[index] = 1
+				queue.append(index)
+	for index in layout_open.size():
+		if visited[index] == 0:
+			layout_open[index] = 0
+
+## One cell of rock is always kept around the grid edge.
+func _set_cell(cell: Vector2i, value: int) -> void:
+	if cell.x >= 1 and cell.y >= 1 and cell.x < layout_width - 1 and cell.y < layout_height - 1:
+		layout_open[cell.y * layout_width + cell.x] = value
+
+func _set_cells(rect: Rect2i, value: int) -> void:
+	for z in range(maxi(rect.position.y, 1), mini(rect.end.y, layout_height - 1)):
+		for x in range(maxi(rect.position.x, 1), mini(rect.end.x, layout_width - 1)):
+			layout_open[z * layout_width + x] = value
+
+func _open_at(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < layout_width and cell.y < layout_height and layout_open[cell.y * layout_width + cell.x] == 1
+
+func _cell_world(cell: Vector2) -> Vector2:
+	return layout_origin + cell * CELL_SIZE
+
+func _room_rect(room: Dictionary) -> Rect2:
+	var bounds: Rect2i = room.bounds
+	return Rect2(_cell_world(Vector2(bounds.position)), Vector2(bounds.size) * CELL_SIZE)
+
+## True when the footprint plus margin lies on carved floor clear of other pieces.
+func _area_clear(footprint: Rect2, margin: float) -> bool:
+	var grown := footprint.grow(margin)
+	var low := Vector2i(floori((grown.position.x - layout_origin.x) / CELL_SIZE), floori((grown.position.y - layout_origin.y) / CELL_SIZE))
+	var high := Vector2i(ceili((grown.end.x - layout_origin.x) / CELL_SIZE) - 1, ceili((grown.end.y - layout_origin.y) / CELL_SIZE) - 1)
+	for z in range(low.y, high.y + 1):
+		for x in range(low.x, high.x + 1):
+			if not _open_at(Vector2i(x, z)):
+				return false
+	for occupied in _occupied:
+		if occupied.intersects(grown):
+			return false
+	return true
+
+func _shuffle(values: Array) -> void:
+	for index in range(values.size() - 1, 0, -1):
+		var pick := _rng.randi_range(0, index)
+		var swap = values[index]
+		values[index] = values[pick]
+		values[pick] = swap
+
+# ---------------------------------------------------------------- geometry
 
 func _build_spawn() -> void:
+	var anchor: Vector2i = rooms[_spawn_room].anchor
+	var at := _cell_world(Vector2(anchor) + Vector2(0.5, 0.5))
 	var spawn := Marker3D.new()
 	spawn.name = "PlayerSpawn"
-	# A seed-selected point on the clear circuit rather than a fixed center spawn.
-	var side := _rng.randi_range(0, 3)
-	var x := _rng.randf_range(_area.position.x + 9.0, _area.end.x - 9.0)
-	var z := _rng.randf_range(_area.position.y + 9.0, _area.end.y - 9.0)
-	match side:
-		0: z = _area.position.y + 4.5
-		1: z = _area.end.y - 4.5
-		2: x = _area.position.x + 4.5
-		3: x = _area.end.x - 4.5
-	spawn.position = Vector3(x, 0.05, z)
-	var toward_center := _area.get_center() - Vector2(x, z)
-	spawn.rotation.y = atan2(-toward_center.x, -toward_center.y)
+	spawn.position = Vector3(at.x, 0.05, at.y)
+	# Face the level's centre of mass rather than the nearest wall.
+	var toward := _area.get_center() - at
+	if toward.length_squared() < 1.0:
+		toward = Vector2(0.0, -1.0)
+	spawn.rotation.y = atan2(-toward.x, -toward.y)
 	add_child(spawn)
-	# Flush floor markings, never raised props in the walk-up strip.
-	_visual(_box, _accent, Vector3(x, 0.006, z - 1.8), Vector3(3.6, 0.01, 0.08))
-	_visual(_box, _accent, Vector3(x, 0.006, z + 1.8), Vector3(3.6, 0.01, 0.08))
+	_occupied.append(Rect2(at - Vector2(3.0, 3.0), Vector2(6.0, 6.0)))
+	# Flush floor markings, never raised props on the landing pad.
+	_visual(_box, _accent, Vector3(at.x, 0.006, at.y - 1.8), Vector3(3.6, 0.01, 0.08))
+	_visual(_box, _accent, Vector3(at.x, 0.006, at.y + 1.8), Vector3(3.6, 0.01, 0.08))
 
-func _build_islands() -> void:
-	var interior := _area.grow(-PERIMETER_CLEARANCE)
-	# Large landmarks first; smaller islands fill remaining space without ever
-	# joining one another. Box yaw stays axis-aligned for the horde's parser.
-	for index in _stage.cover_count:
-		var landmark := index < 4
-		var circular := _theme == &"reactor" or (index % 3 == 1)
-		var size := _island_size(landmark, circular)
-		for _attempt in 160:
-			var point := Vector2(_rng.randf_range(interior.position.x + size.x * 0.5, interior.end.x - size.x * 0.5), _rng.randf_range(interior.position.y + size.z * 0.5, interior.end.y - size.z * 0.5))
-			var footprint := Rect2(point - Vector2(size.x, size.z) * 0.5, Vector2(size.x, size.z))
-			if not _can_place(footprint):
+## Greedy rectangle merge of the remaining rock into exact blocks.
+func _build_solids() -> void:
+	var used := PackedByteArray()
+	used.resize(layout_open.size())
+	var index := 0
+	for z in layout_height:
+		for x in layout_width:
+			var cell := z * layout_width + x
+			if layout_open[cell] == 1 or used[cell] == 1:
 				continue
-			_occupied.append(footprint)
-			var position := Vector3(point.x, size.y * 0.5, point.y)
-			var is_rock := index % 4 == 3
-			var material: Material = _rock if is_rock else _steel
-			var label := "OreBearingRock%d" % index if is_rock else "IndustrialIsland%d" % index
-			if circular:
-				_cylinder_body(label, position, size.x * 0.5, size.y, material)
-				if not is_rock:
-					_dress_column(position, size, landmark)
-			else:
-				_box_body(_obstacles, label, position, size, material)
-				if not is_rock:
-					_dress_box(position, size, landmark)
-			break
-	# Explicit flat cross-lane markings make the circulation legible at speed.
-	_visual(_box, _secondary, Vector3(_lane_center.x - LANE_HALF_WIDTH, 0.006, _area.get_center().y), Vector3(0.045, 0.01, _area.size.y - 4.0))
-	_visual(_box, _secondary, Vector3(_lane_center.x + LANE_HALF_WIDTH, 0.006, _area.get_center().y), Vector3(0.045, 0.01, _area.size.y - 4.0))
-	_visual(_box, _accent, Vector3(_area.get_center().x, 0.006, _lane_center.y - LANE_HALF_WIDTH), Vector3(_area.size.x - 4.0, 0.01, 0.045))
-	_visual(_box, _accent, Vector3(_area.get_center().x, 0.006, _lane_center.y + LANE_HALF_WIDTH), Vector3(_area.size.x - 4.0, 0.01, 0.045))
+			var width := 1
+			while x + width < layout_width and layout_open[cell + width] == 0 and used[cell + width] == 0:
+				width += 1
+			var depth := 1
+			while z + depth < layout_height:
+				var row_free := true
+				for dx in width:
+					var other := (z + depth) * layout_width + x + dx
+					if layout_open[other] == 1 or used[other] == 1:
+						row_free = false
+						break
+				if not row_free:
+					break
+				depth += 1
+			for dz in depth:
+				for dx in width:
+					used[(z + dz) * layout_width + x + dx] = 1
+			_build_block(Rect2i(x, z, width, depth), index)
+			index += 1
 
-## Overlooks first, then ore outcrops, dealt round-robin over the four
-## lane-bounded quadrants so every seed gets distinct, spread-out destinations.
+func _build_block(rect: Rect2i, index: int) -> void:
+	var outer := rect.position.x == 0 or rect.position.y == 0 or rect.end.x == layout_width or rect.end.y == layout_height
+	# Large inner masses vary in height for a broken skyline; small steps along
+	# diagonal passages stay level, and nothing drops below the ore band.
+	var height := _wall_height if outer or rect.get_area() < 6 else maxf(4.2, _wall_height + _rng.randf_range(-0.8, 2.5))
+	var origin := _cell_world(Vector2(rect.position))
+	var size := Vector2(rect.size) * CELL_SIZE
+	var center := origin + size * 0.5
+	var body := _box_body(_obstacles, "Rock%d" % index, Vector3(center.x, height * 0.5, center.y), Vector3(size.x, height, size.y), _wall)
+	_visual(_box, _dark, Vector3(center.x, height + 0.006, center.y), Vector3(size.x * 0.98, 0.012, size.y * 0.98))
+	for face in 4:
+		var length := rect.size.x if face < 2 else rect.size.y
+		var start := -1
+		for step in length + 1:
+			var open := step < length and _open_at(_face_cell(rect, face, step, 1))
+			if open and start < 0:
+				start = step
+			elif not open and start >= 0:
+				_dress_face(rect, face, start, step - start, body, height)
+				start = -1
+
+func _face_cell(rect: Rect2i, face: int, step: int, depth: int) -> Vector2i:
+	match face:
+		0: return Vector2i(rect.position.x + step, rect.position.y - depth)
+		1: return Vector2i(rect.position.x + step, rect.end.y - 1 + depth)
+		2: return Vector2i(rect.position.x - depth, rect.position.y + step)
+	return Vector2i(rect.end.x - 1 + depth, rect.position.y + step)
+
+## World point on a block face, `along` cells from the face's start.
+func _face_point(rect: Rect2i, face: int, along: float) -> Vector3:
+	var point: Vector2
+	match face:
+		0: point = _cell_world(Vector2(rect.position.x + along, rect.position.y))
+		1: point = _cell_world(Vector2(rect.position.x + along, rect.end.y))
+		2: point = _cell_world(Vector2(rect.position.x, rect.position.y + along))
+		_: point = _cell_world(Vector2(rect.end.x, rect.position.y + along))
+	return Vector3(point.x, 0.0, point.y)
+
+func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBody3D, height: float) -> void:
+	var normal := FACE_NORMALS[face]
+	var mid := _face_point(rect, face, start + count * 0.5)
+	var length := count * CELL_SIZE
+	var along_x := face < 2
+	# Everything flush on the face: a glowing top trim, a dark mid band above
+	# the ore mounting height, and a hazard kick-plate reading the wall line.
+	_visual(_box, _accent, mid + normal * 0.02 + Vector3.UP * (height - 0.45), Vector3(length, 0.12, 0.04) if along_x else Vector3(0.04, 0.12, length))
+	if count >= 3:
+		_visual(_box, _dark, mid + normal * 0.015 + Vector3.UP * minf(height - 1.3, 3.6), Vector3(length - 1.0, 1.1, 0.03) if along_x else Vector3(0.03, 1.1, length - 1.0))
+	_visual(_box, _secondary, mid + normal * 0.02 + Vector3.UP * 0.09, Vector3(length, 0.18, 0.04) if along_x else Vector3(0.04, 0.18, length))
+	# Contract ore sites need a broad face with two open cells of standing room.
+	var deep_start := -1
+	for step in range(start, start + count + 1):
+		var deep := step < start + count and _open_at(_face_cell(rect, face, step, 2))
+		if deep and deep_start < 0:
+			deep_start = step
+		elif not deep and deep_start >= 0:
+			var run := step - deep_start
+			if run >= 3:
+				var sites := 1 + (run - 3) / 4
+				var spacing := float(run) / float(sites)
+				for site in sites:
+					var point := _face_point(rect, face, deep_start + spacing * (site + 0.5))
+					point.y = 1.5
+					mining_sites.append({"position": point, "normal": normal, "support": body})
+			deep_start = -1
+
+## Overlooks favour arena rooms; outcrops spread over the others first.
 func _build_set_pieces() -> void:
-	var interior := _area.grow(-PERIMETER_CLEARANCE)
-	var quadrants: Array[Rect2] = []
-	for xs: Vector2 in [Vector2(interior.position.x, _lane_center.x - LANE_HALF_WIDTH), Vector2(_lane_center.x + LANE_HALF_WIDTH, interior.end.x)]:
-		for zs: Vector2 in [Vector2(interior.position.y, _lane_center.y - LANE_HALF_WIDTH), Vector2(_lane_center.y + LANE_HALF_WIDTH, interior.end.y)]:
-			quadrants.append(Rect2(xs.x, zs.x, xs.y - xs.x, zs.y - zs.x))
-	for index in range(quadrants.size() - 1, 0, -1):
-		var pick := _rng.randi_range(0, index)
-		var swap := quadrants[index]
-		quadrants[index] = quadrants[pick]
-		quadrants[pick] = swap
-	var slot := 0
-	for _index in _stage.overlook_count:
-		_place_piece(quadrants, slot, _try_overlook)
-		slot += 1
-	for _index in _stage.outcrop_count:
-		_place_piece(quadrants, slot, _try_outcrop)
-		slot += 1
+	var arenas: Array[int] = []
+	var others: Array[int] = []
+	for index in rooms.size():
+		if rooms[index].arena:
+			arenas.append(index)
+		else:
+			others.append(index)
+	var overlook_order: Array[int] = arenas.duplicate()
+	overlook_order.append_array(others)
+	var outcrop_order: Array[int] = others.duplicate()
+	_shuffle(outcrop_order)
+	outcrop_order.append_array(arenas)
+	for slot in _stage.overlook_count:
+		_place_in_rooms(overlook_order, slot, _try_overlook)
+	for slot in _stage.outcrop_count:
+		_place_in_rooms(outcrop_order, slot, _try_outcrop)
 
-## Prefers the dealt quadrant, then any other; a piece that fits nowhere is skipped.
-func _place_piece(quadrants: Array[Rect2], slot: int, attempt: Callable) -> void:
-	for offset in quadrants.size():
-		if attempt.call(quadrants[(slot + offset) % quadrants.size()]):
+## Prefers the dealt room, then any other, then anywhere on the open floor;
+## a piece that fits nowhere is skipped.
+func _place_in_rooms(order: Array[int], slot: int, attempt: Callable) -> void:
+	for offset in order.size():
+		if attempt.call(_room_rect(rooms[order[(slot + offset) % order.size()]])):
+			return
+	for _sweep in 12:
+		if attempt.call(_area):
 			return
 
-func _try_overlook(quadrant: Rect2) -> bool:
+func _try_overlook(region: Rect2) -> bool:
 	var height := 1.8
 	match _theme:
 		&"foundry": height = 2.2
 		&"reactor": height = 2.6
 	height += _rng.randf_range(0.0, 0.3)
 	var run := height / tan(RAMP_ANGLE)
-	var size := Vector2(_rng.randf_range(7.5, 10.0), _rng.randf_range(7.5, 10.0))
+	var size := Vector2(_rng.randf_range(7.0, 9.5), _rng.randf_range(7.0, 9.5))
 	var directions: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]
-	for index in range(directions.size() - 1, 0, -1):
-		var pick := _rng.randi_range(0, index)
-		var swap := directions[index]
-		directions[index] = directions[pick]
-		directions[pick] = swap
+	_shuffle(directions)
 	for direction in directions:
 		var along_x := absf(direction.x) > 0.5
 		var extent := size + (Vector2(run, 0.0) if along_x else Vector2(0.0, run))
-		if extent.x > quadrant.size.x or extent.y > quadrant.size.y:
+		if extent.x > region.size.x or extent.y > region.size.y:
 			continue
 		for _attempt in 24:
-			var corner := Vector2(_rng.randf_range(quadrant.position.x, quadrant.end.x - extent.x), _rng.randf_range(quadrant.position.y, quadrant.end.y - extent.y))
+			var corner := Vector2(_rng.randf_range(region.position.x, region.end.x - extent.x), _rng.randf_range(region.position.y, region.end.y - extent.y))
 			var footprint := Rect2(corner, extent)
-			if not _can_place(footprint):
+			if not _area_clear(footprint, PIECE_MARGIN):
 				continue
 			_occupied.append(footprint)
 			# The deck holds the end opposite the ramp's outward direction.
@@ -309,18 +697,21 @@ func _build_overlook(deck: Rect2, height: float, direction: Vector2, run: float)
 	_add_fill(top + Vector3.UP * 3.0, _accent_color, 1.4, 12.0)
 	overlooks.append({"center": top, "size": deck.size, "height": height, "foot": foot, "direction": outward})
 
-func _try_outcrop(quadrant: Rect2) -> bool:
-	var length := _rng.randf_range(6.4, 8.0)
-	var depth := _rng.randf_range(2.8, 3.6)
+func _try_outcrop(region: Rect2) -> bool:
+	# Long faces must still exceed a full ore formation (about 4.8 m).
+	var length := _rng.randf_range(5.6, 7.0)
+	var depth := _rng.randf_range(2.6, 3.4)
 	var height := _rng.randf_range(3.4, 4.4)
 	var along_x := _rng.randf() < 0.5
 	for _orientation in 2:
 		var extent := Vector2(length, depth) if along_x else Vector2(depth, length)
-		if extent.x <= quadrant.size.x and extent.y <= quadrant.size.y:
+		if extent.x <= region.size.x and extent.y <= region.size.y:
 			for _attempt in 40:
-				var corner := Vector2(_rng.randf_range(quadrant.position.x, quadrant.end.x - extent.x), _rng.randf_range(quadrant.position.y, quadrant.end.y - extent.y))
+				var corner := Vector2(_rng.randf_range(region.position.x, region.end.x - extent.x), _rng.randf_range(region.position.y, region.end.y - extent.y))
 				var footprint := Rect2(corner, extent)
-				if not _can_place(footprint):
+				# Room for a formation and a miner in front, and never inside a
+				# wall site's standing spot (2.5 m out plus body radius).
+				if not _area_clear(footprint, 3.6):
 					continue
 				_occupied.append(footprint)
 				_build_outcrop(footprint, height, along_x)
@@ -328,7 +719,7 @@ func _try_outcrop(quadrant: Rect2) -> bool:
 		along_x = not along_x
 	return false
 
-## Both long faces are real, broad supports for contract ore in the open arena.
+## Both long faces are real, broad supports for contract ore mid-room.
 func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
 	var center := footprint.get_center()
 	var position := Vector3(center.x, height * 0.5, center.y)
@@ -347,6 +738,87 @@ func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
 	_visual(_cylinder, _secondary, position + Vector3.UP * (height * 0.5 + 0.45), Vector3(0.12, 0.9, 0.12))
 	_add_fill(position + Vector3.UP * (height * 0.5 + 1.5), _secondary_color, 1.2, 11.0)
 
+func _build_room_features() -> void:
+	for room in rooms:
+		if room.kind == &"pillars":
+			_build_pillars(room)
+	_build_cover()
+
+## Colonnades: pillars on cell corners, four cells apart, clear of the walls.
+func _build_pillars(room: Dictionary) -> void:
+	var bounds: Rect2i = room.bounds
+	var radius := 0.75
+	for z in range(bounds.position.y + 2, bounds.end.y - 2, 4):
+		for x in range(bounds.position.x + 2, bounds.end.x - 2, 4):
+			var center := _cell_world(Vector2(x + 1, z + 1))
+			var footprint := Rect2(center - Vector2(radius, radius), Vector2(radius, radius) * 2.0)
+			if not _area_clear(footprint, 3.5):
+				continue
+			_occupied.append(footprint)
+			var position := Vector3(center.x, _wall_height * 0.5, center.y)
+			_cylinder_body("Pillar%d_%d" % [x, z], position, radius, _wall_height, _steel)
+			_dress_column(position, Vector3(radius * 2.0, _wall_height, radius * 2.0), false)
+
+## The reactor itself: a tall glowing landmark visible over every wall.
+func _build_reactor_core(room: Dictionary) -> void:
+	var center := _room_rect(room).get_center()
+	var radius := 3.0
+	var height := 15.0
+	var position := Vector3(center.x, height * 0.5, center.y)
+	_cylinder_body("ReactorCore", position, radius, height, _steel)
+	_occupied.append(Rect2(center - Vector2(radius, radius), Vector2(radius, radius) * 2.0))
+	for index in 6:
+		var band_y := 1.2 + index * 2.3
+		_visual(_cylinder, _accent if index % 2 == 0 else _secondary, Vector3(center.x, band_y, center.y), Vector3(radius + 0.02, 0.22, radius + 0.02))
+	_visual(_cylinder, _accent, Vector3(center.x, height + 0.3, center.y), Vector3(radius * 0.6, 0.6, radius * 0.6))
+	_add_fill(Vector3(center.x, 9.0, center.y), _accent_color, 3.2, 26.0)
+
+func _build_cover() -> void:
+	for index in _stage.cover_count / 2:
+		var landmark := index < 2
+		var circular := _theme == &"reactor" or index % 3 == 1
+		var size := _island_size(landmark, circular)
+		for _attempt in 60:
+			var region := _room_rect(rooms[_rng.randi() % rooms.size()])
+			if region.size.x < size.x + 2.0 * PIECE_MARGIN or region.size.y < size.z + 2.0 * PIECE_MARGIN:
+				continue
+			var point := Vector2(_rng.randf_range(region.position.x + size.x * 0.5, region.end.x - size.x * 0.5), _rng.randf_range(region.position.y + size.z * 0.5, region.end.y - size.z * 0.5))
+			var footprint := Rect2(point - Vector2(size.x, size.z) * 0.5, Vector2(size.x, size.z))
+			if not _area_clear(footprint, PIECE_MARGIN):
+				continue
+			_occupied.append(footprint)
+			var position := Vector3(point.x, size.y * 0.5, point.y)
+			var label := "IndustrialIsland%d" % index
+			if circular:
+				_cylinder_body(label, position, size.x * 0.5, size.y, _steel)
+				_dress_column(position, size, landmark)
+			else:
+				_box_body(_obstacles, label, position, size, _steel)
+				_dress_box(position, size, landmark)
+			break
+
+## Painted centre lines trace every passage; narrow chokepoints glow in the
+## secondary colour. Rooms get a thin floor outline marking their extent.
+func _build_guides() -> void:
+	for corridor in _corridors:
+		var line: Array[Vector2] = corridor.line
+		var material := _secondary if int(corridor.width) <= 2 else _accent
+		for index in line.size() - 1:
+			var a := _cell_world(line[index])
+			var b := _cell_world(line[index + 1])
+			var span := b - a
+			if span.length() < 0.5:
+				continue
+			var middle := (a + b) * 0.5
+			_visual(_box, material, Vector3(middle.x, 0.007, middle.y), Vector3(span.length(), 0.01, 0.07), Basis(Vector3.UP, atan2(-span.y, span.x)))
+	for room in rooms:
+		var rect := _room_rect(room).grow(-0.5)
+		var material := _secondary if room.arena else _accent
+		var center := rect.get_center()
+		for sign_value in [-1.0, 1.0]:
+			_visual(_box, material, Vector3(center.x, 0.006, center.y + sign_value * rect.size.y * 0.5), Vector3(rect.size.x, 0.01, 0.05))
+			_visual(_box, material, Vector3(center.x + sign_value * rect.size.x * 0.5, 0.006, center.y), Vector3(0.05, 0.01, rect.size.y))
+
 func _island_size(landmark: bool, circular: bool) -> Vector3:
 	if circular:
 		var diameter := _rng.randf_range(3.6, 5.6) if landmark else _rng.randf_range(2.2, 3.4)
@@ -358,16 +830,6 @@ func _island_size(landmark: bool, circular: bool) -> Vector3:
 		size.x = size.z
 		size.z = width
 	return size
-
-func _can_place(footprint: Rect2) -> bool:
-	if footprint.position.x < _lane_center.x + LANE_HALF_WIDTH and footprint.end.x > _lane_center.x - LANE_HALF_WIDTH:
-		return false
-	if footprint.position.y < _lane_center.y + LANE_HALF_WIDTH and footprint.end.y > _lane_center.y - LANE_HALF_WIDTH:
-		return false
-	for occupied in _occupied:
-		if occupied.grow(ISLAND_CLEARANCE).intersects(footprint):
-			return false
-	return true
 
 func _dress_box(position: Vector3, size: Vector3, landmark: bool) -> void:
 	# Thin embedded panels keep the visible blocking silhouette equal to the box.
@@ -392,7 +854,6 @@ func _dress_column(position: Vector3, size: Vector3, landmark: bool) -> void:
 
 func _build_skyline() -> void:
 	# Reuse the authored kit's batched art only OUTSIDE the playable rectangle.
-	# The inner wall faces remain simple, exact physical supports for mining.
 	var batch := ModuleBatch.new()
 	batch.name = "ExteriorWallModules"
 	batch.source = REACTOR_WALL_ART if _theme == &"reactor" else YARD_WALL_ART
@@ -427,7 +888,7 @@ func _build_lighting() -> void:
 	environment.background_color = Color(0.012, 0.023, 0.048)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.37, 0.51, 0.69)
-	environment.ambient_light_energy = 0.75
+	environment.ambient_light_energy = 0.8
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 	if _theme == &"foundry":
 		environment.background_color = Color(0.045, 0.018, 0.012)
@@ -445,10 +906,15 @@ func _build_lighting() -> void:
 	key.shadow_enabled = true
 	key.directional_shadow_max_distance = 70.0
 	add_child(key)
-	var center := _area.get_center()
-	for sign_value in [-1.0, 1.0]:
-		_add_fill(Vector3(center.x + _area.size.x * 0.27 * sign_value, 7.0, center.y - _area.size.y * 0.27), _accent_color, 2.8, 30.0)
-		_add_fill(Vector3(center.x - _area.size.x * 0.27 * sign_value, 7.0, center.y + _area.size.y * 0.27), _secondary_color, 2.6, 30.0)
+	# One coloured fill per large room, alternating the theme's two hues.
+	var lit := 0
+	for room in rooms:
+		var rect := _room_rect(room)
+		if lit >= 8 or rect.size.x * rect.size.y < 140.0 or room.kind == &"hub":
+			continue
+		var center := rect.get_center()
+		_add_fill(Vector3(center.x, _wall_height - 0.5, center.y), _accent_color if lit % 2 == 0 else _secondary_color, 2.0, maxf(rect.size.x, rect.size.y) * 0.9)
+		lit += 1
 
 func _box_body(parent: Node, label: String, position: Vector3, size: Vector3, material: Material) -> StaticBody3D:
 	var shape := BoxShape3D.new()

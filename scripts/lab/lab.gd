@@ -14,6 +14,7 @@ extends Node
 
 const GAME_SCENE := preload("res://scenes/game.tscn")
 const MENU_THEME := preload("res://scenes/ui/menu/menu_theme.tres")
+const AUTHORED_AREAS := {&"yard": Rect2(-32, -32, 64, 64), &"foundry": Rect2(-48, -26, 96, 52), &"reactor": Rect2(-38, -38, 76, 76)}
 const SCENARIOS := {
 	&"combat": preload("res://scripts/lab/scenarios/combat_scenario.gd"),
 	&"weapons": preload("res://scripts/lab/scenarios/weapons_scenario.gd"),
@@ -85,6 +86,8 @@ func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: boo
 		for index in game.campaign.size():
 			var fixture := game.campaign[index].duplicate() as StageDefinition
 			fixture.world_scene = load("res://scenes/levels/%s.tscn" % fixture.id) as PackedScene
+			# Hand-built fixture arenas keep their own floor rectangles.
+			fixture.play_area = AUTHORED_AREAS[fixture.id]
 			if fixture.id == &"yard":
 				fixture.mining_encounter_scene = load("res://scenes/encounters/mining_defense.tscn")
 			game.campaign[index] = fixture
