@@ -1,5 +1,12 @@
 # Unreleased source changes
 
+- Reskin started: *LUĎAS: LAST TIME KRATOS*. The design bible
+  (`docs/ludas/BIBLE.md`) sets the 90s Prague story, the three circles of
+  Tartarus (Žižkov, Palmovka, Hlavák), the hallucination bestiary, improvised
+  weapons, renamed skills and currencies. First playable piece: Luďas's own
+  recorded voice reacts to arrival, kill bursts, combos, new skills, low
+  health, healing, extraction, clears and death, with priorities and
+  cooldowns. New `voice` lab scenario.
 - Guided start (Settings, on by default) introduces the game gradually. Runs
   begin with one skill; the others unlock at levels 2, 3, 5 and 7 with a NEW
   SKILL callout, a dim next-skill teaser on the HUD and locked shop cards.

@@ -29,6 +29,7 @@ const SCENARIOS := {
 	&"abilities": preload("res://scripts/lab/scenarios/abilities_scenario.gd"),
 	&"combos": preload("res://scripts/lab/scenarios/combos_scenario.gd"),
 	&"onboarding": preload("res://scripts/lab/scenarios/onboarding_scenario.gd"),
+	&"voice": preload("res://scripts/lab/scenarios/voice_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
 	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),

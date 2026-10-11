@@ -66,6 +66,14 @@ var _banked_ids: Array[StringName] = []
 var _nearby := PackedInt32Array()
 var _music_timer := 0.0
 var _run_recorded := false
+## Luďas reacts with his own recorded voice; survives stage loads.
+var voice: LudasVoice
+## Kills in the current short burst, for the multikill reaction.
+var _burst_kills := 0
+var _burst_left := 0.0
+const BURST_WINDOW := 1.5
+const BURST_KILLS := 12
+var _last_health := 0
 
 func _ready() -> void:
 	_rng.randomize()
@@ -73,6 +81,9 @@ func _ready() -> void:
 		if definition.banked:
 			_banked_ids.append(definition.id)
 	level_up.chosen.connect(_on_upgrade_chosen)
+	voice = LudasVoice.new()
+	voice.name = "LudasVoice"
+	add_child(voice)
 	pause_menu.resume_requested.connect(_on_resume)
 	pause_menu.abandon_requested.connect(_on_abandon)
 	hud.setup_resources(resources)
@@ -138,6 +149,9 @@ func _process(delta: float) -> void:
 		if player.mining_ready():
 			hud.tutor.offer(&"mining")
 		run_time += delta
+		_burst_left -= delta
+		if _burst_left <= 0.0:
+			_burst_kills = 0
 		_music_timer -= delta
 		if _music_timer <= 0.0:
 			_music_timer = 0.25
@@ -266,6 +280,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.hit_confirmed.connect(hud.show_hit)
 	player.combo_changed.connect(hud.show_combo)
 	player.ability_combo.connect(hud.show_ability_combo)
+	player.ability_combo.connect(func(_id: StringName): voice.say(&"combo"))
 	horde.enemy_killed.connect(_on_enemy_killed)
 	horde.boss_spawned.connect(_on_boss_spawned)
 	horde.boss_health_changed.connect(hud.set_boss_health)
@@ -289,6 +304,10 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	if run_state.pending_level_ups > 0:
 		_present_level_up()
 	hud.tutor.clear()
+	voice.stop()
+	_last_health = player.health
+	_burst_kills = 0
+	voice.say(&"arrive")
 	if index == 0:
 		hud.tutor.offer(&"basics")
 		hud.tutor.offer(&"contract")
@@ -300,6 +319,7 @@ func _on_ability_unlocked(slot: int) -> void:
 	if not is_instance_valid(player) or slot >= player.abilities.size():
 		return
 	hud.show_skill_unlocked(player.abilities[slot])
+	voice.say(&"skill")
 	_offer_skill_tip(player.abilities[slot])
 	if run_state.is_ability_unlocked(3) and run_state.is_ability_unlocked(4):
 		hud.tutor.offer(&"combos")
@@ -307,9 +327,15 @@ func _on_ability_unlocked(slot: int) -> void:
 func _offer_skill_tip(skill: ActiveAbility) -> void:
 	hud.tutor.offer(StringName("skill_" + skill.display_name.to_snake_case()), "NEW SKILL · KEY %d · %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.description)
 
+## Low health prompts the repair tip and Luďas's growl; healing gets a gulp.
 func _on_health_for_tips(current: int, maximum: int) -> void:
 	if current > 0 and current < maximum * 0.4:
 		hud.tutor.offer(&"repair")
+		if current < _last_health:
+			voice.say(&"hurt")
+	if current > _last_health and _last_health > 0:
+		voice.say(&"heal")
+	_last_health = current
 
 func _stage_enemies(schedule: SpawnSchedule) -> Array[HordeEnemyDefinition]:
 	var definitions: Array[HordeEnemyDefinition] = []
@@ -326,6 +352,11 @@ func _on_enemy_killed(definition: HordeEnemyDefinition, _position: Vector3) -> v
 	kills += 1
 	hud.set_kills(kills)
 	quests.record_kill(definition)
+	_burst_kills += 1
+	_burst_left = BURST_WINDOW
+	if _burst_kills >= BURST_KILLS:
+		_burst_kills = 0
+		voice.say(&"multikill")
 
 func _on_boss_spawned(definition: HordeEnemyDefinition) -> void:
 	hud.show_boss(definition)
@@ -453,6 +484,7 @@ func _on_quests_completed(source_id: int) -> void:
 	extraction.departed.connect(_on_extraction_departed.bind(extraction.get_instance_id()), CONNECT_DEFERRED)
 	director.surge = extraction.surge_multiplier
 	hud.radar.set_extraction_point(Vector2(at.x, at.z))
+	voice.say(&"extraction")
 	hud.show_extraction_warning()
 	Music.set_boss(true)
 	hud.tutor.offer(&"extraction")
@@ -489,6 +521,7 @@ func _finish_stage_clear() -> void:
 	player.velocity = Vector3.ZERO
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player.sound.play_cue(&"victory")
+	voice.say(&"clear")
 	var final_stage := stage_index == campaign.size() - 1
 	Music.set_boss(false)
 	Music.stinger(&"run_complete" if final_stage else &"stage_clear")
@@ -508,6 +541,7 @@ func _on_player_died() -> void:
 	var banked := _bank(death_bank_fraction)
 	_record_run(false)
 	player.sound.play_cue(&"death")
+	voice.say(&"death")
 	Music.set_boss(false)
 	Music.stinger(&"death")
 	hud.finish_run(run_state.level, kills, run_time, stages_cleared, banked)

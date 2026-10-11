@@ -12,6 +12,8 @@ All third-party art is released under **CC0 1.0 (public domain)**: free for pers
 
 The environment packs include their original `LICENSE.txt` in `assets/third_party/`. `assets/monsters/LICENSES.txt` records source packs and licenses for the baked characters; the alien bug download has no separate license file, so its source page is the record. Raw downloads are not stored in the repository. `tools/vat/README.md` documents the bake.
 
+**Voice:** `assets/voice/ludas/*.wav` are short clips from the project owner's private recordings (archive `#ludas_vox`), mono 22 kHz and loudness-normalised (EBU R128, −16 LUFS). They are not CC0 and are included with the owner's permission for this project only.
+
 ## Engine and bundled libraries
 
 Kakaboomboom runs on **Godot Engine 4.7.2**, distributed under the MIT license.
