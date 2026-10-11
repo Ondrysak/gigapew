@@ -1,5 +1,9 @@
 # Unreleased source changes
 
+- Removed the painted guide lines from generated levels: the corridor centre lines,
+  room outlines, the landing-pad bars, and the glowing wall-top and wall-base neon
+  strips in Palmovka and Hlavák. Layouts, colliders, mining sites and RNG order are
+  unchanged. Ramp treads and deck edges stay. Hlavák is noticeably darker without them.
 - Eight more invented homeless characters: a hood over a long beard, taped glasses, a
   bandana, a flat cap with a black eye, an eyepatch, heavy jowls, smeared eyeliner and
   a swollen face. The face atlas is now 5 × 5 (24 faces), with 20 homeless cells and 4

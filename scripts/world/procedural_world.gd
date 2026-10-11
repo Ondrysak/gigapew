@@ -154,7 +154,6 @@ func _ready() -> void:
 	_build_room_features()
 	if _theme == &"yard":
 		_build_zizkov_street()
-	_build_guides()
 	_build_lighting()
 	_flush_visual_batches()
 	# Storefronts wait until the game's deposit field has placed its machines (a few
@@ -645,8 +644,6 @@ func _build_spawn() -> void:
 		for bar in 5:
 			_visual(_box, _dark, Vector3(at.x + (bar - 2) * 0.28, 0.02, at.y), Vector3(0.07, 0.01, 1.3 - absf(bar - 2) * 0.3))
 		return
-	_visual(_box, _accent, Vector3(at.x, 0.006, at.y - 1.8), Vector3(3.6, 0.01, 0.08))
-	_visual(_box, _accent, Vector3(at.x, 0.006, at.y + 1.8), Vector3(3.6, 0.01, 0.08))
 
 ## Greedy rectangle merge of the remaining rock into exact blocks.
 func _build_solids() -> void:
@@ -725,12 +722,9 @@ func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBo
 	# Tenement dressing waits until every machine site and set piece exists.
 	_facade_runs.append({"mid": mid, "normal": normal, "length": length, "height": height, "along_x": along_x, "key": hash([rect.position, face, start])})
 	if _theme != &"yard":
-		# Everything flush on the face: a glowing top trim, a dark mid band above
-		# the machine mounting height, and a hazard kick-plate reading the wall line.
-		_visual(_box, _accent, mid + normal * 0.02 + Vector3.UP * (height - 0.45), Vector3(length, 0.12, 0.04) if along_x else Vector3(0.04, 0.12, length))
+		# Flush on the face: only a dark mid band above the machine mounting height.
 		if count >= 3:
 			_visual(_box, _dark, mid + normal * 0.015 + Vector3.UP * minf(height - 1.3, 3.6), Vector3(length - 1.0, 1.1, 0.03) if along_x else Vector3(0.03, 1.1, length - 1.0))
-		_visual(_box, _secondary, mid + normal * 0.02 + Vector3.UP * 0.09, Vector3(length, 0.18, 0.04) if along_x else Vector3(0.04, 0.18, length))
 	# Contract machine sites need a broad face with two open cells of standing room.
 	var deep_start := -1
 	for step in range(start, start + count + 1):
@@ -949,28 +943,6 @@ func _build_cover() -> void:
 				_box_body(_obstacles, label, position, size, _steel)
 				_dress_box(position, size, landmark)
 			break
-
-## Painted centre lines trace every passage; narrow chokepoints glow in the
-## secondary colour. Rooms get a thin floor outline marking their extent.
-func _build_guides() -> void:
-	for corridor in _corridors:
-		var line: Array[Vector2] = corridor.line
-		var material := _secondary if int(corridor.width) <= 2 else _accent
-		for index in line.size() - 1:
-			var a := _cell_world(line[index])
-			var b := _cell_world(line[index + 1])
-			var span := b - a
-			if span.length() < 0.5:
-				continue
-			var middle := (a + b) * 0.5
-			_visual(_box, material, Vector3(middle.x, 0.007, middle.y), Vector3(span.length(), 0.01, 0.07), Basis(Vector3.UP, atan2(-span.y, span.x)))
-	for room in rooms:
-		var rect := _room_rect(room).grow(-0.5)
-		var material := _secondary if room.arena else _accent
-		var center := rect.get_center()
-		for sign_value in [-1.0, 1.0]:
-			_visual(_box, material, Vector3(center.x, 0.006, center.y + sign_value * rect.size.y * 0.5), Vector3(rect.size.x, 0.01, 0.05))
-			_visual(_box, material, Vector3(center.x + sign_value * rect.size.x * 0.5, 0.006, center.y), Vector3(0.05, 0.01, rect.size.y))
 
 func _island_size(landmark: bool, circular: bool) -> Vector3:
 	if circular:
