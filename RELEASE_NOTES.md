@@ -1,4 +1,7 @@
-# Unreleased source changes
+# Kakaboomboom 0.4.0
+
+LUĎAS: LAST TIME KRATOS reskin: Prague humans and delirium creatures with invented
+faces, junk guns, crowbar salvage and a street UI; Godot 4.7.2 Linux x86_64 release.
 
 - Homeless enemies with invented faces: Bezdomovec, Feťák and Alkoholik, plus the
   harder Vekslák, Vyhazovač and Pan Herna, draw one of sixteen painted pixel
@@ -174,8 +177,22 @@
   That subset still reported 20 ObjectDB instances leaked at exit; source
   verification is not claimed universally warning-free.
 
-The published 0.3.0 export and archive below have not been rebuilt for these
-source changes.
+## 0.4.0 verification and limits
+
+The full rendered lab (25 scenarios, 199 captures) and the precision/nested-blast
+regression passed with zero failures before packaging. The packaged archive and all
+its files passed SHA-256 verification; the extracted executable booted through the
+intro and main menu outside the source project for 600 frames and exited with code 0.
+The package contains no reference photographs: the export excludes `homeless_pictures/`,
+Godot ignores that folder, and a scan of the executable found none of its file names.
+Faces in the game are painted from parameters only.
+
+The packaged smoke reported 6 leaked ObjectDB instances at exit. Sustained 60 fps,
+Radeon hardware performance, balance and other distributions are not certified.
+
+Version 0.4.0 installs like 0.3.0: extract `kakaboomboom-0.4.0-linux-x86_64.tar.gz`,
+verify with the adjacent `.sha256` and `SHA256SUMS`, run `./kakaboomboom.x86_64`.
+Previous versioned release artifacts are not overwritten. The 0.3.0 notes follow.
 
 # Kakaboomboom 0.3.0
 

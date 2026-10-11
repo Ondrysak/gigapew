@@ -57,16 +57,16 @@ the `levels`, `quests` and `onboarding` scenarios exercise generated campaign wo
 
 ## Linux release
 
-Current game version: **0.3.0**. Downloadable/local release notes are in
+Current game version: **0.4.0**. Downloadable/local release notes are in
 [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 To play the packaged release:
 
 ```sh
 cd export/linux
-sha256sum -c kakaboomboom-0.3.0-linux-x86_64.tar.gz.sha256
-tar -xzf kakaboomboom-0.3.0-linux-x86_64.tar.gz
-cd kakaboomboom-0.3.0-linux-x86_64
+sha256sum -c kakaboomboom-0.4.0-linux-x86_64.tar.gz.sha256
+tar -xzf kakaboomboom-0.4.0-linux-x86_64.tar.gz
+cd kakaboomboom-0.4.0-linux-x86_64
 sha256sum -c SHA256SUMS
 ./kakaboomboom.x86_64
 ```
@@ -356,4 +356,4 @@ and all six guns in hand were inspected as screenshots. Faces look greyer under
 the authored lab arena's cold lighting than they will in the warm generated
 sectors, which this run did not capture; frame rate is not measured.
 
-The published 0.3.0 package has not been rebuilt for these source changes.
+Version 0.4.0 packages these changes; its verification and limits are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
