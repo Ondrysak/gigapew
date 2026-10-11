@@ -1,9 +1,9 @@
 {
  "id": "robot_runner",
- "source_vertices": 908,
- "columns": 908,
+ "source_vertices": 916,
+ "columns": 932,
  "texture": [
-  908,
+  932,
   81
  ],
  "clips": [
@@ -38,8 +38,14 @@
   "Pants",
   "Belt",
   "Face",
-  "Hair"
+  "Hair",
+  "Batoh"
  ],
- "textures": {},
- "rest_vertices": 908
+ "textures": {
+  "FaceAtlas": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 916
 }

@@ -94,6 +94,11 @@ static func _material_for(source: Material, definition: HordeEnemyDefinition, sh
 	# Bodies pressed against the camera vanish; larger bodies vanish sooner.
 	# Capped so a boss (whose contact distance exceeds the cap) always stays visible.
 	material.set_shader_parameter("near_cull", minf(definition.radius + 0.8, 1.6))
+	# Textured surfaces (the face) carry their own dirt; flat clothes and skin get the shader's.
+	var textured := standard != null and standard.albedo_texture != null
+	material.set_shader_parameter("grime", definition.grime * (0.4 if textured else 1.0))
+	if textured and definition.face_atlas != Vector2i.ONE:
+		material.set_shader_parameter("face_atlas", Vector4(definition.face_atlas.x, definition.face_atlas.y, definition.face_first, definition.face_count))
 	var animation := definition.vertex_animation
 	if animation != null:
 		material.set_shader_parameter("vat_positions", animation.positions)

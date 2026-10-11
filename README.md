@@ -12,6 +12,14 @@ The implemented asset changes are:
   Alkoholik, Vekslák, Vyhazovač and Pan Herna in the first two sectors; Bílá myška,
   Šváb z herny, Lahev rumu, Jednoruký bandita and Pan Jackpot in the third.
   `robot_*` and `alien_*` are retained internal slot IDs, not the visible creatures.
+- The six human enemies wear original invented faces. `tools/vat/faces/build_faces.py`
+  paints sixteen pixel faces (twelve homeless/drunk/junkie, four harder men) and
+  `tools/vat/bake_vat.py` maps them onto the front of each head; the horde shader
+  picks one per enemy, so a crowd of Bezdomovci shows all twelve. No photograph
+  or real person is used. Mud, stains and damp patches come from the shader
+  (`grime`); a bedroll, ragged backpack and second bottle add silhouette.
+  Bezdomovec, Feťák and Alkoholik also spawn in Hlavák, so every sector has
+  homeless in its crowd.
 - The first weapon, **Lahve od piva** (`pulse`), is a dirty fingerless-gloved hand
   holding a brown beer bottle, with pooled tumbling flying bottles and glass/foam
   impacts. It has no muzzle flash or brass casings; damage and cadence are unchanged.
@@ -40,8 +48,8 @@ The implemented asset changes are:
   The remaining primary labels follow the bible: **Excalibur / Vinyly /
   Holubí letka / Absintové molotov / Rum + zapalovač**.
 
-The other five primary weapon models and later-sector environments retain their
-existing designs. Renamed labels do not imply those meshes have been replaced.
+The later-sector environments retain their existing designs. All six primary guns
+are original improvised junk models with unchanged numbers (see below).
 The narrative ending is specified in the bible, not a newly implemented cutscene.
 Authored combat lab arenas deliberately retain their original sci-fi dressing;
 the `levels`, `quests` and `onboarding` scenarios exercise generated campaign worlds.
@@ -162,7 +170,7 @@ Turning Guided start off gives experienced players all five skills and every upg
 - **PERMABAN** (`collapse`): casting Valhalla within 6 m of the zone's edge detonates it for 70 base damage, +10% per held enemy (up to +150%), and flings the pack outward.
 - **LAST TIME KRATOS** (`ram`): dash or grapple while another skill protects you to slam a 5.5 m, 45-damage shockwave at landing. It can POWNED too.
 
-**One primary, one trigger:** no main-weapon melee, magazines, reserves, reloads, ammunition pickups, charged secondaries or cross-charge meters. The first model is a thrown-beer-bottle weapon; the other five primary models remain unchanged. Choose a starting blueprint in the Workshop, change weapons with the wheel or free shop selector, and keep purchased primary-mod ranks without compounding them. The crowbar is a close-range salvage tool, not a combat weapon. Passive auto weapons remain separate level-up picks.
+**One primary, one trigger:** no main-weapon melee, magazines, reserves, reloads, ammunition pickups, charged secondaries or cross-charge meters. Every primary is an original improvised model held by a fingerless glove: Lahve od piva (thrown beer bottles), Excalibur (rebar and a road-sign crossguard), Vinyly (a record-player shotgun throwing black discs), Holubí letka (a bike-wheel rotary firing pigeons), Absintovej molotov (a drainpipe launcher with flaming absinthe bottles) and Rum + zapalovač (a hairspray-and-lighter flame). Choose a starting blueprint in the Workshop, change weapons with the wheel or free shop selector, and keep purchased primary-mod ranks without compounding them. The crowbar is a close-range salvage tool, not a combat weapon. Passive auto weapons remain separate level-up picks.
 
 | Weapon | Main cadence | Role |
 | --- | --- | --- |
@@ -185,7 +193,7 @@ Turning Guided start off gives experienced players all five skills and every upg
 
 Spitters have 180 base health, tanks 420 and bosses 6000; schedule multipliers still apply. These values are not a full-campaign balance certification.
 
-**Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes reliable target reactions and coherent presentation. Contact feedback precedes restrained camera effects; recoil never drifts aim, and the horde simulation has no global hit-stop. Six original Blender-authored models use metre-scale receivers, open barrel bores, rails, sights, magazines, metal/polymer/rubber materials and gloved grips. Static parts are batched by material; magazines, the shotgun pump and the rotary barrel assembly remain movable.
+**Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes reliable target reactions and coherent presentation. Contact feedback precedes restrained camera effects; recoil never drifts aim, and the horde simulation has no global hit-stop. Six original Blender-authored junk guns (rusty rebar, pipe, tape, a record player, a bike wheel, bottles and cans) share one gloved grip rig. Static parts are batched by material; the pump, rotary wheel and pooled thrown projectiles (bottle, spike, disc, pigeon, flaming bottle) stay movable.
 
 **Hit chains:** each main-gun shot that directly hits an enemy adds one beat, no matter how many pellets hit. After three consecutive hits, each further shot gains +8% damage per beat, capped at +40%. A miss, taking damage, or 2.5 seconds without another hit breaks the chain; explosions alone do not extend it. The crosshair shows the next shot's bonus and a countdown. Hit-confirmation sounds climb in pitch; hits and kills have brighter impact sparks and stronger recoil.
 
@@ -260,6 +268,8 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Horde:** `scripts/horde/horde.gd` runs a data-oriented simulation with one MultiMesh per enemy type, a shared flow field, weapon queries, `slow()`, material FX and contact tuning. The flow field avoids obstacles and treats cliffs as walls; it routes to the player's level over ramps. Each enemy has a feet height taken from the stage heightfield: it snaps up ramps, falls off ledges and never climbs a step over 0.3 m. Hit tests, blasts, projectiles and contact damage all use that height. Hallucination stats/animations are in `data/enemies/*.tres`, retaining `robot_*`/`alien_*` as internal slot IDs. Six CC0 humans and five original delirium rigs bake into `assets/monsters/`; `shaders/horde_enemy_vat.gdshader` animates the crowd from position/normal textures and per-instance clip state. `tools/vat/README.md` covers source generation, baking and licenses. `Faction.MACHINE`/`FLESH` select sparks or splatter independently of slot IDs.
 
   Enemy `weak_spot_offset` and `weak_spot_radius` author a head/core sphere in model-space metres before `model_scale` and yaw; radius zero disables precision hits. Type-level offsets, squared radii and upper hit bounds are cached once, not allocated per shot.
+
+  Human enemies share a 4 × 4 face atlas (`tools/vat/faces/atlas.png`). `HordeEnemyDefinition.face_atlas`, `face_first` and `face_count` choose which cells an enemy draws from; `horde_enemy_vat.gdshader` offsets the Face surface's UV by the per-instance phase, so one mesh and one draw call serve every face. `grime` (0–1) darkens and stains flat surfaces from model-space position in `horde_enemy_common.gdshaderinc`. Homeless enemies draw cells 0–11, Vekslák 12–13, Vyhazovač 13–14 and Pan Herna 15.
 - **Salvage:** `ResourceDefinition` data lives in `data/resources/`; internal deposit types remain in `data/resources/deposits/`. `DepositGeometry` builds machine doors and exact triangle colliders; `MineralDeposit` owns health, opening transforms, permanent housing and conserved integer loot. `DepositField` retains seeded site/stock placement. `MiningTool` owns crowbar contact/leverage; `MiningFeedback` draws mechanical latch markers and Czech telemetry. `ResourcePickupSet` pools coin/token meshes and paper packs using `shaders/cigarette_pack.gdshader`. Mining-named APIs/input IDs remain intentional internals; the obsolete crystal/history shaders are removed.
 - **Survival pickups:** `scripts/progression/pickup_field.gd` pools XP, magnets, repairs and a separate two-pack timed repair supply set. `PickupGeometry` builds their faceted silhouettes once at setup. Kill thresholds and supply interval are exports; grounded placement uses the horde heightfield, and supply routes reject obstacles and cliffs. Collection never overwrites the persistent profile. The radar reads the same live pickup pools.
 - **Procedural levels:** `data/stages/*.tres` configure play area, `layout_theme`, `cover_count`, `overlook_count`, `outcrop_count`, `quest_scale` and `SpawnSchedule`. `ProceduralWorld` (`scripts/world/procedural_world.gd`, `scenes/levels/procedural.tscn`) is configured with the stage and seed before entering the tree. It carves a 2 m grid identical to the horde grid: the theme plan places rooms, corridors join them (spanning tree plus loops, or the Reactor's spokes and chords), and alcoves are added. Ring cores are refilled and cells unreachable from spawn are pruned. Remaining rock merges greedily into exact axis-aligned blocks under `Obstacles`; broad block faces with two open cells in front become contract `mining_sites`. Overlook decks and tilted ramp boxes live under `Elevation`, which the horde rasterises into its walkable heightfield. Set pieces, pillars and cover check carved floor plus margins, so passages and ore standing room stay open. `layout_open` is public for the radar. Original authored worlds remain explicit lab fixtures with their own play areas.
@@ -307,6 +317,7 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `shop` | primary comparison/swap, five skill upgrades, sold/maxed/empty wallet | real UI purchases, preserved mod ranks, layout bounds, exact debits, rerolls, capped/unaffordable refusals and no Esc skip |
 | `hud` | five skill cooldowns/ranks, primary mods, armor, low health and death | actual lethal damage ends the run |
 | `mining` | automatic crowbar, held-F leverage strip, opened compartments and empty housing | firearm/reach rejection, conserved loot, wall occlusion, pause and return to gun |
+| `street` | all twelve homeless faces on each homeless model, close faces, the harder men, the boss and a crowd per sector | atlas ranges and grime on every human, 12 of 12 faces appear in a crowd, homeless admitted by the real director in all three sectors |
 | `menu` | intro, every party member and scrollable skill details, workshop tabs, records, settings and pause/abandon screens | saved gear, free primary switching and gadgets reapplied exactly once |
 | `icons` | one gallery page per icon group | visual review |
 
@@ -336,5 +347,13 @@ The Prague asset/salvage/street-UI pass ran the full rendered lab:
 scroll-layout follow-ups cover real mouse purchases and complete party/skill
 descriptions. Screenshots were visually reviewed for menu, HUD/death, shop,
 mastery, tutorial, boss and extraction surfaces; this is not FPS certification.
+
+The street-faces and junk-guns pass then ran the full rendered lab again across
+all 25 scenarios: **199 captures, zero check failures or script/engine errors**,
+plus the precision/nested-blast regression (`failures=0`). Face galleries for
+each homeless model, close faces, the harder men, the boss, a crowd per sector
+and all six guns in hand were inspected as screenshots. Faces look greyer under
+the authored lab arena's cold lighting than they will in the warm generated
+sectors, which this run did not capture; frame rate is not measured.
 
 The published 0.3.0 package has not been rebuilt for these source changes.

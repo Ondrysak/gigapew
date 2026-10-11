@@ -11,7 +11,7 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   automat a Jackpot jsou vlastní generované rigy. Pohyb, útok a smrt se pečou do VAT.
 - První improvizovaná zbraň **Lahve od piva**: špinavá ruka v bezprsté
   rukavici, hnědá pivní lahev, letící lahve a skleněné střepy s pěnou.
-  Ostatních pět hlavních modelů zbraní zůstává původních.
+  Všech šest hlavních zbraní má vlastní improvizovaný model.
 - První generovaný sektor má žižkovské činžáky, pavlače, dlažbu, HERNA NONSTOP,
   PIVO, sodíkové lampy a vysílač. Geometrie kontraktů a kolizí se nemění.
   Palmovka/Hlavák mají nové názvy, zatím původní prostředí.
@@ -31,6 +31,10 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   `street_racer`, `jedno_kolo`, `takhle`, `plna_rychlost` pro variace reakcí.
 - Zvolený konec B je zapsaný v kapitole 5; tento asset pass nepřidává
   příběhové cutscény ani svatební dialogy.
+- Lidé z ulice mají šestnáct vymyšlených pixelových obličejů (dvanáct bezďáci,
+  opilci a feťáci, čtyři tvrdší chlapi) a špínu v shaderu. Bezdomovec, Feťák a
+  Alkoholik se objevují ve všech třech sektorech včetně Hlaváku. Obličeje jsou
+  malované z parametrů; nejsou podle fotek ani skutečných lidí.
 
 
 ## 1. Logline

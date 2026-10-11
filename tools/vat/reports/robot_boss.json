@@ -50,6 +50,11 @@
   "Hat",
   "Hair"
  ],
- "textures": {},
+ "textures": {
+  "FaceAtlas": [
+   1024,
+   1024
+  ]
+ },
  "rest_vertices": 2776
 }

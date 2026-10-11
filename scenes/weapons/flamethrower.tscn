@@ -22,14 +22,14 @@ blend_mode = 1
 albedo_color = Color(1, 0.42, 0.08, 0.26)
 
 [sub_resource type="SphereMesh" id="Mesh_flash"]
-radius = 0.033
-height = 0.085
-radial_segments = 8
+radius = 0.03
+height = 0.09
+radial_segments = 7
 rings = 4
 
-[node name="Flamethrower" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
+[node name="Flamethrower" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "pilot_flame")]
 script = ExtResource("1_view")
-muzzle = NodePath("MuzzleFlash")
+muzzle = NodePath("Model/flamethrower/Muzzle")
 flash = NodePath("MuzzleFlash")
 flash_light = NodePath("MuzzleLight")
 impact_material = SubResource("Mat_impact")
@@ -42,10 +42,11 @@ recoil_wobble = 0.2
 recoil_frequency = 9.0
 recoil_damping = 0.85
 flash_duration = 0.05
+pilot_flame = NodePath("Model/flamethrower/Pilot")
 puff_material = SubResource("Mat_puff")
 puff_pool_size = 48
 puff_lifetime = 0.32
-puff_start_size = 0.06
+puff_start_size = 0.05
 puff_end_size = 0.85
 puff_camera_clearance = 0.45
 casing_pool_size = 0
@@ -54,7 +55,7 @@ casing_pool_size = 0
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="."]
 visible = false
-position = Vector3(0, 0.041, -0.6)
+position = Vector3(-0.03, 0.17, -0.62)
 rotation = Vector3(1.570796, 0, 0)
 mesh = SubResource("Mesh_flash")
 material_override = SubResource("Mat_glow")
@@ -62,7 +63,7 @@ cast_shadow = 0
 
 [node name="MuzzleLight" type="OmniLight3D" parent="."]
 visible = false
-position = Vector3(0, 0.041, -0.6)
+position = Vector3(-0.03, 0.17, -0.62)
 light_color = Color(1, 0.5, 0.15, 1)
 light_energy = 2.4
 omni_range = 5.0

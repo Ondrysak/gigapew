@@ -12,6 +12,7 @@ Outputs go to assets/monsters/<id>/ (see tools/vat/README.md for the format):
 	<id>_vat.tres        HordeVertexAnimation resource (clips, counts, textures)
 """
 
+import bmesh
 import bpy
 import json
 import math
@@ -254,6 +255,94 @@ def apply_materials(mesh, spec):
 			bsdf.inputs["Emission Strength"].default_value = override.get("emission_strength", 1.0)
 
 
+def cut_polygons(obj, spec):
+	"""Delete polygons of a named material inside a source-space window. Used to
+	remove a painted-over feature, e.g. the moustache part of a hair mesh, so the
+	face texture shows through. Each cut: material, below_z/above_z, max_abs_x and
+	max_normal_y (normal.y < value keeps only front-facing polygons)."""
+	cuts = spec.get("cut", [])
+	if not cuts:
+		return
+	mesh = obj.data
+	slots = {m.name: index for index, m in enumerate(mesh.materials) if m is not None}
+	bm = bmesh.new()
+	bm.from_mesh(mesh)
+	rotation = obj.matrix_world.to_3x3()
+	doomed = []
+	for face in bm.faces:
+		centre = obj.matrix_world @ face.calc_center_median()
+		normal = (rotation @ face.normal).normalized()
+		for cut in cuts:
+			if face.material_index != slots.get(cut["material"]):
+				continue
+			if cut.get("above_z", -1e9) < centre.z < cut.get("below_z", 1e9) and abs(centre.x) < cut.get("max_abs_x", 1e9) and normal.y < cut.get("max_normal_y", 1.0):
+				doomed.append(face)
+				break
+	bmesh.ops.delete(bm, geom=doomed, context="FACES")
+	bm.to_mesh(mesh)
+	bm.free()
+	print("CUT %d polygons" % len(doomed))
+
+
+def apply_face(obj, spec):
+	"""Give the front of the head an atlas-textured Face material.
+
+	The source heads are one smooth skin blob with only two eyes and two brows in
+	the Face material. Skin polygons on the front of the head join the Face
+	material and get a planar front projection over their bounding box: cell 0 of
+	the atlas. The horde shader offsets that UV per instance to pick a cell, so
+	all the faces share one mesh and one draw call. Atlas orientation: row 0 is the
+	image's top row; glTF export flips Blender's V."""
+	face = spec.get("face")
+	if not face:
+		return
+	mesh = obj.data
+	slots = {m.name: index for index, m in enumerate(mesh.materials) if m is not None}
+	if "Face" not in slots or "Skin" not in slots:
+		raise RuntimeError("face spec needs Skin and Face materials, found %s" % sorted(slots))
+	face_slot, skin_slot = slots["Face"], slots["Skin"]
+	cols, rows = face["cells"]
+	rotation = obj.matrix_world.to_3x3()
+	picked = []
+	for poly in mesh.polygons:
+		normal = (rotation @ poly.normal).normalized()
+		centre = obj.matrix_world @ poly.center
+		if poly.material_index == face_slot or (
+			poly.material_index == skin_slot and normal.y < -0.35 and centre.z > 2.05 and abs(centre.x) < 0.56
+		):
+			picked.append(poly)
+	if len(picked) < 24:
+		raise RuntimeError("only %d head-front polygons found; head layout changed?" % len(picked))
+	points = [obj.matrix_world @ mesh.vertices[v].co for poly in picked for v in poly.vertices]
+	x0, x1 = min(p.x for p in points), max(p.x for p in points)
+	z0, z1 = min(p.z for p in points), max(p.z for p in points)
+	uv_layer = mesh.uv_layers[0] if len(mesh.uv_layers) else mesh.uv_layers.new(name="UVMap")
+	for poly in picked:
+		poly.material_index = face_slot
+		for loop in poly.loop_indices:
+			p = obj.matrix_world @ mesh.vertices[mesh.loops[loop].vertex_index].co
+			u = (p.x - x0) / (x1 - x0)
+			v = (p.z - z0) / (z1 - z0)
+			uv_layer.data[loop].uv = (u / cols, 1.0 - 1.0 / rows + v / rows)
+
+	image = bpy.data.images.load(os.path.join(PROJECT, face["atlas"]))
+	image.name = "FaceAtlas"
+	image.colorspace_settings.name = "sRGB"
+	material = mesh.materials[face_slot]
+	material.use_nodes = True
+	tree = material.node_tree
+	tree.nodes.clear()
+	bsdf = tree.nodes.new("ShaderNodeBsdfPrincipled")
+	output = tree.nodes.new("ShaderNodeOutputMaterial")
+	texture = tree.nodes.new("ShaderNodeTexImage")
+	texture.image = image
+	texture.interpolation = "Linear"
+	tree.links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
+	tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+	bsdf.inputs["Roughness"].default_value = 0.72
+	bsdf.inputs["Metallic"].default_value = 0.0
+
+
 def add_props(rig, spec):
 	"""Rigid low-poly props (a plastic bag, a bottle, a door) skinned with weight 1
 	to one bone, so they follow the hand through every baked clip. Offsets are in
@@ -450,6 +539,8 @@ def bake(monster_id, config):
 	obj = join(meshes)
 	mesh = obj.data
 	apply_materials(mesh, spec)
+	cut_polygons(obj, spec)
+	apply_face(obj, spec)
 	downscale_textures(config.get("max_texture_size", 1024))
 	prepare_uvs(mesh)
 	loop_column, column_loop, column_vertex = build_columns(mesh)

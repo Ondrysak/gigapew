@@ -9,6 +9,9 @@ extends Node3D
 @export var trace_material: Material
 @export var impact_material: Material
 @export var target_impact_material: Material
+## Keep the scene's own tracer, impact, puff and flash colours for kinetic damage;
+## only elemental types (fire, frost, shock) recolour them.
+@export var kinetic_keeps_colors := false
 @export var shot_cue: StringName = &"shot"
 @export var hit_cue: StringName = &"hit"
 @export var kill_cue: StringName = &"kill"
@@ -41,11 +44,20 @@ extends Node3D
 @export var projectile_pool_size := 12
 ## Seconds from the muzzle to the ray's end.
 @export var projectile_flight := 0.12
+## Flight speed (metres per second); when above zero it replaces the fixed flight time,
+## so near targets are reached sooner and far ones never blur past.
+@export var projectile_speed := 0.0
 @export var projectile_scale := 1.0
 ## Tumble rate (radians per second) about the projectile's side axis.
 @export var projectile_spin := 30.0
 ## Peak height of the throwing arc as a fraction of the flight distance.
 @export var projectile_arc := 0.03
+## Axis (in the projectile's own frame) it spins about; zero keeps it level (e.g. a pigeon).
+@export var projectile_spin_axis := Vector3.RIGHT
+## Wing flap rate (radians per second) of projectiles that carry WingL/WingR pivots; 0 disables.
+@export var projectile_flap_speed := 0.0
+## Peak wing deflection (radians) of that flap.
+@export var projectile_flap_angle := 0.8
 
 @export_group("Impact")
 ## Optional streak mesh at each contact (e.g. glass shards); empty uses thin bars.
@@ -82,9 +94,16 @@ extends Node3D
 @export var blast_duration := 0.26
 ## Visual radius as a fraction of the damage radius.
 @export var blast_visual_scale := 0.75
+## Keep the blast template's own materials instead of tinting it by damage type (e.g. a fireball).
+@export var blast_keep_materials := false
 ## Blasts whose flash would reach within this distance of the camera skip the
 ## flash (damage still applies), so point-blank shots never white out the view.
 @export var min_view_clearance := 1.0
+
+@export_group("Pilot")
+## Node scaled with a flicker every frame (e.g. a lighter's pilot flame).
+@export var pilot_flame: Node3D
+@export var pilot_flicker := 0.2
 
 @export_group("Casings")
 ## Spent casings pooled per view; 0 ejects none (e.g. flame weapons).
@@ -155,7 +174,10 @@ var _projectiles: Array[Node3D] = []
 var _projectile_from := PackedVector3Array()
 var _projectile_to := PackedVector3Array()
 var _projectile_age := PackedFloat32Array()
+var _projectile_duration := PackedFloat32Array()
 var _projectile_next := 0
+var _projectile_wings: Array[Node3D] = []
+var _pilot_time := 0.0
 
 func _ready() -> void:
 	_rest = position
@@ -163,12 +185,12 @@ func _ready() -> void:
 	_rng.randomize()
 	# A small variation keeps the firearm's recoil spring organic.
 	_spring_omega = TAU * recoil_frequency * _rng.randf_range(0.9, 1.1)
-	_pump = get_node_or_null(^"Model/Pump") as Node3D
+	_pump = find_child("Pump", true, false) as Node3D
 	if _pump != null:
 		_pump_rest = _pump.position
-	var ejection := get_node_or_null(^"Model/Eject") as Node3D
+	var ejection := find_child("Eject", true, false) as Node3D
 	if ejection != null:
-		casing_port = ejection.position
+		casing_port = to_local(ejection.global_position)
 	if flash != null:
 		_flash_basis = flash.basis
 		_flash_shot_basis = _flash_basis
@@ -261,10 +283,14 @@ func prepare(pellet_count: int) -> void:
 			projectile.top_level = true
 			projectile.hide()
 			_projectiles.append(projectile)
+			if projectile_flap_speed > 0.0:
+				_projectile_wings.append(projectile.find_child("WingL", true, false) as Node3D)
+				_projectile_wings.append(projectile.find_child("WingR", true, false) as Node3D)
 		_projectile_from.resize(count)
 		_projectile_to.resize(count)
 		_projectile_age.resize(count)
 		_projectile_age.fill(-1.0)
+		_projectile_duration.resize(count)
 	var blast_count := maxi(pellet_count, blast_pool_size)
 	var blast_mesh := _sphere_mesh(12, 6) if blast_count > 0 else null
 	if blast_template != null:
@@ -334,6 +360,11 @@ func configure(definition: WeaponDefinition) -> void:
 		return
 	_damage_type = definition.damage_type
 	var color := DamageType.color(_damage_type)
+	if kinetic_keeps_colors and _damage_type == DamageType.Kind.KINETIC:
+		# Critical hits still flare brighter than ordinary ones.
+		var base := (target_impact_material as StandardMaterial3D).albedo_color
+		_tint(_critical_material, base.lerp(Color.WHITE, 0.6))
+		return
 	_tint(trace_material as StandardMaterial3D, color)
 	_tint(impact_material as StandardMaterial3D, color.lerp(Color.WHITE, 0.25))
 	_tint(target_impact_material as StandardMaterial3D, color)
@@ -343,8 +374,9 @@ func configure(definition: WeaponDefinition) -> void:
 	_tint(_blast_material, Color(color.r, color.g, color.b, 0.25))
 	if flash_light != null:
 		flash_light.light_color = color
-	for blast in _blasts:
-		_tint_blast(blast, color)
+	if not blast_keep_materials:
+		for blast in _blasts:
+			_tint_blast(blast, color)
 
 func _tint(material: StandardMaterial3D, color: Color) -> void:
 	if material == null:
@@ -480,6 +512,10 @@ func _process(delta: float) -> void:
 			impact.hide()
 		elif impact.visible:
 			impact.scale = Vector3.ONE * maxf(0.001, _impact_time * 0.9)
+	if pilot_flame != null:
+		_pilot_time += delta
+		var flicker := 1.0 + pilot_flicker * (sin(_pilot_time * 43.0) * 0.5 + sin(_pilot_time * 71.0 + 1.3) * 0.5)
+		pilot_flame.scale = Vector3(flicker, 1.0 + (flicker - 1.0) * 2.2, flicker)
 	if spinner != null and _spin > 0.0:
 		spinner.rotation.z = fmod(spinner.rotation.z + spin_speed * _spin * delta, TAU)
 	for spark in _sparks:
@@ -671,6 +707,7 @@ func _launch_projectile(start: Vector3, end: Vector3) -> void:
 	_projectile_from[slot] = start
 	_projectile_to[slot] = end
 	_projectile_age[slot] = 0.0
+	_projectile_duration[slot] = maxf(start.distance_to(end) / projectile_speed, 0.04) if projectile_speed > 0.0 else projectile_flight
 	_place_projectile(slot, 0.0)
 	_projectiles[slot].show()
 
@@ -680,22 +717,30 @@ func _update_projectiles(delta: float) -> void:
 		if age < 0.0:
 			continue
 		age += delta
-		if age >= projectile_flight:
+		if age >= _projectile_duration[index]:
 			_projectile_age[index] = -1.0
 			_projectiles[index].hide()
 			continue
 		_projectile_age[index] = age
 		_place_projectile(index, age)
 
-## Along the ray with a shallow throwing arc, tumbling end over end.
+## Along the ray with a shallow throwing arc, spinning about its spin axis.
 func _place_projectile(index: int, age: float) -> void:
 	var from := _projectile_from[index]
 	var ray := _projectile_to[index] - from
-	var t := age / projectile_flight if projectile_flight > 0.0 else 1.0
+	var t := age / _projectile_duration[index] if _projectile_duration[index] > 0.0 else 1.0
 	var at := from + ray * t + Vector3.UP * (sin(t * PI) * projectile_arc * ray.length())
 	var facing := Basis.looking_at(ray, Vector3.RIGHT if absf(ray.normalized().y) > 0.98 else Vector3.UP)
-	var tumble := Basis(Vector3.RIGHT, float(index) * 1.9 + projectile_spin * age)
+	var tumble := Basis.IDENTITY
+	if projectile_spin_axis != Vector3.ZERO:
+		tumble = Basis(projectile_spin_axis.normalized(), float(index) * 1.9 + projectile_spin * age)
 	_projectiles[index].global_transform = Transform3D((facing * tumble).scaled(Vector3.ONE * projectile_scale), at)
+	if not _projectile_wings.is_empty():
+		var flap := sin(age * projectile_flap_speed + float(index) * 2.3) * projectile_flap_angle
+		if _projectile_wings[index * 2] != null:
+			_projectile_wings[index * 2].rotation.z = -flap
+		if _projectile_wings[index * 2 + 1] != null:
+			_projectile_wings[index * 2 + 1].rotation.z = flap
 
 func _update_puffs(delta: float) -> void:
 	var camera := _view_camera()

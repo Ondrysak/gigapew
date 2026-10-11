@@ -78,6 +78,16 @@ enum Faction { MACHINE, FLESH }
 ## Fresnel rim glow that keeps silhouettes readable in dark arenas; alpha is strength.
 @export var rim_color := Color(0.0, 0.0, 0.0, 0.0)
 
+@export_group("Street Wear")
+## Layout (columns, rows) of a face atlas on the surface that has an albedo texture;
+## Vector2i.ONE means the texture is not an atlas. Each enemy shows one of `face_count`
+## cells starting at `face_first`, chosen from its random per-instance phase.
+@export var face_atlas := Vector2i.ONE
+@export var face_first := 0
+@export var face_count := 1
+## 0..1 dirt: mud up the legs, stains and darkening, in the model's own space.
+@export_range(0.0, 1.0) var grime := 0.0
+
 @export_group("Animation")
 ## Baked skeletal clips; null draws `model_scene` statically.
 @export var vertex_animation: HordeVertexAnimation

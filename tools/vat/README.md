@@ -10,6 +10,25 @@ KAKABOOMBOOM_DOWNLOADS=/absolute/path/to/kakaboomboom-downloads ./tools/vat/bake
 # Optional: BLENDER=/absolute/path/to/blender ./tools/vat/bake_all.sh
 ```
 
+## Street faces, grime and props
+
+The six human enemies share a 4 × 4 atlas of invented faces:
+
+```sh
+python3 tools/vat/faces/build_faces.py --preview /tmp/faces.png   # writes tools/vat/faces/atlas.png
+./tools/vat/bake_all.sh robot_grunt robot_runner robot_spitter robot_tank robot_bulwark robot_boss
+```
+
+The atlas is painted from parameters only; no photograph or real person is used.
+In `monsters.json`, `"face": {"atlas": ..., "cells": [4, 4]}` makes `bake_vat.py`
+move the front-facing head skin polygons into the Face material and project them
+planarly onto cell 0. `HordeEnemyDefinition.face_atlas/face_first/face_count`
+select the runtime cells. `"cut": [{"material", "below_z", "above_z", "max_abs_x",
+"max_normal_y"}]` deletes polygons, e.g. the Bezdomovec's moustache hair, so the
+painted mouth shows. `props` may add rigid shapes to any bone (a bedroll on the
+Torso, a bottle in each fist). Dirt is not baked: `HordeEnemyDefinition.grime`
+drives the shader.
+
 ## Original Hlavák delirium sources
 
 The five Hlavák replacements are generated locally, with no external model or

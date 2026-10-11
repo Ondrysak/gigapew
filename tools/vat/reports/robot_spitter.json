@@ -1,9 +1,9 @@
 {
  "id": "robot_spitter",
- "source_vertices": 952,
- "columns": 984,
+ "source_vertices": 968,
+ "columns": 1032,
  "texture": [
-  984,
+  1032,
   177
  ],
  "clips": [
@@ -47,8 +47,14 @@
   "Belt",
   "Face",
   "Hair",
-  "Lahev"
+  "Lahev",
+  "Pivo"
  ],
- "textures": {},
- "rest_vertices": 952
+ "textures": {
+  "FaceAtlas": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 968
 }

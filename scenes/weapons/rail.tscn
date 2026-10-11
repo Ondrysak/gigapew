@@ -5,27 +5,28 @@
 
 [sub_resource type="StandardMaterial3D" id="Trace"]
 shading_mode = 0
-albedo_color = Color(0.85, 0.7, 1, 1)
+albedo_color = Color(1, 0.84, 0.5, 1)
 
 [sub_resource type="StandardMaterial3D" id="Impact"]
 shading_mode = 0
-albedo_color = Color(0.8, 0.86, 1, 1)
+albedo_color = Color(1, 0.8, 0.55, 1)
 
 [sub_resource type="StandardMaterial3D" id="Hit"]
 shading_mode = 0
-albedo_color = Color(1, 0.3, 0.65, 1)
+albedo_color = Color(1, 0.55, 0.3, 1)
 
-[sub_resource type="SphereMesh" id="Flash"]
-radius = 0.04
-height = 0.17
-radial_segments = 8
-rings = 4
+[sub_resource type="StandardMaterial3D" id="Mat_rust"]
+shading_mode = 0
+albedo_color = Color(0.82, 0.34, 0.12, 1)
 
-[node name="Rail" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light")]
+[sub_resource type="PrismMesh" id="Mesh_chip"]
+left_to_right = 0.3
+size = Vector3(0.05, 0.22, 0.01)
+
+[node name="Rail" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template")]
 script = ExtResource("1_view")
-muzzle = NodePath("Flash")
-flash = NodePath("Flash")
-flash_light = NodePath("Light")
+kinetic_keeps_colors = true
+muzzle = NodePath("Model/rail/Muzzle")
 trace_material = SubResource("Trace")
 impact_material = SubResource("Impact")
 target_impact_material = SubResource("Hit")
@@ -35,29 +36,16 @@ recoil_angle = 0.052
 recoil_wobble = 0.15
 recoil_frequency = 5.0
 recoil_damping = 0.8
-trace_width = 0.045
+trace_width = 0.02
 trace_duration = 0.24
-flash_duration = 0.085
-casing_pool_size = 4
-casing_color = Color(0.55, 0.42, 0.95, 1)
-casing_radius = 0.009
-casing_length = 0.04
-casing_port = Vector3(0, 0.06, 0.02)
-casing_speed = 1.4
+projectile_template = NodePath("Model/rail/ThrownSpike")
+projectile_speed = 90.0
+projectile_arc = 0.0
+projectile_spin = 16.0
+projectile_spin_axis = Vector3(0, 0, 1)
+shard_mesh = SubResource("Mesh_chip")
+shard_material = SubResource("Mat_rust")
+shards_per_hit = 4
+casing_pool_size = 0
 
 [node name="Model" parent="." instance=ExtResource("2_model")]
-
-[node name="Flash" type="MeshInstance3D" parent="."]
-visible = false
-position = Vector3(0, 0.052, -0.739)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Flash")
-material_override = SubResource("Trace")
-cast_shadow = 0
-
-[node name="Light" type="OmniLight3D" parent="."]
-visible = false
-position = Vector3(0, 0.052, -0.739)
-light_color = Color(0.64, 0.4, 1, 1)
-light_energy = 2.3
-omni_range = 4.0

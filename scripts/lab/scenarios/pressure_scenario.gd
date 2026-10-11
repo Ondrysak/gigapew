@@ -51,7 +51,7 @@ func _stage_pressure() -> void:
 				if definition == wave.enemy:
 					authored = true
 			authored_identities = authored_identities and authored
-			if definition == schedule.waves[0].enemy or definition == schedule.waves[1 if stage > 0 else 2].enemy:
+			if definition.behavior == HordeEnemyDefinition.Behavior.SWARM:
 				ordinary += 1
 			else:
 				specialists += 1
@@ -77,7 +77,7 @@ func _stage_pressure() -> void:
 		specialists = 0
 		for identity: Vector2i in _identities(horde):
 			var definition: HordeEnemyDefinition = horde._defs[horde._type[identity.x]]
-			if definition == schedule.waves[0].enemy or definition == schedule.waves[1 if stage > 0 else 2].enemy:
+			if definition.behavior == HordeEnemyDefinition.Behavior.SWARM:
 				ordinary += 1
 			else:
 				specialists += 1

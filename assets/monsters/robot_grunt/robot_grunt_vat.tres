@@ -33,5 +33,5 @@ loop = false
 script = ExtResource("1_vat")
 positions = ExtResource("3_positions")
 normals = ExtResource("4_normals")
-vertex_count = 951
+vertex_count = 1003
 clips = Array[ExtResource("2_clip")]([SubResource("Clip_0"), SubResource("Clip_1"), SubResource("Clip_2")])

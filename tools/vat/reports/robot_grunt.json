@@ -1,9 +1,9 @@
 {
  "id": "robot_grunt",
- "source_vertices": 935,
- "columns": 951,
+ "source_vertices": 945,
+ "columns": 1003,
  "texture": [
-  951,
+  1003,
   88
  ],
  "clips": [
@@ -41,8 +41,14 @@
   "Face",
   "Hat",
   "Hair",
-  "Igelitka"
+  "Igelitka",
+  "Karimatka"
  ],
- "textures": {},
- "rest_vertices": 935
+ "textures": {
+  "FaceAtlas": [
+   1024,
+   1024
+  ]
+ },
+ "rest_vertices": 945
 }

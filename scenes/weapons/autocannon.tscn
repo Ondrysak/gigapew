@@ -3,54 +3,53 @@
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
 [ext_resource type="PackedScene" path="res://assets/guns/autocannon.glb" id="2_model"]
 
-[sub_resource type="StandardMaterial3D" id="Mat_glow"]
-shading_mode = 0
-albedo_color = Color(1, 0.52, 0.12, 1)
-
-[sub_resource type="StandardMaterial3D" id="Mat_trace"]
-shading_mode = 0
-albedo_color = Color(1, 0.62, 0.22, 1)
-
 [sub_resource type="StandardMaterial3D" id="Mat_impact"]
 shading_mode = 0
 albedo_color = Color(1, 0.8, 0.45, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_hit"]
 shading_mode = 0
-albedo_color = Color(1, 0.35, 0.3, 1)
+albedo_color = Color(1, 0.4, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_glass"]
+shading_mode = 0
+albedo_color = Color(0.3, 0.72, 0.28, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_core"]
 shading_mode = 0
 transparency = 1
 blend_mode = 1
 cull_mode = 2
-albedo_color = Color(1, 0.85, 0.5, 0.75)
+albedo_color = Color(1, 0.82, 0.4, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_fire"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(1, 0.4, 0.07, 0.55)
 
 [sub_resource type="StandardMaterial3D" id="Mat_blast"]
 shading_mode = 0
 transparency = 1
 blend_mode = 1
 cull_mode = 2
-albedo_color = Color(1, 0.4, 0.08, 0.5)
+albedo_color = Color(0.7, 0.16, 0.04, 0.3)
 
-[sub_resource type="SphereMesh" id="Mesh_flash"]
-radius = 0.055
-height = 0.16
-radial_segments = 10
-rings = 5
+[sub_resource type="PrismMesh" id="Mesh_glass"]
+left_to_right = 0.2
+size = Vector3(0.05, 0.18, 0.008)
 
 [sub_resource type="SphereMesh" id="Mesh_blast"]
 radius = 1.0
 height = 2.0
-radial_segments = 16
-rings = 8
+radial_segments = 9
+rings = 5
 
-[node name="Autocannon" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "blast_template")]
+[node name="Autocannon" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template", "blast_template", "pilot_flame")]
 script = ExtResource("1_view")
-muzzle = NodePath("MuzzleFlash")
-flash = NodePath("MuzzleFlash")
-flash_light = NodePath("MuzzleLight")
-trace_material = SubResource("Mat_trace")
+kinetic_keeps_colors = true
+muzzle = NodePath("Model/autocannon/Muzzle")
 impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")
 synth_shot = &"autocannon"
@@ -60,49 +59,48 @@ recoil_angle = 0.047
 recoil_lift = 0.2
 recoil_frequency = 5.5
 recoil_damping = 0.8
-trace_width = 0.034
-trace_duration = 0.11
-flash_duration = 0.07
+projectile_template = NodePath("Model/autocannon/ThrownMolotov")
+projectile_speed = 40.0
+projectile_arc = 0.02
+projectile_scale = 1.5
+projectile_spin = 16.0
+shard_mesh = SubResource("Mesh_glass")
+shard_material = SubResource("Mat_glass")
+shards_per_hit = 5
 blast_template = NodePath("BlastTemplate")
 blast_pool_size = 6
 blast_duration = 0.26
 blast_visual_scale = 0.8
+blast_keep_materials = true
 min_view_clearance = 1.0
-casing_color = Color(0.86, 0.6, 0.2, 1)
-casing_radius = 0.012
-casing_length = 0.05
-casing_lifetime = 0.7
-casing_port = Vector3(0, 0.06, -0.02)
-casing_speed = 1.4
+pilot_flame = NodePath("Model/autocannon/Pilot")
+casing_pool_size = 0
 
 [node name="Model" parent="." instance=ExtResource("2_model")]
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
-visible = false
-position = Vector3(0, 0.079, -0.703)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_flash")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="MuzzleLight" type="OmniLight3D" parent="."]
-visible = false
-position = Vector3(0, 0.079, -0.703)
-light_color = Color(1, 0.55, 0.18, 1)
-light_energy = 3.0
-omni_range = 4.5
 
 [node name="BlastTemplate" type="Node3D" parent="."]
 visible = false
 
 [node name="Core" type="MeshInstance3D" parent="BlastTemplate"]
-scale = Vector3(0.55, 0.55, 0.55)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
 mesh = SubResource("Mesh_blast")
 material_override = SubResource("Mat_core")
 cast_shadow = 0
 
+[node name="LobeA" type="MeshInstance3D" parent="BlastTemplate"]
+transform = Transform3D(0.62, 0, 0, 0, 0.62, 0, 0, 0, 0.62, 0.38, 0.15, 0.1)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_fire")
+cast_shadow = 0
+
+[node name="LobeB" type="MeshInstance3D" parent="BlastTemplate"]
+transform = Transform3D(0.56, 0, 0, 0, 0.56, 0, 0, 0, 0.56, -0.35, 0.25, -0.2)
+mesh = SubResource("Mesh_blast")
+material_override = SubResource("Mat_fire")
+cast_shadow = 0
+
 [node name="Shock" type="MeshInstance3D" parent="BlastTemplate"]
-scale = Vector3(1, 0.6, 1)
+transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("Mesh_blast")
 material_override = SubResource("Mat_blast")
 cast_shadow = 0

@@ -1,37 +1,29 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
 [ext_resource type="PackedScene" path="res://assets/guns/minigun.glb" id="2_model"]
 
-[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+[sub_resource type="StandardMaterial3D" id="Mat_splat"]
 shading_mode = 0
-albedo_color = Color(1, 0.72, 0.18, 1)
-
-[sub_resource type="StandardMaterial3D" id="Mat_trace"]
-shading_mode = 0
-albedo_color = Color(1, 0.86, 0.45, 1)
-
-[sub_resource type="StandardMaterial3D" id="Mat_impact"]
-shading_mode = 0
-albedo_color = Color(1, 0.7, 0.3, 1)
+albedo_color = Color(0.96, 0.95, 0.88, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_hit"]
 shading_mode = 0
-albedo_color = Color(1, 0.3, 0.4, 1)
+albedo_color = Color(0.9, 0.88, 0.8, 1)
 
-[sub_resource type="SphereMesh" id="Mesh_flash"]
-radius = 0.038
-height = 0.12
-radial_segments = 8
-rings = 4
+[sub_resource type="StandardMaterial3D" id="Mat_feather"]
+shading_mode = 0
+albedo_color = Color(0.62, 0.64, 0.68, 1)
 
-[node name="Minigun" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "spinner")]
+[sub_resource type="PrismMesh" id="Mesh_feather"]
+left_to_right = 0.5
+size = Vector3(0.05, 0.16, 0.006)
+
+[node name="Minigun" type="Node3D" node_paths=PackedStringArray("muzzle", "spinner", "projectile_template")]
 script = ExtResource("1_view")
-muzzle = NodePath("MuzzleFlash")
-flash = NodePath("MuzzleFlash")
-flash_light = NodePath("MuzzleLight")
-trace_material = SubResource("Mat_trace")
-impact_material = SubResource("Mat_impact")
+kinetic_keeps_colors = true
+muzzle = NodePath("Model/minigun/Muzzle")
+impact_material = SubResource("Mat_splat")
 target_impact_material = SubResource("Mat_hit")
 synth_shot = &"minigun"
 shot_volume_db = -15.0
@@ -40,34 +32,27 @@ recoil_angle = 0.009
 recoil_wobble = 0.25
 recoil_frequency = 11.0
 recoil_damping = 0.85
-trace_width = 0.012
-trace_duration = 0.05
-flash_duration = 0.03
-spinner = NodePath("Model/Spinner")
+spinner = NodePath("Model/minigun/Spinner")
 spin_speed = 42.0
 synth_spin = &"spin"
 spin_volume_db = -17.0
-casing_pool_size = 12
-casing_radius = 0.006
-casing_length = 0.024
+projectile_template = NodePath("Model/minigun/ThrownPigeon")
+projectile_speed = 42.0
+projectile_arc = 0.0
+projectile_scale = 2.2
+projectile_spin_axis = Vector3(0, 0, 0)
+projectile_flap_speed = 46.0
+projectile_flap_angle = 0.75
+shard_mesh = SubResource("Mesh_feather")
+shard_material = SubResource("Mat_feather")
+shards_per_hit = 3
+casing_pool_size = 8
+casing_color = Color(0.72, 0.5, 0.22, 1)
+casing_radius = 0.008
+casing_length = 0.02
 casing_lifetime = 0.45
 casing_port = Vector3(0, 0.03, 0.02)
 casing_speed = 1.5
 casing_direction = Vector3(1, -0.3, 0.2)
 
 [node name="Model" parent="." instance=ExtResource("2_model")]
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
-visible = false
-position = Vector3(0.052, 0.034, -0.66)
-rotation = Vector3(1.570796, 0, 0)
-mesh = SubResource("Mesh_flash")
-material_override = SubResource("Mat_glow")
-cast_shadow = 0
-
-[node name="MuzzleLight" type="OmniLight3D" parent="."]
-visible = false
-position = Vector3(0.052, 0.034, -0.66)
-light_color = Color(1, 0.75, 0.3, 1)
-light_energy = 1.6
-omni_range = 3.0

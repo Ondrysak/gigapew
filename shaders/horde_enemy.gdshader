@@ -17,7 +17,7 @@ void vertex() {
 }
 
 void fragment() {
-	horde_surface(UV, NORMAL, VIEW, TIME, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
+	horde_surface(UV, NORMAL, VIEW, TIME, vec3(0.0), v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
 	if (use_normal_texture) {
 		NORMAL_MAP = texture(normal_texture, UV).rgb;
 		NORMAL_MAP_DEPTH = normal_scale;

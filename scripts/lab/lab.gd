@@ -39,6 +39,7 @@ const SCENARIOS := {
 	&"hud": preload("res://scripts/lab/scenarios/hud_scenario.gd"),
 	&"mining": preload("res://scripts/lab/scenarios/mining_scenario.gd"),
 	&"menu": preload("res://scripts/lab/scenarios/menu_scenario.gd"),
+	&"street": preload("res://scripts/lab/scenarios/street_scenario.gd"),
 	&"icons": preload("res://scripts/lab/scenarios/icons_scenario.gd"),
 }
 ## Batch runs never hang: the whole process quits after this many seconds.

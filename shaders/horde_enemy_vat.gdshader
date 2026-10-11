@@ -17,6 +17,10 @@ uniform float sway_amplitude = 0.0;
 instance uniform float preview_frame = -1.0;
 instance uniform float preview_start = 0.0;
 instance uniform float preview_count = 1.0;
+// Face atlas: columns, rows, first cell, cell count. The surface whose UV spans cell
+// 0 shows one of `count` cells per instance, picked from the random animation phase.
+uniform vec4 face_atlas = vec4(1.0, 1.0, 0.0, 1.0);
+varying vec3 v_local;
 
 ivec2 vat_texel(int column, int frame, int width, int rows) {
 	return ivec2(column % width, frame * rows + column / width);
@@ -44,6 +48,12 @@ void vertex() {
 	vec3 n0 = texelFetch(vat_normals, vat_texel(column, start + f0, width, rows), 0).xyz;
 	vec3 n1 = texelFetch(vat_normals, vat_texel(column, start + f1, width, rows), 0).xyz;
 	vec3 posed = mix(p0, p1, blend);
+	v_local = posed;
+	if (face_atlas.x * face_atlas.y > 1.0) {
+		float pick = min(floor(fract(INSTANCE_CUSTOM.z * 0.15915494) * face_atlas.w), face_atlas.w - 1.0);
+		float cell = face_atlas.z + pick;
+		UV += vec2(mod(cell, face_atlas.x) / face_atlas.x, floor(cell / face_atlas.x) / face_atlas.y);
+	}
 	vec3 normal = normalize(mix(n0, n1, blend));
 	// Rotate the rest tangent frame onto the animated normal (normal maps).
 	vec3 axis = cross(NORMAL, normal);
@@ -79,7 +89,7 @@ void vertex() {
 }
 
 void fragment() {
-	horde_surface(UV, NORMAL, VIEW, TIME, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
+	horde_surface(UV, NORMAL, VIEW, TIME, v_local, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
 	if (use_normal_texture) {
 		NORMAL_MAP = texture(normal_texture, UV).rgb;
 		NORMAL_MAP_DEPTH = normal_scale;

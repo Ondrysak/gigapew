@@ -1,12 +1,14 @@
 extends LabScenario
 
 const GUNS := ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower"]
+## Longer guns need the model shifted and a wider frame; the rest share the default.
+const LAYOUT := {"rail": {"z": 0.42, "size": 1.0, "projectile": 0.95}, "minigun": {"projectile": 0.3}, "scatter": {"projectile": 0.3}, "autocannon": {"projectile": 0.6}}
 
 func title() -> String:
 	return "Gun models"
 
 func summary() -> String:
-	return "Original Blender weapons: side and three-quarter views, plus the flying beer bottle"
+	return "Improvised junk weapons: side and three-quarter views, plus each pooled projectile (bottle, rebar spike, vinyl, pigeon, molotov)"
 
 func run() -> void:
 	var root := Node3D.new()
@@ -38,10 +40,15 @@ func run() -> void:
 	for id in GUNS:
 		var gun := (load("res://assets/guns/%s.glb" % id) as PackedScene).instantiate() as Node3D
 		root.add_child(gun)
-		gun.position.z = 0.22
-		# The thrown-bottle projectile template is only shown in flight.
-		var template := gun.find_child("ThrownBottle", true, false) as Node3D
-		if template != null:
+		var layout: Dictionary = LAYOUT.get(id, {})
+		var frame: float = layout.get("size", 0.75)
+		camera.size = frame
+		gun.position.z = layout.get("z", 0.22)
+		# The pooled projectile template (Thrown*) is only shown in flight.
+		var template: Node3D = null
+		var thrown := gun.find_children("Thrown*", "Node3D", true, false)
+		if not thrown.is_empty():
+			template = thrown[0] as Node3D
 			template.hide()
 		camera.position = Vector3(1.5, 0.12, 0)
 		camera.look_at(Vector3(0, 0.02, 0))
@@ -52,16 +59,16 @@ func run() -> void:
 		await lab.frames(3)
 		await lab.capture(id + "_quarter")
 		if template != null:
-			# Inspect the actual pooled projectile asset without the hand obscuring it.
-			var hand := gun.find_child("Hand", true, false) as Node3D
-			if hand != null:
-				hand.hide()
+			# Inspect the actual pooled projectile asset on its own, as shipped.
+			var parts := gun.get_child(0)
+			for part in parts.get_children():
+				if part is Node3D:
+					(part as Node3D).visible = part == template
 			template.show()
-			gun.position = Vector3.ZERO
-			camera.size = 0.5
+			gun.position = -(parts as Node3D).position
+			camera.size = layout.get("projectile", 0.5)
 			camera.position = Vector3(0.65, 0.3, -0.6)
 			camera.look_at(Vector3.ZERO)
 			await lab.frames(3)
 			await lab.capture(id + "_projectile")
-			camera.size = 0.75
 		gun.free()
