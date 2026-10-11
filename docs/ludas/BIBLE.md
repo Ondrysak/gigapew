@@ -31,8 +31,8 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   `street_racer`, `jedno_kolo`, `takhle`, `plna_rychlost` pro variace reakcí.
 - Zvolený konec B je zapsaný v kapitole 5; tento asset pass nepřidává
   příběhové cutscény ani svatební dialogy.
-- Lidé z ulice mají šestnáct vymyšlených pixelových obličejů (dvanáct bezďáci,
-  opilci a feťáci, čtyři tvrdší chlapi) a špínu v shaderu. Bezdomovec, Feťák a
+- Lidé z ulice mají čtyřiadvacet vymyšlených pixelových obličejů (dvacet bezďáci,
+  opilci a feťáci, čtyři tvrdší chlapi; osm z nich jsou nové archetypy) a špínu v shaderu. Bezdomovec, Feťák a
   Alkoholik se objevují ve všech třech sektorech včetně Hlaváku. Obličeje jsou
   malované z parametrů; nejsou podle fotek ani skutečných lidí.
 

@@ -1,3 +1,12 @@
+# Unreleased source changes
+
+- Eight more invented homeless characters: a hood over a long beard, taped glasses, a
+  bandana, a flat cap with a black eye, an eyepatch, heavy jowls, smeared eyeliner and
+  a swollen face. The face atlas is now 5 × 5 (24 faces), with 20 homeless cells and 4
+  harder ones, and is quantized to a small flat palette so it stays cartoonish. The
+  generator reads no image file; characters are designed from broad categories, not
+  from any photograph. `street` lab scenario updated.
+
 # Kakaboomboom 0.4.0
 
 LUĎAS: LAST TIME KRATOS reskin: Prague humans and delirium creatures with invented

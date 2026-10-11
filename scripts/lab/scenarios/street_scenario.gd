@@ -21,11 +21,11 @@ func _atlas_contract() -> void:
 	for id in HUMANS:
 		var definition := lab.enemy(id)
 		var animation_ok := definition.vertex_animation != null
-		lab.check(definition.face_atlas == Vector2i(4, 4) and definition.face_count >= 1 and definition.face_first + definition.face_count <= 16, "%s shows cells inside the 4x4 face atlas" % id)
+		lab.check(definition.face_atlas == Vector2i(5, 5) and definition.face_count >= 1 and definition.face_first + definition.face_count <= 24, "%s shows cells inside the 5x5 face atlas" % id)
 		lab.check(animation_ok and definition.grime > 0.0, "%s is dirty" % id)
 	for id in HOMELESS:
 		var definition := lab.enemy(id)
-		lab.check(definition.face_first == 0 and definition.face_count == 12, "%s draws from the twelve homeless faces" % id)
+		lab.check(definition.face_first == 0 and definition.face_count == 20, "%s draws from the twenty homeless faces" % id)
 	for id in ["alien_grunt", "alien_boss"]:
 		lab.check(lab.enemy(id).face_atlas == Vector2i.ONE, "%s has no face atlas" % id)
 
@@ -67,45 +67,47 @@ func _gallery() -> void:
 	var grunt := lab.enemy("robot_grunt")
 	for slot in lab.spawn_pack(grunt, lab.ahead(30.0), 48, 6.0):
 		cells[_cell(horde, slot, grunt)] = true
-	lab.check(cells.size() >= 9, "a crowd of 48 Bezdomovci shows %d of the 12 faces" % cells.size())
-	# Every homeless face once, two rows facing the player.
-	game = await _fresh()
-	for cell in 12:
-		var row := cell / 6
-		var column := cell % 6
-		_place(game, grunt, lab.ahead(3.6 + row * 2.0, (float(column) - 2.5) * 1.15 + row * 0.55), cell)
-	_look(lab.ahead(4.4), 1.45)
-	await lab.wait(0.35)
-	await lab.capture("homeless_faces")
+	lab.check(cells.size() >= 15, "a crowd of 48 Bezdomovci shows %d of the 20 faces" % cells.size())
+	# Every homeless face once on the Bezdomovec: two pages of ten, facing the player.
+	for page in 2:
+		game = await _fresh()
+		for n in 10:
+			var row := n / 5
+			var column := n % 5
+			_place(game, grunt, lab.ahead(3.6 + row * 2.0, (float(column) - 2.0) * 1.3 + row * 0.6), page * 10 + n)
+		_look(lab.ahead(4.4), 1.45)
+		await lab.wait(0.35)
+		await lab.capture("homeless_faces_%d" % (page + 1))
+	# The eight invented archetypes (cells 12-19) on the other two homeless bodies.
 	for id in ["robot_runner", "robot_spitter"]:
 		game = await _fresh()
 		var definition := lab.enemy(id)
-		for cell in 12:
-			var row := cell / 6
-			var column := cell % 6
-			_place(game, definition, lab.ahead(3.6 + row * 2.0, (float(column) - 2.5) * 1.15 + row * 0.55), cell)
-		_look(lab.ahead(4.4), 1.45)
+		for n in 8:
+			var row := n / 4
+			var column := n % 4
+			_place(game, definition, lab.ahead(3.4 + row * 2.0, (float(column) - 1.5) * 1.35 + row * 0.6), 12 + n)
+		_look(lab.ahead(4.2), 1.45)
 		await lab.wait(0.35)
-		await lab.capture("homeless_%s" % id.trim_prefix("robot_"))
+		await lab.capture("archetypes_%s" % id.trim_prefix("robot_"))
 	# Three close faces for a hard look at the painting on the real models.
 	game = await _fresh()
-	_place(game, lab.enemy("robot_runner"), lab.ahead(2.2, 0.0), 3)
-	_place(game, lab.enemy("robot_spitter"), lab.ahead(2.2, -1.1), 4)
-	_place(game, grunt, lab.ahead(2.2, 1.1), 11)
+	_place(game, lab.enemy("robot_runner"), lab.ahead(2.2, 0.0), 12)
+	_place(game, lab.enemy("robot_spitter"), lab.ahead(2.2, -1.1), 16)
+	_place(game, grunt, lab.ahead(2.2, 1.1), 17)
 	_look(lab.ahead(2.2), 1.5)
 	await lab.wait(0.35)
 	await lab.capture("close_faces")
 	# Harder men: the dealer and the bouncer, then the boss alone.
 	game = await _fresh()
-	_place(game, lab.enemy("robot_tank"), lab.ahead(4.5, -2.4), 12)
-	_place(game, lab.enemy("robot_tank"), lab.ahead(4.5, -0.6), 13)
-	_place(game, lab.enemy("robot_bulwark"), lab.ahead(4.5, 1.4), 13)
-	_place(game, lab.enemy("robot_bulwark"), lab.ahead(4.5, 3.3), 14)
+	_place(game, lab.enemy("robot_tank"), lab.ahead(4.5, -2.4), 20)
+	_place(game, lab.enemy("robot_tank"), lab.ahead(4.5, -0.6), 21)
+	_place(game, lab.enemy("robot_bulwark"), lab.ahead(4.5, 1.4), 21)
+	_place(game, lab.enemy("robot_bulwark"), lab.ahead(4.5, 3.3), 22)
 	_look(lab.ahead(4.5), 1.8)
 	await lab.wait(0.35)
 	await lab.capture("hard_faces")
 	game = await _fresh()
-	var boss := _place(game, lab.enemy("robot_boss"), lab.ahead(8.0, 0.0), 15)
+	var boss := _place(game, lab.enemy("robot_boss"), lab.ahead(8.0, 0.0), 23)
 	if boss >= 0:
 		lab.aim_at(game.horde.weak_spot_position(boss))
 		await lab.wait(0.3)

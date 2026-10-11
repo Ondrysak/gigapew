@@ -12,7 +12,7 @@ KAKABOOMBOOM_DOWNLOADS=/absolute/path/to/kakaboomboom-downloads ./tools/vat/bake
 
 ## Street faces, grime and props
 
-The six human enemies share a 4 × 4 atlas of invented faces:
+The six human enemies share a 5 × 5 atlas of invented faces (24 painted cells, quantized to a flat palette):
 
 ```sh
 python3 tools/vat/faces/build_faces.py --preview /tmp/faces.png   # writes tools/vat/faces/atlas.png
@@ -20,7 +20,7 @@ python3 tools/vat/faces/build_faces.py --preview /tmp/faces.png   # writes tools
 ```
 
 The atlas is painted from parameters only; no photograph or real person is used.
-In `monsters.json`, `"face": {"atlas": ..., "cells": [4, 4]}` makes `bake_vat.py`
+In `monsters.json`, `"face": {"atlas": ..., "cells": [5, 5]}` makes `bake_vat.py`
 move the front-facing head skin polygons into the Face material and project them
 planarly onto cell 0. `HordeEnemyDefinition.face_atlas/face_first/face_count`
 select the runtime cells. `"cut": [{"material", "below_z", "above_z", "max_abs_x",

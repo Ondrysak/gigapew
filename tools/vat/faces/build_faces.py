@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Generates the invented Prague street-face atlas used by the human enemies.
 
-Every face is painted from the parameters below: nothing is traced or sampled
-from a photograph and no real person is depicted. 16 cells in a 4 x 4 atlas,
-each a 64 x 64 pixel painting upscaled 4x with nearest filtering:
+Every face is painted from the parameters below: no image file is read, nothing is
+traced or sampled from a photograph, and no real person is depicted. The characters
+are hand-designed archetypes built from broad street-look categories (a hood, taped
+glasses, a bandana, a cap, an eyepatch, heavy jowls, smeared eyeliner, a swollen
+face, beards, bruises, gaps) and deliberately exaggerated and flattened: the whole
+atlas is quantized to a small flat palette so nothing reads as photographic.
+25 cells in a 5 x 5 atlas, each a 64 x 64 pixel painting upscaled 3x:
 
-    cells 0-11   homeless / drunk / junkie faces (Bezdomovec, Feťák, Alkoholik)
-    cells 12-15  harder faces (Vekslák, Vyhazovač, Pan Herna)
+    cells 0-19   homeless / drunk / junkie faces (Bezdomovec, Feťák, Alkoholik)
+    cells 20-23  harder faces (Vekslák, Vyhazovač, Pan Herna)
+    cell 24      unused
 
 A cell covers the whole front of the model head (forehead to chin), planar
 mapped by tools/vat/bake_vat.py. Its outer ring is blended into BASE_SRGB so the
@@ -27,8 +32,9 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 CELL = 64
-GRID = 4
-SCALE = 4
+GRID = 5
+SCALE = 3
+PALETTE_COLORS = 72
 # Neutral dirty skin. monsters.json derives the untextured Skin colour from this.
 BASE_SRGB = (170, 128, 104)
 
@@ -85,6 +91,49 @@ FACES = [
     dict(tone=6, hair=("slick", (22, 18, 18)), beard=("mustache", (24, 20, 20)), brow=(22, 18, 18), eyes="plain",
          iris=(40, 32, 28), bags=0.2, teeth="closed", nose="plain", wrinkles=1, grime=0.1, shades=True),
 ]
+
+
+def ring(c, cx, cy, rx, ry, color, thick, alpha=1.0):
+    """Outline of an ellipse, `thick` pixels wide."""
+    inner = (max(rx - thick, 0.1) / rx) ** 2
+    for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
+        for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
+            d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
+            if inner <= d <= 1.0:
+                c.blend(x, y, color, alpha)
+
+
+# Eight further invented characters. Each is a recombination of generic categories
+# chosen by hand; none mirrors the overall look of any reference.
+ARCHETYPES = [
+    # hood pulled forward over a long scruffy beard, hollow eyes
+    dict(tone=-10, hair=("bald", (0, 0, 0)), beard=("long", (96, 90, 84)), brow=(80, 74, 70), eyes="plain",
+         iris=(74, 84, 92), bags=0.9, teeth="hidden", nose="plain", wrinkles=2, grime=0.55, hood=(104, 98, 90)),
+    # taped glasses, nicotine moustache, sunburned nose
+    dict(tone=8, hair=("bald", (0, 0, 0)), beard=("mustache", (150, 118, 62)), brow=(70, 56, 44), eyes="plain",
+         iris=(96, 70, 40), bags=0.5, teeth="yellow", nose="red", wrinkles=3, grime=0.45, glasses=True, flush=0.4),
+    # red bandana, gap-toothed grin, scar
+    dict(tone=2, hair=("bald", (0, 0, 0)), beard=("stubble", (50, 40, 34)), brow=(50, 40, 34), eyes="bloodshot",
+         iris=(90, 70, 50), bags=0.7, teeth="gaps", nose="plain", wrinkles=1, grime=0.5, scar=True, bandana=(150, 40, 40)),
+    # flat cap, black eye, split lip
+    dict(tone=-2, hair=("bald", (0, 0, 0)), beard=("scruff", (60, 50, 40)), brow=(50, 40, 34), eyes="plain",
+         iris=(70, 96, 120), bags=0.6, teeth="gaps", nose="plain", wrinkles=2, grime=0.5, bruise="left", splitlip=True, cap=(64, 88, 74)),
+    # eyepatch, rotten teeth, broken nose
+    dict(tone=6, hair=("bald", (0, 0, 0)), beard=("mustache", (150, 118, 62)), brow=(60, 48, 38), eyes="plain",
+         iris=(80, 84, 90), bags=0.7, teeth="rotten", nose="broken", wrinkles=3, grime=0.6, sores=4, eyepatch=True),
+    # heavy jowls, drooping lids, slack drooling mouth
+    dict(tone=14, hair=("bald", (0, 0, 0)), beard=("none", (0, 0, 0)), brow=(90, 76, 60), eyes="halflid",
+         iris=(84, 112, 128), bags=0.9, teeth="open", nose="red", wrinkles=1, grime=0.4, drool=True, jowls=True, flush=0.8),
+    # smeared dark eyeliner, hollow cheeks, cracked sores
+    dict(tone=-16, hair=("bald", (0, 0, 0)), beard=("stubble", (96, 88, 80)), brow=(30, 24, 30), eyes="glazed",
+         iris=(70, 70, 90), bags=1.0, teeth="rotten", nose="plain", wrinkles=1, grime=0.5, sores=6, gaunt=True, eyeliner=True),
+    # swollen puffy face, slit eyes, split lip
+    dict(tone=16, hair=("bald", (0, 0, 0)), beard=("none", (0, 0, 0)), brow=(100, 80, 60), eyes="plain",
+         iris=(70, 60, 50), bags=0.6, teeth="closed", nose="red", wrinkles=1, grime=0.45, swollen=True, flush=0.9, splitlip=True, bruise="right"),
+]
+
+# 0-11 original homeless, 12-19 archetypes, 20-23 harder men.
+ALL_FACES = FACES[:12] + ARCHETYPES + FACES[12:]
 
 
 def srgb(c, k=1.0):
@@ -193,6 +242,10 @@ def paint(index: int, t: dict) -> Image.Image:
         c.ellipse(ex, EYE_Y, 12, 10, (92, 54, 110), 0.75, 0.35)
         c.ellipse(ex + 2, EYE_Y + 4, 8, 6, (150, 130, 60), 0.4, 0.35)
     # Brows.
+    if t.get("eyeliner"):
+        for ex in EYE_X:
+            ring(c, ex, EYE_Y, 13, 9.5, (34, 26, 40), 4, 0.85)
+            c.speckle(ex - 12, EYE_Y + 5, ex + 12, EYE_Y + 13, (34, 26, 40), 0.18, 0.7)
     brow = srgb(t["brow"])
     tilt = rng.choice((-1, 1)) * rng.uniform(0.5, 1.5)
     for k, ex in enumerate(EYE_X):
@@ -243,6 +296,26 @@ def paint(index: int, t: dict) -> Image.Image:
     if t.get("tattoo"):
         c.line(EYE_X[1] + 2, EYE_Y + 6, EYE_X[1] + 2, EYE_Y + 11, (36, 52, 84), 0.9, 2)
         c.ellipse(EYE_X[1] + 2, EYE_Y + 12, 1.5, 2, (36, 52, 84), 0.9)
+    if t.get("glasses"):
+        for ex in EYE_X:
+            ring(c, ex, EYE_Y, 10.5, 8.0, (30, 26, 24), 2.2, 0.95)
+            c.ellipse(ex, EYE_Y, 8.0, 6.0, (214, 226, 230), 0.18)
+            c.blend(ex - 4, EYE_Y - 3, (255, 255, 255), 0.55)
+        c.rect(28, EYE_Y - 2, 36, EYE_Y, (30, 26, 24), 1.0)
+        c.rect(27, EYE_Y - 3, 30, EYE_Y + 1, (222, 214, 190), 0.95)
+    if t.get("eyepatch"):
+        ex = EYE_X[0]
+        c.line(0, EYE_Y - 15, ex, EYE_Y - 2, (22, 20, 20), 1.0, 2)
+        c.line(ex, EYE_Y - 2, 63, EYE_Y - 11, (22, 20, 20), 1.0, 2)
+        c.ellipse(ex, EYE_Y, 10.5, 8.5, (22, 20, 20), 1.0)
+        c.blend(ex - 3, EYE_Y - 3, (90, 86, 80), 0.6)
+    if t.get("swollen"):
+        lid = base + tone + 10
+        for ex in EYE_X:
+            c.rect(ex - 9, EYE_Y - 5, ex + 9, EYE_Y - 1, lid, 1.0)
+            c.rect(ex - 9, EYE_Y + 2, ex + 9, EYE_Y + 6, lid, 1.0)
+            c.line(ex - 8, EYE_Y, ex + 8, EYE_Y, (60, 36, 36), 1.0)
+        c.ellipse(32, 20, 10, 3, (240, 190, 170), 0.3)
 
     # Nose.
     nose = t.get("nose", "plain")
@@ -327,6 +400,11 @@ def paint(index: int, t: dict) -> Image.Image:
         c.speckle(24, 54, 41, 63, (214, 190, 110), 0.18, 0.95)
         c.speckle(24, 54, 41, 63, (110, 50, 40), 0.06, 0.95)
 
+    if t.get("jowls"):
+        c.line(8, 46, 22, 61, (100, 70, 62), 0.75, 2)
+        c.line(55, 46, 41, 61, (100, 70, 62), 0.75, 2)
+        c.ellipse(32, 59, 22, 3.6, (112, 80, 72), 0.4)
+        c.ellipse(32, 62, 17, 2.4, (96, 66, 60), 0.45)
     # Scars, sores, grime.
     if t.get("scar"):
         c.line(EYE_X[0] - 4, EYE_Y - 12, EYE_X[0] + 14, EYE_Y + 22, (200, 140, 130), 0.95)
@@ -357,13 +435,42 @@ def paint(index: int, t: dict) -> Image.Image:
     top_keep = np.clip(1.0 - yy[:, :1] / 4.0, 0.0, 1.0)[:, :, None]
     fade = np.maximum(fade, top_keep * (1.0 - np.clip(np.minimum(xx, CELL - 1 - xx) / 3.0, 0, 1))[:, :, None] * 0 + top_keep)
     arr = base * (1.0 - fade) + arr * fade
+    # Fabric is painted after the edge blend so it keeps its colour at the cell border.
+    c.px = arr
+    if t.get("hood"):
+        fabric = srgb(t["hood"])
+        for x0, x1, y0, y1 in ((0, 63, 0, 9), (0, 8, 0, 63), (55, 63, 0, 63)):
+            c.rect(x0, y0, x1, y1, fabric)
+        c.speckle(0, 0, 63, 63, fabric * 1.25, 0.04, 0.5)
+        for i in range(4):
+            shade = 0.5 - i * 0.1
+            c.rect(9, 10 + i, 54, 10 + i, fabric * 0.4, shade)
+            c.rect(9 + i, 10, 9 + i, 63, fabric * 0.4, shade)
+            c.rect(54 - i, 10, 54 - i, 63, fabric * 0.4, shade)
+    if t.get("cap"):
+        fabric = srgb(t["cap"])
+        c.rect(0, 0, 63, 12, fabric)
+        c.rect(0, 12, 63, 13, fabric * 0.5)
+        for i in range(5):
+            c.rect(0, 14 + i, 63, 14 + i, (40, 30, 26), 0.5 - i * 0.09)
+        c.speckle(0, 0, 63, 12, fabric * 1.3, 0.06, 0.6)
+    if t.get("bandana"):
+        fabric = srgb(t["bandana"])
+        c.rect(0, 4, 63, 13, fabric)
+        c.rect(0, 13, 63, 13, fabric * 0.55)
+        for x in range(2, 62, 6):
+            for y in (6, 10):
+                c.blend(x + (3 if y == 10 else 0), y, (230, 220, 200), 0.85)
+    arr = c.px
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
 
 
 def build() -> Image.Image:
     atlas = Image.new("RGB", (CELL * GRID, CELL * GRID), BASE_SRGB)
-    for index, traits in enumerate(FACES):
+    for index, traits in enumerate(ALL_FACES):
         atlas.paste(paint(index, traits), ((index % GRID) * CELL, (index // GRID) * CELL))
+    # Flatten to a small palette: a deliberate cartoon look, nothing photographic.
+    atlas = atlas.quantize(colors=PALETTE_COLORS, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB")
     return atlas.resize((atlas.width * SCALE, atlas.height * SCALE), Image.NEAREST)
 
 

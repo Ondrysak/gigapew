@@ -12,7 +12,7 @@
 			"size": 1.72,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"cut": [{"material": "Hair", "below_z": 2.5, "max_abs_x": 0.45, "max_normal_y": -0.1}],
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
@@ -42,7 +42,7 @@
 			"size": 1.8,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
 				"Face": {"color": [0.402, 0.216, 0.138]},
@@ -68,7 +68,7 @@
 			"size": 1.75,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
 				"Face": {"color": [0.402, 0.216, 0.138]},
@@ -96,7 +96,7 @@
 			"size": 2.4,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
 				"Face": {"color": [0.402, 0.216, 0.138]},
@@ -120,7 +120,7 @@
 			"size": 2.3,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
 				"Face": {"color": [0.402, 0.216, 0.138]},
@@ -142,7 +142,7 @@
 			"size": 4.4,
 			"yaw": 180,
 			"smooth": true,
-			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [4, 4]},
+			"face": {"atlas": "tools/vat/faces/atlas.png", "cells": [5, 5]},
 			"materials": {
 				"Skin": {"color": [0.402, 0.216, 0.138]},
 				"Face": {"color": [0.402, 0.216, 0.138]},

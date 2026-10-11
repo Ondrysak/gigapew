@@ -34,8 +34,8 @@
  ],
  "textures": {
   "FaceAtlas": [
-   1024,
-   1024
+   960,
+   960
   ]
  },
  "rest_vertices": 1169
