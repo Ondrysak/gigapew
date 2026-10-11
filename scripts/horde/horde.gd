@@ -13,6 +13,7 @@ signal boss_spawned(definition: HordeEnemyDefinition)
 signal boss_health_changed(current: float, maximum: float)
 signal boss_killed
 signal damage_reported(at: Vector3, amount: float, damage_type: int, critical: bool, killed: bool)
+signal enemy_fused(index: int, members: int)
 
 const CAPACITY := 4096
 const CELL := 2.0
@@ -38,6 +39,16 @@ const SHOCK_RADIUS := 3.5
 const SHOCK_TARGETS := 3
 const SHOCK_CHECKS := 96
 const RADIUS_DEPTH := 8
+const FUSION_MIN := 6
+const FUSION_MAX := 8
+const FUSION_RANGE := 2.4
+const FUSION_DENSITY_TIME := 0.75
+const FUSION_GROW_TIME := 0.55
+const FUSION_SCALE := 1.7
+const FUSION_SHOULDER := 1.2
+const FUSION_SEEDS := 256
+const FUSION_CHECKS := 48
+const FUSION_DECK_GAP := 0.3
 
 enum { FREE, ALIVE, DYING }
 enum Mode { SEEK, WINDUP, CHARGE }
@@ -57,8 +68,11 @@ enum Mode { SEEK, WINDUP, CHARGE }
 ## Hitscan forgiveness above each enemy's height so level shots at eye height
 ## still connect with short enemies.
 @export var hit_headroom := 0.6
+var _largest_radius := BIG_RADIUS
 
 var alive_count := 0
+## Ordinary lives represented by live bodies; fusion never frees spawn pressure.
+var population_count := 0
 var target: ArenaPlayer
 
 var _defs: Array[HordeEnemyDefinition] = []
@@ -83,6 +97,12 @@ var _armor_renderers: Array[MultiMeshInstance3D] = []
 var _armor_buffers: Array[PackedFloat32Array] = []
 var _renderers: Array[MultiMeshInstance3D] = []
 var _buffers: Array[PackedFloat32Array] = []
+# One bounded native appendage batch per eligible species, never per-enemy nodes.
+var _anatomy_renderers: Array[MultiMeshInstance3D] = []
+var _anatomy_buffers: Array[PackedFloat32Array] = []
+var _anatomy_slot_instance := PackedInt32Array()
+var _anatomy_intensity := 0.65
+const ANATOMY_CAPACITY := CAPACITY / 6
 
 # Rendering: per-type animation setup (clip ids index the _clip_* arrays; -1 = none).
 var _t_stride := PackedInt32Array()
@@ -131,6 +151,25 @@ var _cell_of := PackedInt32Array()
 var _query_id := 0
 
 var _generation := PackedInt64Array()
+var _fusion_allowed := PackedByteArray()
+var _members := PackedInt32Array()
+var _body := PackedFloat32Array()
+var _radius := PackedFloat32Array()
+var _height := PackedFloat32Array()
+var _mass := PackedFloat32Array()
+var _gait := PackedFloat32Array()
+var _grow := PackedFloat32Array()
+var _dense_since := PackedFloat32Array()
+var _dense_last := PackedFloat32Array()
+var _dense_count := PackedInt32Array()
+var _dense_members := PackedInt32Array()
+var _dense_generation := PackedInt64Array()
+var _fusion_clock := 0.0
+var _fusion_cursor := 0
+var _fusion_times := PackedFloat32Array()
+var _fusion_time_cursor := 0
+var _fusion_events := PackedInt32Array()
+var _fusion_event_generation := PackedInt64Array()
 var _reserved_slots := 0
 var _active := PackedInt32Array()
 var _active_count := 0
@@ -215,6 +254,7 @@ var _radius_buffers: Array[PackedInt32Array] = []
 var _radius_depth := 0
 ## Shock never uses the splash/raycast/caller scratch arrays.
 var _chain_index := PackedInt32Array()
+var _radius_generations: Array[PackedInt64Array] = []
 var _chain_distance := PackedFloat32Array()
 
 ## `elevation` (optional) holds StaticBody3D decks and ramps, each with one
@@ -234,6 +274,30 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_generation.resize(CAPACITY)
 	_generation.fill(0)
 	_reserved_slots = 0
+	_fusion_allowed.resize(CAPACITY)
+	_fusion_allowed.fill(0)
+	_members.resize(CAPACITY)
+	_members.fill(1)
+	_body.resize(CAPACITY)
+	_body.fill(1.0)
+	_radius.resize(CAPACITY)
+	_height.resize(CAPACITY)
+	_mass.resize(CAPACITY)
+	_gait.resize(CAPACITY)
+	_grow.resize(CAPACITY)
+	_dense_since.resize(CAPACITY)
+	_dense_last.resize(CAPACITY)
+	_dense_count.resize(CAPACITY)
+	_dense_count.fill(0)
+	_dense_members.resize(CAPACITY * FUSION_MAX)
+	_dense_generation.resize(CAPACITY * FUSION_MAX)
+	_fusion_events.resize(4)
+	_fusion_event_generation.resize(4)
+	_fusion_times.resize(4)
+	_fusion_times.fill(-0.5)
+	_fusion_clock = 0.0
+	_fusion_cursor = 0
+	_fusion_time_cursor = 0
 	_yaw.resize(CAPACITY)
 	_hp.resize(CAPACITY)
 	_max_hp.resize(CAPACITY)
@@ -278,11 +342,15 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_candidate_index.resize(64)
 	_candidate_t.resize(64)
 	_radius_buffers.clear()
+	_radius_generations.clear()
 	_radius_depth = 0
 	for depth in RADIUS_DEPTH:
 		var buffer := PackedInt32Array()
 		buffer.resize(CAPACITY)
 		_radius_buffers.append(buffer)
+		var generations := PackedInt64Array()
+		generations.resize(CAPACITY)
+		_radius_generations.append(generations)
 	_chain_index.resize(SHOCK_TARGETS)
 	_chain_distance.resize(SHOCK_TARGETS)
 	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
@@ -315,6 +383,16 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	add_child(_shot_renderer)
 	_shot_buffer.resize(MAX_PROJECTILES * 12)
 
+## Optional encounter species share the normal batched rendering/simulation.
+func registered_definitions() -> Array[HordeEnemyDefinition]:
+	return _defs.duplicate()
+
+func register_definition(definition: HordeEnemyDefinition) -> void:
+	if definition == null or _type_of.has(definition):
+		return
+	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
+	_register(definition, bounds)
+
 func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	if _type_of.has(definition):
 		return
@@ -323,6 +401,7 @@ func _register(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	_t_behavior.append(definition.behavior)
 	_t_speed.append(definition.speed)
 	_t_radius.append(definition.radius)
+	_largest_radius = maxf(_largest_radius, definition.radius * (FUSION_SCALE * FUSION_SHOULDER if not definition.is_boss and not definition.front_armored and definition.behavior == HordeEnemyDefinition.Behavior.SWARM else 1.0))
 	_t_height.append(definition.height)
 	_t_mass.append(maxf(0.05, definition.mass))
 	_t_contact.append(definition.contact_damage)
@@ -346,10 +425,14 @@ func _setup_rendering() -> void:
 	_anim_frame.resize(CAPACITY)
 	_anim_speed.resize(CAPACITY)
 	_anim_prev.resize(CAPACITY)
+	_anatomy_slot_instance.resize(CAPACITY)
+	_anatomy_slot_instance.fill(-1)
+	_anatomy_intensity = clampf(float(Profile.settings.get("hallucination_intensity", 0.65)), 0.0, 1.0)
+	if not Profile.changed.is_connected(_sync_anatomy_setting):
+		Profile.changed.connect(_sync_anatomy_setting)
 	if fx_scene != null and _fx == null:
 		_fx = fx_scene.instantiate() as HordeFx
 		add_child(_fx)
-		enemy_killed.connect(_fx.burst_death)
 
 func _register_renderer(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	var animation := definition.vertex_animation
@@ -384,6 +467,26 @@ func _register_renderer(definition: HordeEnemyDefinition, bounds: AABB) -> void:
 	var buffer := PackedFloat32Array()
 	buffer.resize(64 * stride)
 	_buffers.append(buffer)
+	var anatomy_renderer: MultiMeshInstance3D
+	var anatomy_buffer := PackedFloat32Array()
+	if not definition.is_boss and not definition.front_armored and definition.behavior == HordeEnemyDefinition.Behavior.SWARM:
+		var anatomy := MultiMesh.new()
+		anatomy.transform_format = MultiMesh.TRANSFORM_3D
+		anatomy.use_custom_data = true
+		anatomy.use_colors = animated
+		anatomy.mesh = HordeMeshBaker.bake_anatomy(multimesh.mesh as ArrayMesh, definition)
+		anatomy.instance_count = ANATOMY_CAPACITY
+		anatomy.visible_instance_count = 0
+		anatomy_renderer = MultiMeshInstance3D.new()
+		anatomy_renderer.name = "%sRecursiveAnatomy" % definition.display_name
+		anatomy_renderer.multimesh = anatomy
+		anatomy_renderer.custom_aabb = bounds.grow(3.0)
+		anatomy_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		anatomy_renderer.visible = _anatomy_intensity > 0.0
+		add_child(anatomy_renderer)
+		anatomy_buffer.resize(ANATOMY_CAPACITY * stride)
+	_anatomy_renderers.append(anatomy_renderer)
+	_anatomy_buffers.append(anatomy_buffer)
 	var armor_renderer: MultiMeshInstance3D
 	var armor_buffer := PackedFloat32Array()
 	if definition.front_armored:
@@ -442,7 +545,7 @@ func _read_obstacles(root: Node) -> void:
 	# Bucket obstacles into every cell their footprint (plus largest enemy) touches.
 	var buckets: Array[PackedInt32Array] = []
 	buckets.resize(_cells)
-	var margin := 2.0
+	var margin := maxf(2.0, _largest_radius)
 	for index in _obstacle_center.size():
 		var low := _obstacle_center[index] - _obstacle_half[index] - Vector2(margin, margin)
 		var high := _obstacle_center[index] + _obstacle_half[index] + Vector2(margin, margin)
@@ -577,7 +680,7 @@ func release_reserved(count: int) -> void:
 func spawn_reserved(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
 	if _reserved_slots <= 0 or _free_count == 0:
 		return -1
-	return _spawn(definition, xz, health_multiplier)
+	return _spawn(definition, xz, health_multiplier, false)
 
 ## Slot generation identifies a particular life, not a recycled enemy index.
 func enemy_generation(index: int) -> int:
@@ -586,14 +689,27 @@ func enemy_generation(index: int) -> int:
 func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1.0) -> int:
 	if _free_count <= _reserved_slots:
 		return -1
-	return _spawn(definition, xz, health_multiplier)
+	return _spawn(definition, xz, health_multiplier, true)
 
-func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: float) -> int:
+func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: float, ordinary: bool) -> int:
 	var type: int = _type_of[definition]
 	_free_count -= 1
 	var slot := _free[_free_count]
 	_generation[slot] += 1
 	var radius := _t_radius[type]
+	_fusion_allowed[slot] = 1 if ordinary and not definition.is_boss and not definition.front_armored and definition.behavior == HordeEnemyDefinition.Behavior.SWARM else 0
+	_members[slot] = 1
+	_body[slot] = 1.0
+	_radius[slot] = radius
+	_height[slot] = _t_height[type]
+	_mass[slot] = _t_mass[type]
+	_gait[slot] = 0.9 + float((slot * 73 + int(_generation[slot]) * 19) % 101) * 0.002
+	_grow[slot] = 0.0
+	_dense_count[slot] = 0
+	_stamp[slot] = 0
+	_timer[slot] = 0.0
+	_death[slot] = 0.0
+	_aim[slot] = Vector2.ZERO
 	xz.x = clampf(xz.x, _area.position.x + radius, _area.end.x - radius)
 	xz.y = clampf(xz.y, _area.position.y + radius, _area.end.y - radius)
 	_state[slot] = ALIVE
@@ -614,7 +730,8 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_burn_damage[slot] = 0.0
 	_exposed[slot] = 0.0
 	_stunned[slot] = 0.0
-	_phase[slot] = _rng.randf() * TAU
+	# Stay away from encoding boundaries after MultiMesh float32 rounding.
+	_phase[slot] = _rng.randf_range(0.0001, TAU - 0.0001)
 	_yaw[slot] = _rng.randf() * TAU
 	if _t_armored[type] != 0 and is_instance_valid(target):
 		var toward := Vector2(target.global_position.x, target.global_position.z) - xz
@@ -622,14 +739,17 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_active[_active_count] = slot
 	_active_count += 1
 	alive_count += 1
+	population_count += 1
 	if radius > BIG_RADIUS:
 		_big.append(slot)
+	_reset_animation(slot)
 	if definition.is_boss:
 		_boss_index = slot
 		control_boss(false)
+		var generation := _generation[slot]
 		boss_spawned.emit(definition)
-		boss_health_changed.emit(_hp[slot], _max_hp[slot])
-	_reset_animation(slot)
+		if is_alive(slot) and _generation[slot] == generation:
+			boss_health_changed.emit(_hp[slot], _max_hp[slot])
 	return slot
 
 ## Transfers the current boss's steering to its stage encounter controller.
@@ -693,6 +813,7 @@ func _rect_blocked(rect: Rect2) -> bool:
 ## Removes every enemy without rewards (stage clear).
 func clear() -> void:
 	control_boss(false)
+	_boss_index = -1
 	_reserved_slots = 0
 	for a in _active_count:
 		var slot := _active[a]
@@ -700,6 +821,11 @@ func clear() -> void:
 			_begin_death(slot)
 	_active_count = 0
 	alive_count = 0
+	population_count = 0
+	_big.clear()
+	_dense_count.fill(0)
+	_fusion_cursor = 0
+	_rebuild_grid()
 	_shot_count = 0
 
 # ---------------------------------------------------------------- queries
@@ -733,6 +859,26 @@ func is_stunned(index: int) -> bool:
 func is_alive(index: int) -> bool:
 	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
 
+func fusion_members(index: int) -> int:
+	return _members[index] if index >= 0 and index < CAPACITY and _state[index] != FREE else 1
+
+func enemy_body_scale(index: int) -> float:
+	return _body[index] if index >= 0 and index < CAPACITY and _state[index] != FREE else 1.0
+
+func enemy_radius(index: int) -> float:
+	return _radius[index] if index >= 0 and index < CAPACITY and _state[index] != FREE else 0.0
+
+func query_megas(out: PackedInt32Array) -> int:
+	var count := 0
+	for a in _active_count:
+		var slot := _active[a]
+		if is_alive(slot) and _members[slot] > 1:
+			if count >= out.size():
+				out.resize(maxi(16, out.size() * 2))
+			out[count] = slot
+			count += 1
+	return count
+
 ## Fraction of current health for a live slot, for precise finishing effects.
 func enemy_health_fraction(index: int) -> float:
 	if not is_alive(index):
@@ -741,14 +887,14 @@ func enemy_health_fraction(index: int) -> float:
 
 func enemy_position(index: int) -> Vector3:
 	var p := _pos[index]
-	return Vector3(p.x, _y[index] + _t_height[_type[index]] * 0.5, p.y)
+	return Vector3(p.x, _y[index] + _height[index] * 0.5, p.y)
 
 func get_definition(index: int) -> HordeEnemyDefinition:
 	return _defs[_type[index]]
 
 ## Uses the same feet position, scale and yaw as the rendered enemy.
 func weak_spot_position(index: int) -> Vector3:
-	var offset := _t_weak_offset[_type[index]]
+	var offset := _t_weak_offset[_type[index]] * _body[index]
 	var yaw := _yaw[index]
 	var c := cos(yaw)
 	var s := sin(yaw)
@@ -759,7 +905,7 @@ func weak_spot_position(index: int) -> Vector3:
 func weak_spot_hit(index: int, origin: Vector3, direction: Vector3, max_distance: float) -> bool:
 	if not is_alive(index):
 		return false
-	var radius_squared := _t_weak_radius_squared[_type[index]]
+	var radius_squared := _t_weak_radius_squared[_type[index]] * _body[index] * _body[index]
 	if radius_squared <= 0.0:
 		return false
 	# A ray from the front cannot claim a core behind the intervening chassis.
@@ -789,10 +935,10 @@ func _collect_in_radius(slot: int, c: Vector2, cy: float, radius: float, out: Pa
 	if _state[slot] != ALIVE or _stamp[slot] == _query_id:
 		return count
 	_stamp[slot] = _query_id
-	var r := radius + _t_radius[_type[slot]]
+	var r := radius + _radius[slot]
 	if (_pos[slot] - c).length_squared() > r * r:
 		return count
-	var half := _t_height[_type[slot]] * 0.5
+	var half := _height[slot] * 0.5
 	if absf(_y[slot] + half - cy) > radius + half + LEVEL_GAP:
 		return count
 	if count >= out.size():
@@ -806,10 +952,10 @@ func nearest(center: Vector3, max_radius: float) -> int:
 	var best_d2 := max_radius * max_radius
 	var cx0 := _cell_x(c.x)
 	var cz0 := _cell_z(c.y)
-	var rings := ceili(max_radius / CELL) + 1
+	var rings := ceili((max_radius + _largest_radius) / CELL) + 1
 	for ring in rings:
-		# Cells on this ring are at least (ring - 1) * CELL away.
-		if best >= 0 and pow(maxf(0.0, (ring - 1) * CELL), 2.0) > best_d2:
+		# A body's surface may reach across multiple cells.
+		if best >= 0 and pow(maxf(0.0, (ring - 1) * CELL - _largest_radius), 2.0) > best_d2:
 			break
 		for cz in range(cz0 - ring, cz0 + ring + 1):
 			if cz < 0 or cz >= _grid_h:
@@ -824,16 +970,27 @@ func nearest(center: Vector3, max_radius: float) -> int:
 						var slot := _cell_items[k]
 						if _state[slot] != ALIVE:
 							continue
-						var d2 := (_pos[slot] - c).length_squared()
+						var d2 := _body_distance_squared(slot, center)
 						if d2 < best_d2:
 							best_d2 = d2
 							best = slot
 				cx += maxi(1, step)
 	for slot in _big:
-		if _state[slot] == ALIVE and (_pos[slot] - c).length_squared() < best_d2:
-			best_d2 = (_pos[slot] - c).length_squared()
+		if _state[slot] != ALIVE:
+			continue
+		var d2 := _body_distance_squared(slot, center)
+		if d2 < best_d2:
+			best_d2 = d2
 			best = slot
 	return best
+
+func _body_distance_squared(slot: int, center: Vector3) -> float:
+	# Ordinary targeting retains its existing XZ-center semantics.
+	if _members[slot] == 1:
+		return _pos[slot].distance_squared_to(Vector2(center.x, center.z))
+	var horizontal := maxf(0.0, _pos[slot].distance_to(Vector2(center.x, center.z)) - _radius[slot])
+	var vertical := center.y - clampf(center.y, _y[slot], _y[slot] + _height[slot])
+	return horizontal * horizontal + vertical * vertical
 
 ## Ray against enemy cylinders; writes up to max_hits nearest hits.
 func raycast(origin: Vector3, direction: Vector3, max_distance: float, max_hits: int, out_hits: PackedInt32Array, out_distances: PackedFloat32Array) -> int:
@@ -931,7 +1088,7 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 	return candidates + 1
 
 func _core_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_distance: float) -> float:
-	var radius_squared := _t_weak_radius_squared[_type[slot]]
+	var radius_squared := _t_weak_radius_squared[_type[slot]] * _body[slot] * _body[slot]
 	if radius_squared <= 0.0:
 		return INF
 	var offset := weak_spot_position(slot) - origin
@@ -948,7 +1105,7 @@ func _core_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_dist
 func _plate_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_distance: float) -> float:
 	var c := cos(_yaw[slot])
 	var s := sin(_yaw[slot])
-	var scale := _t_scale[_type[slot]]
+	var scale := _t_scale[_type[slot]] * _body[slot]
 	var offset := origin - Vector3(_pos[slot].x, _y[slot], _pos[slot].y)
 	var local := Vector3(offset.x * c - offset.z * s, offset.y, offset.x * s + offset.z * c) / scale - HordeArmorMesh.FRONT_CENTER
 	var ray := Vector3(direction.x * c - direction.z * s, direction.y, direction.x * s + direction.z * c) / scale
@@ -969,7 +1126,7 @@ func _plate_ray_distance(slot: int, origin: Vector3, direction: Vector3, max_dis
 	return near
 
 func _cylinder_ray_distance(slot: int, type: int, origin: Vector3, direction: Vector3, o: Vector2, h: Vector2, max_distance: float) -> float:
-	var radius := _t_radius[type] + 0.08
+	var radius := _radius[slot] + 0.08
 	var m := o - _pos[slot]
 	var a := h.length_squared()
 	var c := m.length_squared() - radius * radius
@@ -994,7 +1151,7 @@ func _cylinder_ray_distance(slot: int, type: int, origin: Vector3, direction: Ve
 	var y_enter := origin.y + direction.y * t
 	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
 	var base := _y[slot]
-	var top := base + maxf(_t_height[type] + hit_headroom, _t_weak_top[type])
+	var top := base + maxf(_height[slot] + hit_headroom * _body[slot], _t_weak_top[type] * _body[slot])
 	if minf(y_enter, y_exit) > top or maxf(y_enter, y_exit) < base:
 		return INF
 	if y_enter > top and direction.y < 0.0:
@@ -1054,18 +1211,19 @@ func _damage_effects(index: int, amount: float, effect_amount: float, knockback:
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var at := enemy_position(index)
-	var killed := _deal_damage(index, amount, knockback, damage_type, critical)
+	var generation := _generation[index]
+	# Establish exclusion before damage signals can synchronously run a fusion.
 	match damage_type:
 		DamageType.Kind.FIRE:
-			if is_alive(index):
-				if _burn_time[index] <= 0.0:
-					_burn_tick[index] = BURN_TICK
-				_burn_time[index] = BURN_DURATION
-				_burn_damage[index] = maxf(_burn_damage[index], effect_amount * 0.15)
+			if _burn_time[index] <= 0.0:
+				_burn_tick[index] = BURN_TICK
+			_burn_time[index] = BURN_DURATION
+			_burn_damage[index] = maxf(_burn_damage[index], effect_amount * 0.15)
 		DamageType.Kind.FROST:
 			slow(index, FROST_FACTOR, FROST_DURATION)
-		DamageType.Kind.SHOCK:
-			_chain_shock(index, at, effect_amount * 0.4, critical)
+	var killed := _deal_damage(index, amount, knockback, damage_type, critical)
+	if damage_type == DamageType.Kind.SHOCK and _generation[index] == generation:
+		_chain_shock(index, at, effect_amount * 0.4, critical)
 	return killed
 
 ## Shared health/reward path, deliberately without secondary type effects.
@@ -1085,69 +1243,89 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 	var at := enemy_position(index)
 	var definition := _defs[_type[index]]
 	var was_boss := index == _boss_index
+	var members := _members[index]
+	var health_after := _hp[index]
+	var maximum := _max_hp[index]
 	_flash[index] = 1.0
-	_knock[index] += Vector2(knockback.x, knockback.z) / _t_mass[_type[index]]
+	_knock[index] += Vector2(knockback.x, knockback.z) / _mass[index]
 	var killed := _hp[index] <= 0.0
 	if killed:
 		_begin_death(index)
 		alive_count -= 1
+		population_count -= members
 		if was_boss:
 			_boss_index = -1
 			control_boss(false)
+		# Visual death belongs to the body, not each credited constituent life.
+		if is_instance_valid(_fx):
+			_fx.burst_death(definition, at, _body[index])
 	if was_boss:
-		boss_health_changed.emit(_hp[index], _max_hp[index])
+		boss_health_changed.emit(health_after, maximum)
 	damage_reported.emit(at, removed, damage_type, critical, killed)
 	if killed:
-		enemy_killed.emit(definition, at)
+		for member in members:
+			enemy_killed.emit(definition, at)
 		if was_boss:
 			boss_killed.emit()
-	elif _fx != null:
+	elif is_instance_valid(_fx):
 		_fx.burst_hit(definition, at)
 	return killed
 
-## One-hop conduction to the three closest targets among at most 96 local
-## grid entries. Fixed candidate storage keeps crowd-density work bounded.
+## One-hop conduction to three closest bodies among at most 96 entries.
+## Big bodies participate first; grid candidates share the same work budget.
 func _chain_shock(source: int, center: Vector3, amount: float, critical: bool) -> void:
 	var c := Vector2(center.x, center.z)
 	_chain_index.fill(-1)
 	_chain_distance.fill(INF)
+	_query_id += 1
 	var checks := 0
-	for cz in range(_cell_z(c.y - SHOCK_RADIUS), _cell_z(c.y + SHOCK_RADIUS) + 1):
-		for cx in range(_cell_x(c.x - SHOCK_RADIUS), _cell_x(c.x + SHOCK_RADIUS) + 1):
+	for slot in _big:
+		if checks >= SHOCK_CHECKS:
+			break
+		checks += 1
+		_chain_consider(slot, source, center)
+	var reach := SHOCK_RADIUS + BIG_RADIUS
+	for cz in range(_cell_z(c.y - reach), _cell_z(c.y + reach) + 1):
+		for cx in range(_cell_x(c.x - reach), _cell_x(c.x + reach) + 1):
 			var cell := cz * _grid_w + cx
 			for k in range(_cell_start[cell], _cell_start[cell + 1]):
 				if checks >= SHOCK_CHECKS:
 					break
 				checks += 1
-				var slot := _cell_items[k]
-				if slot == source or not is_alive(slot):
-					continue
-				var d2 := enemy_position(slot).distance_squared_to(center)
-				if d2 > SHOCK_RADIUS * SHOCK_RADIUS:
-					continue
-				for rank in SHOCK_TARGETS:
-					if d2 < _chain_distance[rank]:
-						for shift in range(SHOCK_TARGETS - 1, rank, -1):
-							_chain_index[shift] = _chain_index[shift - 1]
-							_chain_distance[shift] = _chain_distance[shift - 1]
-						_chain_index[rank] = slot
-						_chain_distance[rank] = d2
-						break
+				_chain_consider(_cell_items[k], source, center)
 			if checks >= SHOCK_CHECKS:
 				break
 		if checks >= SHOCK_CHECKS:
 			break
-	# Capture all three before emitting signals: a synchronous callback can
-	# start another shock and overwrite the selection scratch.
+	# Snapshot identities as well as indices before synchronous callbacks.
 	var first := _chain_index[0]
 	var second := _chain_index[1]
 	var third := _chain_index[2]
-	if first >= 0:
+	var first_generation := enemy_generation(first)
+	var second_generation := enemy_generation(second)
+	var third_generation := enemy_generation(third)
+	if first >= 0 and enemy_generation(first) == first_generation:
 		_deal_damage(first, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
-	if second >= 0:
+	if second >= 0 and enemy_generation(second) == second_generation:
 		_deal_damage(second, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
-	if third >= 0:
+	if third >= 0 and enemy_generation(third) == third_generation:
 		_deal_damage(third, amount, Vector3.ZERO, DamageType.Kind.SHOCK, critical)
+
+func _chain_consider(slot: int, source: int, center: Vector3) -> void:
+	if slot == source or not is_alive(slot) or _stamp[slot] == _query_id:
+		return
+	_stamp[slot] = _query_id
+	var d2 := _body_distance_squared(slot, center)
+	if d2 > SHOCK_RADIUS * SHOCK_RADIUS:
+		return
+	for rank in SHOCK_TARGETS:
+		if d2 < _chain_distance[rank]:
+			for shift in range(SHOCK_TARGETS - 1, rank, -1):
+				_chain_index[shift] = _chain_index[shift - 1]
+				_chain_distance[shift] = _chain_distance[shift - 1]
+			_chain_index[rank] = slot
+			_chain_distance[rank] = d2
+			break
 
 func _update_burns(delta: float) -> void:
 	# Death only marks slots here; compacting stays in _rebuild_grid afterward.
@@ -1156,13 +1334,14 @@ func _update_burns(delta: float) -> void:
 		var slot := _active[a]
 		if not is_alive(slot) or _burn_time[slot] <= 0.0:
 			continue
+		var generation := _generation[slot]
 		var elapsed := minf(delta, _burn_time[slot])
 		_burn_time[slot] = maxf(0.0, _burn_time[slot] - delta)
 		_burn_tick[slot] -= elapsed
-		while _burn_tick[slot] <= 0.00001 and is_alive(slot):
+		while _burn_tick[slot] <= 0.00001 and is_alive(slot) and _generation[slot] == generation:
 			_burn_tick[slot] += BURN_TICK
 			_deal_damage(slot, _burn_damage[slot], Vector3.ZERO, DamageType.Kind.FIRE, false)
-		if _burn_time[slot] <= 0.0:
+		if _generation[slot] == generation and _burn_time[slot] <= 0.0:
 			_burn_damage[slot] = 0.0
 			_burn_tick[slot] = 0.0
 
@@ -1179,11 +1358,17 @@ func damage_radius(center: Vector3, radius: float, amount: float, knockback_stre
 	# Packed arrays use copy-on-write; detach while this invocation owns it.
 	_radius_buffers[depth] = PackedInt32Array()
 	var count := query_radius(center, radius, buffer)
+	var generations := _radius_generations[depth]
+	_radius_generations[depth] = PackedInt64Array()
+	for n in count:
+		generations[n] = _generation[buffer[n]]
 	var damaged := 0
 	var c := Vector2(center.x, center.z)
 	for n in count:
-		damaged += _damage_radius_slot(buffer[n], c, amount, knockback_strength, damage_type, critical)
+		if _generation[buffer[n]] == generations[n]:
+			damaged += _damage_radius_slot(buffer[n], c, amount, knockback_strength, damage_type, critical)
 	_radius_buffers[depth] = buffer
+	_radius_generations[depth] = generations
 	_radius_depth -= 1
 	return damaged
 
@@ -1196,8 +1381,9 @@ func _damage_radius_slot(slot: int, center: Vector2, amount: float, knockback_st
 		away = away.normalized() * knockback_strength
 		push = Vector3(away.x, 0.0, away.y)
 	var before := _hp[slot]
+	var generation := _generation[slot]
 	damage(slot, amount, push, damage_type, critical)
-	return 1 if _hp[slot] < before else 0
+	return 1 if _generation[slot] != generation or _hp[slot] < before else 0
 
 func _damage_radius_scan(center: Vector3, radius: float, amount: float, knockback_strength: float, damage_type: int, critical: bool) -> int:
 	var c := Vector2(center.x, center.z)
@@ -1205,16 +1391,17 @@ func _damage_radius_scan(center: Vector3, radius: float, amount: float, knockbac
 	for slot in CAPACITY:
 		if not is_alive(slot):
 			continue
-		var reach := radius + _t_radius[_type[slot]]
+		var reach := radius + _radius[slot]
 		if _pos[slot].distance_squared_to(c) > reach * reach:
 			continue
-		var half := _t_height[_type[slot]] * 0.5
+		var half := _height[slot] * 0.5
 		if absf(_y[slot] + half - center.y) > radius + half + LEVEL_GAP:
 			continue
 		damaged += _damage_radius_slot(slot, c, amount, knockback_strength, damage_type, critical)
 	return damaged
 
 func _begin_death(slot: int) -> void:
+	_hide_anatomy_slot(slot)
 	_state[slot] = DYING
 	_slow[slot] = 1.0
 	_slow_time[slot] = 0.0
@@ -1225,16 +1412,231 @@ func _begin_death(slot: int) -> void:
 	_flash[slot] = 1.0
 	_dying[_dying_count] = slot
 	_dying_count += 1
-	if _t_radius[_type[slot]] > BIG_RADIUS:
-		var at := _big.find(slot)
-		if at >= 0:
-			_big.remove_at(at)
+	_fusion_allowed[slot] = 0
+	_dense_count[slot] = 0
+	_exposed[slot] = 0.0
+	_stunned[slot] = 0.0
+	var at := _big.find(slot)
+	if at >= 0:
+		_big.remove_at(at)
+
+## Cached physical dimensions are also the rendered grow-in dimensions.
+func _set_body(slot: int, factor: float) -> void:
+	var type := _type[slot]
+	_body[slot] = factor
+	_radius[slot] = _t_radius[type] * factor * (FUSION_SHOULDER if _members[slot] > 1 else 1.0)
+	_height[slot] = _t_height[type] * factor
+	_mass[slot] = _t_mass[type] * float(_members[slot])
+
+func _fusion_eligible(slot: int, player: Vector2) -> bool:
+	return is_alive(slot) and _fusion_allowed[slot] != 0 and _members[slot] == 1 \
+		and _mode[slot] == Mode.SEEK and _burn_time[slot] <= 0.0 \
+		and _slow_time[slot] <= 0.0 and _stunned[slot] <= 0.0 and _exposed[slot] <= 0.0 \
+		and absf(_vy[slot]) < 0.001 and _knock[slot].length_squared() < 0.01 \
+		and _pos[slot].distance_squared_to(player) >= 16.0
+
+## Exact segment/obstacle tests: even a thin wall cannot join two crowds.
+func _fusion_path_clear(from: Vector2, to: Vector2, radius: float) -> bool:
+	var low := from.min(to) - Vector2.ONE * radius
+	var high := from.max(to) + Vector2.ONE * radius
+	var ray := to - from
+	var ground := ground_height(from)
+	var steps := maxi(1, ceili(ray.length() / (HEIGHT_STEP * 0.5)))
+	for step in range(1, steps + 1):
+		if absf(ground_height(from + ray * (float(step) / steps)) - ground) > FUSION_DECK_GAP:
+			return false
+	for cz in range(_cell_z(low.y), _cell_z(high.y) + 1):
+		for cx in range(_cell_x(low.x), _cell_x(high.x) + 1):
+			var cell := cz * _grid_w + cx
+			for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
+				var obstacle := _cell_obstacle_items[k]
+				var center := _obstacle_center[obstacle]
+				var half := _obstacle_half[obstacle] + Vector2.ONE * radius
+				if _obstacle_circle[obstacle] != 0:
+					var t := clampf((center - from).dot(ray) / maxf(0.000001, ray.length_squared()), 0.0, 1.0)
+					if (from + ray * t).distance_squared_to(center) <= half.x * half.x:
+						return false
+				else:
+					var near := 0.0
+					var far := 1.0
+					for axis in 2:
+						if absf(ray[axis]) < 0.000001:
+							if absf(from[axis] - center[axis]) > half[axis]:
+								far = -1.0
+						else:
+							var a := (center[axis] - half[axis] - from[axis]) / ray[axis]
+							var b := (center[axis] + half[axis] - from[axis]) / ray[axis]
+							near = maxf(near, minf(a, b))
+							far = minf(far, maxf(a, b))
+					if near <= far:
+						return false
+	return true
+
+func _dense_group_valid(seed: int, player: Vector2) -> bool:
+	var offset := seed * FUSION_MAX
+	for n in _dense_count[seed]:
+		var slot := _dense_members[offset + n]
+		if not _fusion_eligible(slot, player) or _generation[slot] != _dense_generation[offset + n] \
+				or _type[slot] != _type[seed] or absf(_y[slot] - _y[seed]) > FUSION_DECK_GAP \
+				or _pos[slot].distance_squared_to(_pos[seed]) > FUSION_RANGE * FUSION_RANGE:
+			return false
+	return true
+
+## At most 256 seeds and 48 local grid entries per seed, never all-pairs.
+## Stored constituent identities must stay together across repeated observations.
+func _update_fusions(delta: float) -> void:
+	_fusion_clock += delta
+	if _active_count < FUSION_MIN or not is_instance_valid(target) or not target.active:
+		_dense_count.fill(0)
+		return
+	var player := Vector2(target.global_position.x, target.global_position.z)
+	var events := 0
+	var seeds := mini(FUSION_SEEDS, _active_count)
+	var observation_gap := maxf(0.35, delta * ceili(float(_active_count) / FUSION_SEEDS) * 1.5)
+	for attempt in seeds:
+		if _fusion_cursor >= _active_count:
+			_fusion_cursor = 0
+		var seed := _active[_fusion_cursor]
+		_fusion_cursor += 1
+		if not _fusion_eligible(seed, player):
+			_dense_count[seed] = 0
+			continue
+		if _dense_count[seed] >= FUSION_MIN:
+			if _fusion_clock - _dense_last[seed] > observation_gap or not _dense_group_valid(seed, player):
+				_dense_count[seed] = 0
+			else:
+				_dense_last[seed] = _fusion_clock
+				if _fusion_clock - _dense_since[seed] >= FUSION_DENSITY_TIME and _fusion_clock - _fusion_times[_fusion_time_cursor] >= 0.5:
+					if _fuse_group(seed, player):
+						_fusion_events[events] = seed
+						_fusion_event_generation[events] = _generation[seed]
+						events += 1
+						_fusion_times[_fusion_time_cursor] = _fusion_clock
+						_fusion_time_cursor = (_fusion_time_cursor + 1) % 4
+					else:
+						_dense_count[seed] = 0
+				continue
+		var offset := seed * FUSION_MAX
+		_dense_members[offset] = seed
+		_dense_generation[offset] = _generation[seed]
+		var count := 1
+		var checks := 0
+		var p := _pos[seed]
+		for cz in range(_cell_z(p.y - FUSION_RANGE), _cell_z(p.y + FUSION_RANGE) + 1):
+			for cx in range(_cell_x(p.x - FUSION_RANGE), _cell_x(p.x + FUSION_RANGE) + 1):
+				var cell := cz * _grid_w + cx
+				for k in range(_cell_start[cell], _cell_start[cell + 1]):
+					if checks >= FUSION_CHECKS or count >= FUSION_MAX:
+						break
+					checks += 1
+					var slot := _cell_items[k]
+					if slot == seed or _type[slot] != _type[seed] or not _fusion_eligible(slot, player):
+						continue
+					if absf(_y[slot] - _y[seed]) > FUSION_DECK_GAP or _pos[slot].distance_squared_to(p) > FUSION_RANGE * FUSION_RANGE:
+						continue
+					_dense_members[offset + count] = slot
+					_dense_generation[offset + count] = _generation[slot]
+					count += 1
+		_dense_count[seed] = count if count >= FUSION_MIN else 0
+		_dense_since[seed] = _fusion_clock
+		_dense_last[seed] = _fusion_clock
+	if events == 0:
+		return
+	# Finish transactions and remove all stale active/grid entries before callbacks.
+	_rebuild_grid()
+	for n in events:
+		var slot := _fusion_events[n]
+		if is_alive(slot) and _generation[slot] == _fusion_event_generation[n]:
+			enemy_fused.emit(slot, _members[slot])
+
+func _fuse_group(seed: int, player: Vector2) -> bool:
+	if not _dense_group_valid(seed, player):
+		return false
+	var count := _dense_count[seed]
+	var offset := seed * FUSION_MAX
+	var center := Vector2.ZERO
+	var health := 0.0
+	var maximum := 0.0
+	for n in count:
+		var slot := _dense_members[offset + n]
+		center += _pos[slot]
+		health += _hp[slot]
+		maximum += _max_hp[slot]
+	center /= float(count)
+	var final_radius := _t_radius[_type[seed]] * FUSION_SCALE * FUSION_SHOULDER
+	if center.distance_squared_to(player) < 16.0 or is_blocked(center, final_radius) \
+			or _rect_rough(Rect2(center - Vector2.ONE * final_radius, Vector2.ONE * final_radius * 2.0)) \
+			or absf(ground_height(center) - _y[seed]) > FUSION_DECK_GAP:
+		return false
+	for n in count:
+		var slot := _dense_members[offset + n]
+		if not _fusion_path_clear(_pos[slot], center, _radius[slot]):
+			return false
+	# No callbacks during mutation; absorption is neither a death nor a reward.
+	for n in range(1, count):
+		_recycle(_dense_members[offset + n])
+	_generation[seed] += 1
+	_members[seed] = count
+	_fusion_allowed[seed] = 0
+	_dense_count[seed] = 0
+	_hp[seed] = health
+	_max_hp[seed] = maximum
+	_pos[seed] = center
+	_y[seed] = ground_height(center)
+	_knock[seed] = Vector2.ZERO
+	_grow[seed] = 0.0
+	_set_body(seed, 1.0)
+	if final_radius > BIG_RADIUS and not _big.has(seed):
+		_big.append(seed)
+	_largest_radius = maxf(_largest_radius, final_radius)
+	alive_count -= count - 1
+	_reset_animation(seed)
+	return true
+
+func _recycle(slot: int) -> void:
+	_hide_anatomy_slot(slot)
+	var big_at := _big.find(slot)
+	if big_at >= 0:
+		_big.remove_at(big_at)
+	_state[slot] = FREE
+	_generation[slot] += 1
+	_fusion_allowed[slot] = 0
+	_members[slot] = 1
+	_body[slot] = 1.0
+	_radius[slot] = 0.0
+	_height[slot] = 0.0
+	_mass[slot] = 0.0
+	_grow[slot] = 0.0
+	_dense_count[slot] = 0
+	_hp[slot] = 0.0
+	_max_hp[slot] = 0.0
+	_knock[slot] = Vector2.ZERO
+	_aim[slot] = Vector2.ZERO
+	_timer[slot] = 0.0
+	_cooldown[slot] = 0.0
+	_flash[slot] = 0.0
+	_death[slot] = 0.0
+	_slow[slot] = 1.0
+	_slow_time[slot] = 0.0
+	_burn_time[slot] = 0.0
+	_burn_tick[slot] = 0.0
+	_burn_damage[slot] = 0.0
+	_exposed[slot] = 0.0
+	_stunned[slot] = 0.0
+	_anim_clip[slot] = -1
+	_anim_frame[slot] = 0.0
+	_anim_speed[slot] = 0.0
+	_stamp[slot] = 0
+	_cell_of[slot] = -1
+	_free[_free_count] = slot
+	_free_count += 1
 
 # ---------------------------------------------------------------- simulation
 
 func _physics_process(delta: float) -> void:
 	_update_burns(delta)
 	_rebuild_grid()
+	_update_fusions(delta)
 	_flow_timer -= delta
 	if _flow_timer <= 0.0 and is_instance_valid(target):
 		_flow_timer = FLOW_INTERVAL
@@ -1256,6 +1658,10 @@ func _physics_process(delta: float) -> void:
 		var i := _active[a]
 		if not is_alive(i):
 			continue
+		if _members[i] > 1 and _grow[i] < FUSION_GROW_TIME:
+			_grow[i] = minf(FUSION_GROW_TIME, _grow[i] + delta)
+			var progress := _grow[i] / FUSION_GROW_TIME
+			_set_body(i, lerpf(1.0, FUSION_SCALE, progress * progress * (3.0 - 2.0 * progress)))
 		_exposed[i] = maxf(0.0, _exposed[i] - delta)
 		var stunned := _stunned[i] > 0.0
 		_stunned[i] = maxf(0.0, _stunned[i] - delta)
@@ -1264,7 +1670,7 @@ func _physics_process(delta: float) -> void:
 		var to := player - p
 		var distance := to.length()
 		var direction := to / distance if distance > 0.001 else Vector2.ZERO
-		var radius := _t_radius[type]
+		var radius := _radius[i]
 		var reach := radius + PLAYER_RADIUS
 		var move := Vector2.ZERO
 		var rise := player_y - _y[i]
@@ -1298,9 +1704,9 @@ func _physics_process(delta: float) -> void:
 				move = _steer(i, type, route, direction, distance, delta)
 			if _mode[i] == Mode.CHARGE:
 				face = _aim[i]
-			var touching := distance < reach + 0.15 and rise < _t_height[type] and rise > -1.9
+			var touching := distance < reach + 0.15 and rise < _height[i] and rise > -1.9
 			if touching:
-				contact += _t_contact[type]
+				contact += _t_contact[type] * (minf(2.0, 1.0 + float(_members[i] - 1) * 0.15) if _members[i] > 1 else 1.0)
 				if _mode[i] == Mode.CHARGE and not (i == _boss_index and _boss_controlled):
 					target.take_damage(ceili(_t_contact[type] * 2.0))
 					_end_charge(i, type)
@@ -1382,7 +1788,7 @@ func _steer(i: int, type: int, route: Vector2, direct: Vector2, distance: float,
 			if _timer[i] <= 0.0:
 				_mode[i] = Mode.SEEK
 			return _aim[i] * definition.charge_speed
-	var move := route * _t_speed[type]
+	var move := route * _t_speed[type] * (0.68 if _members[i] > 1 else 1.0)
 	if behavior == HordeEnemyDefinition.Behavior.RANGED:
 		if distance < definition.preferred_range - 1.5:
 			move = -direct * _t_speed[type] * 0.7
@@ -1409,27 +1815,34 @@ func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 	var cell := _cell_of[i]
 	var cx := cell % _grid_w
 	var cz := cell / _grid_w
-	for nz in range(maxi(0, cz - 1), mini(_grid_h, cz + 2)):
-		for nx in range(maxi(0, cx - 1), mini(_grid_w, cx + 2)):
-			var neighbor := nz * _grid_w + nx
-			for k in range(_cell_start[neighbor], _cell_start[neighbor + 1]):
-				var j := _cell_items[k]
-				if j == i:
+	var rings := maxi(1, ceili((radius + _largest_radius) / CELL))
+	# Visit near cells first; enlarged broadphase must not spend the entire
+	# neighbor budget on distant bodies before reaching the local crowd.
+	for ring in range(rings + 1):
+		for nz in range(cz - ring, cz + ring + 1):
+			if nz < 0 or nz >= _grid_h:
+				continue
+			for nx in range(cx - ring, cx + ring + 1):
+				if nx < 0 or nx >= _grid_w or (ring > 0 and abs(nx - cx) != ring and abs(nz - cz) != ring):
 					continue
-				var away := p - _pos[j]
-				var d2 := away.length_squared()
-				var reach := radius + _t_radius[_type[j]]
-				# Bodies on another level (deck above, floor below) never shove.
-				if d2 < reach * reach and absf(feet - _y[j]) <= LEVEL_GAP:
-					if d2 < 0.000001:
-						away = Vector2(float(i & 7) - 3.5, float(j & 7) - 3.5)
-						d2 = away.length_squared()
-					var d := sqrt(d2)
-					# Heavier neighbors shove harder.
-					push += away * ((reach - d) / d) * minf(2.0, _t_mass[_type[j]] / _t_mass[_type[i]])
-				checks += 1
-				if checks >= MAX_NEIGHBOR_CHECKS:
-					return (push * SEPARATION).limit_length(0.25)
+				var neighbor := nz * _grid_w + nx
+				for k in range(_cell_start[neighbor], _cell_start[neighbor + 1]):
+					var j := _cell_items[k]
+					if j == i or not is_alive(j):
+						continue
+					var away := p - _pos[j]
+					var d2 := away.length_squared()
+					var reach := radius + _radius[j]
+					# Bodies on another level never shove.
+					if d2 < reach * reach and absf(feet - _y[j]) <= LEVEL_GAP:
+						if d2 < 0.000001:
+							away = Vector2.from_angle(float((i * 37 + j * 17) % 256) * TAU / 256.0) * 0.001
+							d2 = 0.000001
+						var d := sqrt(d2)
+						push += away * ((reach - d) / d) * minf(2.0, _mass[j] / _mass[i])
+					checks += 1
+					if checks >= MAX_NEIGHBOR_CHECKS:
+						return (push * SEPARATION).limit_length(0.25)
 	return (push * SEPARATION).limit_length(0.25)
 
 func _constrain(p: Vector2, radius: float) -> Vector2:
@@ -1492,9 +1905,7 @@ func _update_dying(delta: float) -> void:
 			_dying[n] = slot
 			n += 1
 		else:
-			_state[slot] = FREE
-			_free[_free_count] = slot
-			_free_count += 1
+			_recycle(slot)
 	_dying_count = n
 
 # ---------------------------------------------------------------- projectiles
@@ -1503,7 +1914,7 @@ func _fire(i: int, type: int) -> void:
 	if _shot_count >= MAX_PROJECTILES or not is_instance_valid(target):
 		return
 	var definition := _defs[type]
-	var from := Vector3(_pos[i].x, _y[i] + _t_height[type] * 0.7, _pos[i].y)
+	var from := Vector3(_pos[i].x, _y[i] + _height[i] * 0.7, _pos[i].y)
 	var aim := target.global_position + Vector3(0.0, 0.2, 0.0) - from
 	_shot_pos[_shot_count] = from
 	_shot_vel[_shot_count] = aim.normalized() * definition.projectile_speed
@@ -1566,15 +1977,16 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 		multimesh.instance_count = mini(capacity, CAPACITY)
 		buffer.resize(multimesh.instance_count * stride)
 	var scale := _t_scale[type]
-	var reach := _t_radius[type] + PLAYER_RADIUS + CONTACT_ANIMATION_MARGIN
-	var reach2 := reach * reach
+	var reach := 0.0
 	var k := 0
 	for a in _active_count:
 		var slot := _active[a]
 		if _type[slot] == type and _state[slot] == ALIVE:
-			k = _write_instance(buffer, k, slot, scale, scale, _flash[slot], stride)
+			var body_scale := scale * _body[slot]
+			k = _write_instance(buffer, k, slot, body_scale, body_scale, _flash[slot], stride)
 			if animated:
-				_animate(buffer, k - 8, slot, type, delta, _pos[slot].distance_squared_to(player) < reach2)
+				reach = _radius[slot] + PLAYER_RADIUS + CONTACT_ANIMATION_MARGIN
+				_animate(buffer, k - 8, slot, type, delta, _pos[slot].distance_squared_to(player) < reach * reach)
 	var death_clip := _t_clip_death[type]
 	var duration := _t_death_time[type]
 	for d in _dying_count:
@@ -1582,10 +1994,11 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 		if _type[slot] != type:
 			continue
 		var left := _death[slot] / duration
+		var death_scale := scale * _body[slot]
 		if death_clip >= 0:
 			# Play the death clip over most of the time, then shrink away quickly.
 			var fade := clampf(left / DEATH_FADE, 0.02, 1.0)
-			k = _write_instance(buffer, k, slot, scale * fade, scale * fade, 0.35 * left * left, stride)
+			k = _write_instance(buffer, k, slot, death_scale * fade, death_scale * fade, 0.35 * left * left, stride)
 			var progress := minf(1.0, (1.0 - left) / (1.0 - DEATH_FADE))
 			_write_clip(buffer, k - 8, death_clip, progress * (_clip_count[death_clip] - 1.0), 0.0)
 			continue
@@ -1593,7 +2006,7 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 		var widen := 1.0 + 0.15 * sin(left * PI)
 		# Dying bodies glow faintly and fade with their collapse; mass kills
 		# must not paint the view white.
-		k = _write_instance(buffer, k, slot, scale * maxf(0.02, left) * widen, scale * maxf(0.02, left * left), 0.35 * left, stride)
+		k = _write_instance(buffer, k, slot, death_scale * maxf(0.02, left) * widen, death_scale * maxf(0.02, left * left), 0.35 * left, stride)
 		if animated:
 			# Freeze the pose the enemy died in.
 			var clip := _anim_clip[slot] if _anim_clip[slot] >= 0 else _t_clip_move[type]
@@ -1603,6 +2016,55 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 	multimesh.visible_instance_count = k / stride
 	_buffers[type] = buffer
 	_draw_armor(type)
+	_draw_anatomy(type)
+
+func _sync_anatomy_setting() -> void:
+	_anatomy_intensity = clampf(float(Profile.settings.get("hallucination_intensity", 0.65)), 0.0, 1.0)
+	for type in _anatomy_renderers.size():
+		var renderer := _anatomy_renderers[type]
+		if renderer != null:
+			renderer.visible = _anatomy_intensity > 0.0
+			_draw_anatomy(type)
+
+func _hide_anatomy_slot(slot: int) -> void:
+	if slot >= _anatomy_slot_instance.size():
+		return
+	var instance := _anatomy_slot_instance[slot]
+	if instance < 0:
+		return
+	var renderer := _anatomy_renderers[_type[slot]]
+	if renderer != null:
+		# Immediate invalidation also works during pause/reward menu callbacks.
+		renderer.multimesh.set_instance_transform(instance, Transform3D(Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO), Vector3.ZERO))
+	_anatomy_slot_instance[slot] = -1
+
+func _draw_anatomy(type: int) -> void:
+	var renderer := _anatomy_renderers[type]
+	if renderer == null:
+		return
+	if _anatomy_intensity <= 0.0:
+		renderer.multimesh.visible_instance_count = 0
+		return
+	var stride := _t_stride[type]
+	var buffer := _anatomy_buffers[type]
+	_anatomy_buffers[type] = PackedFloat32Array()
+	var k := 0
+	for a in _active_count:
+		var slot := _active[a]
+		if _type[slot] != type or not is_alive(slot) or _members[slot] <= 1:
+			continue
+		if k / stride >= ANATOMY_CAPACITY:
+			break
+		_anatomy_slot_instance[slot] = k / stride
+		var scale := _t_scale[type] * _body[slot]
+		k = _write_instance(buffer, k, slot, scale, scale, _flash[slot], stride)
+		if stride == 20:
+			var clip := _anim_clip[slot] if _anim_clip[slot] >= 0 else _t_clip_move[type]
+			var loop := 0.0 if _stunned[slot] > 0.0 or _mode[slot] == Mode.WINDUP else 1.0
+			_write_clip(buffer, k - 8, clip, _anim_frame[slot], loop)
+	RenderingServer.multimesh_set_buffer(renderer.multimesh.get_rid(), buffer)
+	renderer.multimesh.visible_instance_count = k / stride
+	_anatomy_buffers[type] = buffer
 
 func _draw_armor(type: int) -> void:
 	var renderer := _armor_renderers[type]
@@ -1615,7 +2077,7 @@ func _draw_armor(type: int) -> void:
 	for a in _active_count:
 		var slot := _active[a]
 		if _type[slot] == type and _state[slot] == ALIVE:
-			k = _write_instance(buffer, k, slot, scale, scale, 0.0, 16)
+			k = _write_instance(buffer, k, slot, scale * _body[slot], scale * _body[slot], 0.0, 16)
 	RenderingServer.multimesh_set_buffer(renderer.multimesh.get_rid(), buffer)
 	renderer.multimesh.visible_instance_count = k / 16
 	_armor_buffers[type] = buffer
@@ -1647,7 +2109,7 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	var custom := k + stride - 4
 	buffer[custom] = flash
 	buffer[custom + 1] = -1.0 if _stunned[slot] > 0.0 else telegraph
-	buffer[custom + 2] = _phase[slot]
+	buffer[custom + 2] = _phase[slot] + TAU * float(_members[slot] - 1)
 	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 or (slot == _boss_index and _boss_recovering) else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
 	return k + stride
 
@@ -1681,12 +2143,13 @@ func _animate(buffer: PackedFloat32Array, at: int, slot: int, type: int, delta: 
 	if attack >= 0 and (mode == Mode.CHARGE or touching):
 		clip = attack
 	else:
-		var reference := _t_move_ref[type]
+		var reference := _t_move_ref[type] * _body[slot]
 		rate = clampf(speed / reference, 0.5, 3.0)
 		var idle := _t_clip_idle[type]
 		if idle >= 0 and speed < reference * 0.15:
 			clip = idle
 			rate = 1.0
+	rate *= _gait[slot] * (0.55 if _members[slot] > 1 else 1.0)
 	var count := _clip_count[clip]
 	if clip != _anim_clip[slot]:
 		_anim_clip[slot] = clip

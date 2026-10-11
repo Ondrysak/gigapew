@@ -8,7 +8,7 @@ extends PanelContainer
 
 const TIPS := {
 	&"basics": ["POHYB A RÁNY", "WASD pro pohyb, myš pro míření. Drž LMB a útoč: munice nikdy nedojde. Kolečkem myši měníš zbraně."],
-	&"contract": ["TVŮJ KŠEFT", "Seznam vlevo je zakázka: vypáč požadovanou kořist z automatů a rozpráš uvedené halucinace. Počítá se jen kořist uvolněná z rozbitých přihrádek, ne peníze v kapse. Splnění přivolá odvoz."],
+	&"contract": ["TVŮJ KŠEFT", "Seznam vlevo je zakázka: vypáč požadovanou kořist z automatů, rozpráš uvedené halucinace a vyber alespoň dvě různé skrýše. U skrýše drž E; můžeš ji ukrást i pod palbou. Elitní drop se nepočítá, odmítnutí výbavy nevadí. Až celá zakázka přivolá odvoz."],
 	&"mining": ["VYSEKEJ AUTOMAT", "Zamiř zblízka na přihrádku: páčidlo se zvedne samo. Drž F a páč zámek označený + pro ×1,75 síly. Vytrvalé páčení stejné západky přidá až 35 %. Drobné z výherního automatu, Cigára z cigaretového, Kešulky z jackpotu."],
 	&"repair": ["UŽ SE SYPEŠ", "Přejdi přes červené lékárničky a doplň zdraví. Padají z nepřátel; časem poblíž přistanou i balíky zásob."],
 	&"extraction": ["ODVOZ", "Zakázka hotová! Běž ke světelnému sloupu a zůstaň v kruhu odvozu až do odjezdu. Halucinace do té doby přibývají."],

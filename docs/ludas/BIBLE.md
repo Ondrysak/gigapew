@@ -9,6 +9,24 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
 - Všech jedenáct nepřátelských slotů má nové modely podle bestiáře níže.
   Šest lidí je přebarvených z CC0 Quaternius packu; myška, šváb, lahev,
   automat a Jackpot jsou vlastní generované rigy. Pohyb, útok a smrt se pečou do VAT.
+- Husté skupiny 6–8 běžných halucinací stejného druhu se slepí do jednoho
+  megaslepence: mohutnější tělo, mosazné spoje a koruna, přitažené jiskry,
+  pomalý asymetrický krok. Zdraví se sečte bez léčení; zabití až po porážce
+  započítá všechny slepené životy do zakázky i běžných odměn.
+  Bossové, specialisté, hlídači a výběrčí zůstávají samostatní. Spojení
+  neprojde zdí ani mezi patry a nevymaže aktivní oheň, mráz, omráčení či tag.
+  Počítadlo HALUCINACE ukazuje těla, tlak spawnu pořád počítá původní životy.
+- Slepence opakují vlastní anatomii: dvě další hlavy, další ruce/nohy a menší
+  končetiny vyrůstající z končetin ve třech omezených generacích. Vnořené menší
+  hlavy smyčkují zmenšování pro iluzi nekonečného zoomu; používají skutečné
+  textury a VAT modelu, ne geometrickou tapetu. Hlavní korunovaná hlava/jádro
+  zůstává přesným cílem, přidané části nemají vlastní životy ani kolize.
+  Periferie obrazu běží ve smyčce zpětné vazby (inspirace Fraksl/crystaldive):
+  šest zrcadlených kopií světa se do sebe vnořuje a donekonečna zmenšuje k místu zamíření, točí, mění odstín, rozpadá
+  barevně a v hloubce zrcadlí, navíc rozostření a dvojité vidění. Střed
+  zamíření a HUD zůstávají ostré.
+  INTENZITA HALUCINACÍ se ukládá (0–100 %, výchozí 65 %); nula vypne nové efekty
+  i v pauze. Nový pohyb v pauze/odměnách stojí, kamera se neotáčí ani nebliká.
 - První improvizovaná zbraň **Lahve od piva**: špinavá ruka v bezprsté
   rukavici, hnědá pivní lahev, letící lahve a skleněné střepy s pěnou.
   Všech šest hlavních zbraní má vlastní improvizovaný model.
@@ -23,6 +41,15 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
 - Krystaly a vrtačka jsou nahrazené banky automatů a páčidlem:
   skutečné přihrádky se páčí, dvířka se otevírají a rozbíjejí, kořist se
   zachovává a prázdná skříň zůstává. Dropy jsou mince, krabičky cigaret a žetony.
+  Výherní automaty a JACKPOT 777 jsou trojice skutečných hospodských
+  automatů: podsvícené sklo s výherní tabulkou a žebříčkem SUPER TURBO
+  x1–x10, červené LED displeje SÁZKA/MULTIWIN/BONUS, točící se válce s ovocem
+  (rozjezd, rozmazání, zastavení zleva doprava s cuknutím), výhry s
+  blikáním a načítáním kreditu, RISK hra na spodním skle a svítící tlačítka.
+  Páčí se horní sklo, spodní sklo a pokladna se zámkem. Vypáčený automat
+  přestane hrát a rozbliká červenou lampu; vybrakovaná trojice je mimo
+  provoz. Cigaretový automat bliká žárovkami a neonem. Vše stojí v pauze a
+  ozdoby nemají kolize.
 - Celé UI používá české texty, špinavý papír/kov, oprýskané rámy a tlumenou
   tabákovou, rezavou a jantarovou paletu: úvod, menu, výběr party, bazar,
   nastavení/rekordy, pauza, upgrady, HUD/rady, obchod, interakce a smrt/kořist.
@@ -40,6 +67,19 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   Drogerie Savo, Řeznictví, Herna žetony, Pekárna 6:00, Žižkovský tunel) stojí jako
   výlohy na činžácích a pojmenovávají obchod mezi sektory. Květinářství záměrně
   chybí („vegetariánský mor“). Jen kulisa a hlášky; hratelnost se nemění.
+- Výbava na jeden běh: čtyři místa, žádné duplikáty a výslovná výměna při
+  plné kapacitě. Zrcadlo těžkýho dna odráží zásahy, Geoxy z Palmovky nechávají
+  stopu při úhybu, Kabel celoživotních blesků řetězí šok, Podržtaškovy rukavice
+  dávají štít za páčení, Nebozízkový zapalovač odměňuje sérii zabití výbuchem.
+  Nejsem sklenička je označené prokletí: +50 % poškození, −35 % maximálního zdraví.
+  Karty i prohlížení přes G ukazují účinek, pixelovou ikonu a odpovídající hlášku.
+- Každý sektor má hlídanou skrýš, dvě průzkumné keše a volitelného výběrčího
+  s výbavou. Skrýš lze vybojovat nebo ukrást držením E; její odměna nabízí až
+  tři různé věci, keše a výběrčí jednu. Pro odvoz musíš vedle páčení a zabití
+  vybrat alespoň dvě různé skrýše: počítá se hlídaná i obě průzkumné keše,
+  ne elitní drop. Odmítnutí výbavy nevadí; opakované vybrání nepřidá postup.
+  Počítadlo začíná v každém sektoru od nuly.
+  Objevy odemykají budoucí elitní dropy, nikoli trvale vybavenou sílu.
 
 
 ## 1. Logline

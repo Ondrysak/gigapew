@@ -5,6 +5,8 @@ extends Node3D
 ## Placement probes real support faces; procedural and authored worlds share it.
 
 signal deposit_broken(definition: DepositDefinition, position: Vector3)
+## One actual door/compartment opening, independent of loot collection.
+signal compartment_opened
 
 @export_group("Deposits")
 @export var deposit_types: Array[DepositDefinition] = []
@@ -641,6 +643,7 @@ func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -
 	var definition := deposit.definition
 	var normal := deposit.global_basis.z
 	_spill(definition.resource, amount, center, normal)
+	compartment_opened.emit()
 	# Currency, pickup overflow and bonus multipliers are not mining progress.
 	# Spill the conserved fracture loot before completion observers can clear a level.
 	if _quests != null:

@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS := {
 	"sfx_volume": 0.8,
 	"mouse_sensitivity": 1.0,
 	"fullscreen": false,
+	"hallucination_intensity": 0.65,
 	## Gradual skill unlocks, level-gated upgrade kinds and first-time tips.
 	"guided_start": true,
 }
@@ -52,11 +53,13 @@ var meta_pool: MetaPool
 ## best_time, best_kills, best_level, runs, victories, total_kills,
 ## deepest_stage, and last_run (the latest record_run summary, JSON-safe).
 var records: Dictionary = {}
-## master_volume, music_volume, sfx_volume (0..1), mouse_sensitivity
-## (multiplier), fullscreen (bool). Change through set_setting().
+## Volumes and hallucination_intensity (0..1), mouse_sensitivity
+## (multiplier), fullscreen and guided_start (bool). Change through set_setting().
 var settings: Dictionary = {}
 ## Ids of first-time tips already shown; persisted so each appears once.
 var _seen_tips: Dictionary = {}
+## Persistent discoveries unlock regular drops, never equipped run slots.
+var _discovered_gear: Dictionary = {}
 
 var _currencies: Dictionary = {}
 var _unlocked_classes: Dictionary = {}
@@ -90,9 +93,27 @@ func enter_sandbox() -> void:
 	_loading = true
 	_reset()
 	_loading = false
+	RenderingServer.global_shader_parameter_set("hallucination_intensity", float(settings.hallucination_intensity))
 
 func is_sandboxed() -> bool:
 	return not _persistent
+
+func discover_gear(id: StringName) -> bool:
+	if GearCatalog.find(id) == null or has_discovered_gear(id):
+		return false
+	_discovered_gear[String(id)] = true
+	_mutated()
+	return true
+
+func has_discovered_gear(id: StringName) -> bool:
+	return _discovered_gear.has(String(id))
+
+func discovered_gear() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for item in GearCatalog.all():
+		if has_discovered_gear(item.id):
+			result.append(item.id)
+	return result
 
 # --- currencies -------------------------------------------------------------
 
@@ -414,6 +435,7 @@ func reset_tips() -> void:
 	_mutated()
 
 func apply_settings() -> void:
+	RenderingServer.global_shader_parameter_set("hallucination_intensity", float(settings.get("hallucination_intensity", DEFAULT_SETTINGS.hallucination_intensity)))
 	for key: String in VOLUME_BUSES:
 		var bus := AudioServer.get_bus_index(VOLUME_BUSES[key])
 		if bus < 0:
@@ -448,6 +470,7 @@ func save() -> void:
 		"records": records,
 		"settings": settings,
 		"seen_tips": _seen_tips.keys(),
+		"discovered_gear": _discovered_gear.keys(),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -528,6 +551,14 @@ func _apply_data(data: Dictionary) -> void:
 	if tips is Array:
 		for id in tips:
 			_seen_tips[str(id)] = true
+	var discoveries: Variant = data.get("discovered_gear", [])
+	if discoveries is Array:
+		for value in discoveries:
+			if not (value is String or value is StringName):
+				continue
+			var id := StringName(value)
+			if GearCatalog.find(id) != null:
+				_discovered_gear[String(id)] = true
 
 func _reset() -> void:
 	selected_class_id = &""
@@ -541,6 +572,7 @@ func _reset() -> void:
 	records = DEFAULT_RECORDS.duplicate()
 	settings = DEFAULT_SETTINGS.duplicate()
 	_seen_tips.clear()
+	_discovered_gear.clear()
 
 ## Legacy saves stored three slots; take the first surviving crafted entry.
 ## Removed melee recipes are absent from the catalog and skipped safely.
@@ -567,6 +599,8 @@ func _sanitize_setting(key: String, value: Variant) -> Variant:
 			return value if value is bool else _number(value) != 0.0
 		"mouse_sensitivity":
 			return clampf(_number(value, 1.0), SENSITIVITY_RANGE.x, SENSITIVITY_RANGE.y)
+		"hallucination_intensity":
+			return clampf(_number(value, float(DEFAULT_SETTINGS.hallucination_intensity)), 0.0, 1.0)
 		_:
 			return clampf(_number(value, 1.0), 0.0, 1.0)
 

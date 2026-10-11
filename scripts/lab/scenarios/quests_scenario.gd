@@ -29,10 +29,28 @@ func run() -> void:
 				game.run_state.level_up_ready.disconnect(game._on_level_up_ready)
 			await lab.wait(0.2)
 		game.horde.set_physics_process(false)
-		game.horde.clear()
+		_clear_horde(game)
 		var old_quests := game.quests
 		var complete_signals := [0]
 		old_quests.completed.connect(func(): complete_signals[0] += 1)
+		if stage == 0:
+			var loot := game.gear_loot
+			_stand(game.player, loot.elite_site)
+			await lab.wait(0.2)
+			lab.check(loot.elite_spawned, "elite fixture activates before any stash is looted")
+			if loot.elite_spawned:
+				game.horde.damage(loot.elite_slot, loot.elite_definition.max_health * 2.0)
+				await lab.frames(2)
+				await _loot_stash(game, loot.elite_drop)
+				await _settle_choices(game)
+				lab.check(game.quests.quests.back().progress == 0, "claiming an elite drop does not count as looting a stash")
+		if stage > 0:
+			await _loot_stash(game, game.gear_loot.stashes[0])
+			await _settle_choices(game)
+			if stage == 1:
+				await _loot_stash(game, game.gear_loot.stashes[1])
+				await _settle_choices(game)
+			lab.check(not game.quests.is_complete() and game.extraction == null, "looting stashes cannot bypass unfinished salvage and kill objectives")
 		# A real last-kill callback may finish while an XP picker is already open.
 		if stage == 0:
 			_mine_targets(game)
@@ -41,7 +59,7 @@ func run() -> void:
 			lab.check(game.round_state == ArenaGame.RoundState.LEVEL_UP, "an earned XP choice can remain open when the last kill arrives")
 			_kill_targets(game)
 			await lab.frames(2)
-			lab.check(game.round_state == ArenaGame.RoundState.LEVEL_UP and not game.round_shop.visible, "completing a contract preserves an already earned upgrade choice")
+			lab.check(game.round_state == ArenaGame.RoundState.LEVEL_UP and game.extraction == null, "finishing salvage and kills preserves the XP choice and waits for stashes")
 			await lab.capture("complete_pending_choice")
 			await lab.wait(game.level_up.input_delay + 0.05)
 			game.level_up._choose(0)
@@ -51,6 +69,21 @@ func run() -> void:
 			await lab.frames(2)
 			lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "stage %d stays playable when kill objectives finish before mining" % stage)
 			_mine_targets(game)
+		await _settle_choices(game)
+		if stage != 1:
+			lab.check(game.extraction == null and not game.quests.is_complete(), "stage %d cannot extract with fewer than two looted stashes" % stage)
+			if stage == 0:
+				var first := game.gear_loot.stashes[1]
+				await _loot_stash(game, first)
+				await _settle_choices(game)
+				game.quests.record_stash(first)
+				lab.check(game.extraction == null and not game.quests.is_complete() and not game.gear_loot.claim_stash(first), "one distinct stash, declining its gear and repeated claim attempts cannot satisfy the two-stash requirement")
+				await lab.capture("one_stash_required")
+				await _loot_stash(game, game.gear_loot.stashes[2])
+			else:
+				await _loot_stash(game, game.gear_loot.stashes[1])
+			lab.check(game.quests.is_complete() and game.gear_screen.visible and game.get_tree().paused and game.extraction != null, "second stash completes the contract without losing its paused reward choice")
+			await lab.capture("%s_stash_completion_choice" % game.campaign[stage].id)
 		await _extract(game, stage)
 		lab.check(game.round_state == ArenaGame.RoundState.SHOP and game.round_shop.visible and game.get_tree().paused, "stage %d extracts into the real shop only after every objective" % stage)
 		lab.check(game.stages_cleared == stage + 1 and complete_signals[0] == 1, "stage %d counts one completed contract and emits completion once" % stage)
@@ -111,14 +144,49 @@ func _stand(player: ArenaPlayer, at: Vector3) -> void:
 	player.global_position = Vector3(at.x, at.y + 0.1, at.z)
 
 func _settle_choices(game: ArenaGame) -> void:
-	while game.round_state == ArenaGame.RoundState.LEVEL_UP:
-		await lab.wait(game.level_up.input_delay + 0.05)
-		game.level_up._choose(0)
+	while game.round_state in [ArenaGame.RoundState.LEVEL_UP, ArenaGame.RoundState.GEAR]:
+		if game.round_state == ArenaGame.RoundState.GEAR:
+			await lab.wait(game.gear_screen.input_delay + 0.05)
+			var key := InputEventKey.new()
+			key.keycode = KEY_ESCAPE
+			key.physical_keycode = KEY_ESCAPE
+			key.pressed = true
+			Input.parse_input_event(key)
+			await lab.frames(1)
+			key.pressed = false
+			Input.parse_input_event(key)
+		else:
+			await lab.wait(game.level_up.input_delay + 0.05)
+			game.level_up._choose(0)
 		await lab.frames(2)
+
+func _loot_stash(game: ArenaGame, stash: GearStash) -> void:
+	await _settle_choices(game)
+	var sight := PhysicsRayQueryParameters3D.create(Vector3.ZERO, stash.aim_point(), 1, [game.player.get_rid()])
+	var placed := false
+	for point in game.gear_loot._floor_points:
+		var distance := point.distance_to(stash.global_position)
+		if distance < 1.5 or distance > 2.3:
+			continue
+		sight.from = point + Vector3.UP * 1.6
+		if game.get_world_3d().direct_space_state.intersect_ray(sight).is_empty():
+			_stand(game.player, point)
+			placed = true
+			break
+	lab.check(placed, "required stash has a reachable visible interaction position")
+	if not placed:
+		return
+	await lab.wait(0.2)
+	lab.aim_at(stash.aim_point())
+	game.player.cancel_actions()
+	Input.action_press(&"interact")
+	await lab.wait(2.3)
+	Input.action_release(&"interact")
+	lab.check(stash.claimed and game.gear_screen.visible, "E claims world loot through the real reward UI")
 
 func _sustained_pressure(game: ArenaGame) -> void:
 	game.horde.set_physics_process(false)
-	game.horde.clear()
+	_clear_horde(game)
 	game.director.elapsed = game.campaign[0].schedule.ramp_duration
 	# Completion cannot be earned merely by waiting beyond the old deadline.
 	for tick in 50:
@@ -142,7 +210,7 @@ func _sustained_pressure(game: ArenaGame) -> void:
 	game.director._physics_process(10.0)
 	lab.check(game.horde.alive_count == count and game.director.elapsed == elapsed, "pause freezes contract-level enemy admissions")
 	game.get_tree().paused = false
-	game.horde.clear()
+	_clear_horde(game)
 	game.horde.set_physics_process(true)
 
 func _drill_input(game: ArenaGame) -> void:
@@ -177,7 +245,7 @@ func _fire_input(game: ArenaGame) -> void:
 			break
 	var enemy := quest.definition as HordeEnemyDefinition
 	game.horde.set_physics_process(false)
-	game.horde.clear()
+	_clear_horde(game)
 	# Face back into the clear machine circuit, not through the wall just pried.
 	var stand := game.player.global_position
 	var away := game.player.global_basis.z
@@ -252,3 +320,10 @@ func _kill_targets(game: ArenaGame) -> void:
 				return
 			game.horde.damage(slot, 1000000.0)
 		lab.check(quest.progress == quest.target, "%s objective counts its exact real deaths" % quest.name)
+
+func _clear_horde(game: ArenaGame) -> void:
+	# Keep the live loot director's finite encounter reservations when resetting
+	# ordinary enemies for combat fixtures.
+	var reserved := game.horde._reserved_slots
+	game.horde.clear()
+	game.horde.reserve_slots(reserved)

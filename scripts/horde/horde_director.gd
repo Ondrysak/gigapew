@@ -65,7 +65,7 @@ func _physics_process(delta: float) -> void:
 		var group := maxi(1, wave.group_size)
 		while _accumulated[w] >= group:
 			_accumulated[w] -= group
-			if _horde.alive_count + group > _schedule.max_alive:
+			if _horde.population_count + group > _schedule.max_alive:
 				# Full crowd: drop the backlog instead of bursting later.
 				_accumulated[w] = 0.0
 				break

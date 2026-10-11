@@ -184,7 +184,7 @@ func _live_wave() -> void:
 	var seen := {}
 	Engine.time_scale = 6.0
 	await _observe(game, seen, 12.0)
-	var early := game.horde.alive_count
+	var early := game.horde.population_count
 	lab.check(early > 0 and early < game.campaign[0].schedule.max_alive / 4, "normal early live wave presents pressure rather than an instant cap dump")
 	_aim_crowd(game)
 	await lab.capture("live_early")
@@ -203,10 +203,12 @@ func _live_wave() -> void:
 	Engine.time_scale = 1.0
 	_aim_crowd(game)
 	await lab.frames(2)
-	var late := game.horde.alive_count
-	lab.check(late > early * 3 and late <= game.campaign[0].schedule.max_alive and game.kills > 0, "accelerated normal gameplay ramps a larger real crowd while held weapons kill actual enemies (%d early, %d late, %d kills)" % [early, late, game.kills])
+	var late := game.horde.population_count
+	lab.check(late > early * 3 and late <= game.campaign[0].schedule.max_alive and game.kills > 0, "accelerated normal gameplay ramps real represented pressure within the cap while held weapons kill actual enemies (%d early, %d late)" % [early, late])
 	lab.check(seen.size() >= late and game.pickups._gems.count <= game.kills / 3, "observed live identities and actual kills leave sparse XP gems instead of a gem for every victim")
-	lab.log_line("normal elapsed=%.1f crowd=%d observed_lives=%d kills=%d ground_xp_gems=%d magnets=%d repairs=%d supplies=%d" % [game.director.elapsed, late, seen.size(), game.kills, game.pickups._gems.count, game.pickups._magnets.count, game.pickups._repairs.count, game.pickups._supplies.count])
+	var megas := PackedInt32Array()
+	var mega_count := game.horde.query_megas(megas)
+	lab.log_line("normal elapsed=%.1f bodies=%d represented=%d megas=%d observed_lives=%d kills=%d ground_xp_gems=%d magnets=%d repairs=%d supplies=%d" % [game.director.elapsed, game.horde.alive_count, late, mega_count, seen.size(), game.kills, game.pickups._gems.count, game.pickups._magnets.count, game.pickups._repairs.count, game.pickups._supplies.count])
 	# Inspect the same stress crowd from the authored 3m overlook rather than
 	# inside the unopposed robots surrounding the original camera.
 	var lookout := Vector2(25.0, 25.0)

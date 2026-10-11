@@ -13,8 +13,10 @@ signal resources_changed(id: StringName, amount: int)
 signal supply_changed(value: int, required: int)
 ## A hero skill slot became usable (guided start reveals them by level).
 signal ability_unlocked(slot: int)
+signal gear_changed
 
 const MAX_WEAPONS := 4
+const MAX_GEAR := 4
 const BASE_CRIT_MULTIPLIER := 2.0
 ## Precision adds one base-damage unit; never stacks a second random multiplier.
 const WEAK_SPOT_CRIT_BONUS := 1.0
@@ -35,6 +37,9 @@ var upgrade_levels: Dictionary = {}
 var owned_weapons: Array[UpgradeDefinition] = []
 ## PERK upgrades in pick order; they never use weapon slots.
 var owned_perks: Array[UpgradeDefinition] = []
+## Four passive slots, retained only for this run.
+var gear: Array[GearDefinition] = []
+var gear_health_multiplier := 1.0
 
 ## Effective primary and ordered hero skills retained across stage loads.
 var primary: WeaponBuild
@@ -94,6 +99,28 @@ var _rng := RandomNumberGenerator.new()
 func _init() -> void:
 	xp_required = required_for(level)
 	_rng.randomize()
+
+func has_gear(id: StringName) -> bool:
+	for item in gear:
+		if item.id == id:
+			return true
+	return false
+
+## Replacement is always explicit; never discard an item to make room.
+func equip_gear(item: GearDefinition, replace_slot: int = -1) -> bool:
+	if item == null or GearCatalog.find(item.id) == null or has_gear(item.id):
+		return false
+	if replace_slot < -1 or replace_slot >= gear.size():
+		return false
+	if replace_slot == -1:
+		if gear.size() >= MAX_GEAR:
+			return false
+		gear.append(item)
+	else:
+		gear[replace_slot] = item
+	_recompute()
+	gear_changed.emit()
+	return true
 
 static func required_for(p_level: int) -> int:
 	return 5 + p_level * 4 + roundi(pow(float(p_level), 1.4))
@@ -482,6 +509,9 @@ func _recompute() -> void:
 	resource_multiplier = maxf(resource_multiplier, 0.0)
 	crit_chance = clampf(crit_chance, 0.0, 1.0)
 	crit_multiplier = maxf(crit_multiplier, 1.0)
+	gear_health_multiplier = 0.65 if has_gear(&"glass") else 1.0
+	if has_gear(&"glass"):
+		damage_multiplier *= 1.5
 
 func _add_modifier(modifier: StatModifier, stacks: int) -> void:
 	damage_multiplier += modifier.damage_multiplier * stacks

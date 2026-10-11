@@ -66,16 +66,16 @@ are unchanged. The `levels`, `quests`, `onboarding` and `venues` scenarios exerc
 
 ## Linux release
 
-Current game version: **0.4.1**. Downloadable/local release notes are in
+Current game version: **0.5.0**. Downloadable/local release notes are in
 [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 To play the packaged release:
 
 ```sh
 cd export/linux
-sha256sum -c kakaboomboom-0.4.1-linux-x86_64.tar.gz.sha256
-tar -xzf kakaboomboom-0.4.1-linux-x86_64.tar.gz
-cd kakaboomboom-0.4.1-linux-x86_64
+sha256sum -c kakaboomboom-0.5.0-linux-x86_64.tar.gz.sha256
+tar -xzf kakaboomboom-0.5.0-linux-x86_64.tar.gz
+cd kakaboomboom-0.5.0-linux-x86_64
 sha256sum -c SHA256SUMS
 ./kakaboomboom.x86_64
 ```
@@ -118,7 +118,8 @@ same version; older versioned releases remain intact.
 - **Hold LMB** fires your single primary gun with unlimited ammunition. The **mouse wheel** swaps among the six firearms; purchased primary-mod ranks follow the new gun. Swaps retain the 0.2 s draw.
 - **Aim at a visible machine compartment within 2.6 m** to automatically raise the crowbar, then **hold F** to pry. Target the brass **+ lock** for faster progress. Look away to return to your gun. Guns and abilities cannot extract machine loot.
 - **1 / 2 / 3 / 4 / 5** activate your class abilities. WASD is unchanged; W remains movement, not an ability binding. With **Guided start** (default) only key 1 works at first; the rest unlock as you level (see below).
-- **E** interacts with consoles, flame vents or a secured guarded-machine beacon in the standalone authored lab arenas.
+- **E** interacts with consoles, flame vents or a secured guarded-machine beacon in the standalone authored lab arenas. In generated sectors, aim at a gear stash within 2.6 m and **hold E for 2 s** to pry it open; **press E** to collect an elite's dropped gear. Loot at least **two distinct stashes per level** before extraction.
+- **G** pauses to inspect all four equipped gear slots, with their effects and source hlášky; **Esc** closes the inspection.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
 - **Esc** pauses (Resume, Settings, Abandon Run).
 - **Finish every level objective:** a drop pod lands in the farthest room, with a green beam over the walls and a radar marker. Reach it and hold its ring for 10 s while the horde surges (progress is kept if you step out to fight). Lift-off banks currency and opens the shop. Swap the primary freely, upgrade any of your five abilities, buy primary mods or protection, then continue. After death: **R** retries with the same class and a new layout; **Enter** returns to the menu.
@@ -135,21 +136,113 @@ Each theme plans differently:
 
 **Overlooks** sit in large rooms: raised decks reached by a treaded ramp, giving firing height while the horde funnels up a choke point for Ban zóna and Valhalla. **Salvage islands** supply extra solid faces for machine banks in open rooms. Žižkov has 1 overlook / 2 islands, Palmovka and Hlavák 2 / 3. Collision layouts, floor themes and enemy schedules remain unchanged. Most groups arrive behind you.
 
-**No level countdown or deadline.** The contract requests machine salvage and non-boss hallucination kills. Objective counts and species vary with the seed and sector; early guided contracts are smaller (see below). Pry close machine compartments with F and defeat the listed enemies. Unrelated kills, carried/banked currency, collected loose loot and resource bonuses do not advance salvage objectives. Progress remains earned when you stop to fight.
+**No level countdown or deadline.** The contract requests machine salvage, non-boss hallucination kills and looting **two distinct stashes**. Salvage counts and kill species vary with the seed and sector; early guided contracts are smaller (see below). Pry machine compartments with F, defeat the listed enemies and open any two of the three stashes with E. Unrelated kills, carried/banked currency, collected loose loot and resource bonuses do not advance salvage objectives. Progress remains earned when you stop to fight.
 
 Every generated contract starts with enough supported, reachable machine stock, with spare yield where possible. Contract machines fill salvage-island faces first, then broad room and corridor walls with standing room in front. Requested enemy species spawn after the arrival calm and remain available indefinitely. Crowd pressure ramps to a capped final rate, not a timer-triggered boss.
 
 **Extraction:** finishing **all** objectives calls a drop pod to the clear room spot farthest from you. It descends for 3 s, then hovers in a beam; standing inside its 4.5 m ring for 10 s lifts off, banks minerals and opens the round shop. Progress accrues only inside the ring and while unpaused, and is kept if you step out. The director spawns at double rate until lift-off, and dying during extraction still ends the run at 50% banking. Earned upgrade choices can be answered mid-extraction; killing a boss cannot bypass unfinished objectives.
 
-| Stage | Crowd cap | Objective scale | Contract | Arrival calm |
-| --- | --- | --- | --- | --- |
-| Žižkov (88 × 88 m, ~43% walkable) | 1000 | 1.0× | 1 salvage + 1 kill | 12 s |
-| Palmovka (120 × 72 m, ~62% walkable) | 1500 | 1.35× | 2 salvage + 1 kill | none |
-| Hlavák (104 × 104 m, ~43% walkable) | 2100 | 1.7× | 2 salvage + 2 kill | none |
+### Gear and required stash raids
 
-Continue carries the primary build, all five ability ranks, level-up upgrades, perks and auto weapons into a newly generated next sector, resets its quest counters and refills health. Finishing Hlavák records victory; its final shop returns to the base. Run duration remains a record statistic, not a progression gate. Contact damage remains capped at 4 damage per 0.5 s; ordinary wave density and individual enemy health are preserved.
+Each generated sector has one guarded stash, two exploration caches and one elite hunt.
+**Loot any two of the three stashes to complete the level**, alongside its salvage
+and kill objectives. The guarded stash and both exploration caches count; elite
+drops do not. A stash counts when opened, even if you decline its offered gear.
+Repeated claims never count twice, and progress resets each sector. Approaching within
+6 m activates the stash's finite defenders or the elite and its escort. Fight first, or
+hold E to steal the stash while its guards remain alive. Partial opening survives
+retreat and pause; rewards can be claimed only once.
+
+- **Guarded stash:** choose one of up to three different items.
+- **Exploration cache:** reveals one random item.
+- **Elite hunt:** the Podržtaškův výběrčí has three times its base species' health.
+  Killing it leaves an E pickup on reachable floor; it never auto-equips gear.
+
+Four passive slots, no duplicates. With a full inventory, choose exactly which item
+to discard or leave the reward behind. Equipment survives sector changes but not a
+new run. Revealing gear records its discovery even if you decline it: mirror,
+trainers and gloves are available in elite drops initially; wire, lighter and glass
+join that pool after discovery in a stash/cache. Discoveries persist in the profile,
+not the equipped build. Loot placement and reward rolls use their own seeded RNG.
+
+| Item | Effect |
+| --- | --- |
+| Zrcadlo těžkýho dna | One ricochet per primary shot: 40% of direct-hit damage to another visible enemy within 6 m. |
+| Geoxy z Palmovky | Dashes leave a 2 s trail: 10 damage every 0.25 s within 1.1 m. |
+| Kabel celoživotních blesků | Four direct-hit shots on the same enemy lifetime discharge 25 damage to up to three nearby enemies within 5 m. |
+| Podržtaškovy rukavice | Opening a machine compartment grants a 20-point shield for 5 s; another opening refreshes it, never stacks it. |
+| Nebozízkový zapalovač | Eight primary kills with gaps of at most 2.5 s prime the next killing primary hit for a 50-damage explosion within 3 m. |
+| Nejsem sklenička | Clearly marked curse: +50% damage and −35% maximum health. Replacing it removes both effects without compounding modifiers. |
+
+Each item has a pixel icon, Czech effect description and a matching quote from
+`hlasky.txt`, shown in reward cards, explicit replacement and G inspection. The HUD
+shows four compact slots, shield/lighter status, loot-source distances and the
+aimed stash's E prompt.
+
+| Stage | Crowd cap (represented lives) | Objective scale | Contract | Arrival calm |
+| --- | --- | --- | --- | --- |
+| Žižkov (88 × 88 m, ~43% walkable) | 1000 | 1.0× | 1 salvage + 1 kill + loot 2 stashes | 12 s |
+| Palmovka (120 × 72 m, ~62% walkable) | 1500 | 1.35× | 2 salvage + 1 kill + loot 2 stashes | none |
+| Hlavák (104 × 104 m, ~43% walkable) | 2100 | 1.7× | 2 salvage + 2 kill + loot 2 stashes | none |
+
+Continue carries the primary build, all five ability ranks, level-up upgrades, perks and auto weapons into a newly generated next sector, resets its quest counters and refills health. Finishing Hlavák records victory; its final shop returns to the base. Run duration remains a record statistic, not a progression gate. Contact damage remains capped at 4 damage per 0.5 s; ordinary spawn pressure and aggregate remaining enemy health are preserved through fusion.
 
 **Standalone tactical fixtures:** `encounter`, `boss` and `boss_patterns` retain an authored guarded machine, interactive hazards, raised decks and ramp combat. These fixed placements are not inserted into generated campaign layouts. Vyhazovač still uses directional front armor and a rear precision target; explicit boss fixtures retain ram/mortar attacks and staggerable recovery windows.
+
+### Mega hallucinations
+
+Persistent overcrowding turns **6–8 ordinary enemies of the same species into
+one mega**: constituents must stay within 2.4 m of the seed for 0.75 s. Sparse
+packs remain ordinary. Fusion gathers small amber sparks, grows the body to
+1.7× scale over 0.55 s, broadens its torso and adds brass binding seams and a
+segmented crown. Megas use slower, heavier, asymmetric gait/stomp motion;
+ordinary enemies also vary gait timing per instance.
+
+Fusion preserves the sum of current and maximum health, without healing or
+awarding kills, loot or contract progress. Defeating the mega credits each
+absorbed life to its original species, normal sparse XP/utility-drop rules and
+primary-kill gear streaks. The enlarged main head/core remains a precision
+target. Megas move at 68% of ordinary speed, resist knockback with combined
+mass and contribute at most twice their species' normal contact damage, still
+under the shared contact cap.
+Visual death bursts are emitted once per body, not per credited life; blood
+splats stay grounded instead of stacking in the enlarged body's center.
+
+Bosses, plated enemies, ranged/charger specialists and reserved stash/elite/
+guarded-machine responses never fuse. Active burns, frost, stun, exposure,
+knockback and falling also prevent fusion. Groups cannot merge through cover,
+between decks, into insufficient clearance or within 4 m of the player.
+Megas cannot fuse again; transitions are capped at four per half-second.
+
+**HALUCINACE counts visible living bodies**, while spawn caps and music pressure
+count all represented lives. Fewer models therefore do not refill the director's
+budget or silently reduce credited kills. Fusion ships in 0.5.0.
+
+### Recursive hallucinations
+
+Megas repeat their **anatomy**, not geometric wallpaper: two auxiliary heads,
+extra arms/legs, and smaller limb offshoots branching through three bounded
+generations. Smaller native heads cycle through nested scales on the auxiliary
+heads, creating an endless inward-zoom illusion without infinite geometry.
+The original model triangles, textures, face selection and VAT animation are
+reused.
+
+The crowned main head/core remains the real precision target. Phantom
+appendages add no enemy lives, health, collision, damage or rewards.
+Peripheral vision runs a Fraksl/crystaldive-style video-feedback loop over the
+rendered world: six recursive, mirror-tiled copies nest inside each other and shrink endlessly toward the aim point, spiral,
+hue-drift, separate chromatically and fold into a six-way mirror at depth, on
+top of soft blur and a drifting double image. The loop is unrolled in one
+pass (the steady state of `frame + decay · warp(previous)`), so it needs no
+history buffer and never echoes the HUD. The central aim region, HUD and menus
+stay clear. New motion freezes in pause/reward screens, with no camera
+steering or strobing. Smaller/distant appendages fade to limit clutter.
+
+**Settings → INTENZITA HALUCINACÍ** saves an intensity from 0–100% (default 65%).
+Zero immediately removes the new anatomy and screen-reading pass, while
+retaining the original mega body, brass binding and six-segment crown.
+
+
 
 ## Classes
 
@@ -279,14 +372,21 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
   Enemy `weak_spot_offset` and `weak_spot_radius` author a head/core sphere in model-space metres before `model_scale` and yaw; radius zero disables precision hits. Type-level offsets, squared radii and upper hit bounds are cached once, not allocated per shot.
 
   Human enemies share a 5 × 5 face atlas (`tools/vat/faces/atlas.png`). `HordeEnemyDefinition.face_atlas`, `face_first` and `face_count` choose which cells an enemy draws from; `horde_enemy_vat.gdshader` offsets the Face surface's UV by the per-instance phase, so one mesh and one draw call serve every face. `grime` (0–1) darkens and stains flat surfaces from model-space position in `horde_enemy_common.gdshaderinc`. Homeless enemies draw cells 0–19 (twelve original characters plus eight invented archetypes: hood, taped glasses, bandana, flat cap, eyepatch, jowls, smeared eyeliner, swollen face), Vekslák 20–21, Vyhazovač 21–22 and Pan Herna 23. The generator reads no image file; the archetypes are hand-designed from broad street-look categories, recombined so none mirrors any reference, exaggerated, and the whole atlas is quantized to 72 flat colours so nothing reads as photographic.
-- **Salvage:** `ResourceDefinition` data lives in `data/resources/`; internal deposit types remain in `data/resources/deposits/`. `DepositGeometry` builds machine doors and exact triangle colliders; `MineralDeposit` owns health, opening transforms, permanent housing and conserved integer loot. `DepositField` retains seeded site/stock placement. `MiningTool` owns crowbar contact/leverage; `MiningFeedback` draws mechanical latch markers and Czech telemetry. `ResourcePickupSet` pools coin/token meshes and paper packs using `shaders/cigarette_pack.gdshader`. Mining-named APIs/input IDs remain intentional internals; the obsolete crystal/history shaders are removed.
+
+  Fusion uses fixed per-slot constituent/identity storage and bounded grid scans,
+  not per-enemy nodes or all-pairs checks. `alive_count` counts bodies;
+  `population_count` counts represented lives. Cached body dimensions drive
+  rendering, movement, hit cylinders, weak spots, splash and contact together.
+  `HordeFx` batches mega crowns and pools gathering sparks. Slot generations are
+  opaque life IDs: absorption/recycling invalidates them immediately.
+- **Salvage:** `ResourceDefinition` data lives in `data/resources/`; internal deposit types remain in `data/resources/deposits/`. `SlotBankGeometry` builds the gold/shard banks of three fruit machines (backlit glass, reel drums, button deck, cash-box doors) and `DepositGeometry` the cigarette machine; both give every door its exact triangle collider. Reels, LEDs and lamps are shader functions of the paused gameplay clock (`shaders/slot_machine.gdshaderinc`); their art is generated by `tools/automat_art.py` into `assets/automat/`. `MineralDeposit` owns health, hinged opening transforms, permanent housing and conserved integer loot. `DepositField` retains seeded site/stock placement. `MiningTool` owns crowbar contact/leverage; `MiningFeedback` draws mechanical latch markers and Czech telemetry. `ResourcePickupSet` pools coin/token meshes and paper packs using `shaders/cigarette_pack.gdshader`. Mining-named APIs/input IDs remain intentional internals; the obsolete crystal/history shaders are removed.
 - **Survival pickups:** `scripts/progression/pickup_field.gd` pools XP, magnets, repairs and a separate two-pack timed repair supply set. `PickupGeometry` builds their faceted silhouettes once at setup. Kill thresholds and supply interval are exports; grounded placement uses the horde heightfield, and supply routes reject obstacles and cliffs. Collection never overwrites the persistent profile. The radar reads the same live pickup pools.
 - **Procedural levels:** `data/stages/*.tres` configure play area, `layout_theme`, `cover_count`, `overlook_count`, `outcrop_count`, `quest_scale` and `SpawnSchedule`. `ProceduralWorld` (`scripts/world/procedural_world.gd`, `scenes/levels/procedural.tscn`) is configured with the stage and seed before entering the tree. It carves a 2 m grid identical to the horde grid: the theme plan places rooms, corridors join them (spanning tree plus loops, or the Reactor's spokes and chords), and alcoves are added. Ring cores are refilled and cells unreachable from spawn are pruned. Remaining rock merges greedily into exact axis-aligned blocks under `Obstacles`; broad block faces with two open cells in front become contract `mining_sites`. Overlook decks and tilted ramp boxes live under `Elevation`, which the horde rasterises into its walkable heightfield. Set pieces, pillars and cover check carved floor plus margins, so passages and ore standing room stay open. `layout_open` is public for the radar. Original authored worlds remain explicit lab fixtures with their own play areas.
 - **Shop venues:** `ShopVenue` resources (`scripts/data/shop_venue.gd`, `data/venues/*.tres`, listed in `data/venues/catalog.tres`) carry the shop name, sign text, tagline, window goods and colours. `ProceduralWorld` builds storefronts ~4 physics frames after the world, on wall stretches a physics query finds clear, through the batched visual path (`shaders/venue_front.gdshader`) with a private RNG seeded from the stage seed, so layouts and the global RNG are untouched. The round shop header reads the sector's first seeded venue.
 - **Level contracts:** `LevelQuests` (`scripts/level_quests.gd`) selects seeded resource/ordinary-species targets, clamps progress and emits completion once. `DepositField` records conserved raw section fractures; `ArenaGame` records exact horde victim definitions. Inventory/banking signals never count. `HordeDirector` sustains every ordinary wave; `SpawnSchedule.ramp_duration` bounds pressure ramping, not level length, and `surge` multiplies spawning during extraction. Boss release is explicit. Completion defers beyond the current impact, rejects stale source ids and respects death and earned upgrade choices, then spawns an `ExtractionPod` (`scripts/extraction_pod.gd`, collision-free) at `ProceduralWorld.extraction_point()`; only its stale-checked `departed` signal clears the stage.
 - **Skill combos:** `ActiveAbility.blast()` wraps every skill's area damage and applies POWNED (`crush`) against `ArenaPlayer.active_gravity_well()`; `arrive()` is called at movement-skill landings for LAST TIME KRATOS (`ram`) via `is_shielded_by_other()`; Valhalla calls `GravityWell.collapse()` for PERMABAN (`collapse`). `ArenaPlayer.ability_combo` drives the HUD callout (rate-limited per combo), while `combo_counts` records every trigger.
 - **Luďas's voice:** `LudasVoice` (`scripts/audio/ludas_voice.gd`, owned by `ArenaGame` so it survives stage loads) plays recorded reactions from `assets/voice/ludas/`: arrival, kill bursts (12 kills within 1.5 s), combos, a skill unlock (*Jaj… krajíc… chleba* in sequence), dropping below 40% health, healing, extraction, stage clear and death. One line plays at a time; a higher-priority reaction interrupts a lower one, and each reaction has its own cooldown. The reskin plan lives in `docs/ludas/BIBLE.md`.
-- **UI:** `scenes/ui/hud.tscn` has currency/supply counters, salvage/kill contracts, hostiles/kills, vitals, a primary readout, numbered skill tiles and a close-range F prying prompt. There is no level timer or ammo readout. Boss fixtures retain health/recovery readouts and radar markers. Numeric level-up choices consume input before resuming, so choosing a card cannot cast a combat ability.
+- **UI:** `scenes/ui/hud.tscn` has currency/supply counters, salvage/kill/stash contracts, hostiles/kills, vitals, a primary readout, numbered skill tiles and a close-range F prying prompt. There is no level timer or ammo readout. Boss fixtures retain health/recovery readouts and radar markers. Numeric level-up choices consume input before resuming, so choosing a card cannot cast a combat ability.
 - **Guided start:** `RunState.start_guided()` sets `unlocked_abilities` from `ABILITY_UNLOCK_LEVELS` and emits `ability_unlocked` as levels are gained; `can_upgrade_ability()` and `_is_eligible()` gate skills, perks and gun mods. `Tutor` (`scripts/ui/tutor.gd`) queues one-time tips stored in `Profile` (`seen_tips`, `guided_start` setting). `StageDefinition.mine_objectives`, `kill_objectives` and `spawn_grace` (`HordeDirector.grace`) size each sector's contract and arrival.
 - **Pixel-art icons:** every upgrade, gun, class, ability, Armory upgrade, mineral, workshop recipe, shop item and HUD glyph has a 16 × 16 icon in `assets/icons/<group>/<id>.png`. They are authored as text grids in `tools/icons/art_*.py` on the shared palette in `tools/icons/pixel.py` (automatic dark outline). Data resources reference their icon through `icon` exports; code-only concepts use `GameIcons.lookup(group, id)` (`scripts/ui/game_icons.gd`), and `CraftRecipe.display_icon()` resolves a recipe's payload icon. Show them nearest-filtered at 2×, 3× or 4× (`GameIcons.rect`). After editing art, run `make icons` (renders, then imports); `python3 tools/icons/build.py --group <g> --preview /tmp/icons` also writes a labelled 6× preview sheet.
 - **Run flow:** `ArenaGame` builds each stage under a fresh `Round`, carries the primary build and five skill ranks, and handles level-up, pause, shop and return to base. It banks all three currencies into `Profile`, records runs and drives music from crowd density.
@@ -312,12 +412,14 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `gunplay` | sustained unlimited fire, upgraded gun swaps and paused trigger | real damage beyond a burst, stable aim, mods preserved without compounding, release before resumed fire |
 | `tempo` | real held-input firing for six guns and boosted Minigun | actual cadence above 60 shots/s, stable aim, gentle recoil and bounded hitch catch-up |
 | `pressure` | real stage directors and accelerated crowds with scarce loot | arrival calm free of spawns, prompt groups after it, all-stage caps, ordinary/specialist admissions, sparse XP/magnet boundaries, repair RNG, overflow conservation and paused/inactive/freed-player supply timers |
+| `fusion` | dense-pack grow-in, mega/ordinary motion strips and actual primary shots | no healing or early rewards, bounded same-species membership, director cap preservation, enlarged precision hits, per-member quests/XP/gear streaks, protected identities, statuses, player proximity and pause |
+| `hallucinations` | native recursive heads/limbs on human, mouse and insect megas, inward head-cycle strips, peripheral feedback-loop vision and paused settings | actual keyboard intensity changes, visible anatomy and strong peripheral echoes, clear main precision head and HUD, frozen anatomy/feedback motion, complete off restoration and real precision damage |
 | `levels` | first-person, overhead and deck views of all three carved themes | same-seed repeatability, different-seed variation, connected grid, reachable ramps and machine standing spots, overlook/island counts, supported contract stock and actual player/enemy ramp movement |
-| `quests` | F prying, hallucination kills, earned choices and three extractions | exact emitted-unit/species progress, stock/reward exclusion, safe indefinite spawning, pause, completion orders, touchdown/ring progress, surge, shop only after lift-off and stale-level rejection |
+| `quests` | F prying, hallucination kills, required E stash looting, earned choices and three extractions | exact emitted-unit/species progress, two distinct stashes, elite/duplicate exclusion, declined gear counts, stash-first/last completion, stock/reward exclusion, pause, touchdown/ring progress, surge, shop only after lift-off and stale-level rejection |
 | `pickups` | repair kits, distant XP vacuum and timed repair supplies | actual healing, full-health preservation, exact XP/overflow conservation, later loose gems, supply cap, pause/inactive timers and raised-deck fallback |
 | `abilities` | every class's five physical number keys and actual effects | damage, movement, healing, source-owned buffs, overlapping shields, pause/death cleanup, rank-scaled damage/cooldown/protection |
 | `combos` | POWNED, PERMABAN and LAST TIME KRATOS through physical keys | exact +60% crush versus a plain blast, real thrown charge into a well, out-of-reach control, collapse burst scaling with held enemies, dash-without-shield control and ram damage on arrival |
-| `onboarding` | guided arrival, an unlocked-skill callout/tip and locked shop cards | one skill plus teaser, footer, locked key, two-objective first contract, 12 s calm with a real director, no early perks/gun mods/locked skills, level-gated unlocks and working key, combo tip at level 7, tips seen once, Guided start off shows everything |
+| `onboarding` | guided arrival, an unlocked-skill callout/tip and locked shop cards | one skill plus teaser, footer, locked key, 12 s calm with a real director, no early perks/gun mods/locked skills, level-gated unlocks and working key, combo tip at level 7, tips seen once, Guided start off shows everything |
 | `voice` | Luďas's recorded reactions | arrival, kill-burst trigger and cooldown, skill-unlock sequence order and interruption, hurt growl with cooldown, heal gulp, death outranking everything |
 | `boss` | Pan Herna and Pan Jackpot: arrival, fight, low health, kill | tracked boss, WARNING/health frame, death cannot bypass unfinished objectives |
 | `boss_patterns` | ram lanes, mortar footprints/impacts and teal recovery | real damage and movement dodges, locked targets, cover/height/radius boundaries, +50% recovery, stagger interruption, pause and death/menu/node-removal cancellation |
@@ -326,10 +428,11 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `levelup` | new, mixed, ranked and ability mastery cards | selection upgrades the run and resumes play; physical numeric selection cannot leak into a combat skill |
 | `shop` | primary comparison/swap, five skill upgrades, sold/maxed/empty wallet | real UI purchases, preserved mod ranks, layout bounds, exact debits, rerolls, capped/unaffordable refusals and no Esc skip |
 | `hud` | five skill cooldowns/ranks, primary mods, armor, low health and death | actual lethal damage ends the run |
-| `mining` | automatic crowbar, held-F leverage strip, opened compartments and empty housing | firearm/reach rejection, conserved loot, wall occlusion, pause and return to gun |
+| `mining` | whole fruit-machine bank, blinking lamps, a reel-stop strip, a win, paused spin, a tampered cabinet, automatic crowbar, held-F leverage strip, opened compartments, empty housing and out of order | lamps chase in play and freeze in pause, reels spin, stop exactly and freeze in pause, wins count the credit LED up, a tampered cabinet halts, out of order is darker, pried doors go dark, firearm/reach rejection, conserved loot, wall occlusion, pause and return to gun |
 | `street` | all twenty homeless faces on the Bezdomovec, the eight archetypes on the other two bodies, close faces, the harder men, the boss and a crowd per sector | atlas ranges and grime on every human, 18+ of 20 faces appear in a crowd, homeless admitted by the real director in all three sectors |
 | `menu` | intro, every party member and scrollable skill details, workshop tabs, records, settings and pause/abandon screens | saved gear, free primary switching and gadgets reapplied exactly once |
 | `venues` | all fourteen storefronts in a generated Žižkov, natural views of all three sectors and the stage-clear shop for several venues | unique ids and text, no florist, identical carve/mining sites/RNG end state with and without storefronts, venue named in the shop header, Label3D/instance/batch/light bounds |
+| `gear` | Czech gear cards, replacement/inspection, all six effects, stashes and elite hunts in every generated sector | real ricochet/shock/explosion/dash/shield damage, curse removal, slot-generation safety, discovery persistence, actual card/E/G input, pause/retreat, one-shot claims and sector carry-over |
 | `icons` | one gallery page per icon group | visual review |
 
 ```sh
@@ -338,7 +441,9 @@ make lab-shots SCENARIOS="shop boss"   # a subset
 python3 tools/lab.py gunplay mining abilities shop  # single primary, close-range salvage and hero kit
 python3 tools/lab.py encounter armor boss_patterns  # tactical Yard features
 python3 tools/lab.py tempo pressure pickups  # faster fire, scarce loot and healing supplies
+python3 tools/lab.py fusion pressure armor  # crowd fusion, heavy gait and conserved combat
 python3 tools/lab.py levels quests     # generated arenas and mining/kill progression
+python3 tools/lab.py gear quests       # passive gear, required stash raids and extraction
 python3 tools/lab.py --list            # scenario names; --window renders visibly, --clean hides the overlay
 make lab                               # interactive: pick a scenario, play on; F1 list, F12 screenshot
 ```
@@ -370,4 +475,48 @@ stage-clear shop captures were inspected as screenshots, as were the eight inven
 archetypes on the runner and spitter bodies. Frame rate is not measured, and the
 storefront taglines are small: legible at about 3 m, marginal across a street.
 
-Version 0.4.1 packages the faces, guns, arenas, archetypes, venues and the guide-line removal.
+Version 0.4.1 packages the faces, guns, arenas, archetypes, venues and the guide-line removal. Version 0.5.0 adds gear, required stashes, fusion, recursive hallucinations and the fruit machines.
+
+The initial passive-gear expansion, before the required-stash change, passed the full rendered lab across **27 scenarios /
+263 captures with zero check failures or script/engine errors**, plus
+`tools/check_combat.gd` (`failures=0`). Reward, replacement, inspection, stash,
+elite and pixel-icon captures were visually inspected. The `gear` scenario alone
+produced 18 captures and checks all six real effects and loot sources in all three
+sectors. Frame rate is not measured. Gear ships in 0.5.0.
+
+The required-stash follow-up passed `quests gear onboarding levels`: **4 rendered
+scenarios / 52 captures, zero failures or script/engine errors**. Checks exercise
+all three sector extractions, two distinct stash claims, elite/duplicate exclusion,
+declined rewards, stash-first and stash-last completion, pending choices and
+per-sector reset. The expanded HUD was visually inspected; precision/nested-blast
+regressions also passed (`failures=0`).
+
+The fusion integration passed the full rendered lab: **28 scenarios / 274
+captures, zero failures or script/engine errors**. After the final single-body
+death-effect adjustment, `fusion gear combat boss armor` passed **5 scenarios /
+46 captures**, again with zero failures or script/engine errors. Precision and
+nested-blast regressions reported `failures=0`; a throwaway terrain/callback
+smoke also passed wall, narrow-corridor, deck, static-mesh, synchronous
+clear/recycle and grounded single-burst death cases.
+
+Before/after, smooth fusion-transition and heavy-gait captures were inspected
+visually. One normal live-pressure smoke retained this conserved population:
+
+| Represented lives | Visible living bodies | Megas |
+| --- | --- | --- |
+| 1000 | 363 | 123 |
+
+These are functional crowd-reduction observations, not FPS certification.
+
+The recursive-hallucination replacement passed the full rendered lab: **29
+scenarios / 293 captures, zero failures or script/engine errors**. Native
+human, mouse and insect anatomy, nested-head cycle strips, peripheral blur
+and crowded play were inspected visually. Isolated settings persistence and a
+paused death/recycle smoke reported `failures=0`; precision/nested-blast
+regressions also passed. Frame rate is not measured.
+
+The feedback-loop vision follow-up passed `hallucinations combat pressure boss
+menu levelup gear`: **7 rendered scenarios / 81 captures, zero failures or
+script/engine errors**, including strong peripheral echoes, an unchanged health
+bar, frozen feedback motion in pause and complete off restoration. Default,
+full-intensity, crowded-play and reward-menu captures were inspected visually.

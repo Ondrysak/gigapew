@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Kakaboomboom"
-config/version="0.4.1"
+config/version="0.5.0"
 run/main_scene="res://scenes/ui/intro.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
@@ -127,3 +127,14 @@ interact={
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 anti_aliasing/quality/msaa_3d=2
+
+[shader_globals]
+
+hallucination_intensity={
+"type": "float",
+"value": 0.65
+}
+hallucination_time={
+"type": "float",
+"value": 0.0
+}

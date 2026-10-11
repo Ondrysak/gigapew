@@ -9,6 +9,8 @@ extends Node3D
 
 const STRIDE := 16
 const GRAVITY := 16.0
+const MEGA_CAPACITY := Horde.CAPACITY / 6
+const FUSION_COLOR := Color(0.84, 0.52, 0.16)
 
 enum { SPARK, DEBRIS, GOO, SPLAT, KIND_COUNT }
 
@@ -47,8 +49,19 @@ var _deaths_this_frame := 0
 var _rng := RandomNumberGenerator.new()
 # Owning horde: debris lands on its heightfield (decks, ramps).
 var _horde: Horde
+# One shared segmented crown mesh; no per-enemy render nodes or dynamic pools.
+var _mega_renderer: MultiMeshInstance3D
+var _mega_buffer := PackedFloat32Array()
+var _mega_indices := PackedInt32Array()
+var _mega_time := 0.0
+var _mega_generations := PackedInt64Array()
+var _mega_count := 0
+var _fusions_this_frame := 0
+var _world_area := Rect2()
 
 func _ready() -> void:
+	# Only stale crown identities are checked while pause/rewards stop particles.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_rng.randomize()
 	_horde = get_parent() as Horde
 	var meshes: Array[Mesh] = [spark_mesh, debris_mesh, goo_mesh, splat_mesh]
@@ -85,6 +98,113 @@ func _ready() -> void:
 	_size.resize(total)
 	_spin.resize(total)
 	_color.resize(total)
+	_setup_mega_marks()
+	_sync_world_bounds()
+	if _horde != null:
+		_horde.enemy_fused.connect(_on_enemy_fused)
+
+func _setup_mega_marks() -> void:
+	var segment := BoxMesh.new()
+	segment.size = Vector3(0.50, 0.10, 0.12)
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for n in 6:
+		var angle := float(n) * TAU / 6.0
+		var basis := Basis(Vector3.UP, -angle + PI * 0.5)
+		var at := Vector3(cos(angle), 0.0, sin(angle))
+		tool.append_from(segment, 0, Transform3D(basis, at))
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_colors = true
+	multimesh.mesh = tool.commit()
+	multimesh.instance_count = MEGA_CAPACITY
+	multimesh.visible_instance_count = 0
+	_mega_renderer = MultiMeshInstance3D.new()
+	_mega_renderer.multimesh = multimesh
+	_mega_renderer.material_override = material
+	_mega_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_mega_renderer)
+	_mega_buffer.resize(MEGA_CAPACITY * STRIDE)
+	_mega_indices.resize(Horde.CAPACITY)
+	_mega_generations.resize(MEGA_CAPACITY)
+
+func _sync_world_bounds() -> void:
+	if _horde == null or _horde.play_area == _world_area:
+		return
+	_world_area = _horde.play_area
+	var bounds := AABB(Vector3(_world_area.position.x - 4.0, -5.0, _world_area.position.y - 4.0), Vector3(_world_area.size.x + 8.0, 40.0, _world_area.size.y + 8.0))
+	for renderer in _renderers:
+		renderer.custom_aabb = bounds
+	_mega_renderer.custom_aabb = bounds
+
+func _update_mega_marks(delta: float) -> void:
+	if _horde == null:
+		return
+	_mega_time += delta
+	var count := mini(_horde.query_megas(_mega_indices), MEGA_CAPACITY)
+	var multimesh := _mega_renderer.multimesh
+	_mega_count = count
+	if count == 0:
+		multimesh.visible_instance_count = 0
+		return
+	var buffer := _mega_buffer
+	_mega_buffer = PackedFloat32Array()
+	for n in count:
+		var slot := _mega_indices[n]
+		_mega_generations[n] = _horde.enemy_generation(slot)
+		var center := _horde.enemy_position(slot)
+		var definition := _horde.get_definition(slot)
+		var height := definition.height * _horde.enemy_body_scale(slot)
+		var body_radius := _horde.enemy_radius(slot)
+		var radius := body_radius * 0.85
+		var ground_y := _horde.ground_height(Vector2(center.x, center.z))
+		var floor_y := maxf(center.y - height * 0.5, ground_y)
+		var yaw := float(slot) * 0.71 + _mega_time * 0.14
+		var basis := Basis.from_euler(Vector3(0.08, yaw, 0.05)).scaled(Vector3.ONE * radius)
+		var k := n * STRIDE
+		buffer[k] = basis.x.x
+		buffer[k + 1] = basis.y.x
+		buffer[k + 2] = basis.z.x
+		buffer[k + 3] = center.x
+		buffer[k + 4] = basis.x.y
+		buffer[k + 5] = basis.y.y
+		buffer[k + 6] = basis.z.y
+		buffer[k + 7] = floor_y + height + radius * 0.10
+		buffer[k + 8] = basis.x.z
+		buffer[k + 9] = basis.y.z
+		buffer[k + 10] = basis.z.z
+		buffer[k + 11] = center.z
+		var brightness := 0.88 + float(_horde.fusion_members(slot) - 6) * 0.06
+		buffer[k + 12] = FUSION_COLOR.r * brightness
+		buffer[k + 13] = FUSION_COLOR.g * brightness
+		buffer[k + 14] = FUSION_COLOR.b * brightness
+		buffer[k + 15] = 1.0
+	RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
+	multimesh.visible_instance_count = count
+	_mega_buffer = buffer
+
+func _on_enemy_fused(index: int, members: int) -> void:
+	if _horde == null or _offset.is_empty() or _fusions_this_frame >= 4:
+		return
+	_fusions_this_frame += 1
+	var center := _horde.enemy_position(index)
+	var definition := _horde.get_definition(index)
+	var height := definition.height * _horde.enemy_body_scale(index)
+	var radius := clampf(_horde.enemy_radius(index) * 2.0, 0.6, 2.4)
+	var pieces := mini(members + 4, 12)
+	var duration := 0.38
+	for n in pieces:
+		var angle := float(n) * TAU / float(pieces) + float(index) * 0.71
+		var radial := Vector3(cos(angle), 0.0, sin(angle)) * radius
+		var at := center + radial
+		at.x = clampf(at.x, _horde.play_area.position.x, _horde.play_area.end.x)
+		at.z = clampf(at.z, _horde.play_area.position.y, _horde.play_area.end.y)
+		at.y = maxf(center.y - height * 0.15, _horde.ground_height(Vector2(at.x, at.z)) + 0.08)
+		var velocity := Vector3((center.x - at.x) / duration, GRAVITY * duration * 0.5, (center.z - at.z) / duration)
+		_emit(SPARK, at, velocity, duration, 0.035, FUSION_COLOR)
 
 ## Small burst where a non-lethal hit landed.
 func burst_hit(definition: HordeEnemyDefinition, at: Vector3) -> void:
@@ -99,19 +219,20 @@ func burst_hit(definition: HordeEnemyDefinition, at: Vector3) -> void:
 		for n in 3:
 			_emit(SPARK, at, _spray(6.0, 3.5), _rng.randf_range(0.15, 0.3), 0.045, color)
 
-## Death burst sized to the enemy (signature matches Horde.enemy_killed).
-func burst_death(definition: HordeEnemyDefinition, at: Vector3) -> void:
+## One scaled visual burst per dead body, independent of constituent rewards.
+func burst_death(definition: HordeEnemyDefinition, at: Vector3, body_scale: float) -> void:
 	if _offset.is_empty() or (_deaths_this_frame >= max_deaths_per_frame and not definition.is_boss):
 		return
 	_deaths_this_frame += 1
-	var bulk := clampf(definition.radius / 0.4, 0.8, 5.0)
+	var bulk := clampf(definition.radius * body_scale / 0.4, 0.8, 5.0)
 	var reach := sqrt(bulk)
 	var color := definition.fx_color
 	var pieces := roundi(3.0 * bulk) * (3 if definition.is_boss else 1)
 	if definition.faction == HordeEnemyDefinition.Faction.FLESH:
 		for n in pieces + 2:
 			_emit(GOO, at, _spray(4.5 * reach, 4.0), 0.8, _rng.randf_range(0.07, 0.13) * reach, color)
-		_emit(SPLAT, Vector3(at.x, at.y - definition.height * 0.5 + 0.02, at.z), Vector3.ZERO, 1.4, definition.radius * 1.6, color.darkened(0.25))
+		var floor_y := _horde.ground_height(Vector2(at.x, at.z)) + 0.02
+		_emit(SPLAT, Vector3(at.x, floor_y, at.z), Vector3.ZERO, 1.4, definition.radius * body_scale * 1.6, color.darkened(0.25))
 	else:
 		for n in pieces + 3:
 			_emit(SPARK, at, _spray(8.0 * reach, 5.0), _rng.randf_range(0.25, 0.45), 0.05, color)
@@ -120,8 +241,19 @@ func burst_death(definition: HordeEnemyDefinition, at: Vector3) -> void:
 			_emit(DEBRIS, at, _spray(4.5 * reach, 5.5), _rng.randf_range(0.7, 1.0), _rng.randf_range(0.07, 0.14) * reach, metal)
 
 func _process(delta: float) -> void:
+	if get_tree().paused:
+		# No simulation, uploads or terrain queries unless a pooled identity changed.
+		for n in _mega_count:
+			var slot := _mega_indices[n]
+			if not _horde.is_alive(slot) or _horde.enemy_generation(slot) != _mega_generations[n]:
+				_update_mega_marks(0.0)
+				break
+		return
 	_hits_this_frame = 0
 	_deaths_this_frame = 0
+	_fusions_this_frame = 0
+	_sync_world_bounds()
+	_update_mega_marks(delta)
 	for kind in KIND_COUNT:
 		_update(kind, delta)
 
@@ -170,6 +302,8 @@ func _update(kind: int, delta: float) -> void:
 		if kind != SPLAT:
 			v.y -= GRAVITY * delta
 			p += v * delta
+			if _horde != null and not _world_area.has_point(Vector2(p.x, p.z)):
+				continue
 			var ground := 0.03 + (_horde.ground_height(Vector2(p.x, p.z)) if _horde != null else 0.0)
 			if p.y < ground:
 				if kind == DEBRIS:

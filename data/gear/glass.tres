@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GearDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gear_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/gear/glass.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"glass"
+display_name = "Nejsem sklenička"
+description = "Prokletí: +50 % veškerého poškození, ale -35 % maximálního zdraví. Výměna předmětu oba účinky zruší."
+quote = "Ja sem op neverim ze bych si myslel ze sem sklenicka"
+icon = ExtResource("2")
+accent_color = Color(0.9, 0.4, 0.65, 1)
+cursed = true

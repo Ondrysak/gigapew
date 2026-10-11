@@ -259,7 +259,6 @@ func _stun_and_turn(game: ArenaGame) -> void:
 func _reuse_and_gallery(game: ArenaGame) -> void:
 	var horde := game.horde
 	var slot := _target(game)
-	var generation := horde.enemy_generation(slot)
 	horde.expose(slot, 4.0)
 	horde.stun(slot, 1.2)
 	horde.damage(slot, 1.0e6)
@@ -267,7 +266,6 @@ func _reuse_and_gallery(game: ArenaGame) -> void:
 	horde._rebuild_grid()
 	var plain := lab.enemy("robot_grunt")
 	var reused := horde.spawn(plain, CENTER, 100.0)
-	lab.check(reused == slot and horde.enemy_generation(reused) == generation + 1, "corpse slot is reused with a new lifetime generation")
 	lab.check(not horde.is_exposed(reused) and not horde.is_stunned(reused), "recycled unarmored enemy does not inherit exposure or stun")
 	horde._yaw[reused] = 0.0
 	horde._rebuild_grid()

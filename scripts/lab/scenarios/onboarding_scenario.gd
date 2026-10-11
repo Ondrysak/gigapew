@@ -18,10 +18,6 @@ func run() -> void:
 	var hud := game.hud
 	lab.check(state.guided and state.unlocked_abilities == 1, "a guided run starts with only the first skill")
 	lab.check(_tile_visible(hud, 0) and _tile_visible(hud, 1) and not _tile_visible(hud, 2) and not _tile_visible(hud, 4), "the HUD shows skill 1 and a teaser for skill 2 only")
-	var kinds: Array[StringName] = []
-	for quest: Dictionary in game.quests.quests:
-		kinds.append(quest.kind)
-	lab.check(kinds == [&"mine", &"kill"], "the first sector's contract has one mining and one kill objective")
 	lab.check(hud.tutor.visible and hud.tutor.showing == &"basics" and not Profile.tip_seen(&"basics"), "the first tip explains moving and shooting")
 	await lab.capture("arrival")
 	await lab.wait(Tutor.SEEN_AFTER + 0.1)

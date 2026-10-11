@@ -31,6 +31,152 @@ static func bake(definition: HordeEnemyDefinition, static_shader: Shader, animat
 		mesh.surface_set_material(mesh.get_surface_count() - 1, _material_for(source, definition, animated_shader if animated else static_shader))
 	return mesh
 
+## A second, small native mesh containing only rest-selected head/limb triangles.
+## UV2.x retains the VAT column; UV2.y encodes piece + 8*depth + 32*fork.
+## Never clip against animated positions: a walking limb keeps the same triangles.
+static func bake_anatomy(body: ArrayMesh, definition: HordeEnemyDefinition) -> ArrayMesh:
+	var height := definition.height / maxf(definition.model_scale, 0.001)
+	var weak := definition.weak_spot_offset
+	var radius := maxf(definition.weak_spot_radius, height * 0.08)
+	var upright := weak.y > height * 0.6 and absf(weak.z) < height * 0.3
+	var bounds := body.get_aabb()
+	var neck := minf(weak.y - radius * 1.4, height * 0.58)
+	var front := weak.z + radius * 0.6
+	var min_points: Array[Vector3] = []
+	var max_points: Array[Vector3] = []
+	var counts := PackedInt32Array()
+	counts.resize(6)
+	for piece in 6:
+		min_points.append(Vector3(INF, INF, INF))
+		max_points.append(Vector3(-INF, -INF, -INF))
+	var selected: Array = []
+	for surface in body.get_surface_count():
+		var arrays := body.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		if indices.is_empty():
+			indices.resize(vertices.size())
+			for vertex in vertices.size():
+				indices[vertex] = vertex
+		var pieces: Array[PackedInt32Array] = []
+		for piece in 6:
+			pieces.append(PackedInt32Array())
+		for triangle in range(0, indices.size(), 3):
+			var a := indices[triangle]
+			var b := indices[triangle + 1]
+			var c := indices[triangle + 2]
+			var center := (vertices[a] + vertices[b] + vertices[c]) / 3.0
+			var head := center.y >= neck if upright else center.z <= front and center.y > height * 0.25
+			var piece := -1
+			if not head:
+				var side := 0 if center.x < weak.x else 1
+				if upright:
+					if center.y < height * 0.36:
+						piece = 4 + side
+					elif absf(center.x - weak.x) > bounds.size.x * 0.23 and center.y < neck:
+						piece = 2 + side
+				elif center.y < height * 0.50 and absf(center.x - weak.x) > maxf(radius * 0.85, bounds.size.x * 0.18):
+					piece = (2 if center.z < weak.z * 0.2 else 4) + side
+			for target in range(0, 2) if head else range(piece, piece + 1):
+				if target < 0:
+					continue
+				var subset := pieces[target]
+				pieces[target] = PackedInt32Array()
+				for index in [a, b, c]:
+					subset.append(index)
+					min_points[target] = min_points[target].min(vertices[index])
+					max_points[target] = max_points[target].max(vertices[index])
+					counts[target] += 1
+				pieces[target] = subset
+		selected.append(pieces)
+	var mesh := ArrayMesh.new()
+	var head_origin := (min_points[0] + max_points[0]) * 0.5 if counts[0] > 0 else weak
+	var head_width := maxf(max_points[0].x - min_points[0].x, radius * 2.0) if counts[0] > 0 else radius * 2.0
+	var pivots := PackedVector3Array()
+	var tips := PackedVector3Array()
+	for piece in range(2, 6):
+		var low := min_points[piece]
+		var high := max_points[piece]
+		var middle := (low + high) * 0.5
+		var left := piece % 2 == 0
+		if counts[piece] == 0:
+			pivots.append(weak)
+			tips.append(weak)
+		elif upright:
+			pivots.append(Vector3(middle.x, high.y, middle.z))
+			tips.append(Vector3(middle.x, low.y, middle.z))
+		else:
+			pivots.append(Vector3(high.x if left else low.x, high.y, middle.z))
+			tips.append(Vector3(low.x if left else high.x, low.y, middle.z))
+	var pivot_refs := PackedVector4Array()
+	var tip_refs := PackedVector4Array()
+	for piece in 6:
+		var pivot := head_origin if piece < 2 else pivots[piece - 2]
+		var tip := head_origin if piece < 2 else tips[piece - 2]
+		pivot_refs.append(_anatomy_reference(body, selected, piece, pivot))
+		tip_refs.append(_anatomy_reference(body, selected, piece, tip))
+	for surface in body.get_surface_count():
+		var arrays := body.surface_get_arrays(surface)
+		var pieces: Array[PackedInt32Array] = selected[surface]
+		var tool := SurfaceTool.new()
+		tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var emitted := false
+		for piece in 6:
+			for depth in (4 if piece < 2 else 3):
+				for fork in (1 if piece < 2 else 1 << depth):
+					var encoded := float(piece + 1 + depth * 8 + fork * 32)
+					for index in pieces[piece]:
+						_append_anatomy_vertex(tool, arrays, index, encoded)
+						emitted = true
+		if not emitted:
+			continue
+		tool.commit(mesh)
+		var material := body.surface_get_material(surface).duplicate() as ShaderMaterial
+		material.set_shader_parameter("anatomy_enabled", true)
+		material.set_shader_parameter("anatomy_upright", upright)
+		material.set_shader_parameter("anatomy_head_origin", head_origin)
+		material.set_shader_parameter("anatomy_head_width", head_width)
+		material.set_shader_parameter("anatomy_pivot_refs", pivot_refs)
+		material.set_shader_parameter("anatomy_tip_refs", tip_refs)
+		var names := ["left_arm", "right_arm", "left_leg", "right_leg"]
+		for piece in 4:
+			material.set_shader_parameter("anatomy_" + names[piece], pivots[piece])
+			material.set_shader_parameter("anatomy_" + names[piece] + "_tip", tips[piece])
+		mesh.surface_set_material(mesh.get_surface_count() - 1, material)
+	return mesh
+
+static func _anatomy_reference(body: ArrayMesh, selected: Array, piece: int, joint: Vector3) -> Vector4:
+	var nearest := INF
+	var reference := Vector4(joint.x, joint.y, joint.z, 0.0)
+	for surface in body.get_surface_count():
+		var arrays := body.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv2s: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2] if arrays[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+		var pieces: Array[PackedInt32Array] = selected[surface]
+		for index in pieces[piece]:
+			var distance := vertices[index].distance_squared_to(joint)
+			if distance < nearest:
+				nearest = distance
+				var vertex := vertices[index]
+				reference = Vector4(vertex.x, vertex.y, vertex.z, uv2s[index].x if not uv2s.is_empty() else 0.0)
+	return reference
+
+static func _append_anatomy_vertex(tool: SurfaceTool, arrays: Array, index: int, piece: float) -> void:
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null else PackedVector3Array()
+	var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null else PackedFloat32Array()
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV] if arrays[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+	var uv2s: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2] if arrays[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+	if not normals.is_empty():
+		tool.set_normal(normals[index])
+	if not tangents.is_empty():
+		var at := index * 4
+		tool.set_tangent(Plane(Vector3(tangents[at], tangents[at + 1], tangents[at + 2]), tangents[at + 3]))
+	tool.set_uv(uvs[index] if not uvs.is_empty() else Vector2.ZERO)
+	tool.set_uv2(Vector2(uv2s[index].x if not uv2s.is_empty() else 0.0, piece))
+	tool.set_color(Color.WHITE)
+	tool.add_vertex(vertices[index])
+
 static func _collect(node: Node, parent: Transform3D, tools: Dictionary, order: Array[Material]) -> void:
 	var local := parent
 	if node is Node3D:
@@ -91,6 +237,8 @@ static func _material_for(source: Material, definition: HordeEnemyDefinition, sh
 	material.set_shader_parameter("telegraph_color", definition.telegraph_color)
 	material.set_shader_parameter("bob_amplitude", definition.bob_amplitude)
 	material.set_shader_parameter("bob_speed", definition.bob_speed)
+	material.set_shader_parameter("fusion_body_height", definition.height / maxf(definition.model_scale, 0.001))
+	material.set_shader_parameter("fusion_weak_spot", Vector4(definition.weak_spot_offset.x, definition.weak_spot_offset.y, definition.weak_spot_offset.z, definition.weak_spot_radius))
 	# Bodies pressed against the camera vanish; larger bodies vanish sooner.
 	# Capped so a boss (whose contact distance exceeds the cap) always stays visible.
 	material.set_shader_parameter("near_cull", minf(definition.radius + 0.8, 1.6))

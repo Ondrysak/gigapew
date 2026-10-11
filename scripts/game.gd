@@ -6,7 +6,7 @@ extends Node3D
 ## pause and level-up flow, banking of mined currency into the Profile, and
 ## music intensity. Each stage is rebuilt from data under a fresh Round node.
 
-enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD }
+enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD, GEAR }
 
 const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
@@ -74,6 +74,11 @@ var _burst_left := 0.0
 const BURST_WINDOW := 1.5
 const BURST_KILLS := 12
 var _last_health := 0
+var gear_screen: GearScreen
+var gear_loot: GearLootDirector
+var _pending_gear_rewards: Array[Dictionary] = []
+var _gear_offers: Array[GearDefinition] = []
+var _gear_inspection := false
 
 func _ready() -> void:
 	_rng.randomize()
@@ -96,10 +101,16 @@ func _ready() -> void:
 	shop_layer.add_child(round_shop)
 	round_shop.hide()
 	round_shop.continue_requested.connect(_on_shop_continue)
+	gear_screen = GearScreen.new()
+	add_child(gear_screen)
+	gear_screen.chosen.connect(_on_gear_chosen)
+	gear_screen.declined.connect(_on_gear_declined)
+	hud.gear_hud.inspect_requested.connect(_inspect_gear)
 	_new_run()
 
 func _new_run() -> void:
 	get_tree().paused = false
+	_cancel_gear()
 	class_definition = Profile.roster.find(Profile.selected_class_id)
 	run_state = RunState.new()
 	var permanent := Profile.meta_levels()
@@ -120,7 +131,9 @@ func _new_run() -> void:
 	run_state.resources_changed.connect(hud.set_resource)
 	run_state.supply_changed.connect(hud.set_supply)
 	kills = 0
+	hud.gear_hud.setup(run_state)
 	run_time = 0.0
+	RenderingServer.global_shader_parameter_set("hallucination_time", run_time)
 	stages_cleared = 0
 	run_banked = {}
 	_run_recorded = false
@@ -145,10 +158,12 @@ func _process(delta: float) -> void:
 	hud.set_gunplay(player)
 	hud.set_objectives(mining_encounter, extraction, player)
 	hud.set_boss_fight(boss_fight)
+	hud.set_gear_loot(gear_loot, round_state == RoundState.PLAYING)
 	if round_state == RoundState.PLAYING:
 		if player.mining_ready():
 			hud.tutor.offer(&"mining")
 		run_time += delta
+		RenderingServer.global_shader_parameter_set("hallucination_time", run_time)
 		_burst_left -= delta
 		if _burst_left <= 0.0:
 			_burst_kills = 0
@@ -160,8 +175,11 @@ func _process(delta: float) -> void:
 ## Blend of the crowd pressing on the player and the stage-wide crowd size.
 func _crowd_intensity() -> float:
 	var near := horde.query_radius(player.global_position, music_radius, _nearby)
-	var local := clampf(float(near) / music_crowd_reference, 0.0, 1.0)
-	var global := clampf(float(horde.alive_count) / maxf(1.0, campaign[stage_index].schedule.max_alive), 0.0, 1.0)
+	var represented := 0
+	for n in near:
+		represented += horde.fusion_members(_nearby[n])
+	var local := clampf(float(represented) / music_crowd_reference, 0.0, 1.0)
+	var global := clampf(float(horde.population_count) / maxf(1.0, campaign[stage_index].schedule.max_alive), 0.0, 1.0)
 	return clampf(0.12 + local * 0.6 + global * 0.3, 0.0, 1.0)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -171,6 +189,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		RoundState.PLAYING:
 			if event.is_action_pressed("pause"):
 				_open_pause()
+			elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_G:
+				get_viewport().set_input_as_handled()
+				_inspect_gear()
 		RoundState.LOST:
 			if event.is_action_pressed("restart"):
 				_request(_new_run)
@@ -183,6 +204,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
 	_cancel_encounters()
+	_cancel_gear()
 	player.active = false
 	player.cancel_actions()
 	# Rebuild outside input/physics callbacks; the whole old round is freed.
@@ -208,9 +230,11 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	get_tree().paused = false
 	round_shop.hide()
 	_cancel_encounters()
+	_cancel_gear()
 	mining_encounter = null
 	boss_fight = null
 	extraction = null
+	gear_loot = null
 	_pending_encounter_rewards = 0
 	_stage_clear_pending = false
 	if is_instance_valid(_round):
@@ -246,10 +270,11 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	tool.setup(player, run_state)
 	deposits = deposit_field_scene.instantiate() as DepositField
 	quests = LevelQuests.new()
-	quests.configure(stage, deposits.deposit_types, level_seed)
+	quests.configure(stage, deposits.deposit_types, level_seed, world is ProceduralWorld)
 	deposits.configure_quests(quests, level_seed)
 	_round.add_child(deposits)
 	deposits.setup(world, stage.play_area, player, run_state)
+	deposits.compartment_opened.connect(player.gear_effects.grant_salvage_shield)
 	pickups = pickup_scene.instantiate() as PickupField
 	_round.add_child(pickups)
 	pickups.setup(horde, player, run_state)
@@ -292,6 +317,14 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 		mining_encounter.setup(horde, player, run_state, deposits, pickups)
 	hud.set_primary(run_state)
 	hud.set_weapon_mods(run_state)
+	hud.gear_hud.bind_player(player)
+	if world is ProceduralWorld:
+		gear_loot = GearLootDirector.new()
+		gear_loot.name = "GearLoot"
+		_round.add_child(gear_loot)
+		gear_loot.setup(world as ProceduralWorld, horde, player, run_state, level_seed, stage_index)
+		gear_loot.reward_ready.connect(_on_gear_reward_ready.bind(gear_loot.get_instance_id()), CONNECT_DEFERRED)
+		gear_loot.stash_looted.connect(quests.record_stash)
 	player.weapon_changed.connect(func(_definition: WeaponDefinition): hud.set_primary(run_state))
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
@@ -386,6 +419,68 @@ func _present_encounter_reward() -> void:
 	Music.stinger(&"level_up")
 	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state, "AUTOMAT VYBRÁN", "ODMĚNA ZA OBRANU  ·  VYBER JEDNO VYLEPŠENÍ")
 
+# ---------------------------------------------------------------- passive gear
+
+func _cancel_gear() -> void:
+	if is_instance_valid(gear_loot):
+		gear_loot.cancel()
+	if is_instance_valid(gear_screen):
+		gear_screen.close()
+	_pending_gear_rewards.clear()
+	_gear_offers.clear()
+	_gear_inspection = false
+
+func _on_gear_reward_ready(offers: Array[GearDefinition], title: String, source_id: int) -> void:
+	if not is_instance_valid(gear_loot) or gear_loot.get_instance_id() != source_id \
+			or round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
+		return
+	if offers.is_empty():
+		return
+	_pending_gear_rewards.append({"offers": offers, "title": title})
+	if round_state == RoundState.PLAYING:
+		_present_gear_reward()
+
+func _present_gear_reward() -> void:
+	var reward: Dictionary = _pending_gear_rewards.pop_front()
+	_gear_offers.assign(reward.offers)
+	for item in _gear_offers:
+		item.set_meta(&"newly_discovered", Profile.discover_gear(item.id))
+	_gear_inspection = false
+	round_state = RoundState.GEAR
+	player.cancel_actions()
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	gear_screen.present(_gear_offers, run_state, reward.title)
+	Music.stinger(&"level_up")
+
+func _inspect_gear() -> void:
+	if round_state != RoundState.PLAYING:
+		return
+	_gear_inspection = true
+	_gear_offers.clear()
+	round_state = RoundState.GEAR
+	player.cancel_actions()
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	gear_screen.present_inventory(run_state)
+
+func _on_gear_chosen(item: GearDefinition, replace_slot: int) -> void:
+	if round_state != RoundState.GEAR or _gear_inspection or not _gear_offers.has(item):
+		return
+	if not run_state.equip_gear(item, replace_slot):
+		return
+	gear_screen.close()
+	_gear_offers.clear()
+	_resume_play()
+
+func _on_gear_declined() -> void:
+	if round_state != RoundState.GEAR:
+		return
+	gear_screen.close()
+	_gear_offers.clear()
+	_gear_inspection = false
+	_resume_play()
+
 # ---------------------------------------------------------------- level-ups
 
 func _on_level_up_ready() -> void:
@@ -433,6 +528,9 @@ func _on_resume() -> void:
 	_resume_play()
 
 func _resume_play() -> void:
+	if not _pending_gear_rewards.is_empty():
+		_present_gear_reward()
+		return
 	# Preserve earned choices when the contract finishes during a picker callback.
 	if _pending_encounter_rewards > 0:
 		_present_encounter_reward()
@@ -509,6 +607,7 @@ func _on_extraction_departed(source_id: int) -> void:
 func _finish_stage_clear() -> void:
 	_stage_clear_pending = false
 	round_state = RoundState.SHOP
+	_cancel_gear()
 	stages_cleared += 1
 	if stage_reward != null:
 		run_state.add_resource(stage_reward, stage_reward_amount)
@@ -538,6 +637,7 @@ func _on_player_died() -> void:
 	round_state = RoundState.LOST
 	hud.tutor.clear()
 	_cancel_encounters()
+	_cancel_gear()
 	var banked := _bank(death_bank_fraction)
 	_record_run(false)
 	player.sound.play_cue(&"death")

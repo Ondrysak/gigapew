@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/menu/settings_screen.gd" id="1_settings"]
 
-[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "fullscreen_toggle", "guided_toggle", "reset_tips_button", "default_focus", "back_button")]
+[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "hallucinations_slider", "hallucinations_value", "fullscreen_toggle", "guided_toggle", "reset_tips_button", "default_focus", "back_button")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,6 +19,8 @@ master_value = NodePath("Center/Panel/Rows/Grid/MasterValue")
 music_value = NodePath("Center/Panel/Rows/Grid/MusicValue")
 sfx_value = NodePath("Center/Panel/Rows/Grid/SfxValue")
 sensitivity_value = NodePath("Center/Panel/Rows/Grid/SensitivityValue")
+hallucinations_slider = NodePath("Center/Panel/Rows/Grid/HallucinationsSlider")
+hallucinations_value = NodePath("Center/Panel/Rows/Grid/HallucinationsValue")
 fullscreen_toggle = NodePath("Center/Panel/Rows/Fullscreen")
 guided_toggle = NodePath("Center/Panel/Rows/Guided")
 reset_tips_button = NodePath("Center/Panel/Rows/ResetTips")
@@ -139,6 +141,27 @@ value = 1.0
 custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
 text = "100%"
+horizontal_alignment = 2
+
+[node name="HallucinationsName" type="Label" parent="Center/Panel/Rows/Grid"]
+layout_mode = 2
+text = "INTENZITA HALUCINACÍ"
+
+[node name="HallucinationsSlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
+custom_minimum_size = Vector2(300, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+tooltip_text = "Opakující se menší končetiny a hlavy, iluze nekonečného zoomu a rozmazané vidění se smyčkou zpětné vazby. Nula vypne nové efekty; nemění zásahy ani hlavní zamíření."
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+value = 0.65
+
+[node name="HallucinationsValue" type="Label" parent="Center/Panel/Rows/Grid"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "65%"
 horizontal_alignment = 2
 
 [node name="Fullscreen" type="CheckButton" parent="Center/Panel/Rows"]

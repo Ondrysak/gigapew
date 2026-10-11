@@ -1,22 +1,28 @@
 class_name LevelQuests
 extends RefCounted
 
-## Only loot actually emitted by machine compartments and exact species deaths count.
+## Real machine loot, exact species deaths and distinct opened stashes count.
 signal changed
 signal completed
+
+const REQUIRED_STASHES := 2
 
 var quests: Array[Dictionary] = []
 var _mining_indices: Dictionary = {}
 var _kill_indices: Dictionary = {}
 var _requirements: Dictionary = {}
 var _finished := false
+var _stash_index := -1
+var _looted_stashes: Dictionary = {}
 
-func configure(stage: StageDefinition, deposit_types: Array[DepositDefinition], seed: int) -> void:
+func configure(stage: StageDefinition, deposit_types: Array[DepositDefinition], seed: int, require_stashes: bool) -> void:
 	quests.clear()
 	_mining_indices.clear()
 	_kill_indices.clear()
 	_requirements.clear()
 	_finished = false
+	_stash_index = -1
+	_looted_stashes.clear()
 	assert(stage != null and stage.schedule != null, "Level quests require a stage spawn schedule.")
 	if stage == null or stage.schedule == null:
 		push_error("Level quests require a stage spawn schedule.")
@@ -77,6 +83,11 @@ func configure(stage: StageDefinition, deposit_types: Array[DepositDefinition], 
 		quests.append({"kind": &"kill", "id": id, "name": enemy.display_name,
 			"icon": GameIcons.lookup(&"hud", &"kills"), "color": enemy.fx_color, "target": target,
 			"progress": 0, "definition": enemy})
+	if require_stashes:
+		_stash_index = quests.size()
+		quests.append({"kind": &"stash", "id": &"stashes", "name": "Skrýše",
+			"icon": GameIcons.lookup(&"gear", &"gloves"), "color": Color(1.0, 0.80, 0.40),
+			"target": REQUIRED_STASHES, "progress": 0, "definition": null})
 	changed.emit()
 
 func record_mined(resource: ResourceDefinition, amount: int) -> void:
@@ -91,6 +102,16 @@ func record_kill(enemy: HordeEnemyDefinition) -> void:
 	if enemy == null or enemy.is_boss or not _kill_indices.has(enemy):
 		return
 	_advance(int(_kill_indices[enemy]), 1)
+
+func record_stash(stash: GearStash) -> void:
+	if _stash_index < 0 or not is_instance_valid(stash) or not stash.claimed \
+			or stash.source == GearStash.Source.ELITE_DROP:
+		return
+	var id := stash.get_instance_id()
+	if _looted_stashes.has(id):
+		return
+	_looted_stashes[id] = true
+	_advance(_stash_index, 1)
 
 func is_complete() -> bool:
 	return not quests.is_empty() and completed_count() == quests.size()

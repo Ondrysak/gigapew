@@ -11,6 +11,8 @@ extends MenuScreen
 @export var music_value: Label
 @export var sfx_value: Label
 @export var sensitivity_value: Label
+@export var hallucinations_slider: Range
+@export var hallucinations_value: Label
 @export var fullscreen_toggle: BaseButton
 @export var guided_toggle: BaseButton
 @export var reset_tips_button: BaseButton
@@ -23,6 +25,7 @@ func _ready() -> void:
 	music_slider.value_changed.connect(_on_volume_changed.bind("music_volume", music_value))
 	sfx_slider.value_changed.connect(_on_volume_changed.bind("sfx_volume", sfx_value))
 	sensitivity_slider.value_changed.connect(_on_sensitivity_changed)
+	hallucinations_slider.value_changed.connect(_on_hallucinations_changed)
 	fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
 	guided_toggle.toggled.connect(func(pressed: bool): Profile.set_setting("guided_start", pressed))
 	reset_tips_button.pressed.connect(_on_reset_tips)
@@ -33,6 +36,8 @@ func refresh() -> void:
 	music_slider.set_value_no_signal(settings.music_volume)
 	sfx_slider.set_value_no_signal(settings.sfx_volume)
 	sensitivity_slider.set_value_no_signal(settings.mouse_sensitivity)
+	hallucinations_slider.set_value_no_signal(settings.hallucination_intensity)
+	_show_hallucinations(settings.hallucination_intensity)
 	fullscreen_toggle.set_pressed_no_signal(settings.fullscreen)
 	guided_toggle.set_pressed_no_signal(settings.guided_start)
 	reset_tips_button.text = "ZNOVU UKAZOVAT RADY"
@@ -49,6 +54,10 @@ func _on_sensitivity_changed(value: float) -> void:
 	Profile.set_setting("mouse_sensitivity", value)
 	_show_sensitivity(value)
 
+func _on_hallucinations_changed(value: float) -> void:
+	Profile.set_setting("hallucination_intensity", value)
+	_show_hallucinations(value)
+
 func _on_fullscreen_toggled(pressed: bool) -> void:
 	Profile.set_setting("fullscreen", pressed)
 
@@ -61,3 +70,6 @@ func _show_volume(label: Label, value: float) -> void:
 
 func _show_sensitivity(value: float) -> void:
 	sensitivity_value.text = "%.2f×" % value
+
+func _show_hallucinations(value: float) -> void:
+	hallucinations_value.text = "VYPNUTO" if value <= 0.0 else "%d%%" % roundi(value * 100.0)

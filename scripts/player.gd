@@ -46,6 +46,11 @@ var max_health := 100
 var health := 100
 var _fire_cooldown := 0.0
 var mining_tool: MiningTool
+var gear_effects: GearEffects
+var _health_gear_multiplier := 1.0
+# Preserve the unrounded fraction across curse toggles, including repeated swaps.
+var _gear_health_fraction := 1.0
+var _gear_health_snapshot := 100
 var _draw_left := 0.0
 var _waiting_for_mine_release := false
 var combo_hits := 0
@@ -88,6 +93,11 @@ var _hit_lookup := PackedInt32Array()
 var _hit_critical := PackedByteArray()
 var _hit_direct := PackedByteArray()
 var _hit_push := PackedVector3Array()
+var _hit_generation := PackedInt64Array()
+var _hit_position := PackedVector3Array()
+## Defeated constituent lives, not a boolean: one fused victim can credit up to eight.
+var _hit_killed := PackedByteArray()
+var _hit_applied := PackedByteArray()
 var _splash_hits := PackedInt32Array()
 var _death_guards: Array[Callable] = []
 
@@ -110,8 +120,15 @@ func _ready() -> void:
 	_hit_direct.resize(Horde.CAPACITY)
 	_hit_push.resize(Horde.CAPACITY)
 	_splash_hits.resize(Horde.CAPACITY)
+	_hit_generation.resize(Horde.CAPACITY)
+	_hit_position.resize(Horde.CAPACITY)
+	_hit_killed.resize(Horde.CAPACITY)
+	_hit_applied.resize(Horde.CAPACITY)
 	_directions.resize(WeaponBuild.MAX_PROJECTILES)
 	refresh_weapon()
+	gear_effects = GearEffects.new()
+	add_child(gear_effects)
+	gear_effects.setup(self, horde, run_state)
 	for slot in range(mini(5, ability_scenes.size())):
 		var scene := ability_scenes[slot]
 		if scene == null:
@@ -191,12 +208,21 @@ func drilling() -> bool:
 	return not _waiting_for_mine_release and Input.is_action_pressed("mine") and mining_ready()
 
 
-## Re-reads run upgrades; keeps current damage taken when max health grows.
+## Upgrade growth keeps damage taken; changing the curse preserves health fraction.
 func refresh_stats() -> void:
 	var bonus := run_state.max_health_bonus if run_state != null else 0
+	var multiplier := run_state.gear_health_multiplier if run_state != null else 1.0
 	var previous := max_health
-	max_health = base_max_health + bonus
-	health = clampi(health + maxi(0, max_health - previous), 0, max_health)
+	max_health = maxi(1, floori(float(base_max_health + bonus) * multiplier))
+	if not is_equal_approx(multiplier, _health_gear_multiplier):
+		if health != _gear_health_snapshot:
+			_gear_health_fraction = float(health) / float(maxi(1, previous))
+		health = clampi(floori(_gear_health_fraction * float(max_health)), 1 if health > 0 else 0, max_health)
+	else:
+		health = clampi(health + maxi(0, max_health - previous), 0, max_health)
+		_gear_health_fraction = float(health) / float(max_health)
+	_health_gear_multiplier = multiplier
+	_gear_health_snapshot = health
 	health_changed.emit(health, max_health)
 
 ## Blocks firing until the fire button is released (after menus and recapture).
@@ -249,6 +275,8 @@ func announce_combo(id: StringName) -> void:
 func dash(dash_velocity: Vector3, duration: float) -> void:
 	_dash_velocity = dash_velocity
 	_dash_time = duration
+	if gear_effects != null:
+		gear_effects.begin_dash()
 
 func is_dashing() -> bool:
 	return _dash_time > 0.0
@@ -362,8 +390,11 @@ func _physics_process(delta: float) -> void:
 			if Input.is_action_pressed(ABILITY_ACTIONS[skill.slot]) and Input.is_action_just_pressed(ABILITY_ACTIONS[skill.slot]) and skill.activate():
 				ability_used.emit(skill)
 	if _dash_time > 0.0:
+		var dash_start := global_position
 		_dash()
 		_dash_time -= delta
+		if gear_effects != null:
+			gear_effects.record_dash_step(dash_start, global_position)
 	else:
 		_move(delta)
 	_stay_in_arena()
@@ -562,7 +593,18 @@ func _shoot() -> void:
 	# Direct pellets and splash aggregate before any deaths or feedback.
 	var confirmed := _hit_count > 0
 	for n in _hit_count:
-		horde.damage_combined(_hit_slots[n], _hit_direct_damage[n], origin, _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0)
+		_hit_applied[n] = 0
+		_hit_killed[n] = 0
+		var slot := _hit_slots[n]
+		if not horde.is_alive(slot) or horde.enemy_generation(slot) != _hit_generation[n]:
+			continue
+		_hit_position[n] = horde.enemy_position(slot)
+		_hit_applied[n] = 1
+		var members := horde.fusion_members(slot)
+		_hit_killed[n] = members if horde.damage_combined(slot, _hit_direct_damage[n], origin, _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0) else 0
+	# Gear consumes only these captured primary transactions, never secondary kills.
+	if gear_effects != null:
+		gear_effects.process_primary_shot(_hit_count, _hit_slots, _hit_generation, _hit_position, _hit_direct_damage, _hit_killed, _hit_applied)
 	if direct_confirmed:
 		combo_hits += 1 # One beat per direct-hit shot, not per pellet or blast victim.
 		_combo_left = COMBO_WINDOW
@@ -596,11 +638,16 @@ func _reset_combo() -> void:
 
 func _add_hit(slot: int, amount: float, critical: bool, direct: bool) -> void:
 	var index := _hit_lookup[slot]
+	var generation := horde.enemy_generation(slot)
 	if index < 0:
 		index = _hit_count
 		_hit_count += 1
 		_hit_lookup[slot] = index
+		_hit_generation[index] = -1
+	if _hit_generation[index] != generation:
 		_hit_slots[index] = slot
+		_hit_generation[index] = generation
+		_hit_position[index] = horde.enemy_position(slot)
 		_hit_damage[index] = 0.0
 		_hit_direct_damage[index] = 0.0
 		_hit_critical[index] = 0
@@ -627,7 +674,10 @@ func take_damage(amount: int) -> void:
 		return
 	_reset_combo()
 	var armor := run_state.armor if run_state != null else 0.0
-	health = maxi(0, health - maxi(1, amount - int(armor)))
+	var incoming := maxi(1, amount - int(armor))
+	if gear_effects != null:
+		incoming = gear_effects.absorb_damage(incoming)
+	health = maxi(0, health - incoming)
 	if health == 0 and _survives_lethal_hit():
 		health = 1
 	health_changed.emit(health, max_health)

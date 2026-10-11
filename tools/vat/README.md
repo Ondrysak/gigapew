@@ -67,7 +67,30 @@ before baking; then inspect the baked enemies in a rendered Godot session.
 
 Each EXR contains 32-bit linear float RGBA texels: X = lookup column, Y = frame (clips concatenated), RGB = Godot-local position or normal. At most 4096 columns fit per row; wider meshes wrap over `ceil(columns / texture_width)` rows per frame. **Every polygon loop gets its own UV2.x = (column + 0.5) / column_count**; split normals reuse a lookup column only if they share the same original vertex and rest normal. glTF/Godot vertex reordering, seam splits and indices therefore cannot invalidate animation. The vertex shader reads UV2, never `VERTEX_ID`, and fetches exact pixels using `texelFetch(..., ..., 0)`. Both EXRs use lossless, non-sRGB, no-mipmap, uncompressed HDR imports (`.exr.import`), including under GL Compatibility. No binary normalization/UNORM compression is allowed: it would lose signed world positions and fine movement. The baker's report includes emitted clip frame offsets/counts and texture dimensions.
 
-The scene's `HordeEnemyDefinition.vertex_animation` enables the VAT shader. `move_clip` is required, `idle_clip`, `attack_clip`, `death_clip` are optional, and `move_clip_speed` controls gait playback relative to travel speed. The old static mesh path remains supported for definitions without VAT. MultiMesh per-instance `COLOR` stores local fractional frame, first frame, clip length, and loop flag; `INSTANCE_CUSTOM` stores flash, attack warning, random phase and frost. The menu uses the same mesh/shader but sets instance preview frame/clip uniforms on a few independent `MeshInstance3D`s. With no death clip, the renderer uses the existing short collapse. Internal `robot_*` IDs now refer to Prague humans and `alien_*` IDs to the five delirium creatures; the IDs are retained for resource stability, not their former appearances.
+The scene's `HordeEnemyDefinition.vertex_animation` enables the VAT shader. `move_clip` is required, `idle_clip`, `attack_clip`, `death_clip` are optional, and `move_clip_speed` controls gait playback relative to travel speed. The old static mesh path remains supported for definitions without VAT. MultiMesh per-instance `COLOR` stores local fractional frame, first frame, clip length, and loop flag; `INSTANCE_CUSTOM` stores flash, attack warning, encoded phase/fusion membership and frost. The menu uses the same mesh/shader but sets instance preview frame/clip uniforms on a few independent `MeshInstance3D`s. With no death clip, the renderer uses the existing short collapse. Internal `robot_*` IDs now refer to Prague humans and `alien_*` IDs to the five delirium creatures; the IDs are retained for resource stability, not their former appearances.
+
+Crowd fusion encodes `INSTANCE_CUSTOM.z = phase + TAU * (members - 1)`, with
+ordinary phase in `[0, TAU)`. Decode the fractional phase for face-atlas selection,
+not the packed value. Megas reuse baked clips with slower playback; torso
+deformation leaves the authored weak-spot sphere and upper head aligned with
+the scaled hit target. Their procedural stomp follows the sampled clip frame,
+so it freezes with VAT playback during pause. Menu previews explicitly disable
+fusion; these runtime changes require no asset rebake.
+
+Recursive mega anatomy uses a second fixed-capacity MultiMesh per eligible
+species. `HordeMeshBaker.bake_anatomy` selects native head/limb triangles once
+in rest space; triangle membership never changes during animation. Texture UVs,
+materials, face phase and `UV2.x` VAT columns are retained. On this subset only,
+`UV2.y = piece + 8 * depth + 32 * fork`, with pieces 1–6 identifying the two
+heads and four limbs. The source body's UV2 remains unchanged.
+VAT-sampled pivot/tip references carry the appendages with the source clip.
+Three limb generations and three nested head depths reuse this finite mesh;
+head depths cycle smoothly instead of allocating more geometry.
+Global `hallucination_intensity` controls emergence, and `hallucination_time`
+follows the gameplay clock so new hinges/head cycles freeze during pause.
+Zero hides the appendage batches. Static megas also use the paused clock.
+No rebake is needed.
+
 
 Use the current `reports/*.json` for baked VAT column counts, EXR dimensions,
 clip frame counts, and bounds. GPU vertices are glTF POSITION accessor vertices

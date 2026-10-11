@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
@@ -18,6 +18,11 @@
 [ext_resource type="Resource" path="res://data/resources/shard.tres" id="16_shard"]
 [ext_resource type="Resource" path="res://data/resources/crystal.tres" id="17_crystal"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="18_pause"]
+[ext_resource type="Script" path="res://scripts/hallucination_vision.gd" id="19_vision"]
+[ext_resource type="Shader" path="res://shaders/hallucination_vision.gdshader" id="20_vision_shader"]
+
+[sub_resource type="ShaderMaterial" id="Material_vision"]
+shader = ExtResource("20_vision_shader")
 
 [node name="Game" type="Node3D"]
 process_mode = 1
@@ -33,6 +38,23 @@ resources = Array[ExtResource("14_resource")]([ExtResource("15_gold"), ExtResour
 stage_reward = ExtResource("16_shard")
 
 [node name="Level" type="Node3D" parent="."]
+
+[node name="HallucinationVision" type="CanvasLayer" parent="."]
+process_mode = 3
+process_priority = 100
+layer = 0
+visible = false
+script = ExtResource("19_vision")
+
+[node name="WorldGhosting" type="ColorRect" parent="HallucinationVision"]
+material = SubResource("Material_vision")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
 
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 

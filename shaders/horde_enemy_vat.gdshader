@@ -20,10 +20,16 @@ instance uniform float preview_count = 1.0;
 // Face atlas: columns, rows, first cell, cell count. The surface whose UV spans cell
 // 0 shows one of `count` cells per instance, picked from the random animation phase.
 uniform vec4 face_atlas = vec4(1.0, 1.0, 0.0, 1.0);
-varying vec3 v_local;
 
 ivec2 vat_texel(int column, int frame, int width, int rows) {
 	return ivec2(column % width, frame * rows + column / width);
+}
+
+vec3 anatomy_joint_delta(vec4 reference, int start, int f0, int f1, float blend, int width, int rows) {
+	int column = clamp(int(reference.w * float(vat_vertex_count)), 0, vat_vertex_count - 1);
+	vec3 a = texelFetch(vat_positions, vat_texel(column, start + f0, width, rows), 0).xyz;
+	vec3 b = texelFetch(vat_positions, vat_texel(column, start + f1, width, rows), 0).xyz;
+	return mix(a, b, blend) - reference.xyz;
 }
 
 void vertex() {
@@ -49,8 +55,11 @@ void vertex() {
 	vec3 n1 = texelFetch(vat_normals, vat_texel(column, start + f1, width, rows), 0).xyz;
 	vec3 posed = mix(p0, p1, blend);
 	v_local = posed;
+	// Previews carry no crowd custom data and must never look fused.
+	v_fusion = preview_frame >= 0.0 ? 0.0 : horde_fusion(INSTANCE_CUSTOM.z);
+	float phase = horde_phase(INSTANCE_CUSTOM.z);
 	if (face_atlas.x * face_atlas.y > 1.0) {
-		float pick = min(floor(fract(INSTANCE_CUSTOM.z * 0.15915494) * face_atlas.w), face_atlas.w - 1.0);
+		float pick = min(floor((phase / HORDE_TAU) * face_atlas.w), face_atlas.w - 1.0);
 		float cell = face_atlas.z + pick;
 		UV += vec2(mod(cell, face_atlas.x) / face_atlas.x, floor(cell / face_atlas.x) / face_atlas.y);
 	}
@@ -64,10 +73,13 @@ void vertex() {
 		TANGENT = TANGENT * c + cross(k, TANGENT) * s + k * dot(k, TANGENT) * (1.0 - c);
 		BINORMAL = BINORMAL * c + cross(k, BINORMAL) * s + k * dot(k, BINORMAL) * (1.0 - c);
 	}
-	float wave = TIME * bob_speed + INSTANCE_CUSTOM.z;
-	if (sway_amplitude != 0.0) {
-		float roll = sin(wave) * sway_amplitude;
-		float pitch = sin(wave * 0.5 + 1.3) * sway_amplitude * 0.6;
+	float variation = sin(phase * 3.0 + 0.7);
+	// Fused stomps follow the sampled gait and freeze with it while paused.
+	float wave = v_fusion > 0.0 ? local / float(count) * HORDE_TAU + phase
+		: TIME * bob_speed * (1.0 + variation * 0.08) + phase;
+	if (sway_amplitude != 0.0 && v_fusion <= 0.0) {
+		float roll = sin(wave) * sway_amplitude * (1.0 + variation * 0.12);
+		float pitch = sin(wave * 0.5 + phase * 0.3 + 1.3) * sway_amplitude * 0.6;
 		mat3 lean = mat3(vec3(cos(roll), sin(roll), 0.0), vec3(-sin(roll), cos(roll), 0.0), vec3(0.0, 0.0, 1.0))
 			* mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(pitch), sin(pitch)), vec3(0.0, -sin(pitch), cos(pitch)));
 		posed = lean * posed;
@@ -75,11 +87,21 @@ void vertex() {
 		TANGENT = lean * TANGENT;
 		BINORMAL = lean * BINORMAL;
 	}
-	posed.y += sin(wave) * bob_amplitude;
-	VERTEX = posed;
-	NORMAL = normal;
+	if (v_fusion > 0.0) {
+		horde_fused_pose(posed, normal, TANGENT, BINORMAL, v_fusion, wave);
+	} else {
+		posed.y += sin(wave) * bob_amplitude * (1.0 + variation * 0.12);
+	}
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	vec3 camera = INV_VIEW_MATRIX[3].xyz;
+	if (anatomy_enabled) {
+		int piece = clamp(int(mod(UV2.y, 8.0)) - 1, 0, 5);
+		vec3 pivot_delta = anatomy_joint_delta(anatomy_pivot_refs[piece], start, f0, f1, blend, width, rows);
+		vec3 tip_delta = anatomy_joint_delta(anatomy_tip_refs[piece], start, f0, f1, blend, width, rows);
+		horde_anatomy_pose(posed, normal, TANGENT, BINORMAL, UV2.y, phase, pivot_delta, tip_delta, origin, camera);
+	}
+	VERTEX = posed;
+	NORMAL = normal;
 	if (length(origin.xz - camera.xz) < near_cull) {
 		VERTEX = vec3(0.0);
 	}
@@ -89,7 +111,7 @@ void vertex() {
 }
 
 void fragment() {
-	horde_surface(UV, NORMAL, VIEW, TIME, v_local, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
+	horde_surface(UV, NORMAL, VIEW, TIME, v_local, v_fusion, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
 	if (use_normal_texture) {
 		NORMAL_MAP = texture(normal_texture, UV).rgb;
 		NORMAL_MAP_DEPTH = normal_scale;

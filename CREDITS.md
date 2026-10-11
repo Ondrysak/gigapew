@@ -32,3 +32,16 @@ No third-party weapon meshes or slide content are redistributed.
 The street-face atlas (`tools/vat/faces/atlas.png`) is painted from parameters by
 `tools/vat/faces/build_faces.py`. Its faces are invented; none is traced from,
 sampled from or modelled on a photograph or a real person.
+The six passive-gear pixel icons in `assets/icons/gear/` are original to this
+project, authored in `tools/icons/art_passive.py` and rendered by the existing
+`tools/icons/build.py` pipeline. Item flavour quotes come from the supplied
+`hlasky.txt`; the item names are adaptations, not verbatim quotations.
+The fruit-machine glass, reel strip, button caps, badge and stickers in
+`assets/automat/` are drawn from parameters by `tools/automat_art.py`. The
+cabinets follow the general layout of Czech pub fruit machines, but the logos
+("SUPER DROBNÉ", "JACKPOT 777", the KOVOHRA badge), symbols and artwork are
+invented; no manufacturer's brand, artwork or photograph is reproduced.
+Their lettering is rasterised from **Fira Sans** (Heavy, Heavy Italic, Bold and
+Condensed ExtraBold) by Carrois Apostrophe / Mozilla, under the
+[SIL Open Font License 1.1](https://openfontlicense.org); only rendered pixels
+are shipped, not the font files.

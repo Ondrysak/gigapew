@@ -23,6 +23,8 @@ const SCENARIOS := {
 	&"gunplay": preload("res://scripts/lab/scenarios/gunplay_scenario.gd"),
 	&"tempo": preload("res://scripts/lab/scenarios/tempo_scenario.gd"),
 	&"pressure": preload("res://scripts/lab/scenarios/pressure_scenario.gd"),
+	&"fusion": preload("res://scripts/lab/scenarios/fusion_scenario.gd"),
+	&"hallucinations": preload("res://scripts/lab/scenarios/hallucinations_scenario.gd"),
 	&"levels": preload("res://scripts/lab/scenarios/levels_scenario.gd"),
 	&"quests": preload("res://scripts/lab/scenarios/quests_scenario.gd"),
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
@@ -41,6 +43,7 @@ const SCENARIOS := {
 	&"menu": preload("res://scripts/lab/scenarios/menu_scenario.gd"),
 	&"street": preload("res://scripts/lab/scenarios/street_scenario.gd"),
 	&"venues": preload("res://scripts/lab/scenarios/venues_scenario.gd"),
+	&"gear": preload("res://scripts/lab/scenarios/gear_scenario.gd"),
 	&"icons": preload("res://scripts/lab/scenarios/icons_scenario.gd"),
 }
 ## Batch runs never hang: the whole process quits after this many seconds.

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GearDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gear_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/gear/mirror.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"mirror"
+display_name = "Zrcadlo těžkýho dna"
+description = "Každý výstřel hlavní zbraně může jednou odrazit 40 % poškození přímého zásahu na dalšího nepřítele do 6 m."
+quote = "To je dno to bych se nemohl podivat do zrcadla"
+icon = ExtResource("2")
+accent_color = Color(0.44, 0.95, 1.0, 1)
+cursed = false

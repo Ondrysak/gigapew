@@ -123,6 +123,46 @@ const COMBO_CALLOUTS := {
 }
 var _combo_callout: Label
 var _combo_tween: Tween
+var gear_hud: GearHUD
+var _gear_status: Label
+var _gear_prompt: Label
+
+func _build_gear_overlay() -> void:
+	gear_hud = GearHUD.new()
+	gear_hud.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	gear_hud.offset_left = -210.0
+	gear_hud.offset_right = 210.0
+	gear_hud.offset_top = 100.0
+	gear_hud.offset_bottom = 174.0
+	add_child(gear_hud)
+	_gear_status = _label("", 12, Color(0.8, 0.74, 0.57))
+	_gear_status.position = Vector2(16.0, 394.0)
+	_gear_status.size = Vector2(304.0, 54.0)
+	_gear_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gear_status.add_theme_color_override(&"font_outline_color", Color(0.03, 0.02, 0.015))
+	_gear_status.add_theme_constant_override(&"outline_size", 3)
+	add_child(_gear_status)
+	_gear_prompt = _label("", 16, Color(0.91, 0.79, 0.49))
+	_gear_prompt.set_anchors_preset(Control.PRESET_CENTER)
+	_gear_prompt.offset_left = -300.0
+	_gear_prompt.offset_right = 300.0
+	_gear_prompt.offset_top = 48.0
+	_gear_prompt.offset_bottom = 95.0
+	_gear_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_gear_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_gear_prompt.add_theme_color_override(&"font_outline_color", Color(0.03, 0.02, 0.015))
+	_gear_prompt.add_theme_constant_override(&"outline_size", 4)
+	add_child(_gear_prompt)
+
+func set_gear_loot(loot: GearLootDirector, playing: bool) -> void:
+	gear_hud.visible = not death.visible and not boss_cue.visible and not warning.visible
+	var available := is_instance_valid(loot) and playing and not death.visible
+	_gear_status.visible = available
+	_gear_prompt.visible = available
+	if available:
+		_gear_status.position.y = quest_panel.get_rect().end.y + 6.0
+		_gear_status.text = loot.status_text()
+		_gear_prompt.text = loot.interaction_text()
 
 func _ready() -> void:
 	_health_fill = (health_bar.get_theme_stylebox(&"fill") as StyleBoxFlat).duplicate()
@@ -140,6 +180,7 @@ func _ready() -> void:
 	_build_primary()
 	_build_abilities()
 	_build_combo_callout()
+	_build_gear_overlay()
 	tutor = Tutor.new()
 	add_child(tutor)
 	StreetWear.apply_tree(self)
@@ -284,7 +325,7 @@ func _refresh_abilities() -> void:
 	if unlocked_count != _unlocked_shown:
 		_unlocked_shown = unlocked_count
 		var skills := "1 TRIK" if unlocked_count <= 1 else "1–%d TRIKY" % unlocked_count
-		controls_label.text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · %s · E POUŽÍT · ESC PAUZA" % skills
+		controls_label.text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · %s · E POUŽÍT · G VÝBAVA · ESC PAUZA" % skills
 
 func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()
@@ -308,13 +349,21 @@ func set_quests(state: LevelQuests, seed_value: int) -> void:
 		child.free()
 	_quest_rows.clear()
 	quest_seed.text = "#%08X" % seed_value
+	$Quests/Rows/Hint.text = "Zamiř zblízka na přihrádku · drž F a páč · dokonči zakázku pro odvoz"
 	for quest: Dictionary in state.quests:
 		var row := VBoxContainer.new()
 		row.add_theme_constant_override(&"separation", 3)
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override(&"separation", 8)
 		line.add_child(_icon(quest.icon, 24))
-		var text := _label("%s %s" % ["VYPÁČ" if quest.kind == &"mine" else "ROZPRAŠ", String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
+		var action: String
+		match quest.kind:
+			&"mine": action = "VYPÁČ"
+			&"kill": action = "ROZPRAŠ"
+			&"stash":
+				action = "VYBER"
+				$Quests/Rows/Hint.text = "F · páč přihrádky   E · vyber alespoň %d skrýše\nDokonči celou zakázku pro odvoz" % quest.target
+		var text := _label("%s %s" % [action, String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		line.add_child(text)

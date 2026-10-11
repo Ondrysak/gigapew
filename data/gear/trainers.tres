@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GearDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gear_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/gear/trainers.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"trainers"
+display_name = "Geoxy z Palmovky"
+description = "Při úhybu necháváš stopu na 2 s. Nepřátelé do 1,1 m od stopy dostávají 10 poškození každých 0,25 s."
+quote = "Vem si moje boty ktery nosim a ukaz skillz"
+icon = ExtResource("2")
+accent_color = Color(0.5, 0.9, 0.3, 1)
+cursed = false

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="GearDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/gear_definition.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/gear/wire.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"wire"
+display_name = "Kabel celoživotních blesků"
+description = "Každé 4 výstřely s přímým zásahem téhož nepřítele vyšlou blesk: 25 poškození až 3 dalším nepřátelům do 5 m. Počítadlo patří konkrétnímu živému cíli."
+quote = "Jedu blesky celej zivot vzdy a vsude"
+icon = ExtResource("2")
+accent_color = Color(0.95, 0.75, 0.25, 1)
+cursed = false
