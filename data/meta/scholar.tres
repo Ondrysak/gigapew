@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 xp_multiplier = 0.04
 id = &"scholar"
-display_name = "Scholar"
-description = "Combat data uplink: +4% XP gain per level."
+display_name = "DJ legenda"
+description = "Za každou úroveň: +4 % získaných zkušeností."
 accent_color = Color(0.2, 1, 0.85, 1)
 costs = PackedInt32Array(50, 100, 180, 300, 450)
 currency = &"gold"

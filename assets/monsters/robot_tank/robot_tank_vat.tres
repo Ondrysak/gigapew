@@ -1,34 +1,37 @@
-[gd_resource type="Resource" script_class="HordeVertexAnimation" format=3 uid="uid://cfmvgtx3aipvj"]
+[gd_resource type="Resource" script_class="HordeVertexAnimation" load_steps=7 format=3]
 
-[ext_resource type="Script" uid="uid://luovvbwa18r0" path="res://scripts/data/horde_vertex_animation.gd" id="1_vat"]
-[ext_resource type="Script" uid="uid://cwc2gpae2b8k3" path="res://scripts/data/horde_vertex_animation_clip.gd" id="2_clip"]
-[ext_resource type="Texture2D" uid="uid://bf56gaqgcktnj" path="res://assets/monsters/robot_tank/robot_tank_positions.exr" id="3_positions"]
-[ext_resource type="Texture2D" uid="uid://dlhu5iy7u2p47" path="res://assets/monsters/robot_tank/robot_tank_normals.exr" id="4_normals"]
+[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation.gd" id="1_vat"]
+[ext_resource type="Script" path="res://scripts/data/horde_vertex_animation_clip.gd" id="2_clip"]
+[ext_resource type="Texture2D" path="res://assets/monsters/robot_tank/robot_tank_positions.exr" id="3_positions"]
+[ext_resource type="Texture2D" path="res://assets/monsters/robot_tank/robot_tank_normals.exr" id="4_normals"]
 
 [sub_resource type="Resource" id="Clip_0"]
 script = ExtResource("2_clip")
 name = &"move"
-frame_count = 33
-fps = 19.8
+start_frame = 0
+frame_count = 25
+fps = 20.0
+loop = true
 
 [sub_resource type="Resource" id="Clip_1"]
 script = ExtResource("2_clip")
 name = &"attack"
-start_frame = 33
-frame_count = 6
-fps = 18.75
+start_frame = 25
+frame_count = 16
+fps = 20.0
 loop = false
 
 [sub_resource type="Resource" id="Clip_2"]
 script = ExtResource("2_clip")
 name = &"death"
-start_frame = 39
-frame_count = 21
+start_frame = 41
+frame_count = 47
+fps = 20.0727
 loop = false
 
 [resource]
 script = ExtResource("1_vat")
 positions = ExtResource("3_positions")
 normals = ExtResource("4_normals")
-vertex_count = 1350
+vertex_count = 1380
 clips = Array[ExtResource("2_clip")]([SubResource("Clip_0"), SubResource("Clip_1"), SubResource("Clip_2")])

@@ -109,7 +109,7 @@ billboard = 1
 pixel_size = 0.003
 font_size = 38
 outline_size = 8
-text = "[E] OPEN FUEL VALVE"
+text = "[E] OTEVŘÍT PALIVOVÝ VENTIL"
 
 [node name="LaneMarker" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.026, 0)

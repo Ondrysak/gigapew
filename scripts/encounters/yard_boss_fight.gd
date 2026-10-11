@@ -5,7 +5,7 @@ extends Node3D
 ## boss movement, terrain constraints, animation and ordinary capped contact.
 enum State { APPROACH, RAM_WINDUP, RAM, MORTAR_WINDUP, MORTAR, RECOVERY, CANCELLED }
 
-@export var display_name := "George Dreadnought"
+@export var display_name := "Pan Herna"
 @export_group("Cadence")
 @export_range(0.1, 10.0) var approach_time := 1.4
 @export_range(0.0, 10.0) var approach_speed := 2.6
@@ -102,12 +102,12 @@ func setup(horde: Horde, player: ArenaPlayer) -> void:
 
 func instruction() -> String:
 	match state:
-		State.APPROACH: return "Keep space — the next target locks when the warning starts"
-		State.RAM_WINDUP: return "BREACH RAM — leave the orange lane; direction is locked"
-		State.RAM: return "BREACH RAM — stay outside the locked lane"
-		State.MORTAR_WINDUP: return "MORTAR SALVO — leave all three locked circles"
-		State.MORTAR: return "MORTAR SALVO — staggered impacts; solid cover blocks blasts"
-		State.RECOVERY: return "CORE EXPOSED — punish now: +50% damage"
+		State.APPROACH: return "Drž si odstup — další cíl se zamkne při varování"
+		State.RAM_WINDUP: return "ROZBĚH — uhni z oranžové dráhy; směr už nezmění"
+		State.RAM: return "ROZBĚH — zůstaň mimo zamčenou dráhu"
+		State.MORTAR_WINDUP: return "TŘI RÁNY — opusť všechny tři vyznačené kruhy"
+		State.MORTAR: return "TŘI RÁNY — dopadají postupně; pevný kryt zastaví výbuch"
+		State.RECOVERY: return "KRYT DOLE — teď do něj: +50 % poškození"
 	return ""
 
 func phase_progress() -> float:

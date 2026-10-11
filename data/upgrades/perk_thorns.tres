@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"thorns"
-display_name = "Thorns"
-description = "Enemies touching you take 8 damage every 0.35 s and are shoved back. Taking damage lashes out for 16 damage in 2.5 m."
-level_descriptions = PackedStringArray("Enemies touching you take 8 damage every 0.35 s and are shoved back. Taking damage lashes out for 16 damage in 2.5 m.", "Enemies touching you take 14 damage every 0.35 s and are shoved back. Taking damage lashes out for 28 damage in 2.5 m.", "Enemies touching you take 22 damage every 0.35 s and are shoved back. Taking damage lashes out for 44 damage in 2.5 m.")
+display_name = "Lokty na baru"
+description = "Dotyk: 8 poškození každých 0,35 s a odstrčení. Když dostaneš zásah: 16 poškození do 2,5 m."
+level_descriptions = PackedStringArray("Dotyk: 8 poškození každých 0,35 s a odstrčení. Když dostaneš zásah: 16 poškození do 2,5 m.", "Dotyk: 14 poškození každých 0,35 s a odstrčení. Když dostaneš zásah: 28 poškození do 2,5 m.", "Dotyk: 22 poškození každých 0,35 s a odstrčení. Když dostaneš zásah: 44 poškození do 2,5 m.")
 kind = 3
 max_level = 3
 weight = 1.0

@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"last_stand"
-display_name = "Last Stand"
-description = "Once per stage, a lethal hit leaves you at 1 HP with 3 s of invulnerability and hurls nearby enemies away."
-level_descriptions = PackedStringArray("Once per stage, a lethal hit leaves you at 1 HP with 3 s of invulnerability and hurls nearby enemies away.", "Once per stage, survive a lethal hit at 11 HP with 4 s of invulnerability and hurl nearby enemies away.", "Twice per stage, survive a lethal hit at 21 HP with 4 s of invulnerability and hurl nearby enemies away.")
+display_name = "Ještě jedno kolo"
+description = "Jednou za sektor přežiješ smrtelný zásah s 1 zdravím, 3 s nezranitelnosti a odhozením okolních nepřátel."
+level_descriptions = PackedStringArray("Jednou za sektor přežiješ smrtelný zásah s 1 zdravím, 3 s nezranitelnosti a odhozením okolních nepřátel.", "Jednou za sektor přežiješ smrtelný zásah s 11 zdravím, 4 s nezranitelnosti a odhozením okolních nepřátel.", "Dvakrát za sektor přežiješ smrtelný zásah s 21 zdravím, 4 s nezranitelnosti a odhozením okolních nepřátel.")
 kind = 3
 max_level = 3
 weight = 1.0

@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"arc"
-display_name = "Arc Coil"
-description = "Chain lightning leaps from you through 3 enemies."
-level_descriptions = PackedStringArray("Chain lightning leaps from you through 3 enemies.", "+1 chain jump and more damage.", "+1 chain jump and more damage.", "+1 chain jump and more damage.", "+1 chain jump and more damage.")
+display_name = "Zkrat v mixáku"
+description = "Řetězový blesk přeskočí od tebe přes 3 nepřátele."
+level_descriptions = PackedStringArray("Řetězový blesk přeskočí od tebe přes 3 nepřátele.", "+1 přeskok blesku a vyšší poškození.", "+1 přeskok blesku a vyšší poškození.", "+1 přeskok blesku a vyšší poškození.", "+1 přeskok blesku a vyšší poškození.")
 kind = 1
 max_level = 5
 weight = 1.3

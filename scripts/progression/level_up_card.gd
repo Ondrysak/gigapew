@@ -5,7 +5,7 @@ extends Button
 ## script writes text/colors/icons into the referenced controls and builds the
 ## rank pips (owned / gained by this pick / still locked).
 
-const OVERCLOCK_GOLD := Color(1.0, 0.76, 0.26)
+const OVERCLOCK_GOLD := Color(0.68, 0.49, 0.25)
 const PIP_SIZE := Vector2(22, 10)
 ## Shown in the badge while an upgrade has no icon of its own.
 const FALLBACK_ICONS := {
@@ -36,8 +36,7 @@ var _badge: StyleBoxFlat
 var _new: StyleBoxFlat
 var _base_background := Color()
 var _base_hover := Color()
-var _base_shadow := Color()
-var _base_shadow_size := 0
+const INK := Color(0.87, 0.81, 0.67)
 var _gaining: Control
 var _description_size: int
 var _description_spacing: int
@@ -55,35 +54,33 @@ func _ready() -> void:
 	_new = _own_style(new_badge, &"panel")
 	_base_background = _normal.bg_color
 	_base_hover = _hover.bg_color
-	_base_shadow = _normal.shadow_color
-	_base_shadow_size = _normal.shadow_size
+	StreetWear.apply_tree(self)
 
 func show_offer(upgrade: UpgradeDefinition, current_level: int, key: int) -> void:
 	var overclock := upgrade.kind == UpgradeDefinition.Kind.OVERCLOCK
-	var accent := OVERCLOCK_GOLD if overclock else upgrade.accent_color
+	var accent := OVERCLOCK_GOLD if overclock else upgrade.accent_color.lerp(Color(0.48, 0.43, 0.32), 0.65)
 	accent_bar.color = accent
-	_normal.border_color = accent.darkened(0.3) if not overclock else accent
-	_normal.bg_color = Color(0.075, 0.052, 0.014, 0.98) if overclock else _base_background
-	_normal.shadow_color = Color(accent, 0.3) if overclock else _base_shadow
-	_normal.shadow_size = 14 if overclock else _base_shadow_size
-	_hover.border_color = accent.lightened(0.3)
-	_hover.bg_color = Color(0.11, 0.08, 0.02, 0.99) if overclock else _base_hover
-	_hover.shadow_color = Color(accent, 0.35)
+	_normal.border_color = Color(0.38, 0.32, 0.24)
+	_normal.bg_color = Color(0.11, 0.085, 0.055, 0.98) if overclock else _base_background
+	_normal.shadow_size = 0
+	_hover.border_color = Color(0.67, 0.55, 0.35)
+	_hover.bg_color = Color(0.16, 0.12, 0.075, 0.99) if overclock else _base_hover
+	_hover.shadow_size = 0
 	key_label.text = str(key)
 	kind_label.text = kind_text(upgrade)
-	kind_label.add_theme_color_override(&"font_color", accent.lightened(0.45))
-	_kind.bg_color = accent.darkened(0.78)
-	_kind.border_color = accent.darkened(0.15)
-	_badge.border_color = accent
-	_badge.bg_color = accent.darkened(0.86)
-	_badge.shadow_color = Color(accent, 0.35 if overclock else 0.18)
+	kind_label.add_theme_color_override(&"font_color", INK)
+	_kind.bg_color = Color(0.15, 0.13, 0.10)
+	_kind.border_color = accent
+	_badge.border_color = Color(0.38, 0.32, 0.24)
+	_badge.bg_color = Color(0.09, 0.075, 0.06)
+	_badge.shadow_size = 0
 	var texture := upgrade.icon
 	if texture == null:
 		texture = GameIcons.lookup(&"hud", FALLBACK_ICONS.get(upgrade.kind, &"level"))
 	icon_rect.texture = texture
 	icon_rect.modulate = Color.WHITE if upgrade.icon != null else Color(1, 1, 1, 0.7)
 	name_label.text = upgrade.display_name.to_upper()
-	name_label.add_theme_color_override(&"font_color", accent.lightened(0.25 if overclock else 0.35))
+	name_label.add_theme_color_override(&"font_color", INK)
 	_show_rank(upgrade, current_level, accent)
 	description_label.text = upgrade.describe(current_level + 1)
 	description_label.add_theme_font_size_override(&"font_size", 14 if upgrade.kind == UpgradeDefinition.Kind.ABILITY else _description_size)
@@ -92,16 +89,16 @@ func show_offer(upgrade: UpgradeDefinition, current_level: int, key: int) -> voi
 static func kind_text(upgrade: UpgradeDefinition) -> String:
 	match upgrade.kind:
 		UpgradeDefinition.Kind.ABILITY:
-			return "ABILITY %d" % (upgrade.ability_slot + 1)
+			return "DOVEDNOST %d" % (upgrade.ability_slot + 1)
 		UpgradeDefinition.Kind.WEAPON:
-			return "AUTO WEAPON"
+			return "AUTOMATICKÁ ZBRAŇ"
 		UpgradeDefinition.Kind.GUN_MOD:
-			return "GUN MOD"
+			return "ÚPRAVA ZBRANĚ"
 		UpgradeDefinition.Kind.PERK:
-			return "PERK"
+			return "FINTA"
 		UpgradeDefinition.Kind.OVERCLOCK:
-			return "OVERCLOCK"
-	return "SUPPLY" if upgrade.repeatable else "SYSTEM"
+			return "NA DORAZ"
+	return "VÝPOMOC" if upgrade.repeatable else "VÝBAVA"
 
 func _process(delta: float) -> void:
 	if _gaining == null or not is_visible_in_tree():
@@ -117,7 +114,7 @@ func _show_rank(upgrade: UpgradeDefinition, current_level: int, accent: Color) -
 	_gaining = null
 	if upgrade.repeatable:
 		new_badge.show()
-		new_label.text = "INSTANT"
+		new_label.text = "HNED"
 		_new.bg_color = accent
 		pips.hide()
 		return
@@ -125,14 +122,12 @@ func _show_rank(upgrade: UpgradeDefinition, current_level: int, accent: Color) -
 	var ability := upgrade.kind == UpgradeDefinition.Kind.ABILITY
 	var maxing := current_level + 1 >= upgrade.max_level and upgrade.max_level > 1
 	new_badge.visible = ability or current_level == 0 or maxing
-	new_label.text = "RANK %d" % (current_level + 1) if ability else ("NEW" if current_level == 0 else "MAX")
-	_new.bg_color = accent if ability else (Color(1, 0.58, 0.2) if current_level == 0 else OVERCLOCK_GOLD)
+	new_label.text = "STUPEŇ %d" % (current_level + 1) if ability else ("NOVÉ" if current_level == 0 else "MAXIMUM")
+	_new.bg_color = accent if ability else OVERCLOCK_GOLD
 	pips.show()
-	var owned := _pip_style(accent.darkened(0.1), accent.darkened(0.1))
-	var gaining := _pip_style(accent.lightened(0.65), Color.WHITE)
-	gaining.shadow_color = Color(accent, 0.7)
-	gaining.shadow_size = 6
-	var locked := _pip_style(Color(0.05, 0.07, 0.09), accent.darkened(0.55))
+	var owned := _pip_style(accent, Color(0.38, 0.32, 0.24))
+	var gaining := _pip_style(INK, INK.darkened(0.25))
+	var locked := _pip_style(Color(0.10, 0.085, 0.065), Color(0.30, 0.26, 0.20))
 	for rank in upgrade.max_level:
 		var pip := Panel.new()
 		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -141,6 +136,7 @@ func _show_rank(upgrade: UpgradeDefinition, current_level: int, accent: Color) -
 		var style := owned if rank < current_level else (gaining if rank == current_level else locked)
 		pip.add_theme_stylebox_override(&"panel", style)
 		pips.add_child(pip)
+		StreetWear.apply(pip)
 		if rank == current_level:
 			_gaining = pip
 

@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"field_repair"
-display_name = "Field Repair"
-description = "Instantly restore 30 health."
+display_name = "Vyprošťovák"
+description = "Okamžitě obnoví 30 zdraví."
 max_level = 1
 repeatable = true
 instant_heal = 30

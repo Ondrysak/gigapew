@@ -24,19 +24,20 @@ func _ready() -> void:
 			chip.add_child(GameIcons.rect(definition.icon, ICON_PIXELS))
 		else:
 			var swatch := ColorRect.new()
-			swatch.color = definition.color
+			swatch.color = definition.color.lerp(Color(0.64, 0.52, 0.34), 0.7)
 			swatch.custom_minimum_size = Vector2(10, 10)
 			swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			chip.add_child(swatch)
 		var value := Label.new()
 		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		value.add_theme_font_size_override(&"font_size", font_size)
-		value.add_theme_color_override(&"font_color", definition.color.lightened(0.25))
+		value.add_theme_color_override(&"font_color", definition.color.lerp(Color(0.84, 0.76, 0.59), 0.7))
 		chip.add_child(value)
 		add_child(chip)
 		_values[definition.id] = value
 	Profile.currency_changed.connect(_on_currency_changed)
 	refresh()
+	StreetWear.apply_tree(self)
 
 func refresh() -> void:
 	for id: StringName in _values:
@@ -49,7 +50,7 @@ func label_for(id: StringName) -> String:
 
 func color_for(id: StringName) -> Color:
 	var definition := definition_for(id)
-	return definition.color if definition != null else Color.WHITE
+	return definition.color.lerp(Color(0.64, 0.52, 0.34), 0.7) if definition != null else Color(0.84, 0.76, 0.59)
 
 func definition_for(id: StringName) -> ResourceDefinition:
 	for definition in currencies:

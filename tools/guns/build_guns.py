@@ -1,10 +1,13 @@
 """Original metre-scale gun assets. Run: blender -b --python tools/guns/build_guns.py
+Rebuild only the bottles: blender -b --python tools/guns/build_guns.py -- --weapon pulse
 Godot axes in authoring helpers: X right, Y up, -Z muzzle. No external assets.
 """
 import bpy
 import math
+import argparse
 import os
-from mathutils import Vector
+import sys
+from mathutils import Matrix, Vector
 
 OUT = os.path.abspath('assets/guns')
 os.makedirs(OUT, exist_ok=True)
@@ -35,6 +38,18 @@ BRASS = material('Brass', (.62,.39,.1), .75,.3)
 GLOVE = material('Charcoal glove', (.075,.083,.078), 0,.87)
 CYAN = material('Charge indicator', (.03,.65,.58), .3,.4,1)
 AMBER = material('Pilot indicator', (1,.24,.018), .3,.4,1)
+# Lahve od piva: a grimy fingerless-gloved hand and a generic brown 0.5 l bottle.
+# Faint amber self-light keeps the brown glass from reading olive under the
+# arenas' blue ambient light, in the hand and in flight.
+GLASS = material('Brown bottle glass', (.2,.075,.014), 0,.3,.35)
+LABEL = material('Paper label', (.72,.6,.38), 0,.82)
+PRINT = material('Label print', (.5,.05,.035), 0,.6)
+FOIL = material('Neck foil', (.62,.43,.12), .7,.35)
+CAP = material('Crown cap', (.6,.55,.42), .85,.33)
+SKIN = material('Grimy skin', (.5,.25,.14), 0,.74)
+NAIL = material('Dirty nail', (.16,.12,.07), 0,.6)
+WOOL = material('Fingerless wool glove', (.11,.042,.032), 0,.97)
+JACKET = material('Worn jacket', (.05,.058,.03), 0,.9)
 ROOT = None
 
 def finish(o, name, mat, parent=None, bevel=0):
@@ -141,29 +156,129 @@ def muzzle(z,r=.022):
     for i in range(3):
         tube('Muzzle ring',(0,.052,z+.007+i*.014),r*1.06,.005,STEEL,r*.55)
 
+def revolve(name, prof, mat, parent=None, n=16, origin=(0,0,0), axis=(0,1,0), side=(1,0,0), arc=None, ripple=None):
+    # Surface of revolution in Godot space: prof is (radius, height) pairs along
+    # `axis`; radius 0 closes the end with a pole. `arc` limits it to a strip.
+    o=Vector(origin); w=Vector(axis).normalized(); u=Vector(side)
+    u=(u-w*u.dot(w)).normalized(); v=u.cross(w)
+    a0,a1 = arc if arc else (0,math.tau)
+    cols = n if arc is None else n+1
+    verts=[]; rings=[]
+    for r,h in prof:
+        if r == 0:
+            rings.append([len(verts)]); verts.append(xyz(o+w*h)); continue
+        ring=[]
+        for i in range(cols):
+            a=a0+(a1-a0)*i/n; rr=r*(ripple(i) if ripple else 1)
+            ring.append(len(verts)); verts.append(xyz(o+w*h+(u*math.cos(a)+v*math.sin(a))*rr))
+        rings.append(ring)
+    faces=[]
+    for lo,hi in zip(rings,rings[1:]):
+        for i in range(n):
+            j=(i+1)%cols
+            if len(lo)==1: faces.append((lo[0],hi[i],hi[j]))
+            elif len(hi)==1: faces.append((lo[i],hi[0],lo[j]))
+            else: faces.append((lo[i],hi[i],hi[j],lo[j]))
+    mesh=bpy.data.meshes.new(name); mesh.from_pydata(verts,[],faces); mesh.update()
+    ob=bpy.data.objects.new(name,mesh); bpy.context.collection.objects.link(ob)
+    finish(ob,name,mat,parent)
+    for poly in mesh.polygons: poly.use_smooth=True
+    return ob
+
+def limb(name, a, b, r0, r1, mat, parent=None, n=10):
+    # Rounded sausage from a to b: fingers, thumb, wrist and sleeve.
+    a=Vector(a); b=Vector(b); length=(b-a).length
+    cap0=min(r0*.6,length*.3); cap1=min(r1*.6,length*.3)
+    prof=[(0,0),(r0*.72,cap0*.25),(r0,cap0),(r1,length-cap1),(r1*.72,length-cap1*.25),(0,length)]
+    side=Vector((0,0,1)) if abs((b-a).normalized().z)<.9 else Vector((1,0,0))
+    return revolve(name,prof,mat,parent,n,a,b-a,side)
+
+def block(name, p, size, mat, parent=None, yaw=0, bevel=.004):
+    # Box rotated about the local Y axis (the bottle axis inside the hand rig).
+    bpy.ops.mesh.primitive_cube_add(size=1, location=xyz(p))
+    o=bpy.context.object
+    o.scale=(size[0],size[2],size[1])
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    o.rotation_euler.z=math.radians(yaw)
+    return finish(o,name,mat,parent,bevel)
+
+BOTTLE_HEIGHT=.25
+BOTTLE_RADIUS=.0338
+def bottle(parent, origin=(0,0,0), axis=(0,1,0), side=(1,0,0), label_arc=(math.radians(40),math.radians(220))):
+    # Generic Czech half-litre returnable bottle: squat shoulder, long neck,
+    # foil-wrapped neck, crimped crown cap and an unbranded paper label.
+    kw=dict(parent=parent,origin=origin,axis=axis,side=side)
+    revolve('Bottle',[(0,.002),(.029,0),(.0332,.005),(BOTTLE_RADIUS,.012),(BOTTLE_RADIUS,.14),(.0325,.155),(.0285,.17),
+                      (.0225,.184),(.0172,.196),(.0138,.208),(.0134,.232),(.0153,.234),(.0153,.241),(.0136,.242),(0,.242)],GLASS,n=18,**kw)
+    revolve('Crown cap',[(.0148,.2395),(.0168,.2405),(.0168,.2475),(.0128,.2515),(0,.2515)],CAP,n=21,
+            ripple=lambda i:1.0 if i%2 else 1.08,**kw)
+    revolve('Neck foil',[(.0145,.209),(.0141,.227)],FOIL,n=18,**kw)
+    revolve('Neck label',[(.0225,.186),(.0185,.195)],LABEL,n=18,**kw)
+    revolve('Body label',[(BOTTLE_RADIUS+.0007,.092),(BOTTLE_RADIUS+.0007,.138)],LABEL,n=14,arc=label_arc,**kw)
+    revolve('Label band',[(BOTTLE_RADIUS+.0012,.127),(BOTTLE_RADIUS+.0012,.133)],PRINT,n=14,arc=label_arc,**kw)
+    mid=(label_arc[0]+label_arc[1])/2
+    revolve('Label badge',[(BOTTLE_RADIUS+.0012,.1),(BOTTLE_RADIUS+.0016,.106),(BOTTLE_RADIUS+.0016,.116),(BOTTLE_RADIUS+.0012,.121)],PRINT,
+            n=4,arc=(mid-.42,mid+.42),**kw)
+
+def finger(rig, y, length, radius, start=6, bend=(60,56,50)):
+    # Phalanges wrap the bottle from the palm (+X) round the far side; the knit
+    # glove stops at the first joint, leaving grimy bare fingers and nails.
+    ring=BOTTLE_RADIUS+radius+.0016
+    angles=[start]; heights=[y]
+    for k,step in enumerate(bend):
+        angles.append(angles[-1]-step*length); heights.append(y+.0012*(k+1))
+    pts=[Vector((math.cos(math.radians(a))*ring,h,math.sin(math.radians(a))*ring)) for a,h in zip(angles,heights)]
+    pts[0]+=Vector((.009,0,0))
+    mats=(WOOL,SKIN,SKIN)
+    for k in range(3):
+        r0=radius*(1.12 if k==0 else 1.0-.07*k); r1=radius*(1.0-.07*(k+1))
+        limb('Finger',pts[k],pts[k+1],r0,r1,mats[k],rig)
+    limb('Glove finger hem',pts[0].lerp(pts[1],.78),pts[0].lerp(pts[1],.98),radius*1.2,radius*1.2,WOOL,rig)
+    tip=math.radians(angles[-1]+9); out=Vector((math.cos(tip),0,math.sin(tip)))
+    block('Nail',Vector((0,heights[-1],0))+out*(ring+radius*.78),(.009,.0085,.003),NAIL,rig,yaw=-(angles[-1]+9+90),bevel=.0012)
+
 MUZZLES={}
-def pulse():
-    profile('Forged upper',[(.083,.08),(.089,-.18),(.074,-.217),(.022,-.218),(-.011,-.16),(-.009,.042),(.01,.079)],.078,TAN)
-    box('Lower receiver',(0,-.015,-.053),(.073,.077,.15),TAN)
-    grip(); magazine(-.1); butt()
-    tube('Barrel',(0,.052,-.42),.014,.35,STEEL,.008)
-    # Hollow handguard built of sides and ribs around the visible barrel.
-    for s in (-1,1):
-        box('Handguard upper',(s*.043,.072,-.326),(.013,.019,.22),TAN)
-        box('Handguard lower',(s*.043,.024,-.326),(.013,.019,.22),TAN)
-        for i in range(7):
-            box('Vent separator',(s*.043,.047,-.225-i*.033),(.013,.034,.01),TAN,.001)
-    box('Handguard bottom',(0,.012,-.327),(.071,.012,.22),BLACK)
-    # Bolt carrier port, forward assist and bolt release differentiate upper/lower.
-    tube('Forward assist',(.047,.045,.018),.009,.028,STEEL,axis='x')
-    box('Bolt catch',(-.045,-.001,-.058),(.009,.022,.018),BLACK,.002)
-    box('Receiver bevel band',(0,.079,-.087),(.065,.013,.235),STEEL,.004)
-    rail(-.43,.055,.095); sights(-.405,.045,.147)
-    box('Dust cover',(.045,.045,-.055),(.008,.03,.09),BLACK,.002)
-    box('Charging handle',(0,.076,.07),(.095,.013,.032),STEEL)
-    box('Selector',(-.047,.009,.006),(.011,.008,.028),EDGE,.001,angle=30)
-    fasteners([-.18,-.1,.026],.034,.047); muzzle(-.61)
-    MUZZLES['pulse']=(0,.052,-.613)
+def beer():
+    # Bottle base, axis and palm direction in view space; the rig keeps every
+    # hand part authored around the bottle axis (local +Y). First-person scale
+    # is exaggerated so the hand reads above the HUD.
+    base=Vector((.01,.01,-.02)); axis=Vector((-.267,.79,-.55)).normalized(); scale=1.1
+    palm=Vector((1,0,.25)); palm=(palm-axis*palm.dot(axis)).normalized(); near=palm.cross(axis)
+    rig=bpy.data.objects.new('Hand',None); bpy.context.collection.objects.link(rig); rig.parent=ROOT
+    swap=Matrix(((1,0,0),(0,0,-1),(0,1,0)))
+    rig.matrix_world=(swap@Matrix((palm,axis,near)).transposed()@swap.transposed()).to_4x4()
+    rig.location=xyz(base); rig.scale=(scale,)*3
+    bottle(rig)
+    # Four fingers from index (top) to little finger, stacked up the body.
+    for k,(length,radius) in enumerate([(1.0,.0088),(1.06,.0092),(.98,.0088),(.82,.0076)]):
+        finger(rig,.084-k*.0195,length,radius,start=6+k*2)
+    # Knitted back of the hand, knuckle ridge and the thenar pad (thin side radial).
+    block('Glove back',(BOTTLE_RADIUS+.024,.053,.006),(.032,.086,.064),WOOL,rig,yaw=-8,bevel=.013)
+    block('Knuckle ridge',(BOTTLE_RADIUS+.016,.054,-.016),(.022,.08,.03),WOOL,rig,yaw=18,bevel=.009)
+    block('Thenar pad',(BOTTLE_RADIUS+.012,.04,.026),(.03,.05,.03),WOOL,rig,yaw=-30,bevel=.011)
+    for k in range(5):
+        block('Glove rib',(BOTTLE_RADIUS+.0405,.02+k*.016,.006),(.003,.004,.06),JACKET,rig,yaw=-8,bevel=.0012)
+    # Thumb rounds the near side of the bottle toward the camera.
+    ring=BOTTLE_RADIUS+.0095
+    t=[Vector((math.cos(math.radians(a))*r,h,math.sin(math.radians(a))*r)) for a,h,r in
+       [(28,.034,ring+.012),(66,.056,ring+.001),(104,.076,ring),(138,.091,ring)]]
+    limb('Thumb',t[0],t[1],.0118,.0108,WOOL,rig)
+    limb('Thumb',t[1],t[2],.0106,.0098,SKIN,rig)
+    limb('Thumb',t[2],t[3],.0098,.0088,SKIN,rig)
+    tip=math.radians(146); out=Vector((math.cos(tip),0,math.sin(tip)))
+    block('Nail',Vector((0,.093,0))+out*(ring+.0072),(.01,.009,.003),NAIL,rig,yaw=-(146+90),bevel=.0012)
+    # Wrist, knitted cuff and a frayed jacket sleeve leaving the palm side,
+    # down the bottle and toward the camera, out of frame.
+    wrist=Vector((BOTTLE_RADIUS+.034,.04,.012))
+    local=Vector((.8,-.75,.6)).normalized()
+    limb('Wrist',wrist-local*.02,wrist+local*.07,.03,.028,WOOL,rig)
+    limb('Glove cuff',wrist+local*.045,wrist+local*.1,.032,.033,JACKET,rig,n=12)
+    limb('Sleeve',wrist+local*.085,wrist+local*.4,.043,.052,JACKET,rig,n=12)
+    limb('Sleeve hem',wrist+local*.082,wrist+local*.1,.046,.047,WOOL,rig,n=12)
+    # Thrown copy, centred on its origin with the neck along -Z (flight axis).
+    flying=bpy.data.objects.new('ThrownBottle',None); bpy.context.collection.objects.link(flying); flying.parent=ROOT
+    bottle(flying,origin=(0,0,BOTTLE_HEIGHT/2),axis=(0,0,-1),side=(1,0,0),label_arc=(0,math.tau))
+    MUZZLES['pulse']=tuple(base+axis*BOTTLE_HEIGHT*scale)
 
 def railgun():
     profile('Bullpup chassis',[(.095,.2),(.097,-.33),(.063,-.38),(-.012,-.32),(-.09,.21)],.104,STEEL)
@@ -262,18 +377,28 @@ def flamethrower():
     MUZZLES['flamethrower']=(0,.041,-.6)
 
 if __name__ == '__main__':
-    for kind, build in [('pulse',pulse),('rail',railgun),('scatter',scatter),('minigun',minigun),('autocannon',autocannon),('flamethrower',flamethrower)]:
+    builders = [('pulse',beer),('rail',railgun),('scatter',scatter),('minigun',minigun),('autocannon',autocannon),('flamethrower',flamethrower)]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--weapon', action='append', choices=[kind for kind, _ in builders],
+                        help='Build only this weapon; repeat to select several. Default: all.')
+    args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else [])
+    for kind, build in builders:
+        if args.weapon and kind not in args.weapon:
+            continue
         bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
         ROOT=bpy.data.objects.new(kind,None); bpy.context.collection.objects.link(ROOT)
         build()
         # Join static material batches; retain moving Magazine, Pump and Spinner
-        # assemblies. Geometry is authored once, not built at game startup.
+        # assemblies and the ThrownBottle projectile template (one mesh).
+        # Geometry is authored once, not built at game startup.
         batches = {}
         for o in list(bpy.context.scene.objects):
             if o.type != 'MESH':
                 continue
             if o.name == 'Magazine' or (o.parent and o.parent.name == 'Magazine'):
                 key = ('Magazine',)
+            elif o.parent.name == 'ThrownBottle':
+                key = ('ThrownBottle',)
             else:
                 key = (o.parent.name, o.data.materials[0].name)
             batches.setdefault(key, []).append(o)
@@ -283,8 +408,10 @@ if __name__ == '__main__':
             active = next((o for o in objects if o.name == 'Magazine'), objects[0])
             bpy.context.view_layer.objects.active = active
             if len(objects) > 1: bpy.ops.object.join()
-            active.name = 'Magazine' if key == ('Magazine',) else 'Parts_' + key[1]
-        for name,p in [('Muzzle',MUZZLES[kind]),('Eject',(.058,.044,-.06))]:
+            active.name = {('Magazine',): 'Magazine', ('ThrownBottle',): 'Bottle'}.get(key) or 'Parts_' + key[1]
+        # Thrown bottles eject no casings.
+        markers = [('Muzzle',MUZZLES[kind])] + ([] if kind == 'pulse' else [('Eject',(.058,.044,-.06))])
+        for name,p in markers:
             o=bpy.data.objects.new(name,None); bpy.context.collection.objects.link(o); o.parent=ROOT; o.location=xyz(p)
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,kind+'.glb'),export_format='GLB',use_selection=True,export_apply=True)

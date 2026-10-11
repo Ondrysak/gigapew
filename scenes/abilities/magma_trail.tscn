@@ -46,8 +46,8 @@ size = Vector3(0.07, 0.07, 0.07)
 
 [node name="MagmaTrail" type="Node3D" node_paths=PackedStringArray("patch_template", "aura")]
 script = ExtResource("1_ability")
-display_name = "Magma Trail"
-description = "For 6 s you leave burning magma in your wake. Each patch lasts 3.5 s and scorches enemies inside for 9 damage every 0.3 s."
+display_name = "Brikulóza"
+description = "Na 6 s za sebou necháváš hořící stopu. Každá skvrna vydrží 3,5 s a pálí za 9 poškození každých 0,3 s."
 base_cooldown = 15.0
 accent_color = Color(1, 0.35, 0.1, 1)
 synth_activate = &"flame"

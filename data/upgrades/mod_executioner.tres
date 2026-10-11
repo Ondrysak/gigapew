@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"mod_executioner"
-display_name = "Executioner Core"
-description = "Main-gun direct hits deal +60% damage to enemies already below 35% HP."
+display_name = "Poslední účet"
+description = "Přímé zásahy hlavní zbraní mají +60 % poškození proti nepřátelům, kteří už mají méně než 35 % zdraví."
 kind = 4
 max_level = 1
 weight = 0.8

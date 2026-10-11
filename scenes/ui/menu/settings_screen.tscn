@@ -35,7 +35,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="Center"]
-custom_minimum_size = Vector2(640, 0)
+custom_minimum_size = Vector2(720, 0)
 layout_mode = 2
 
 [node name="Rows" type="VBoxContainer" parent="Center/Panel"]
@@ -45,12 +45,12 @@ theme_override_constants/separation = 16
 [node name="Title" type="Label" parent="Center/Panel/Rows"]
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-text = "SETTINGS"
+text = "NASTAVENÍ"
 
 [node name="Section" type="Label" parent="Center/Panel/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "AUDIO · CONTROLS · DISPLAY — SAVED AUTOMATICALLY"
+text = "ZVUK · OVLÁDÁNÍ · OBRAZ — UKLÁDÁ SE SAMO"
 
 [node name="Separator" type="HSeparator" parent="Center/Panel/Rows"]
 layout_mode = 2
@@ -63,7 +63,7 @@ columns = 3
 
 [node name="MasterName" type="Label" parent="Center/Panel/Rows/Grid"]
 layout_mode = 2
-text = "MASTER VOLUME"
+text = "CELKOVÁ HLASITOST"
 
 [node name="MasterSlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
 custom_minimum_size = Vector2(300, 28)
@@ -83,7 +83,7 @@ horizontal_alignment = 2
 
 [node name="MusicName" type="Label" parent="Center/Panel/Rows/Grid"]
 layout_mode = 2
-text = "MUSIC"
+text = "HUDBA"
 
 [node name="MusicSlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
 custom_minimum_size = Vector2(300, 28)
@@ -103,7 +103,7 @@ horizontal_alignment = 2
 
 [node name="SfxName" type="Label" parent="Center/Panel/Rows/Grid"]
 layout_mode = 2
-text = "EFFECTS"
+text = "ZVUKOVÉ EFEKTY"
 
 [node name="SfxSlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
 custom_minimum_size = Vector2(300, 28)
@@ -123,7 +123,7 @@ horizontal_alignment = 2
 
 [node name="SensitivityName" type="Label" parent="Center/Panel/Rows/Grid"]
 layout_mode = 2
-text = "MOUSE SENSITIVITY"
+text = "CITLIVOST MYŠI"
 
 [node name="SensitivitySlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
 custom_minimum_size = Vector2(300, 28)
@@ -143,17 +143,17 @@ horizontal_alignment = 2
 
 [node name="Fullscreen" type="CheckButton" parent="Center/Panel/Rows"]
 layout_mode = 2
-text = "FULLSCREEN"
+text = "CELÁ OBRAZOVKA"
 
 [node name="Guided" type="CheckButton" parent="Center/Panel/Rows"]
 layout_mode = 2
-tooltip_text = "New runs start with one skill and unlock the rest by level; first-time tips explain each system."
-text = "GUIDED START · GRADUAL SKILLS AND TIPS"
+tooltip_text = "Zapnuto: začínáš jedním trikem, další se odemykají na úrovních 2, 3, 5 a 7. Rady vysvětlí základní systémy. Vypnuto: všech pět triků od startu a žádné rady."
+text = "RADY DO ZAČÁTKU"
 
 [node name="ResetTips" type="Button" parent="Center/Panel/Rows"]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "SHOW TIPS AGAIN"
+text = "ZNOVU UKAZOVAT RADY"
 
 [node name="Separator2" type="HSeparator" parent="Center/Panel/Rows"]
 layout_mode = 2
@@ -161,4 +161,4 @@ layout_mode = 2
 [node name="Back" type="Button" parent="Center/Panel/Rows"]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "BACK  [ESC]"
+text = "ZPĚT  [ESC]"

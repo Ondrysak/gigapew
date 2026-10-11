@@ -75,8 +75,8 @@ ring_segments = 6
 
 [node name="DrillDash" type="Node3D" node_paths=PackedStringArray("drill", "drill_bit", "debris_template", "ring_template")]
 script = ExtResource("1_ability")
-display_name = "Drill Dash"
-description = "Burrow 14 m forward, untouchable. The drill grinds everything in its path for 80 damage, then you erupt for 50 damage in a 4 m blast."
+display_name = "Ilegal street racer"
+description = "Nezranitelně prorazíš 14 m vpřed. Cesta zasáhne za 80 poškození; na konci výbuch za 50 do 4 m."
 base_cooldown = 11.0
 accent_color = Color(1, 0.62, 0.2, 1)
 synth_activate = &"spin"

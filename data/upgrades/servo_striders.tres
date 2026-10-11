@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"servo_striders"
-display_name = "Servo Striders"
-description = "Move 7% faster (total +7%)."
-level_descriptions = PackedStringArray("Move 7% faster (total +7%).", "Move 7% faster (total +14%).", "Move 7% faster (total +21%).", "Move 7% faster (total +28%).", "Move 7% faster (total +35%).")
+display_name = "Tenisky z tržnice"
+description = "Pohyb o 7 % rychlejší (celkem +7 %)."
+level_descriptions = PackedStringArray("Pohyb o 7 % rychlejší (celkem +7 %).", "Pohyb o 7 % rychlejší (celkem +14 %).", "Pohyb o 7 % rychlejší (celkem +21 %).", "Pohyb o 7 % rychlejší (celkem +28 %).", "Pohyb o 7 % rychlejší (celkem +35 %).")
 max_level = 5
 weight = 1.0
 accent_color = Color(0.35, 1.0, 0.55, 1)

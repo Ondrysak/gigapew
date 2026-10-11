@@ -92,7 +92,7 @@ func burst_hit(definition: HordeEnemyDefinition, at: Vector3) -> void:
 		return
 	_hits_this_frame += 1
 	var color := definition.fx_color
-	if definition.faction == HordeEnemyDefinition.Faction.ALIEN:
+	if definition.faction == HordeEnemyDefinition.Faction.FLESH:
 		for n in 2:
 			_emit(GOO, at, _spray(3.5, 2.5), 0.45, _rng.randf_range(0.05, 0.08), color)
 	else:
@@ -108,7 +108,7 @@ func burst_death(definition: HordeEnemyDefinition, at: Vector3) -> void:
 	var reach := sqrt(bulk)
 	var color := definition.fx_color
 	var pieces := roundi(3.0 * bulk) * (3 if definition.is_boss else 1)
-	if definition.faction == HordeEnemyDefinition.Faction.ALIEN:
+	if definition.faction == HordeEnemyDefinition.Faction.FLESH:
 		for n in pieces + 2:
 			_emit(GOO, at, _spray(4.5 * reach, 4.0), 0.8, _rng.randf_range(0.07, 0.13) * reach, color)
 		_emit(SPLAT, Vector3(at.x, at.y - definition.height * 0.5 + 0.02, at.z), Vector3.ZERO, 1.4, definition.radius * 1.6, color.darkened(0.25))

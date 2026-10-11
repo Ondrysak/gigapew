@@ -48,7 +48,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"HeaderLabel"
-text = "SERVICE RECORD"
+text = "ÚČTY A REKORDY"
 
 [node name="CurrencyBar" parent="Center/Panel/Rows/Header" instance=ExtResource("2_currency")]
 layout_mode = 2
@@ -74,7 +74,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/Runs/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "RUNS DEPLOYED"
+text = "VÝPRAVY DO ULIC"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/Runs/Rows"]
 layout_mode = 2
@@ -94,7 +94,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/Victories/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "VICTORIES"
+text = "VÍTĚZSTVÍ"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/Victories/Rows"]
 layout_mode = 2
@@ -114,7 +114,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/TotalKills/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "TOTAL KILLS"
+text = "ZABITÍ CELKEM"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/TotalKills/Rows"]
 layout_mode = 2
@@ -134,7 +134,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/BestKills/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "BEST KILLS"
+text = "REKORD ZABITÍ"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/BestKills/Rows"]
 layout_mode = 2
@@ -154,7 +154,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/BestTime/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "LONGEST RUN"
+text = "NEJDELŠÍ VÝPRAVA"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/BestTime/Rows"]
 layout_mode = 2
@@ -174,7 +174,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/DeepestStage/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "DEEPEST PUSH"
+text = "HOTOVÉ SEKTORY"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/DeepestStage/Rows"]
 layout_mode = 2
@@ -194,7 +194,7 @@ theme_override_constants/separation = 4
 [node name="Name" type="Label" parent="Center/Panel/Rows/Grid/BestLevel/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "HIGHEST LEVEL"
+text = "NEJVYŠŠÍ ÚROVEŇ"
 
 [node name="Value" type="Label" parent="Center/Panel/Rows/Grid/BestLevel/Rows"]
 layout_mode = 2
@@ -205,13 +205,13 @@ text = "0"
 [node name="LastRunTitle" type="Label" parent="Center/Panel/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "LAST DEPLOYMENT"
+text = "POSLEDNÍ ÚČET"
 
 [node name="LastRun" type="Label" parent="Center/Panel/Rows"]
 custom_minimum_size = Vector2(760, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "No runs on record yet."
+text = "Zatím žádná výprava."
 autowrap_mode = 2
 
 [node name="Separator2" type="HSeparator" parent="Center/Panel/Rows"]
@@ -220,4 +220,4 @@ layout_mode = 2
 [node name="Back" type="Button" parent="Center/Panel/Rows"]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "BACK  [ESC]"
+text = "ZPĚT  [ESC]"

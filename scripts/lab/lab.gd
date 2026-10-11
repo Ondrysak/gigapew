@@ -154,8 +154,8 @@ func aim_at(point: Vector3) -> void:
 	var flat := Vector2(direction.x, direction.z).length()
 	player.head.rotation.x = clampf(atan2(direction.y, flat), deg_to_rad(-85.0), deg_to_rad(85.0))
 
-## Geodes have hollow centres. Aim at a live section tip, then prove the physics
-## ray actually hits that deposit before a mining scenario holds F.
+## Aim at a live machine latch and prove the first physics hit is a compartment,
+## not the permanent frame/backing, before a salvage scenario holds F.
 func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
 	var player := game.player
 	var stand := deposit.global_position + deposit.global_basis.z.normalized() * distance
@@ -168,13 +168,13 @@ func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
 		if float(section["health"]) <= 0.0:
 			continue
 		var mesh: MeshInstance3D = section["mesh"]
-		var point: Vector3 = section["weak_position"].lerp(mesh.get_aabb().get_center(), 0.12)
+		var point: Vector3 = mesh.transform * (section["weak_position"] as Vector3)
 		aim_at(deposit.to_global(point))
 		await get_tree().physics_frame
 		query.from = player.camera.global_position
 		query.to = query.from - player.head.global_basis.z * (3.05 if distance <= 3.2 else distance + 3.0)
 		var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
-		if not hit.is_empty() and hit["collider"] == deposit:
+		if not hit.is_empty() and hit["collider"] == deposit and not deposit.feedback_at(hit["position"], int(hit["shape"])).is_empty():
 			return true
 	return false
 

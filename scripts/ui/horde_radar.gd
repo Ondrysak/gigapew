@@ -6,12 +6,12 @@ extends Control
 
 @export var range_meters := 32.0
 @export var max_dots := 350
-@export var background := Color(0.01, 0.03, 0.045, 0.78)
-@export var ring_color := Color(0.1, 0.75, 0.8, 0.45)
-@export var dot_color := Color(1.0, 0.25, 0.45, 0.9)
-@export var boss_color := Color(1.0, 0.75, 0.2, 1.0)
-@export var player_color := Color(0.7, 1.0, 0.95, 1.0)
-@export var wall_color := Color(0.4, 0.62, 0.7, 0.5)
+@export var background := Color(0.07, 0.057, 0.042, 0.94)
+@export var ring_color := Color(0.65, 0.54, 0.34, 0.6)
+@export var dot_color := Color(0.88, 0.34, 0.25, 0.95)
+@export var boss_color := Color(0.89, 0.66, 0.3, 1.0)
+@export var player_color := Color(0.91, 0.85, 0.69, 1.0)
+@export var wall_color := Color(0.57, 0.53, 0.4, 0.6)
 
 var _positions := PackedVector2Array()
 var _count := 0
@@ -33,6 +33,7 @@ var _wall_cell_size := 0.0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	StreetWear.apply(self)
 
 func set_extraction_point(at: Vector2) -> void:
 	_pod = at
@@ -79,9 +80,13 @@ func _map(world: Vector2) -> Vector2:
 func _draw() -> void:
 	var center := size * 0.5
 	var radius := size.x * 0.5
-	draw_circle(center, radius, background)
-	draw_arc(center, radius - 1.0, 0.0, TAU, 48, ring_color, 2.0, true)
-	draw_arc(center, radius * 0.5, 0.0, TAU, 32, Color(ring_color, ring_color.a * 0.5), 1.0, true)
+	draw_rect(Rect2(Vector2.ZERO, size), background)
+	# A worn street-map inset, not a luminous scanner bezel.
+	draw_line(Vector2(9, 3), Vector2(size.x - 15, 3), ring_color, 2.0)
+	draw_line(Vector2(3, 11), Vector2(3, size.y - 7), ring_color, 1.0)
+	draw_line(Vector2(12, size.y - 3), Vector2(size.x - 4, size.y - 3), ring_color, 2.0)
+	draw_line(Vector2(size.x - 3, 7), Vector2(size.x - 3, size.y - 18), ring_color, 1.0)
+	draw_arc(center, radius * 0.5, 0.1, PI - 0.2, 24, Color(ring_color, ring_color.a * 0.4), 1.0, true)
 	if not _wall_cells.is_empty():
 		# Same mapping as _map, applied to whole cells so walls keep their shape.
 		draw_set_transform(center, _yaw, Vector2.ONE * radius / range_meters)
@@ -101,12 +106,13 @@ func _draw() -> void:
 	if _pod != Vector2.INF:
 		# Clamped to the rim when out of range, so it always points the way.
 		var at := _map(_pod)
-		draw_circle(at, 9.0, Color(ExtractionPod.COLOR, 0.35))
-		draw_arc(at, 9.0, 0.0, TAU, 16, ExtractionPod.COLOR, 2.0, true)
-		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -5), at + Vector2(4, 0), at + Vector2(0, 5), at + Vector2(-4, 0)]), ExtractionPod.COLOR)
+		var ink := Color(0.73, 0.75, 0.43)
+		draw_circle(at, 9.0, Color(ink, 0.25))
+		draw_arc(at, 9.0, 0.0, TAU, 16, ink, 2.0, true)
+		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -5), at + Vector2(4, 0), at + Vector2(0, 5), at + Vector2(-4, 0)]), ink)
 	if _vein != Vector2.INF:
 		var point := _map(_vein)
-		var color := Color(0.35, 1.0, 0.78) if _vein_ready else Color(1.0, 0.7, 0.24)
+		var color := Color(0.73, 0.75, 0.43) if _vein_ready else Color(0.83, 0.61, 0.3)
 		draw_circle(point, 10.0, Color(color, 0.3))
 		draw_arc(point, 10.0, 0.0, TAU, 16, color, 1.5, true)
 		if _vein_icon != null:

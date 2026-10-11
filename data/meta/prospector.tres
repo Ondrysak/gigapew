@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 mining_multiplier = 0.15
 id = &"prospector"
-display_name = "Prospector"
-description = "Hardened drill bits: +15% mining damage per level."
+display_name = "Páka z bazaru"
+description = "Za každou úroveň: +15 % rychlosti páčení."
 accent_color = Color(1, 0.75, 0.25, 1)
 costs = PackedInt32Array(50, 100, 180, 300, 450)
 currency = &"gold"

@@ -37,8 +37,8 @@ ring_segments = 6
 
 [node name="PulseBarrier" type="Node3D" node_paths=PackedStringArray("shield", "pulse")]
 script = ExtResource("1_ability")
-display_name = "Pulse Barrier"
-description = "A brief shield and a damaging repel pulse. Combos: cast near your Gravity Well to COLLAPSE it; dash or leap while shielded to SHIELD RAM on landing."
+display_name = "Valhalla"
+description = "Krátký štít a zraňující tlaková vlna. U Ban zóny spustí PERMABAN. Úprk či skok se štítem spustí při dopadu LAST TIME KRATOS."
 base_cooldown = 14.0
 accent_color = Color(0.25, 0.85, 1, 1)
 synth_activate = &"bulwark"

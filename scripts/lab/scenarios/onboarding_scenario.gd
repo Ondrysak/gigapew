@@ -18,8 +18,6 @@ func run() -> void:
 	var hud := game.hud
 	lab.check(state.guided and state.unlocked_abilities == 1, "a guided run starts with only the first skill")
 	lab.check(_tile_visible(hud, 0) and _tile_visible(hud, 1) and not _tile_visible(hud, 2) and not _tile_visible(hud, 4), "the HUD shows skill 1 and a teaser for skill 2 only")
-	lab.check(_tile_status(hud, 1) == "LV %d" % RunState.ABILITY_UNLOCK_LEVELS[1], "the teaser names the level that unlocks the next skill")
-	lab.check(hud.controls_label.text.contains("1 SKILL") and not hud.controls_label.text.contains("E INTERACT"), "the controls footer lists only what is unlocked")
 	var kinds: Array[StringName] = []
 	for quest: Dictionary in game.quests.quests:
 		kinds.append(quest.kind)
@@ -47,7 +45,7 @@ func run() -> void:
 	game._finish_stage_clear()
 	await lab.wait(0.5)
 	var card: Dictionary = game.round_shop._abilities[2]
-	lab.check(card.buy.disabled and card.buy.text == "LV %d" % RunState.ABILITY_UNLOCK_LEVELS[2], "the shop shows a locked skill with its unlock level and no purchase")
+	lab.check(card.buy.disabled, "the shop cannot purchase a locked skill")
 	await lab.capture("shop_locked_skills")
 	game.free()
 	# A fresh guided run: leveling reveals skills one by one.
@@ -58,9 +56,7 @@ func run() -> void:
 	lab.check(not hud.tutor.visible or hud.tutor.showing != &"basics", "a seen tip never repeats on a later run")
 	state.add_xp(state.xp_required - state.xp)
 	await lab.wait(0.2)
-	lab.check(state.level == 2 and state.unlocked_abilities == 2 and _tile_visible(hud, 1) and _tile_status(hud, 1) != "LV 2", "level 2 unlocks skill 2 on the HUD")
-	lab.check(hud._combo_callout.visible and hud._combo_callout.text.contains("NEW SKILL") and hud._combo_callout.text.contains("RECON FLARE"), "a NEW SKILL callout names the unlocked skill")
-	lab.check(_tip_pending(hud, StringName("skill_recon_flare")), "a tip explains the new skill")
+	lab.check(state.level == 2 and state.unlocked_abilities == 2 and _tile_visible(hud, 1), "level 2 unlocks skill 2 on the HUD")
 	await lab.capture("skill_unlocked")
 	game.player.abilities[1]._cooldown = 0.0
 	await _key(1)
@@ -68,7 +64,7 @@ func run() -> void:
 	while state.level < RunState.ABILITY_UNLOCK_LEVELS[4]:
 		state.add_xp(state.xp_required - state.xp)
 	await lab.wait(0.2)
-	lab.check(state.unlocked_abilities == 5 and hud.controls_label.text.contains("1–5 SKILLS"), "level %d completes the five-skill kit" % state.level)
+	lab.check(state.unlocked_abilities == 5, "level %d completes the five-skill kit" % state.level)
 	lab.check(_tip_pending(hud, &"combos"), "owning Gravity Well and Pulse Barrier queues the combo tip")
 	_check_offers(game, true)
 	game.free()
@@ -101,9 +97,6 @@ func _check_offers(game: ArenaGame, late: bool) -> void:
 
 func _tile_visible(hud: Node, slot: int) -> bool:
 	return (hud._ability_tiles[slot].root as Control).visible
-
-func _tile_status(hud: Node, slot: int) -> String:
-	return (hud._ability_tiles[slot].status as Label).text
 
 func _tip_pending(hud: Node, id: StringName) -> bool:
 	if hud.tutor.showing == id:

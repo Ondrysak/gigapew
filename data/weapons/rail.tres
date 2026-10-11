@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Rail"
-description = "Long-range piercing rifle"
+display_name = "Excalibur"
+description = "Těžký průraz na dálku. Jedna rána projde celou řadou halucinací."
 damage = 240
 recoil_degrees = 0.22
 fire_interval = 0.45

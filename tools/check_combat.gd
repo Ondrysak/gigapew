@@ -12,7 +12,17 @@ func _check(condition: bool, message: String) -> void:
 		push_error(message)
 
 func _run() -> void:
+	# Isolate the fixture from saves and guided progression; this exercises perks directly.
+	var profile := root.get_node("Profile")
+	profile.enter_sandbox()
+	profile.set_setting("guided_start", false)
 	var game = (load("res://scenes/game.tscn") as PackedScene).instantiate()
+	# Precision geometry must not depend on a random campaign wall or raised floor.
+	var fixture = game.campaign[0].duplicate()
+	fixture.world_scene = load("res://scenes/levels/yard.tscn")
+	fixture.play_area = Rect2(-32, -32, 64, 64)
+	fixture.mining_encounter_scene = null
+	game.campaign[0] = fixture
 	root.add_child(game)
 	game.director.set_physics_process(false)
 	game.horde.set_physics_process(false)
@@ -133,13 +143,18 @@ func _check_precision(game) -> void:
 	_shoot_at(player, Vector3(0, 3.7, 9))
 	_check(is_equal_approx(horde._hp[slot], 970.0), "Precision volume did not follow enemy feet height")
 	horde.clear()
-	var tank = load("res://data/enemies/robot_tank.tres")
+	var tank = load("res://data/enemies/robot_bulwark.tres")
 	slot = horde.spawn(tank, Vector2(0, 9), 1000.0 / tank.max_health)
 	horde._yaw[slot] = PI * 0.5
 	horde._rebuild_grid()
-	_shoot_at(player, Vector3(-0.8, 1.95, 9))
+	var rotated_core: Vector3 = Vector3(0, horde._y[slot], 9) \
+			+ Basis(Vector3.UP, PI * 0.5) * tank.weak_spot_offset * tank.model_scale
+	# The plated bouncer's core also requires a rear approach after yaw.
+	player.global_position = Vector3(4, 1, 9)
+	_shoot_at(player, rotated_core)
 	_check(is_equal_approx(horde._hp[slot], 970.0), "Off-center weak core did not rotate with the enemy")
 	horde.clear()
+	player.global_position = Vector3(0, 1, 12)
 	slot = horde.spawn(definition, Vector2(0, 9), 1000.0 / definition.max_health)
 	horde._yaw[slot] = 0.0
 	horde._rebuild_grid()

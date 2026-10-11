@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"splitter_array"
-display_name = "Splitter Array"
-description = "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +1)."
-level_descriptions = PackedStringArray("+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +1).", "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +2).", "+1 drone, shell, arc jump, nova echo, saw blade, turret and rocket (total +3).")
+display_name = "Čtyři setupy nestačí"
+description = "+1 pomocník, nálož, přeskok blesku, ozvěna vlny, kotouč, věžička a rachejtle (celkem +1)."
+level_descriptions = PackedStringArray("+1 pomocník, nálož, přeskok blesku, ozvěna vlny, kotouč, věžička a rachejtle (celkem +1).", "+1 pomocník, nálož, přeskok blesku, ozvěna vlny, kotouč, věžička a rachejtle (celkem +2).", "+1 pomocník, nálož, přeskok blesku, ozvěna vlny, kotouč, věžička a rachejtle (celkem +3).")
 max_level = 3
 weight = 0.6
 accent_color = Color(1.0, 0.8, 0.25, 1)

@@ -1,0 +1,37 @@
+{
+ "id": "robot_bulwark",
+ "source_vertices": 1169,
+ "columns": 1169,
+ "texture": [
+  1169,
+  72
+ ],
+ "clips": [
+  {
+   "name": "move",
+   "action": "Walk_Carry",
+   "start": 0,
+   "frames": 25,
+   "fps": 20.0,
+   "loop": true
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 25,
+   "frames": 47,
+   "fps": 20.072727272727274,
+   "loop": false
+  }
+ ],
+ "materials": [
+  "Skin",
+  "Shirt",
+  "Vest",
+  "Pants",
+  "Hat",
+  "Face"
+ ],
+ "textures": {},
+ "rest_vertices": 1169
+}

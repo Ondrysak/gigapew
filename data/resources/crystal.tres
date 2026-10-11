@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"crystal"
-display_name = "Cinder Crystal"
+display_name = "Cigára"
 color = Color(1, 0.38, 0.14, 1)
 icon = ExtResource("icon_px")
 supply_value = 1

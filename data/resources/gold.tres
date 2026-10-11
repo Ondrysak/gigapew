@@ -6,6 +6,6 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"gold"
-display_name = "Gold"
+display_name = "Drobné"
 color = Color(1, 0.78, 0.22, 1)
 icon = ExtResource("icon_px")

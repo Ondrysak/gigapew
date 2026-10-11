@@ -15,10 +15,10 @@
 script = ExtResource("1_class")
 cooldown_multiplier = -0.1
 id = &"engineer"
-display_name = "Engineer"
-tagline = "Let the machines do the killing."
-description = "A deployable support kit: Overdrive accelerates automated weapons, Platform Turret holds a firing lane, and Repair Drone heals, shields and zaps nearby enemies. Gravity Well gathers packs; Pulse Barrier covers repositioning. Starts with a Sentry and -10% auto cooldown."
-accent_color = Color(0.5, 1, 0.38, 1)
+display_name = "Aleš legendary skillz"
+tagline = "Vždycky řekne: pojď někam jdem."
+description = "Legendární podpora party. Unlimited god mode on zrychlí automatické zbraně, 4 setupy hlídají směr a Sony s rejzí léčí, přidává štít a zasahuje blízké nepřátele. Ban zóna stáhne dav, Valhalla kryje přesun. Začíná s automatickou věží; −10 % prodlevy automatických zbraní."
+accent_color = Color(0.53, 0.55, 0.34, 1)
 primary_weapon = ExtResource("3_pulse")
 starting_upgrades = Array[ExtResource("6_upgrade")]([ExtResource("7_sentry")])
 ability_scenes = Array[PackedScene]([ExtResource("5_ability"), ExtResource("8_alt"), ExtResource("9_alt"), ExtResource("gravity"), ExtResource("barrier")])

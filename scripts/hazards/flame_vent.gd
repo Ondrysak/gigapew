@@ -191,13 +191,13 @@ func _update_prompt() -> void:
 		_prompt_key = key
 		match _state:
 			State.READY:
-				prompt.text = "[E] OPEN FUEL VALVE"
+				prompt.text = "[E] OTEVŘÍT PALIVOVÝ VENTIL"
 				prompt.modulate = prompt_color
 			State.PRIMING, State.BURNING:
-				prompt.text = "VENTING"
+				prompt.text = "PLAMENY"
 				prompt.modulate = busy_color
 			State.COOLDOWN:
-				prompt.text = "REFUELING\n%ds" % seconds
+				prompt.text = "DOPLŇOVÁNÍ PALIVA\n%ds" % seconds
 				prompt.modulate = prompt_color.darkened(0.35)
 	if not prompt.visible:
 		prompt.show()

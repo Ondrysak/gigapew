@@ -4,6 +4,35 @@ Pracovní dokument reskinu. Hratelnost zůstává (hordy, kontrakty, extrakce,
 pět skillů, komba, Guided start); mění se svět, příběh, jména, zvuky a modely.
 Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
 
+### Implementováno v aktuálním source
+
+- Všech jedenáct nepřátelských slotů má nové modely podle bestiáře níže.
+  Šest lidí je přebarvených z CC0 Quaternius packu; myška, šváb, lahev,
+  automat a Jackpot jsou vlastní generované rigy. Pohyb, útok a smrt se pečou do VAT.
+- První improvizovaná zbraň **Lahve od piva**: špinavá ruka v bezprsté
+  rukavici, hnědá pivní lahev, letící lahve a skleněné střepy s pěnou.
+  Ostatních pět hlavních modelů zbraní zůstává původních.
+- První generovaný sektor má žižkovské činžáky, pavlače, dlažbu, HERNA NONSTOP,
+  PIVO, sodíkové lampy a vysílač. Geometrie kontraktů a kolizí se nemění.
+  Palmovka/Hlavák mají nové názvy, zatím původní prostředí.
+- Drobné, Cigára a Kešulky mají nové názvy a pixelové ikony. Skilly a
+  komba používají schválená jména; parta je Luďas, Vítek ultras, Mikoláš
+  hajzldítě a Aleš legendary skillz. Interní ID tříd zůstávají původní.
+- Všechny XP upgrady, trvalé talenty, recepty, nabídky obchodu a mastery
+  mají české názvy a konkrétní popisy skutečných efektů. Čísla a ceny zůstávají.
+- Krystaly a vrtačka jsou nahrazené banky automatů a páčidlem:
+  skutečné přihrádky se páčí, dvířka se otevírají a rozbíjejí, kořist se
+  zachovává a prázdná skříň zůstává. Dropy jsou mince, krabičky cigaret a žetony.
+- Celé UI používá české texty, špinavý papír/kov, oprýskané rámy a tlumenou
+  tabákovou, rezavou a jantarovou paletu: úvod, menu, výběr party, bazar,
+  nastavení/rekordy, pauza, upgrady, HUD/rady, obchod, interakce a smrt/kořist.
+  Anglické schválené hlášky a jména z bible zůstávají; nejde o neonový terminál.
+- Hlasová banka obsahuje 19 klipů. Z delších zpráv přibyly fráze
+  `street_racer`, `jedno_kolo`, `takhle`, `plna_rychlost` pro variace reakcí.
+- Zvolený konec B je zapsaný v kapitole 5; tento asset pass nepřidává
+  příběhové cutscény ani svatební dialogy.
+
+
 ## 1. Logline
 
 Samozvaná DJ legenda Luďas prochlastal, prošlehal a v automatech protočil
@@ -82,39 +111,43 @@ extrakce, obchod mezi úrovněmi).
 - **Palmovka:** kocovina, bazar, zastavárna, zelináři a street raceři. Gramce
   zpátky, ale na Hlaváku se hraje *svatba* a DJ tam chybí („100k za svatbu“).
 - **Hlavák:** Tartarus. Kerberos u Fantovky, jackpot, poslední set.
-- **Epilog A (výchozí):** na svatbě nikdo není, jen bezdomovci z Hlaváku, a ti
-  jako první zůstanou až do konce. „Já sem se změnil, už hejtit nebudu lidi
-  takhle.“
-- **Epilog B:** probudí se znovu v septiku. „User not found, probíhá
-  reinkarnace.“
+- **Epilog (zvolený konec B):** po posledním setu se Luďas probudí znovu v
+  septiku na Žižkově. Telefon: nikdo neodepisuje. „User not found, probíhá
+  reinkarnace.“ Smyčka — další běh začíná stejně.
 
 Repliky z videa svatby („Nemám ani jednu svatební fotku!“, „Kde máš sako?“,
 „Dělej, je na stole, kytka!“) patří svatebčanům ve finále.
 
-## 6. Bestiář: halucinace
+## 6. Bestiář: halucinace (mix podle sektoru)
 
-Mapování na existující nepřátele (statistiky a role zůstávají).
+Statistiky a role zůstávají; mění se modely, jména a barvy. Jak se trip
+zhoršuje, mizí lidé a zůstává čisté delirium.
 
-### Frakce HEJT (Žižkov, Palmovka; dnes roboti)
+### Ztracené existence (Žižkov, Palmovka; dnes sloty `robot_*`)
+
+Lidské CC0 modely, přebarvené do sešlých devadesátkových hadrů, groteskně
+zvětšené proporce.
+
+| Slot | Postava | Role | Popis |
+| --- | --- | --- | --- |
+| robot_grunt | **Bezdomovec** | roj | igelitka, rozedraná bunda, šourá se v houfech |
+| robot_runner | **Feťák** | rychlík | vyzáblý, sprintuje |
+| robot_spitter | **Alkoholik** | plivač | z dálky hází lahve |
+| robot_tank | **Veksl­ák** | tank | kožená bunda, zlaté řetězy, obr |
+| robot_bulwark | **Vyhazovač** | obrněný zepředu | drží před sebou dveře z herny, slabé místo na zádech |
+| robot_boss | **Pan Herna** | boss | majitel herny NONSTOP, obří gambler |
+
+### Čisté delirium (Hlavák; dnes sloty `alien_*`)
+
+Vlastní low-poly modely z Blenderu s jednoduchou kostrou.
 
 | Slot | Halucinace | Role | Popis |
 | --- | --- | --- | --- |
-| robot_grunt | **Knírač** | roj | malý chlápek s obřím knírem |
-| robot_runner | **Ilegal street racer** | rychlík | „ILL3G4L ST33T R4C3R“, sprintuje s volantem |
-| robot_spitter | **Zelinář** | plivač | vegetarián plivající brokolici |
-| robot_tank | **Septikovej** | tank | golem ze septiku |
-| robot_bulwark | **Podržtaška** | obrněný zepředu | kryje se aktovkou, slabé místo vzadu |
-| robot_boss | **Velkej Vrába** | boss | „hladí si knír od hoven a válí se ve vegetables“ |
-
-### Frakce TARTARUS (Hlavák; dnes mimozemšťani)
-
-| Slot | Halucinace | Role | Popis |
-| --- | --- | --- | --- |
-| alien_grunt | **Bílá myška** | roj | klasika deliria |
-| alien_runner | **Revizák** | rychlík | „Jízdenky prosím“ |
-| alien_spitter | **Jednoruký bandita** | plivač | automat plivající žetony |
-| alien_tank | **Sbratření** | beran | partyzán s rudoarmějcem, útočí v objetí |
-| alien_boss | **Kerberos z Fantovky** | boss | tříhlavý strážce Tartaru |
+| alien_grunt | **Bílá myška** | roj | klasika deliria tremens |
+| alien_runner | **Šváb z herny** | rychlík | obří šváb |
+| alien_spitter | **Lahev rumu** | plivač | chodící lahev, plive rum |
+| alien_tank | **Jednoruký bandita** | beran | výherní automat na nohou |
+| alien_boss | **Pan Jackpot** | boss | obří automat se třemi válci |
 
 ## 7. Zbraně (civilní improvizace, role zůstávají)
 
@@ -156,6 +189,17 @@ Komba: CRUSH → **POWNED**, COLLAPSE → **PERMABAN**, SHIELD RAM → **LAST TI
 | Cinder Crystal | **Cigára** | z automatů na cigarety, platidlo scény |
 | Void Shard | **Kešulky** (žetony) | vzácný jackpot |
 
+### Páčení automatů
+
+Zblízka zamiř na živou přihrádku a drž **F**. Páčidlo se vysune samo,
+zasune do zámku a páčí dvířka zpátky. Když odběhneš bojovat, poškození zůstává.
+Zámek označený **+** dává ×1,75; práce na stejné západce postupně přidá
+až +35 % rychlosti. Dvířka mají vlastní skutečné kolidery, po rozbití se
+odstraní a vyplatí jen svůj díl předem určené kořisti. Prázdná skříň zůstává
+a nejde vybrat znovu. Zbraň, skill, vzdálený cíl ani cíl za zdí kořist nevydají.
+Kontrakt počítá skutečně vypáčené jednotky, ne sebrané či uložené peníze.
+
+
 ## 10. Hlas a hlášky
 
 - **Repliky z videa** (doslova, beze změn): svatebčané, halucinace v boji.
@@ -175,7 +219,7 @@ Komba: CRUSH → **POWNED**, COLLAPSE → **PERMABAN**, SHIELD RAM → **LAST TI
 
 ## 12. Otevřené otázky
 
-- Konec A, nebo B?
+- ~~Konec A, nebo B?~~ → B (smyčka v septiku).
 - Miminka na vysílači: jsou až z roku 2000. Halucinace navíc pro finále?
 - Dobová hudba: punk, raný techno, dechovka z hospody?
 - Které Luďasovy hlášky chceš povinně ve hře?

@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Minigun"
-description = "Rotary firearm that builds to full cadence"
+display_name = "Holubí letka"
+description = "Nepřetržitý proud projektilů. Chvíli trvá, než nabere plné tempo."
 damage = 26
 recoil_degrees = 0.04
 fire_interval = 0.032

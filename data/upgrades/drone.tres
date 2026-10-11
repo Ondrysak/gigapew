@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"drone"
-display_name = "Sentry Drones"
-description = "Deploy an orbiting drone that snipes the nearest enemy within 18 m."
-level_descriptions = PackedStringArray("Deploy an orbiting drone that snipes the nearest enemy within 18 m.", "Drones hit 25% harder and fire faster.", "Deploy a second drone.", "Drones hit 25% harder and fire faster.", "Deploy a third drone.")
+display_name = "Lítající pager"
+description = "Kolem tebe létá pomocník a střílí na nejbližšího nepřítele do 18 m."
+level_descriptions = PackedStringArray("Kolem tebe létá pomocník a střílí na nejbližšího nepřítele do 18 m.", "Poškození +25 % ze základu a rychlejší střelba.", "Přidá druhého lítajícího pomocníka.", "Poškození +25 % ze základu a rychlejší střelba.", "Přidá třetího lítajícího pomocníka.")
 kind = 1
 max_level = 5
 weight = 1.3

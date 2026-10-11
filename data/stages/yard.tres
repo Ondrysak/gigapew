@@ -8,8 +8,8 @@
 [resource]
 script = ExtResource("definition")
 id = &"yard"
-display_name = "Training Yard"
-subtitle = "Sector 01 / live-fire proving ground"
+display_name = "Žižkov"
+subtitle = "Kruh I / Ijéééé — pavlače, herny, hospody"
 world_scene = ExtResource("world")
 play_area = Rect2(-44, -44, 88, 88)
 mine_objectives = 1

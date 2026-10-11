@@ -1,5 +1,52 @@
 # Unreleased source changes
 
+- Full street-UI reskin: Czech navigation, character profiles, workshop,
+  settings/records, pause, HUD/tutorial, boss and extraction prompts,
+  upgrade/shop cards and death/banked-loot screens. Dark paper/metal,
+  worn ink, chipped borders and muted tobacco/rust/amber replace neon cyan
+  and glossy framing. The logo uses fixed misregistered ink, not glitch flashes.
+- Party names now follow the bible: Luďas, Vítek ultras, Mikoláš hajzldítě
+  and Aleš legendary skillz. Remaining primary labels/descriptions also follow
+  the bible; their five meshes are unchanged. Input, save IDs and combat effects
+  are preserved. Character selection scrolls to keep full skill descriptions
+  reachable, with taller cards for long names.
+- The `menu` lab now also captures intro, full scrollable party/skill details,
+  records/settings and pause/settings/abandon-confirmation surfaces.
+- Shop purchase coverage uses actual mouse input against a visible stock card,
+  so hidden/blank tab content cannot pass by emitting a button signal.
+
+- Mining is now machine salvage: labelled gambling/cigarette/jackpot cabinets
+  have independently breakable compartments and permanent empty housings.
+  A hooked crowbar inserts/levers under real held-F input instead of spinning
+  a drill. Locks, leverage, persistent damage, reach, occlusion, conserved loot
+  and contract progress remain; drops are coins, cigarette packs and tokens.
+  Removed obsolete crystal/fractal-history shaders and feedback buffers.
+- All 41 XP upgrades, eight permanent talents, workshop recipes, shop stock,
+  skill effect descriptions and mastery/purchase/status previews use Czech
+  scene fiction. IDs, prices and effects are unchanged. Mastery text now
+  distinguishes actual duration/protection/fire-rate scaling rather than
+  claiming the same damage/duration bonuses for every skill.
+
+- Playable Prague asset swap: all eleven enemy slots now use animated human
+  hallucinations or original mouse, cockroach, rum-bottle and slot-machine models.
+  Walk/attack/death VAT replaces the old robot and alien meshes; the bouncer
+  carries a HERNA door with a rear money-pouch precision target. Removed obsolete
+  monster textures and updated the CC0 source credits and bake instructions.
+- The first primary is **Lahve od piva**: gloved-hand beer bottle, pooled
+  tumbling bottle trails and glass/foam impacts instead of muzzle flash and
+  shell casings. Its combat numbers are unchanged. The original Blender gun
+  builder supports `-- --weapon pulse` for selective regeneration.
+- The generated first sector is **Žižkov**, with plaster/brick tenements,
+  pavlače, cobbles, warm sodium lighting, HERNA NONSTOP/PIVO signs and the TV
+  tower. Layout, collisions, mining sites and RNG order are unchanged.
+  Later sectors are labelled **Palmovka** and **Hlavák**; currencies are
+  **Drobné / Cigára / Kešulky** with matching pixel icons.
+- Skill names and combo callouts now follow Luďas's vocabulary without changing
+  their effects. Four additional spoken phrases are cut from longer recordings
+  and used as combo, extraction and clear variants. The bible records ending B:
+  waking back in the Žižkov septik after the last set; no ending cutscene is
+  implemented by this asset pass.
+
 - Reskin started: *LUĎAS: LAST TIME KRATOS*. The design bible
   (`docs/ludas/BIBLE.md`) sets the 90s Prague story, the three circles of
   Tartarus (Žižkov, Palmovka, Hlavák), the hallucination bestiary, improvised

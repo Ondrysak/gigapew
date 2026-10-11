@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"momentum"
-display_name = "Momentum"
-description = "While running at speed, all weapons deal 15% more damage (lingers 0.4 s after you slow down)."
-level_descriptions = PackedStringArray("While running at speed, all weapons deal 15% more damage (lingers 0.4 s after you slow down).", "While running at speed, all weapons deal 25% more damage (lingers 0.4 s after you slow down).", "While running at speed, all weapons deal 35% more damage (lingers 0.4 s after you slow down).")
+display_name = "Plná rychlost"
+description = "Za rychlého běhu mají všechny zbraně +15 % poškození. Bonus trvá 0,4 s po zpomalení."
+level_descriptions = PackedStringArray("Za rychlého běhu mají všechny zbraně +15 % poškození. Bonus trvá 0,4 s po zpomalení.", "Za rychlého běhu mají všechny zbraně +25 % poškození. Bonus trvá 0,4 s po zpomalení.", "Za rychlého běhu mají všechny zbraně +35 % poškození. Bonus trvá 0,4 s po zpomalení.")
 kind = 3
 max_level = 3
 weight = 1.0

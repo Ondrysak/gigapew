@@ -30,6 +30,7 @@ func _ready() -> void:
 	cancel_abandon_button.pressed.connect(_set_confirming.bind(false))
 	confirm_abandon_button.pressed.connect(_abandon)
 	settings.back_requested.connect(_show_main.bind(settings_button))
+	StreetWear.apply_tree(self)
 
 func open() -> void:
 	_open = true

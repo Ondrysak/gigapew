@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"cryo_overclock"
-display_name = "Shatterfrost"
-description = "Chilled enemies shatter when they die, damaging their neighbours. Shatters can chain."
+display_name = "Kocovina na střepy"
+description = "Zchlazení nepřátelé při smrti prasknou a zraní okolí. Praskání se může řetězit."
 kind = 2
 max_level = 1
 weight = 3.0

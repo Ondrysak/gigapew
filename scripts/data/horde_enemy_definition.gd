@@ -5,7 +5,7 @@ extends Resource
 ## Horde; `model_scene` is baked once into a shared mesh for batched drawing.
 
 enum Behavior { SWARM, RANGED, CHARGER }
-enum Faction { ROBOT, ALIEN }
+enum Faction { MACHINE, FLESH }
 
 @export var display_name := "Grunt"
 @export var behavior := Behavior.SWARM
@@ -54,8 +54,8 @@ enum Faction { ROBOT, ALIEN }
 @export var charge_duration := 0.6
 
 @export_group("Faction")
-## Selects hit/death effects: robots burst into sparks and debris, aliens into goo.
-@export var faction := Faction.ROBOT
+## Selects hit/death effects: machines burst into sparks and debris, flesh into splatter.
+@export var faction := Faction.MACHINE
 ## Tints the faction's hit/death effects.
 @export var fx_color := Color(1.0, 0.7, 0.25)
 

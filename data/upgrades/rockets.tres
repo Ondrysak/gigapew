@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"rockets"
-display_name = "Homing Rockets"
-description = "Launch salvos of 2 homing rockets that explode on impact."
-level_descriptions = PackedStringArray("Launch salvos of 2 homing rockets that explode on impact.", "Bigger, harder-hitting explosions.", "+1 rocket per salvo.", "Bigger, harder-hitting explosions.", "+1 rocket per salvo.")
+display_name = "Rachejtle z tržnice"
+description = "Automaticky vystřeluje 2 naváděné rachejtle v salvě. Při zásahu vybuchnou."
+level_descriptions = PackedStringArray("Automaticky vystřeluje 2 naváděné rachejtle v salvě. Při zásahu vybuchnou.", "Větší a silnější výbuchy.", "+1 rachejtle v každé salvě.", "Větší a silnější výbuchy.", "+1 rachejtle v každé salvě.")
 kind = 1
 max_level = 5
 weight = 1.3

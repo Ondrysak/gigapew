@@ -96,8 +96,8 @@ rings = 1
 
 [node name="ReconFlare" type="Node3D" node_paths=PackedStringArray("flare", "zone", "zone_ring", "sweep")]
 script = ExtResource("1_ability")
-display_name = "Recon Flare"
-description = "Fire a flare up to 30 m that lights a 9 m zone for 6 s. Enemies inside are marked and slowed, and take +50% main-gun damage."
+display_name = "Šlehat blesky"
+description = "Vystřelíš světlici do 30 m. Na 6 s osvítí zónu o 9 m: označí a zpomalí nepřátele, kteří dostávají +50 % poškození hlavní zbraní."
 base_cooldown = 14.0
 accent_color = Color(0.75, 1, 0.95, 1)
 synth_activate = &"seismic_throw"

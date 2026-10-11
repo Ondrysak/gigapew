@@ -1,16 +1,16 @@
 [gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
-[ext_resource type="PackedScene" path="res://assets/monsters/robot_tank/robot_tank.glb" id="2_model"]
-[ext_resource type="Resource" path="res://assets/monsters/robot_tank/robot_tank_vat.tres" id="3_vat"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_bulwark/robot_bulwark.glb" id="2_model"]
+[ext_resource type="Resource" path="res://assets/monsters/robot_bulwark/robot_bulwark_vat.tres" id="3_vat"]
 
 [resource]
 script = ExtResource("1_def")
-display_name = "Bulwark"
+display_name = "Vyhazovač"
 max_health = 360.0
 speed = 1.7
 radius = 1.15
-height = 2.1
+height = 2.3
 mass = 4.0
 contact_damage = 3.0
 xp_value = 8
@@ -21,16 +21,16 @@ front_damage_scale = 0.25
 front_half_angle_degrees = 60.0
 turn_speed = 0.8
 rear_precision_half_angle_degrees = 60.0
-faction = 0
-fx_color = Color(1, 0.65, 0.12, 1)
+faction = 1
+fx_color = Color(0.45, 0.06, 0.04, 1)
 model_scene = ExtResource("2_model")
 bob_amplitude = 0.0
 bob_speed = 3.5
 flash_color = Color(1, 0.9, 0.65, 1)
 telegraph_color = Color(1, 0.25, 0.02, 1)
-tint = Color(0.68, 0.65, 0.48, 1)
-rim_color = Color(1, 0.62, 0.08, 0.32)
+tint = Color(1, 1, 1, 1)
+rim_color = Color(1, 0.72, 0.42, 0.18)
 vertex_animation = ExtResource("3_vat")
 move_clip = &"move"
 death_clip = &"death"
-move_clip_speed = 2.4
+move_clip_speed = 1.85

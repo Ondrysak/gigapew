@@ -4,13 +4,11 @@ All third-party art is released under **CC0 1.0 (public domain)**: free for pers
 
 | Asset | Author | Source | License | Used as |
 | --- | --- | --- | --- | --- |
-| Modular Sci-Fi MegaKit (Standard) | Quaternius | https://quaternius.com/packs/modularscifimegakit.html | CC0 | Level modules and props (`assets/third_party/quaternius_megakit/`); alien monsters Cyclop, Oculichrysalis, Scolitex (baked into `assets/monsters/`) |
-| Sci-Fi Essentials Kit (Standard) | Quaternius | https://quaternius.com/packs/scifiessentialskit.html | CC0 | Hazard and dressing props (`assets/third_party/quaternius_scifi_essentials/`); robot monsters Eye Drone, Quad Shell, Trilobite |
-| Animated Mech Pack | Quaternius | https://quaternius.com/packs/animatedmech.html | CC0 | Robot monsters (Leela, George) |
-| Animated Alien | Quaternius | https://quaternius.com/packs/animatedalien.html | CC0 | Alien humanoid monster |
-| Alien Bug Animated | CDmir / OpenGameArt | https://opengameart.org/content/alien-bug-animated | CC0 | Alien swarm monster |
+| Modular Sci-Fi MegaKit (Standard) | Quaternius | https://quaternius.com/packs/modularscifimegakit.html | CC0 | Level modules and props (`assets/third_party/quaternius_megakit/`), retained in the later-sector and authored lab environments |
+| Sci-Fi Essentials Kit (Standard) | Quaternius | https://quaternius.com/packs/scifiessentialskit.html | CC0 | Hazard and dressing props (`assets/third_party/quaternius_scifi_essentials/`) |
+| Ultimate Animated Character Pack | Quaternius | https://quaternius.com/packs/ultimatedanimatedcharacter.html | CC0 | The six Žižkov/Palmovka hallucinations (Bezdomovec, Feťák, Alkoholik, Vekslák, Vyhazovač, Pan Herna), recoloured and baked into `assets/monsters/robot_*` |
 
-The environment packs include their original `LICENSE.txt` in `assets/third_party/`. `assets/monsters/LICENSES.txt` records source packs and licenses for the baked characters; the alien bug download has no separate license file, so its source page is the record. Raw downloads are not stored in the repository. `tools/vat/README.md` documents the bake.
+The environment packs include their original `LICENSE.txt` in `assets/third_party/`. `assets/monsters/LICENSES.txt` records the CC0 people pack and the project's original procedural delirium creatures. All five `alien_*` slots now use original mouse, cockroach, rum-bottle and slot-machine meshes, rigs and actions from `tools/vat/build_delirium.py`; no old alien or mech monster textures remain. Raw source downloads are not stored in the repository. `tools/vat/README.md` documents generation and baking.
 
 **Voice:** `assets/voice/ludas/*.wav` are short clips from the project owner's private recordings (archive `#ludas_vox`), mono 22 kHz and loudness-normalised (EBU R128, −16 LUFS). They are not CC0 and are included with the owner's permission for this project only.
 
@@ -25,12 +23,6 @@ bundled libraries, not the original game code.
 
 ## Visual and design inspiration
 
-[Ondrysak's Crystaldive](https://github.com/Ondrysak/crystaldive), especially its
-temporal feedback renderer, informed the mining overlay's use of alternating
-history textures, warp, injection and decay. No Crystaldive code or assets are
-included: the repository has no declared reuse license, and this project's
-Godot shaders and procedural geometry are independently authored. The mining
-design references and adaptations are listed in `README.md`.
 
 Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf)
 informed the emphasis on reliable target feedback before camera effects. The

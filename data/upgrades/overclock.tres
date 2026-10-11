@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"overclock"
-display_name = "Hair Trigger"
-description = "Main gun fires 12% faster (total +12%)."
-level_descriptions = PackedStringArray("Main gun fires 12% faster (total +12%).", "Main gun fires 12% faster (total +24%).", "Main gun fires 12% faster (total +36%).", "Main gun fires 12% faster (total +48%).", "Main gun fires 12% faster (total +60%).")
+display_name = "Třes po absintu"
+description = "Hlavní zbraň útočí o 12 % rychleji (celkem +12 %)."
+level_descriptions = PackedStringArray("Hlavní zbraň útočí o 12 % rychleji (celkem +12 %).", "Hlavní zbraň útočí o 12 % rychleji (celkem +24 %).", "Hlavní zbraň útočí o 12 % rychleji (celkem +36 %).", "Hlavní zbraň útočí o 12 % rychleji (celkem +48 %).", "Hlavní zbraň útočí o 12 % rychleji (celkem +60 %).")
 max_level = 5
 weight = 1.0
 accent_color = Color(1.0, 0.62, 0.18, 1)

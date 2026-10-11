@@ -45,6 +45,7 @@ func _ready() -> void:
 	if get_tree().get_meta(&"open_base", false):
 		get_tree().remove_meta(&"open_base")
 		_open.call_deferred(base, base_button)
+	StreetWear.apply_tree(self)
 
 func _screens() -> Array[MenuScreen]:
 	return [class_select, base, records, settings]
@@ -72,13 +73,13 @@ func _refresh_operator() -> void:
 	var parts := PackedStringArray()
 	var definition := Profile.selected_class()
 	if definition != null:
-		parts.append("OPERATOR  %s" % definition.display_name.to_upper())
+		parts.append("PARTA  %s" % definition.display_name.to_upper())
 	var records_data := Profile.records
-	parts.append("RUNS  %d" % int(records_data.runs))
+	parts.append("VÝPRAVY  %d" % int(records_data.runs))
 	parts.append("v%s" % ProjectSettings.get_setting("application/config/version"))
 	if float(records_data.best_time) > 0.0:
 		var seconds := int(records_data.best_time)
-		parts.append("BEST  %d:%02d" % [floori(seconds / 60.0), seconds % 60])
+		parts.append("REKORD  %d:%02d" % [floori(seconds / 60.0), seconds % 60])
 	operator_label.text = "   ·   ".join(parts)
 
 func _deploy(definition: ClassDefinition) -> void:

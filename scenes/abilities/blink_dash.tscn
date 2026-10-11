@@ -28,8 +28,8 @@ ring_segments = 6
 
 [node name="BlinkDash" type="Node3D" node_paths=PackedStringArray("streak_template", "ring_template")]
 script = ExtResource("1_ability")
-display_name = "Blink Dash"
-description = "Blink 9 m through the swarm. Untouchable mid-dash; everything in the lane gets bowled aside."
+display_name = "Kolobežka Duplex"
+description = "Profrčíš 9 m skrz dav. Během přesunu jsi nezranitelný a nepřátele v cestě odhodíš."
 base_cooldown = 6.0
 accent_color = Color(0.3, 0.95, 1, 1)
 synth_activate = &"blink"

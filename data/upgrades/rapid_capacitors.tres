@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"rapid_capacitors"
-display_name = "Rapid Capacitors"
-description = "Auto weapons recharge 8% faster (total -8% cooldown)."
-level_descriptions = PackedStringArray("Auto weapons recharge 8% faster (total -8% cooldown).", "Auto weapons recharge 8% faster (total -16% cooldown).", "Auto weapons recharge 8% faster (total -24% cooldown).", "Auto weapons recharge 8% faster (total -32% cooldown).", "Auto weapons recharge 8% faster (total -40% cooldown).")
+display_name = "Tempo NONSTOP"
+description = "Prodleva automatických zbraní -8 % ze základu (celkem -8 %)."
+level_descriptions = PackedStringArray("Prodleva automatických zbraní -8 % ze základu (celkem -8 %).", "Prodleva automatických zbraní -8 % ze základu (celkem -16 %).", "Prodleva automatických zbraní -8 % ze základu (celkem -24 %).", "Prodleva automatických zbraní -8 % ze základu (celkem -32 %).", "Prodleva automatických zbraní -8 % ze základu (celkem -40 %).")
 max_level = 5
 weight = 0.9
 accent_color = Color(0.3, 0.75, 1.0, 1)

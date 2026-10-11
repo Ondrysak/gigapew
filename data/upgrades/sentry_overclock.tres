@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"sentry_overclock"
-display_name = "Volatile Sentries"
-description = "Turrets detonate when they expire, blasting everything within 4 m."
+display_name = "Zavíračka s výbuchem"
+description = "Věžičky na konci životnosti vybuchnou a zasáhnou všechno do 4 m."
 kind = 2
 max_level = 1
 weight = 3.0

@@ -325,7 +325,7 @@ func _on_ability_unlocked(slot: int) -> void:
 		hud.tutor.offer(&"combos")
 
 func _offer_skill_tip(skill: ActiveAbility) -> void:
-	hud.tutor.offer(StringName("skill_" + skill.display_name.to_snake_case()), "NEW SKILL · KEY %d · %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.description)
+	hud.tutor.offer(StringName("skill_" + skill.display_name.to_snake_case()), "NOVÝ TRIK · KLÁVESA %d · %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.description)
 
 ## Low health prompts the repair tip and Luďas's growl; healing gets a gulp.
 func _on_health_for_tips(current: int, maximum: int) -> void:
@@ -384,7 +384,7 @@ func _present_encounter_reward() -> void:
 	get_tree().paused = true
 	player.cancel_actions()
 	Music.stinger(&"level_up")
-	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state, "VEIN SECURED", "DEFENSE REWARD  ·  CHOOSE ONE UPGRADE")
+	level_up.present(run_state.roll_offers(upgrade_pool, offers_per_level, _rng), run_state, "AUTOMAT VYBRÁN", "ODMĚNA ZA OBRANU  ·  VYBER JEDNO VYLEPŠENÍ")
 
 # ---------------------------------------------------------------- level-ups
 
@@ -571,11 +571,11 @@ func _record_run(victory: bool) -> void:
 
 func _summary() -> String:
 	var whole := int(run_time)
-	return "LV %d   /   %d KILLS   /   %d:%02d" % [run_state.level, kills, whole / 60, whole % 60]
+	return "ÚR %d   /   %d ROZPRÁŠENO   /   %d:%02d" % [run_state.level, kills, whole / 60, whole % 60]
 
 func _banked_text(banked: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for definition in resources:
 		if definition.banked and int(banked.get(definition.id, 0)) > 0:
 			parts.append("+%d %s" % [banked[definition.id], definition.display_name.to_upper()])
-	return "BANKED   " + "   ".join(parts) if not parts.is_empty() else "NOTHING BANKED"
+	return "SCHOVÁNO   " + "   ".join(parts) if not parts.is_empty() else "DO KAPSY NEZŮSTALO NIC"

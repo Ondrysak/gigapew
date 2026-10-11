@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"scavenger"
-display_name = "Scavenger"
-description = "Kills have a 2% chance to salvage a Cinder Crystal. Bosses always yield 2."
-level_descriptions = PackedStringArray("Kills have a 2% chance to salvage a Cinder Crystal. Bosses always yield 2.", "Kills have a 3.5% chance to salvage a Cinder Crystal. Bosses always yield 2.", "Kills have a 5% chance to salvage a Cinder Crystal. Bosses always yield 2.")
+display_name = "Šacování kapes"
+description = "Zabití má 2% šanci přidat Cigára. Boss vždy dá 2."
+level_descriptions = PackedStringArray("Zabití má 2% šanci přidat Cigára. Boss vždy dá 2.", "Zabití má 3,5% šanci přidat Cigára. Boss vždy dá 2.", "Zabití má 5% šanci přidat Cigára. Boss vždy dá 2.")
 kind = 3
 max_level = 3
 accent_color = Color(1, 0.36, 0.78, 1)

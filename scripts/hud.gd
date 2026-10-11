@@ -15,15 +15,15 @@ const WARNING_HOLD := 0.3
 const PICKUP_NOTICE_SECONDS := 3.0
 const NOTICE_FADE_SECONDS := 0.4
 const PICKUP_KINDS: Array[StringName] = [&"magnet", &"repair"]
-const BOSS_CUE_TITLES: Array[String] = ["REPOSITION", "BREACH RAM", "BREACH RAM", "MORTAR SALVO", "MORTAR SALVO", "CORE EXPOSED", ""]
+const BOSS_CUE_TITLES: Array[String] = ["DRŽ SI ODSTUP", "ROZBĚH PROTI TOBĚ", "ROZBĚH PROTI TOBĚ", "TŘI RÁNY SHORA", "TŘI RÁNY SHORA", "KRYT DOLE", ""]
 
-@export var healthy_color := Color(0.3, 0.9, 0.62)
-@export var critical_color := Color(1.0, 0.24, 0.32)
-@export var boss_color := Color(1.0, 0.36, 0.2)
-@export var boss_phase_color := Color(1.0, 0.16, 0.42)
-@export var ability_ready_color := Color(0.4, 1.0, 0.85)
-@export var ability_charging_color := Color(0.55, 0.65, 0.7)
-@export var focus_color := Color(1.0, 0.58, 0.22)
+@export var healthy_color := Color(0.57, 0.61, 0.36)
+@export var critical_color := Color(0.88, 0.28, 0.22)
+@export var boss_color := Color(0.81, 0.48, 0.24)
+@export var boss_phase_color := Color(0.81, 0.24, 0.22)
+@export var ability_ready_color := Color(0.75, 0.72, 0.45)
+@export var ability_charging_color := Color(0.53, 0.49, 0.4)
+@export var focus_color := Color(0.84, 0.62, 0.32)
 
 @onready var sector_label: Label = $Stage/Rows/Sector
 @onready var subtitle_label: Label = $Stage/Rows/Subtitle
@@ -117,9 +117,9 @@ var _pickup_dirty := false
 var _boss_cue_style: StyleBoxFlat
 ## Label and colour per skill combo id from ArenaPlayer.ability_combo.
 const COMBO_CALLOUTS := {
-	&"crush": ["CRUSH", Color(0.78, 0.5, 1.0)],
-	&"collapse": ["COLLAPSE", Color(1.0, 0.45, 0.9)],
-	&"ram": ["SHIELD RAM", Color(0.35, 0.92, 1.0)],
+	&"crush": ["POWNED", Color(0.78, 0.65, 0.4)],
+	&"collapse": ["PERMABAN", Color(0.78, 0.4, 0.32)],
+	&"ram": ["LAST TIME KRATOS", Color(0.71, 0.73, 0.48)],
 }
 var _combo_callout: Label
 var _combo_tween: Tween
@@ -134,7 +134,7 @@ func _ready() -> void:
 	boss_cue.add_theme_stylebox_override(&"panel", _boss_cue_style)
 	boss_bar.draw.connect(_draw_boss_bar)
 	warning_band.draw.connect(_draw_warning_band)
-	death_keys.add_child(_key_hint("R", "RETRY"))
+	death_keys.add_child(_key_hint("R", "ZNOVU"))
 	death_keys.add_child(_key_hint("ENTER", "MENU"))
 	_build_notices()
 	_build_primary()
@@ -142,6 +142,8 @@ func _ready() -> void:
 	_build_combo_callout()
 	tutor = Tutor.new()
 	add_child(tutor)
+	StreetWear.apply_tree(self)
+	StreetWear.apply(death_panel, true)
 
 func _build_combo_callout() -> void:
 	_combo_callout = Label.new()
@@ -165,13 +167,13 @@ func show_ability_combo(id: StringName) -> void:
 	if feedback.terminal or not COMBO_CALLOUTS.has(id):
 		return
 	var entry: Array = COMBO_CALLOUTS[id]
-	_callout("COMBO  ·  %s" % entry[0], entry[1])
+	_callout("KOMBO  ·  %s" % entry[0], entry[1])
 
 ## Guided start: a new skill slot announces itself and its tile pops in.
 func show_skill_unlocked(skill: ActiveAbility) -> void:
 	if feedback.terminal:
 		return
-	_callout("NEW SKILL  ·  %d  %s" % [skill.slot + 1, skill.display_name.to_upper()], skill.accent_color.lightened(0.2))
+	_callout("NOVÝ TRIK  ·  %d  %s" % [skill.slot + 1, skill.display_name.to_upper()], ability_ready_color)
 	if skill.slot < _ability_tiles.size():
 		var root: Control = _ability_tiles[skill.slot].root
 		root.show()
@@ -262,27 +264,27 @@ func _refresh_abilities() -> void:
 		(tile.icon as TextureRect).texture = ability.icon
 		if teaser:
 			var level := state.ability_unlock_level(index)
-			(tile.icon as TextureRect).modulate = Color(0.3, 0.36, 0.42, 0.55)
+			(tile.icon as TextureRect).modulate = Color(0.36, 0.33, 0.27, 0.55)
 			(tile.rank as Label).text = ""
-			(tile.status as Label).text = "LV %d" % level
-			(tile.status as Label).modulate = Color(0.55, 0.62, 0.68)
+			(tile.status as Label).text = "ÚR %d" % level
+			(tile.status as Label).modulate = Color(0.64, 0.58, 0.47)
 			(tile.meter as ProgressBar).value = 0.0
-			(tile.style as StyleBoxFlat).border_color = Color(0.2, 0.26, 0.3)
-			root.tooltip_text = "Unlocks at level %d · key %d\n%s" % [level, index + 1, ability.description]
+			(tile.style as StyleBoxFlat).border_color = Color(0.32, 0.27, 0.19)
+			root.tooltip_text = "Odemkne se na úrovni %d · klávesa %d\n%s" % [level, index + 1, ability.description]
 			continue
 		var ready := ability.is_ready()
 		var remaining := ability.cooldown_remaining()
-		(tile.icon as TextureRect).modulate = Color.WHITE if ready else Color(0.45, 0.55, 0.6)
-		(tile.rank as Label).text = "R%d" % ability.rank()
-		(tile.status as Label).text = "READY" if ready else "%.1fs" % remaining
+		(tile.icon as TextureRect).modulate = Color.WHITE if ready else Color(0.56, 0.5, 0.4)
+		(tile.rank as Label).text = "S%d" % ability.rank()
+		(tile.status as Label).text = "PŘIPR." if ready else "%.1f s" % remaining
 		(tile.status as Label).modulate = ability_ready_color if ready else Color.WHITE
 		(tile.meter as ProgressBar).value = clampf(1.0 - remaining / maxf(0.001, ability.cooldown_total()), 0.0, 1.0)
 		(tile.style as StyleBoxFlat).border_color = ability_ready_color if ready else ability_charging_color.darkened(0.45)
-		root.tooltip_text = "%s · key %d · rank %d / %d\n%s" % [ability.display_name, index + 1, ability.rank(), RunState.MAX_ABILITY_RANK, ability.description]
+		root.tooltip_text = "%s · klávesa %d · stupeň %d / %d\n%s" % [ability.display_name, index + 1, ability.rank(), RunState.MAX_ABILITY_RANK, ability.description]
 	if unlocked_count != _unlocked_shown:
 		_unlocked_shown = unlocked_count
-		var skills := "1 SKILL" if unlocked_count <= 1 else "1–%d SKILLS" % unlocked_count
-		controls_label.text = "WASD MOVE · SPACE JUMP · LMB FIRE · WHEEL SWAP GUN · F MINE NEAR ORE · %s · ESC PAUSE" % skills
+		var skills := "1 TRIK" if unlocked_count <= 1 else "1–%d TRIKY" % unlocked_count
+		controls_label.text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · %s · E POUŽÍT · ESC PAUZA" % skills
 
 func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()
@@ -292,14 +294,14 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	boss_cue.hide()
 	contract_box.show()
 	_last_health = 0
-	_stage_name = "SECTOR %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
+	_stage_name = "OKRUH %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
 	sector_label.text = "%02d / %02d   %s" % [index + 1, total, stage.display_name.to_upper()]
 	subtitle_label.text = stage.subtitle
 	quest_panel.hide()
 	feedback.reset()
 	_reset_notices()
 
-## Build once per level; fracture/death signals update the real contract counters.
+## Build once per level; compartment loot/death signals update real counters.
 func set_quests(state: LevelQuests, seed_value: int) -> void:
 	_quests = state
 	for child in quest_list.get_children():
@@ -312,7 +314,7 @@ func set_quests(state: LevelQuests, seed_value: int) -> void:
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override(&"separation", 8)
 		line.add_child(_icon(quest.icon, 24))
-		var text := _label("%s %s" % ["MINE" if quest.kind == &"mine" else "KILL", String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
+		var text := _label("%s %s" % ["VYPÁČ" if quest.kind == &"mine" else "ROZPRAŠ", String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		line.add_child(text)
@@ -330,18 +332,18 @@ func set_quests(state: LevelQuests, seed_value: int) -> void:
 func refresh_quests() -> void:
 	if _quests == null:
 		return
-	contract_label.text = "CONTRACT  %d / %d" % [_quests.completed_count(), _quests.quests.size()]
+	contract_label.text = "ZAKÁZKA  %d / %d" % [_quests.completed_count(), _quests.quests.size()]
 	for index in _quest_rows.size():
 		var quest: Dictionary = _quests.quests[index]
 		var row: Dictionary = _quest_rows[index]
 		var done: bool = quest.progress >= quest.target
-		(row.count as Label).text = "DONE" if done else "%d / %d" % [quest.progress, quest.target]
+		(row.count as Label).text = "HOTOVO" if done else "%d / %d" % [quest.progress, quest.target]
 		(row.count as Label).modulate = ability_ready_color if done else Color.WHITE
 		(row.bar as ProgressBar).value = quest.progress
 		(row.row as Control).modulate.a = 0.65 if done else 1.0
 
 ## One objective panel: the extraction once a contract is done, otherwise the
-## authored lab defense vein when present.
+## authored lab guarded machine when present.
 func set_objectives(encounter: MiningDefense, extraction: ExtractionPod, operator: ArenaPlayer) -> void:
 	if is_instance_valid(extraction) and extraction.state != ExtractionPod.State.DEPARTED and not death.visible:
 		objective.visible = true
@@ -355,17 +357,17 @@ func set_objectives(encounter: MiningDefense, extraction: ExtractionPod, operato
 	objective_progress.value = encounter.progress()
 	match encounter.state:
 		MiningDefense.State.WAITING:
-			objective_title.text = "OPTIONAL · DEFENSE VEIN"
-			objective_detail.text = "Aim nearby vein + hold F · %dm away\nFinish mining + survive for an upgrade." % distance
+			objective_title.text = "VOLITELNĚ · HLÍDANÝ AUTOMAT"
+			objective_detail.text = "Zamiř zblízka na přihrádku a drž F · %dm\nVyprázdni automat a přežij pro vylepšení." % distance
 		MiningDefense.State.MINING:
-			objective_title.text = "DEFENSE VEIN · %d%% MINED" % mined
-			objective_detail.text = "Mine between attacks · %d responders\nProgress stays when you stop drilling." % encounter.enemies_remaining()
+			objective_title.text = "AUTOMAT · %d%% VYPÁČENO" % mined
+			objective_detail.text = "Páč mezi útoky · zbývá %d halucinací\nPři puštění F zůstává západka povolená." % encounter.enemies_remaining()
 		MiningDefense.State.DEFENDING:
-			objective_title.text = "VEIN MINED · HOLD THE SITE"
-			objective_detail.text = "%d responders left · finish the defense\nAn upgrade choice awaits." % encounter.enemies_remaining()
+			objective_title.text = "AUTOMAT PRÁZDNÝ · UDRŽ MÍSTO"
+			objective_detail.text = "Zbývá %d halucinací · dokonči obranu\nPak si vybereš vylepšení." % encounter.enemies_remaining()
 		MiningDefense.State.READY:
-			objective_title.text = "VEIN SECURED · REWARD READY"
-			objective_detail.text = "E near the beacon · choose an upgrade\n%dm away" % distance
+			objective_title.text = "AUTOMAT TVŮJ · ODMĚNA ČEKÁ"
+			objective_detail.text = "E u značky · vyber vylepšení\n%dm daleko" % distance
 
 func set_boss_fight(fight: YardBossFight) -> void:
 	boss_cue.visible = is_instance_valid(fight) and fight.state != YardBossFight.State.CANCELLED and not death.visible
@@ -377,7 +379,7 @@ func set_boss_fight(fight: YardBossFight) -> void:
 	boss_cue_title.add_theme_color_override(&"font_color", color)
 	_boss_cue_style.border_color = color
 	boss_cue_instruction.text = fight.instruction()
-	boss_cue_time.text = "%.1fs" % fight.remaining()
+	boss_cue_time.text = "%.1f s" % fight.remaining()
 	boss_cue_progress.value = fight.phase_progress()
 
 func set_aiming(captured: bool) -> void:
@@ -402,7 +404,7 @@ func set_kills(count: int) -> void:
 
 
 func set_xp(xp: int, required: int, level: int) -> void:
-	level_label.text = "LV %d" % level
+	level_label.text = "ÚR %d" % level
 	xp_value.text = "%d / %d" % [xp, required]
 	xp_bar.max_value = maxi(1, required)
 	xp_bar.value = xp
@@ -449,15 +451,15 @@ func set_primary(state: RunState) -> void:
 	primary_title.text = gun.display_name.to_upper()
 	_primary_icon.texture = gun.icon
 	var projectiles := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponBuild.MAX_PROJECTILES)
-	_primary_stats.text = "%d DMG · %.1f/s · ×%d\n%s · SPLASH %.1fm · PIERCE %d" % [gun.damage, 1.0 / maxf(0.001, gun.fire_interval), projectiles, DamageType.label(gun.damage_type).to_upper(), gun.explosion_radius, gun.pierce + state.pierce_bonus]
+	_primary_stats.text = "%d ŠKODA · %.1f/s · ×%d\n%s · OKRUH %.1fm · PRŮRAZ %d" % [gun.damage, 1.0 / maxf(0.001, gun.fire_interval), projectiles, DamageType.label(gun.damage_type).to_upper(), gun.explosion_radius, gun.pierce + state.pierce_bonus]
 	_refresh_armor()
 
-## The drill prompt follows the same aimed, close-range target as the view model.
+## The crowbar prompt follows the same visible close compartment as its model.
 func set_gunplay(player: ArenaPlayer) -> void:
 	var ready := player.mining_ready()
 	mining_prompt.visible = ready and not feedback.terminal and not get_tree().paused
-	mining_prompt.text = "F  ·  MINING" if ready and player.drilling() else "HOLD F  ·  MINE"
-	primary_row.modulate = Color(0.55, 0.65, 0.7) if ready else Color.WHITE
+	mining_prompt.text = "F · PÁČENÍ ZÁMKU" if ready and player.drilling() else "DRŽ F · VYPÁČ PŘIHRÁDKU"
+	primary_row.modulate = Color(0.62, 0.55, 0.43) if ready else Color.WHITE
 
 func _progress_meter(color: Color) -> ProgressBar:
 	var meter := ProgressBar.new()
@@ -466,7 +468,7 @@ func _progress_meter(color: Color) -> ProgressBar:
 	meter.show_percentage = false
 	meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var back := StyleBoxFlat.new()
-	back.bg_color = Color(0.05, 0.1, 0.12)
+	back.bg_color = Color(0.1, 0.085, 0.065)
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = color
 	meter.add_theme_stylebox_override(&"background", back)
@@ -484,7 +486,7 @@ func set_weapon_mods(state: RunState) -> void:
 			if rank <= 0:
 				continue
 			var icon := _icon(RoundShop.icon(id), 20)
-			icon.tooltip_text = "%s · rank %d" % [RoundShop.CATALOG[id].name, rank]
+			icon.tooltip_text = "%s · stupeň %d" % [RoundShop.CATALOG[id].name, rank]
 			mod_row.add_child(icon)
 	_refresh_armor()
 
@@ -530,9 +532,9 @@ func _advance_notices(delta: float) -> void:
 			var caption := ""
 			match PICKUP_KINDS[index]:
 				&"magnet":
-					caption = "%d XP GEMS PULLED" % amount
+					caption = "PŘITAŽENO %d XP STŘEPŮ" % amount
 				&"repair":
-					caption = "+%d HP REPAIRED" % amount
+					caption = "+%d ZDRAVÍ" % amount
 			(row.label as Label).text = caption
 			root.show()
 		_pickup_times[index] = maxf(0.0, _pickup_times[index] - delta)
@@ -542,7 +544,7 @@ func _advance_notices(delta: float) -> void:
 			_pickup_amounts[index] = 0
 	_pickup_dirty = false
 
-## Run-over panel: summary tiles plus the minerals moved into the Profile.
+## Run-over panel: summary tiles plus the loot moved into the Profile.
 func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
 	feedback.terminal = true
 	_reset_notices()
@@ -550,14 +552,14 @@ func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, ban
 	warning.hide()
 	contract_box.hide()
 	quest_panel.hide()
-	death_where.text = "SIGNAL LOST IN %s" % _stage_name if not _stage_name.is_empty() else "SIGNAL LOST"
+	death_where.text = "ZASE V SEPTIKU\nPOSLEDNÍ ŠTACE: %s" % _stage_name if not _stage_name.is_empty() else "ZASE V SEPTIKU"
 	for child in death_stats.get_children():
 		child.queue_free()
 	var whole := int(seconds)
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(level), "LEVEL"))
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"kills"), str(kills), "KILLS"))
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"timer"), "%d:%02d" % [whole / 60, whole % 60], "SURVIVED"))
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "CONTRACTS"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(level), "ÚROVEŇ"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"kills"), str(kills), "ROZPRÁŠENO"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"timer"), "%d:%02d" % [whole / 60, whole % 60], "ČAS NA NOHOU"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "HOTOVÉ OKRUHY"))
 	for child in death_banked.get_children():
 		child.queue_free()
 	for definition in _definitions:
@@ -569,10 +571,11 @@ func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, ban
 		entry.add_theme_constant_override(&"separation", 8)
 		entry.add_child(_icon(definition.icon, 32))
 		entry.add_child(_label("+%d" % amount, 24, definition.color.lightened(0.2)))
-		entry.add_child(_label(definition.display_name.to_upper(), 12, Color(0.6, 0.68, 0.72)))
+		entry.add_child(_label(definition.display_name.to_upper(), 12, Color(0.75, 0.69, 0.57)))
 		death_banked.add_child(entry)
 	if death_banked.get_child_count() == 0:
-		death_banked.add_child(_label("NOTHING BANKED", 16, Color(0.5, 0.56, 0.6)))
+		death_banked.add_child(_label("DO KAPSY NEZŮSTALO NIC", 16, Color(0.75, 0.69, 0.57)))
+	StreetWear.apply_tree(death_panel)
 	death.show()
 	death.modulate.a = 0.0
 	death_panel.pivot_offset = death_panel.size * 0.5
@@ -619,8 +622,8 @@ func _draw_boss_bar() -> void:
 	var enraged := _boss_fraction <= BOSS_PHASE_FRACTION
 	var fill := boss_phase_color if enraged else boss_color
 	if enraged:
-		fill = fill.lerp(Color(1, 0.55, 0.65), 0.25 + 0.25 * sin(_time * 9.0))
-	fill = fill.lerp(Color.WHITE, _boss_flash * 0.55)
+		fill = fill.lerp(Color(0.91, 0.48, 0.32), 0.25 + 0.25 * sin(_time * 9.0))
+	fill = fill.lerp(Color(0.94, 0.86, 0.69), _boss_flash * 0.55)
 	var gap := 3.0
 	var width := (rect.size.x - gap * (BOSS_SEGMENTS - 1)) / BOSS_SEGMENTS
 	for n in BOSS_SEGMENTS:
@@ -631,56 +634,56 @@ func _draw_boss_bar() -> void:
 		boss_bar.draw_rect(segment, Color(0.16, 0.04, 0.04, 1.0))
 		var trail := clampf((_boss_trail - start) / (end - start), 0.0, 1.0)
 		if trail > 0.0:
-			boss_bar.draw_rect(Rect2(x, 0.0, width * trail, rect.size.y), Color(1.0, 0.92, 0.7, 0.9))
+			boss_bar.draw_rect(Rect2(x, 0.0, width * trail, rect.size.y), Color(0.88, 0.77, 0.54, 0.9))
 		var part := clampf((_boss_fraction - start) / (end - start), 0.0, 1.0)
 		if part > 0.0:
 			boss_bar.draw_rect(Rect2(x, 0.0, width * part, rect.size.y), fill)
-			boss_bar.draw_rect(Rect2(x, 0.0, width * part, 3.0), fill.lightened(0.35))
+			boss_bar.draw_rect(Rect2(x, 0.0, width * part, 3.0), fill.lightened(0.15))
 	# Quarter ticks for reading thresholds at a glance.
 	for q in [0.25, 0.5, 0.75]:
 		var tx: float = rect.size.x * q
-		boss_bar.draw_line(Vector2(tx, -3.0), Vector2(tx, rect.size.y + 3.0), Color(1, 0.85, 0.7, 0.5), 1.0)
-	boss_bar.draw_rect(rect, Color(1, 0.4, 0.25, 0.6), false, 1.0)
+		boss_bar.draw_line(Vector2(tx, -3.0), Vector2(tx, rect.size.y + 3.0), Color(0.89, 0.77, 0.58, 0.5), 1.0)
+	boss_bar.draw_rect(rect, Color(0.65, 0.39, 0.23, 0.7), false, 1.0)
 
 
 func _draw_warning_band() -> void:
 	var size := warning_band.size
 	warning_band.draw_rect(Rect2(Vector2.ZERO, size), Color(0.12, 0.01, 0.01, 0.78))
 	var stripe := 12.0
-	var offset := fmod(_time * 60.0, stripe * 2.0)
+	var offset := 0.0
 	for y in [0.0, size.y - 10.0]:
 		var x := -stripe * 2.0 + offset
 		while x < size.x + stripe:
 			warning_band.draw_colored_polygon(PackedVector2Array([
 				Vector2(x, y + 10.0), Vector2(x + stripe, y + 10.0),
 				Vector2(x + stripe * 2.0, y), Vector2(x + stripe, y),
-			]), Color(1.0, 0.62, 0.1, 0.95))
+			]), Color(0.72, 0.51, 0.25, 0.85))
 			x += stripe * 2.0
-	warning_band.draw_line(Vector2(0, 11), Vector2(size.x, 11), Color(1, 0.4, 0.1, 0.9), 2.0)
-	warning_band.draw_line(Vector2(0, size.y - 11), Vector2(size.x, size.y - 11), Color(1, 0.4, 0.1, 0.9), 2.0)
+	warning_band.draw_line(Vector2(0, 11), Vector2(size.x, 11), Color(0.57, 0.3, 0.18, 0.9), 2.0)
+	warning_band.draw_line(Vector2(0, size.y - 11), Vector2(size.x, size.y - 11), Color(0.57, 0.3, 0.18, 0.9), 2.0)
 
 func show_extraction_warning() -> void:
-	_show_warning("DROP POD")
+	_show_warning("ODVOZ")
 
 func _show_extraction(extraction: ExtractionPod, operator: ArenaPlayer) -> void:
 	# The finished contract list gives way to the extraction objective.
 	quest_panel.hide()
-	contract_label.text = "EXTRACTION"
+	contract_label.text = "ODVOZ"
 	var distance := roundi(extraction.distance_to(operator.global_position))
 	var left := extraction.hold_time - extraction.progress
 	objective_progress.value = extraction.fraction()
 	if extraction.state == ExtractionPod.State.LANDING:
-		objective_title.text = "EXTRACTION · DROP POD INBOUND"
-		objective_detail.text = "Head for the green beam · %dm\nThe horde surges until you lift off." % distance
+		objective_title.text = "ODVOZ · ZNAČKA SE BLÍŽÍ"
+		objective_detail.text = "Běž ke světelnému sloupu · %dm\nHalucinace přibývají až do odjezdu." % distance
 	elif extraction.player_inside():
-		objective_title.text = "HOLD THE BEAM · %.1fs" % left
-		objective_detail.text = "Stay inside the ring to extract.\nThe horde is surging."
+		objective_title.text = "DRŽ SE V KRUHU · %.1f s" % left
+		objective_detail.text = "Zůstaň uvnitř kruhu pro odvoz.\nHalucinace pořád přibývají."
 	else:
-		objective_title.text = "EXTRACTION · REACH THE POD"
-		objective_detail.text = "%dm away · %.0fs in the beam left\nProgress is kept if you step out." % [distance, left]
+		objective_title.text = "ODVOZ · DOBĚHNI KE ZNAČCE"
+		objective_detail.text = "%dm daleko · zbývá %.0f s v kruhu\nKdyž vyběhneš, postup zůstane." % [distance, left]
 
 func _show_warning(boss_title: String) -> void:
-	warning_subtitle.text = "%s INBOUND" % boss_title
+	warning_subtitle.text = "BLÍŽÍ SE: %s" % boss_title
 	warning.show()
 	warning.pivot_offset = warning.size * 0.5
 	warning.scale = Vector2(1.0, 0.0)
@@ -706,7 +709,7 @@ func _refresh_armor() -> void:
 # ------------------------------------------------------------------ builders
 func _build_notices() -> void:
 	var glyphs: Array[StringName] = [&"magnet", &"health"]
-	var colors: Array[Color] = [Color(0.65, 1.0, 0.9), Color(0.65, 1.0, 0.68)]
+	var colors: Array[Color] = [Color(0.78, 0.72, 0.51), Color(0.7, 0.73, 0.46)]
 	for index in PICKUP_KINDS.size():
 		var root := HBoxContainer.new()
 		root.custom_minimum_size.y = 24
@@ -727,15 +730,15 @@ func _build_notices() -> void:
 func _build_primary() -> void:
 	_primary_icon = _icon(null, 48)
 	primary_row.add_child(_primary_icon)
-	_primary_stats = _label("", 13, Color(0.75, 0.85, 0.88))
+	_primary_stats = _label("", 13, Color(0.81, 0.76, 0.65))
 	primary_row.add_child(_primary_stats)
 
 func _build_abilities() -> void:
 	for index in range(5):
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color(0.012, 0.03, 0.045, 0.92)
+		style.bg_color = Color(0.085, 0.07, 0.055, 0.96)
 		style.set_border_width_all(1)
-		style.set_corner_radius_all(4)
+		style.set_corner_radius_all(0)
 		style.set_content_margin_all(5)
 		var root := PanelContainer.new()
 		root.custom_minimum_size = Vector2(86, 106)
@@ -751,17 +754,17 @@ func _build_abilities() -> void:
 		var key := _label(str(index + 1), 14, focus_color)
 		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		header.add_child(key)
-		var rank_label := _label("R0", 11, Color(0.75, 0.85, 0.88))
+		var rank_label := _label("S0", 11, Color(0.81, 0.76, 0.65))
 		header.add_child(rank_label)
 		var icon := _icon(null, 32)
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		rows.add_child(icon)
-		var name_label := _label("", 10, Color(0.75, 0.85, 0.88))
+		var name_label := _label("", 10, Color(0.81, 0.76, 0.65))
 		name_label.custom_minimum_size.x = 76
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rows.add_child(name_label)
-		var status := _label("READY", 12, ability_ready_color)
+		var status := _label("PŘIPR.", 12, ability_ready_color)
 		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rows.add_child(status)
 		var meter := _progress_meter(ability_ready_color)
@@ -773,10 +776,10 @@ func _stat_tile(texture: Texture2D, value: String, caption: String) -> Control:
 	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.custom_minimum_size = Vector2(120, 0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.03, 0.06, 0.08, 1)
-	style.border_color = Color(0.1, 0.35, 0.4)
+	style.bg_color = Color(0.11, 0.09, 0.07, 1)
+	style.border_color = Color(0.44, 0.36, 0.25)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(5)
+	style.set_corner_radius_all(0)
 	style.set_content_margin_all(8)
 	tile.add_theme_stylebox_override(&"panel", style)
 	var rows := VBoxContainer.new()
@@ -786,10 +789,10 @@ func _stat_tile(texture: Texture2D, value: String, caption: String) -> Control:
 	var icon := _icon(texture, 32)
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	rows.add_child(icon)
-	var number := _label(value, 24, Color(0.9, 0.97, 1))
+	var number := _label(value, 24, Color(0.9, 0.84, 0.71))
 	number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rows.add_child(number)
-	var label := _label(caption, 11, Color(0.45, 0.62, 0.66))
+	var label := _label(caption, 11, Color(0.75, 0.69, 0.57))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	rows.add_child(label)
 	return tile
@@ -801,19 +804,19 @@ func _key_hint(key: String, action: String) -> Control:
 	var chip := PanelContainer.new()
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.1, 0.12)
-	style.border_color = Color(1, 0.58, 0.22)
+	style.bg_color = Color(0.13, 0.105, 0.075)
+	style.border_color = focus_color
 	style.set_border_width_all(1)
 	style.border_width_bottom = 3
-	style.set_corner_radius_all(4)
+	style.set_corner_radius_all(0)
 	style.content_margin_left = 10
 	style.content_margin_right = 10
 	style.content_margin_top = 2
 	style.content_margin_bottom = 2
 	chip.add_theme_stylebox_override(&"panel", style)
-	chip.add_child(_label(key, 16, Color(1, 0.8, 0.55)))
+	chip.add_child(_label(key, 16, Color(0.89, 0.76, 0.52)))
 	row.add_child(chip)
-	var label := _label(action, 17, Color(0.82, 0.92, 0.95))
+	var label := _label(action, 17, Color(0.86, 0.8, 0.68))
 	row.add_child(label)
 	return row
 
@@ -825,7 +828,7 @@ func _chip(text: String, color: Color) -> Control:
 	style.bg_color = Color(color.darkened(0.7), 0.9)
 	style.border_color = color
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(3)
+	style.set_corner_radius_all(0)
 	style.content_margin_left = 6
 	style.content_margin_right = 6
 	chip.add_theme_stylebox_override(&"panel", style)

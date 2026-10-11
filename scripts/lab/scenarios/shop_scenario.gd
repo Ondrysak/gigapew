@@ -19,6 +19,14 @@ func run() -> void:
 	await lab.capture("open")
 	var rows: Control = screen.get_child(1).get_child(0)
 	lab.check(rows.get_combined_minimum_size().y <= rows.size.y + 0.5, "shop's primary, five skills and stock fit the viewport without vertical clipping")
+	for child in rows.get_children():
+		if child is TabContainer:
+			child.current_tab = 1
+			await lab.frames(2)
+			await lab.capture("suit_stock")
+			child.current_tab = 0
+			await lab.frames(2)
+			break
 
 	var bought := -1
 	for index in shop.offers.size():
@@ -31,10 +39,10 @@ func run() -> void:
 	var id := StringName(shop.offers[bought].id)
 	var rank := shop.rank(id)
 	var gold := Profile.currency(&"gold")
-	screen._offers[bought].buy.pressed.emit()
-	lab.check(bool(shop.offers[bought].sold) and shop.rank(id) == rank + 1 and Profile.currency(&"gold") < gold, "a real mod button installs one primary rank, charges minerals and sells its stock")
+	await _click(screen._offers[bought].buy)
+	lab.check(bool(shop.offers[bought].sold) and shop.rank(id) == rank + 1 and Profile.currency(&"gold") < gold, "clicking a visible stock card installs one primary rank, charges minerals and sells its stock")
 	var paid_gold := Profile.currency(&"gold")
-	screen._offers[bought].buy.pressed.emit()
+	await _click(screen._offers[bought].buy)
 	lab.check(shop.rank(id) == rank + 1 and Profile.currency(&"gold") == paid_gold, "a repeated sold-card action cannot install or charge twice")
 	var rail_index := game.run_state.available_weapons.find(lab.weapon("rail"))
 	screen._selector.select(rail_index)
@@ -84,6 +92,25 @@ func run() -> void:
 	await lab.capture("broke")
 	screen._unhandled_input(_escape())
 	lab.check(screen.visible, "Esc cannot silently skip the extraction shop")
+
+func _click(button: Button) -> void:
+	var at := button.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = at
+	motion.global_position = at
+	Input.parse_input_event(motion)
+	await lab.frames(1)
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.position = at
+	click.global_position = at
+	click.pressed = true
+	Input.parse_input_event(click)
+	await lab.frames(1)
+	click = click.duplicate() as InputEventMouseButton
+	click.pressed = false
+	Input.parse_input_event(click)
+	await lab.frames(2)
 
 func _escape() -> InputEventAction:
 	var event := InputEventAction.new()

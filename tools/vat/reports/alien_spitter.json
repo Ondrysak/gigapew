@@ -1,25 +1,48 @@
 {
  "id": "alien_spitter",
- "source_vertices": 1297,
- "columns": 1297,
+ "source_vertices": 1100,
+ "columns": 1100,
  "texture": [
-  1297,
-  67
+  1100,
+  64
  ],
  "clips": [
   {
    "name": "move",
-   "action": "Alien_Idle",
+   "action": "Walk",
    "start": 0,
-   "frames": 67,
-   "fps": 20.099999999999998,
+   "frames": 17,
+   "fps": 20.4,
    "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 17,
+   "frames": 21,
+   "fps": 20.0,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 38,
+   "frames": 26,
+   "fps": 20.0,
+   "loop": false
   }
  ],
  "materials": [
-  "M_Alien_Orange",
-  "M_Alien_Eyes"
+  "lahev_glass",
+  "lahev_label",
+  "lahev_red",
+  "lahev_black",
+  "lahev_gold",
+  "lahev_cork",
+  "lahev_eye",
+  "lahev_glove",
+  "lahev_shoe"
  ],
  "textures": {},
- "rest_vertices": 1297
+ "rest_vertices": 1100
 }

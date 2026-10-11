@@ -6,7 +6,7 @@ func title() -> String:
 	return "Weapons"
 
 func summary() -> String:
-	return "Every primary firearm, mid-burst against a pack"
+	return "Every primary weapon, including thrown beer bottles, mid-burst against a pack"
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")

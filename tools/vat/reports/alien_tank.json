@@ -1,26 +1,54 @@
 {
  "id": "alien_tank",
- "source_vertices": 1844,
- "columns": 1844,
+ "source_vertices": 926,
+ "columns": 926,
  "texture": [
-  1844,
-  67
+  926,
+  69
  ],
  "clips": [
   {
    "name": "move",
-   "action": "Alien_Idle",
+   "action": "Walk",
    "start": 0,
-   "frames": 67,
-   "fps": 20.099999999999998,
+   "frames": 20,
+   "fps": 20.0,
    "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 20,
+   "frames": 21,
+   "fps": 20.0,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 41,
+   "frames": 28,
+   "fps": 20.25,
+   "loop": false
   }
  ],
  "materials": [
-  "M_Alien_Orange",
-  "M_Alien_Cyan",
-  "M_Alien_Eyes"
+  "automat_red",
+  "automat_chrome",
+  "automat_gold",
+  "automat_yellow",
+  "automat_marquee",
+  "automat_bulb",
+  "automat_dark",
+  "automat_reel",
+  "automat_symbol_red",
+  "automat_green",
+  "automat_lamp_0",
+  "automat_lamp_1",
+  "automat_lamp_2",
+  "automat_knob",
+  "automat_leg"
  ],
  "textures": {},
- "rest_vertices": 1844
+ "rest_vertices": 926
 }

@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"ablative_plates"
-display_name = "Ablative Plates"
-description = "Block 1 damage from every hit."
-level_descriptions = PackedStringArray("Block 1 damage from every hit.", "Block 2 damage from every hit.", "Block 3 damage from every hit.", "Block 4 damage from every hit.", "Block 5 damage from every hit.")
+display_name = "Bunda z bazaru"
+description = "Každý zásah způsobí o 1 poškození méně."
+level_descriptions = PackedStringArray("Každý zásah způsobí o 1 poškození méně.", "Každý zásah způsobí o 2 poškození méně.", "Každý zásah způsobí o 3 poškození méně.", "Každý zásah způsobí o 4 poškození méně.", "Každý zásah způsobí o 5 poškození méně.")
 max_level = 5
 weight = 0.9
 accent_color = Color(0.7, 0.75, 0.8, 1)

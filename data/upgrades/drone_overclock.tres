@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"drone_overclock"
-display_name = "Lancer Drones"
-description = "Drones fire piercing beams that cut through every enemy in an 18 m line."
+display_name = "Pager bohů"
+description = "Lítající pomocníci pálí průrazné paprsky skrz všechny nepřátele v 18m přímce."
 kind = 2
 max_level = 1
 weight = 3.0

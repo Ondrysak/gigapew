@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"vampiric_rounds"
-display_name = "Vampiric Rounds"
-description = "Every 25 kills restore 2 health."
-level_descriptions = PackedStringArray("Every 25 kills restore 2 health.", "Every 18 kills restore 2 health.", "Every 12 kills restore 3 health.")
+display_name = "Panák za účet"
+description = "Každých 25 zabití obnoví 2 zdraví."
+level_descriptions = PackedStringArray("Každých 25 zabití obnoví 2 zdraví.", "Každých 18 zabití obnoví 2 zdraví.", "Každých 12 zabití obnoví 3 zdraví.")
 kind = 3
 max_level = 3
 accent_color = Color(1, 0.36, 0.78, 1)

@@ -1,7 +1,7 @@
 class_name LevelQuests
 extends RefCounted
 
-## Only real deposit fractures and exact ordinary-species deaths advance a level.
+## Only loot actually emitted by machine compartments and exact species deaths count.
 signal changed
 signal completed
 

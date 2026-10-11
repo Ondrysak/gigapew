@@ -7,11 +7,12 @@ signal continue_requested()
 
 const MENU_THEME := preload("res://scenes/ui/menu/menu_theme.tres")
 const MINERALS: Array[ResourceDefinition] = [preload("res://data/resources/gold.tres"), preload("res://data/resources/crystal.tres"), preload("res://data/resources/shard.tres")]
-const TEXT := Color(0.83, 0.96, 0.99)
-const DIM := Color(0.5, 0.66, 0.72)
-const TEAL := Color(0.3, 0.85, 0.88)
-const GOOD := Color(0.5, 1.0, 0.62)
-const BAD := Color(1.0, 0.36, 0.3)
+const STAT_LABELS := {"DMG": "RÁNA", "RATE": "TEMPO", "PELLETS": "KUSŮ", "SPLASH": "VÝBUCH", "PIERCE": "PRŮRAZ", "TYPE": "ŽIVEL", "ARMOR": "OCHRANA", "HEALTH": "ZDRAVÍ", "POWER": "SÍLA"}
+const TEXT := Color(0.87, 0.81, 0.67)
+const DIM := Color(0.65, 0.60, 0.49)
+const AMBER := Color(0.72, 0.55, 0.32)
+const GOOD := Color(0.66, 0.69, 0.46)
+const BAD := Color(0.78, 0.43, 0.34)
 
 var _shop: RoundShop
 var _state: RunState
@@ -37,7 +38,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var shade := ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.01, 0.025, 0.04, 0.97)
+	shade.color = Color(0.045, 0.035, 0.025, 0.98)
 	add_child(shade)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -51,19 +52,19 @@ func _ready() -> void:
 	margin.add_child(rows)
 	var header := _row()
 	rows.add_child(header)
-	_title = _label("ROUND CLEARED", 26, TEXT)
+	_title = _label("SEKTOR HOTOVÝ", 26, TEXT)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title)
 	for mineral in MINERALS:
 		header.add_child(GameIcons.rect(mineral.icon, 24))
-		var value := _label("0", 18, mineral.color.lightened(0.2))
+		var value := _label("0", 18, TEXT)
 		header.add_child(value)
 		_wallet[mineral.id] = value
 	_summary = _label("", 13, DIM)
 	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rows.add_child(_summary)
 	_build_primary(rows)
-	rows.add_child(_label("FIVE ABILITIES · INDEPENDENT UPGRADES · KEYS 1–5", 16, TEAL))
+	rows.add_child(_label("PĚT DOVEDNOSTÍ · SAMOSTATNÁ VYLEPŠENÍ · KLÁVESY 1–5", 16, AMBER))
 	var skills := _row()
 	rows.add_child(skills)
 	for slot in range(5):
@@ -74,7 +75,7 @@ func _ready() -> void:
 	_offers.resize(RoundShop.MOD_SLOTS + RoundShop.SUIT_SLOTS)
 	for section in range(2):
 		var scroll := ScrollContainer.new()
-		scroll.name = "PRIMARY MODS" if section == 0 else "SUIT SYSTEMS"
+		scroll.name = "ÚPRAVY ZBRANĚ" if section == 0 else "HADRY A SÍLA"
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		scroll.follow_focus = true
 		tabs.add_child(scroll)
@@ -90,15 +91,16 @@ func _ready() -> void:
 			_offers[index] = _build_offer(grid, index)
 	var footer := _row()
 	rows.add_child(footer)
-	_reroll = _button("REROLL STOCK", _on_reroll)
+	_reroll = _button("JINÁ NABÍDKA", _on_reroll)
 	footer.add_child(_reroll)
 	_status = _label("", 13, TEXT)
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.add_child(_status)
-	_continue = _button("CONTINUE", _on_continue)
+	_continue = _button("POKRAČOVAT", _on_continue)
 	footer.add_child(_continue)
 	Profile.currency_changed.connect(_on_wallet_changed)
+	StreetWear.apply_tree(self)
 	hide()
 
 func _build_primary(parent: Container) -> void:
@@ -111,9 +113,11 @@ func _build_primary(parent: Container) -> void:
 	var current := VBoxContainer.new()
 	current.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	columns.add_child(current)
-	_primary_name = _label("PRIMARY", 18, TEAL)
+	_primary_name = _label("HLAVNÍ ZBRAŇ", 18, AMBER)
+	_primary_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	current.add_child(_primary_name)
 	_primary_stats = _label("", 13, TEXT)
+	_primary_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	current.add_child(_primary_stats)
 	var candidate := VBoxContainer.new()
 	candidate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -123,10 +127,11 @@ func _build_primary(parent: Container) -> void:
 	_selector.item_selected.connect(_select_candidate)
 	candidate.add_child(_selector)
 	_comparison = _label("", 13, DIM)
+	_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	candidate.add_child(_comparison)
-	_swap = _button("SWAP FREE", _on_swap)
+	_swap = _button("VYMĚNIT ZDARMA", _on_swap)
 	columns.add_child(_swap)
-	_swap.tooltip_text = "Change the single primary firearm. Purchased mod ranks stay installed."
+	_swap.tooltip_text = "Vymění hlavní zbraň. Koupené stupně úprav zůstávají."
 
 func _build_ability(parent: Container, slot: int) -> void:
 	var panel := _panel()
@@ -136,15 +141,14 @@ func _build_ability(parent: Container, slot: int) -> void:
 	panel.add_child(rows)
 	var header := _row()
 	rows.add_child(header)
-	header.add_child(_label(str(slot + 1), 17, TEAL))
+	header.add_child(_label(str(slot + 1), 17, AMBER))
 	var icon := GameIcons.rect(null, 24)
 	header.add_child(icon)
-	var rank := _label("R0 / 3", 13, DIM)
+	var rank := _label("S0 / 3", 13, DIM)
 	header.add_child(rank)
 	var title := _label("", 15, TEXT)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.max_lines_visible = 1
-	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	title.custom_minimum_size.y = 36
 	rows.add_child(title)
 	var stats := _label("", 12, DIM)
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -152,7 +156,7 @@ func _build_ability(parent: Container, slot: int) -> void:
 	var price := _label("", 12, GOOD)
 	price.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rows.add_child(price)
-	var buy := _button("UPGRADE", _on_buy_ability.bind(slot))
+	var buy := _button("VYLEPŠIT", _on_buy_ability.bind(slot))
 	rows.add_child(buy)
 	_abilities.append({"panel": panel, "icon": icon, "rank": rank, "title": title, "stats": stats, "price": price, "buy": buy})
 
@@ -167,18 +171,21 @@ func _build_offer(parent: Container, index: int) -> Dictionary:
 	var icon := GameIcons.rect(null, 24)
 	header.add_child(icon)
 	var title := _label("", 16, TEXT)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	var rank := _label("", 12, DIM)
 	header.add_child(rank)
 	var effect := _label("", 13, DIM)
+	effect.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	rows.add_child(effect)
 	var bottom := _row()
 	rows.add_child(bottom)
 	var comparison := _label("", 14, GOOD)
 	comparison.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bottom.add_child(comparison)
-	var buy := _button("BUY", _on_buy.bind(index))
+	var buy := _button("KOUPIT", _on_buy.bind(index))
 	bottom.add_child(buy)
 	return {"panel": panel, "icon": icon, "title": title, "rank": rank, "effect": effect, "comparison": comparison, "buy": buy}
 
@@ -186,9 +193,9 @@ func open(state: RunState, stage: int, final_stage: bool, summary: String) -> vo
 	_state = state
 	_shop = RoundShop.new()
 	_shop.setup(state, stage, randi())
-	_title.text = "ROUND %d CLEARED · MINERAL EXCHANGE" % (stage + 1)
+	_title.text = "SEKTOR %d HOTOVÝ · BAZAR" % (stage + 1)
 	_summary.text = summary.replace("\n", "   ")
-	_continue.text = "RETURN TO BASE" if final_stage else "CONTINUE TO ROUND %d" % (stage + 2)
+	_continue.text = "ZPÁTKY DO BAZARU" if final_stage else "DO SEKTORU %d" % (stage + 2)
 	_selector.clear()
 	_candidate = 0
 	for index in state.available_weapons.size():
@@ -197,7 +204,7 @@ func open(state: RunState, stage: int, final_stage: bool, summary: String) -> vo
 		if source == state.primary.source:
 			_candidate = index
 	_selector.select(_candidate)
-	_status.text = "Swap freely; mods persist. Buy individual skills, primary mods or suit systems."
+	_status.text = "Výměna zdarma, úpravy zůstávají. Vylepši dovednosti, hlavní zbraň nebo hadry."
 	show()
 	_refresh()
 	_continue.grab_focus.call_deferred()
@@ -207,7 +214,7 @@ func _refresh() -> void:
 		return
 	for id: StringName in _wallet:
 		_wallet[id].text = str(Profile.currency(id))
-	_primary_name.text = "PRIMARY · " + _state.primary.definition.display_name.to_upper()
+	_primary_name.text = "HLAVNÍ · " + _state.primary.definition.display_name.to_upper()
 	_primary_icon.texture = _state.primary.definition.icon
 	_primary_stats.text = _weapon_text(_state.primary.definition)
 	_refresh_comparison()
@@ -216,26 +223,26 @@ func _refresh() -> void:
 		var preview := _shop.ability_preview(slot)
 		card.icon.texture = preview.icon
 		card.title.text = preview.name
-		card.rank.text = "R%d / %d" % [preview.rank, preview.max_rank]
+		card.rank.text = "S%d / %d" % [preview.rank, preview.max_rank]
 		if not _state.is_ability_unlocked(slot):
 			var level := _state.ability_unlock_level(slot)
-			card.stats.text = "Unlocks at level %d" % level
-			card.panel.tooltip_text = String(preview.description)
-			card.price.text = "LOCKED"
-			card.price.modulate = BAD
+			card.stats.text = "Odemkne se na úrovni %d" % level
+			card.panel.tooltip_text = "%s\n%s" % [preview.name, preview.description]
+			card.price.text = "ZAMČENO"
+			card.price.add_theme_color_override(&"font_color", BAD)
 			card.buy.disabled = true
-			card.buy.text = "LV %d" % level
+			card.buy.text = "ÚR %d" % level
 			continue
 		var maxed := not _state.can_upgrade_ability(slot)
-		card.stats.text = "NOW " + String(preview.from)
+		card.stats.text = "TEĎ " + String(preview.from)
 		if not maxed:
-			card.stats.text += "\nNEXT " + String(preview.to)
-		card.panel.tooltip_text = String(preview.description) + "\n" + String(preview.effect)
-		card.price.text = "MAX RANK" if maxed else _price(_shop.ability_cost(slot))
+			card.stats.text += "\nPAK " + String(preview.to)
+		card.panel.tooltip_text = "%s\n%s\n%s" % [preview.name, preview.description, preview.effect]
+		card.price.text = "MAXIMUM" if maxed else _price(_shop.ability_cost(slot))
 		var can_buy := _shop.can_buy_ability(slot)
-		card.price.modulate = GOOD if can_buy or maxed else BAD
+		card.price.add_theme_color_override(&"font_color", GOOD if can_buy or maxed else BAD)
 		card.buy.disabled = not can_buy
-		card.buy.text = "MAX RANK" if maxed else ("UPGRADE" if can_buy else "NEED MINERALS")
+		card.buy.text = "MAXIMUM" if maxed else ("VYLEPŠIT" if can_buy else "CHYBÍ KOŘIST")
 	for index in _offers.size():
 		var card: Dictionary = _offers[index]
 		var offer := _shop.offers[index]
@@ -244,14 +251,14 @@ func _refresh() -> void:
 		var preview := _shop.preview(id)
 		card.icon.texture = RoundShop.icon(id)
 		card.title.text = entry.name
-		card.rank.text = "R%d / %d" % [_shop.rank(id), RoundShop.max_rank(id)]
+		card.rank.text = "S%d / %d" % [_shop.rank(id), RoundShop.max_rank(id)]
 		card.effect.text = "%s · %s" % [RoundShop.TRACK_NAMES[RoundShop.track(id)], entry.effect]
-		card.comparison.text = "%s  %s → %s" % [preview.stat, preview.from, preview.to if not String(preview.to).is_empty() else "MAX"]
+		card.comparison.text = "%s  %s → %s" % [STAT_LABELS.get(preview.stat, "BONUS"), preview.from, preview.to if not String(preview.to).is_empty() else "MAXIMUM"]
 		var can_buy := _shop.can_buy(index)
 		card.buy.disabled = not can_buy
-		card.buy.text = "SOLD" if offer.sold else ("MAXED" if _shop.is_maxed(id) else "BUY · " + _price(offer.cost))
-		card.buy.tooltip_text = "Not enough minerals" if not can_buy and not offer.sold and not _shop.is_maxed(id) else ""
-	_reroll.text = "REROLL · " + _price(_shop.reroll_cost())
+		card.buy.text = "PRODÁNO" if offer.sold else ("MAXIMUM" if _shop.is_maxed(id) else "KOUPIT · " + _price(offer.cost))
+		card.buy.tooltip_text = "Chybí kořist" if not can_buy and not offer.sold and not _shop.is_maxed(id) else ""
+	_reroll.text = "JINÁ NABÍDKA · " + _price(_shop.reroll_cost())
 	_reroll.disabled = not _shop.can_reroll()
 	var focused := get_viewport().gui_get_focus_owner() as Button
 	if focused != null and focused.disabled and is_ancestor_of(focused):
@@ -259,7 +266,7 @@ func _refresh() -> void:
 
 func _weapon_text(definition: WeaponDefinition) -> String:
 	var stats := RoundShop.weapon_stats(definition, _state.projectile_bonus)
-	return "DMG %s · RATE %s · ×%s\nSPLASH %s · PIERCE %s · %s" % [stats.DMG, stats.RATE, stats.PELLETS, stats.SPLASH, stats.PIERCE, stats.TYPE]
+	return "RÁNA %s · TEMPO %s · ×%s\nVÝBUCH %s · PRŮRAZ %s · %s" % [stats.DMG, stats.RATE, stats.PELLETS, stats.SPLASH, stats.PIERCE, stats.TYPE]
 
 func _refresh_comparison() -> void:
 	if _candidate < 0 or _candidate >= _state.available_weapons.size():
@@ -272,7 +279,7 @@ func _refresh_comparison() -> void:
 	_comparison.text = _weapon_text(preview.definition)
 	var current := source == _state.primary.source
 	_swap.disabled = current
-	_swap.text = "EQUIPPED" if current else "SWAP FREE"
+	_swap.text = "NASAZENO" if current else "VYMĚNIT ZDARMA"
 
 func _select_candidate(index: int) -> void:
 	_candidate = index
@@ -280,20 +287,20 @@ func _select_candidate(index: int) -> void:
 
 func _on_swap() -> void:
 	if _candidate >= 0 and _candidate < _state.available_weapons.size() and _state.swap_primary(_state.available_weapons[_candidate]):
-		_status.text = "Primary swapped. All purchased mod ranks retained."
+		_status.text = "Hlavní zbraň vyměněna. Koupené stupně úprav zůstávají."
 	_refresh()
 
 func _on_buy_ability(slot: int) -> void:
 	var success := _shop.buy_ability(slot)
-	_status.text = "Ability %d upgraded to rank %d." % [slot + 1, _state.ability_rank(slot)] if success else "Purchase refused. Nothing charged."
+	_status.text = "Dovednost %d: stupeň %d." % [slot + 1, _state.ability_rank(slot)] if success else "Nákup odmítnut. Nic se nestrhlo."
 	_refresh()
 
 func _on_buy(index: int) -> void:
-	_status.text = "Upgrade installed." if _shop.buy(index) else "Purchase refused: sold, maxed or not enough minerals. Nothing charged."
+	_status.text = "Vylepšení nasazeno." if _shop.buy(index) else "Nelze koupit: prodáno, maximum nebo chybí kořist. Nic se nestrhlo."
 	_refresh()
 
 func _on_reroll() -> void:
-	_status.text = "Unsold stock replaced." if _shop.reroll() else "Reroll unavailable. Wallet unchanged."
+	_status.text = "Neprodaná nabídka vyměněna." if _shop.reroll() else "Nabídku nelze vyměnit. Peněženka beze změny."
 	_refresh()
 
 func _on_continue() -> void:
@@ -316,17 +323,17 @@ func _price(cost: Dictionary) -> String:
 	for mineral in MINERALS:
 		var amount := int(cost.get(mineral.id, 0))
 		if amount > 0:
-			parts.append("%d %s" % [amount, "Cinder" if mineral.id == &"crystal" else mineral.display_name])
-	return "FREE" if parts.is_empty() else " + ".join(parts)
+			parts.append("%d %s" % [amount, mineral.display_name])
+	return "ZDARMA" if parts.is_empty() else " + ".join(parts)
 
 func _panel() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.02, 0.04, 0.06, 0.95)
-	style.border_color = Color(0.1, 0.4, 0.45)
+	style.bg_color = Color(0.09, 0.075, 0.055, 0.98)
+	style.border_color = Color(0.35, 0.29, 0.21)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(5)
+	style.set_corner_radius_all(0)
 	style.set_content_margin_all(8)
 	panel.add_theme_stylebox_override(&"panel", style)
 	return panel

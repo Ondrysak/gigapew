@@ -34,6 +34,27 @@ extends Node3D
 @export var trace_duration := 0.045
 @export var flash_duration := 0.045
 
+@export_group("Thrown")
+## Hidden node pooled and flown, tumbling, from the muzzle to each ray's end
+## (e.g. a thrown bottle); keeps its own materials. Empty disables.
+@export var projectile_template: Node3D
+@export var projectile_pool_size := 12
+## Seconds from the muzzle to the ray's end.
+@export var projectile_flight := 0.12
+@export var projectile_scale := 1.0
+## Tumble rate (radians per second) about the projectile's side axis.
+@export var projectile_spin := 30.0
+## Peak height of the throwing arc as a fraction of the flight distance.
+@export var projectile_arc := 0.03
+
+@export_group("Impact")
+## Optional streak mesh at each contact (e.g. glass shards); empty uses thin bars.
+@export var shard_mesh: Mesh
+## Fixed streak material that ignores damage-type tint and crits; empty follows the impact.
+@export var shard_material: Material
+## Streaks fanned around each contact point.
+@export var shards_per_hit := 2
+
 @export_group("Spin")
 ## Optional node spun about its local Z axis while the gun spins up.
 @export var spinner: Node3D
@@ -130,6 +151,11 @@ var _puff_next := 0
 var _blasts: Array[Node3D] = []
 var _blast_times := PackedFloat32Array()
 var _blast_radii := PackedFloat32Array()
+var _projectiles: Array[Node3D] = []
+var _projectile_from := PackedVector3Array()
+var _projectile_to := PackedVector3Array()
+var _projectile_age := PackedFloat32Array()
+var _projectile_next := 0
 
 func _ready() -> void:
 	_rest = position
@@ -188,8 +214,11 @@ func prepare(pellet_count: int) -> void:
 	var trace_mesh := BoxMesh.new()
 	trace_mesh.size = Vector3(trace_width, trace_width, 1.0)
 	var impact_mesh := _sphere_mesh(8, 4)
-	var spark_mesh := BoxMesh.new()
-	spark_mesh.size = Vector3(0.018, 0.16, 0.018)
+	var spark_mesh := shard_mesh
+	if spark_mesh == null:
+		var bar := BoxMesh.new()
+		bar.size = Vector3(0.018, 0.16, 0.018)
+		spark_mesh = bar
 	for index in range(pellet_count):
 		if trace_material != null:
 			var trace := MeshInstance3D.new()
@@ -201,10 +230,11 @@ func prepare(pellet_count: int) -> void:
 		impact.mesh = impact_mesh
 		_add_world_visual(impact)
 		_impacts.append(impact)
-		# Two short crossed streaks at the actual contact point, reused per ray.
-		for arm in 2:
+		# Short streaks fanned at the actual contact point, reused per ray.
+		for arm in shards_per_hit:
 			var spark := MeshInstance3D.new()
 			spark.mesh = spark_mesh
+			spark.material_override = shard_material
 			_add_world_visual(spark)
 			_sparks.append(spark)
 	_trace_from.resize(pellet_count)
@@ -221,6 +251,20 @@ func prepare(pellet_count: int) -> void:
 		_puff_to.resize(puff_pool_size)
 		_puff_age.resize(puff_pool_size)
 		_puff_age.fill(-1.0)
+	if projectile_template != null:
+		projectile_template.hide()
+		# Enough in flight for a full burst of every ray at the fastest cadence.
+		var count := maxi(projectile_pool_size, pellet_count * 2)
+		for index in range(count):
+			var projectile := projectile_template.duplicate() as Node3D
+			add_child(projectile)
+			projectile.top_level = true
+			projectile.hide()
+			_projectiles.append(projectile)
+		_projectile_from.resize(count)
+		_projectile_to.resize(count)
+		_projectile_age.resize(count)
+		_projectile_age.fill(-1.0)
 	var blast_count := maxi(pellet_count, blast_pool_size)
 	var blast_mesh := _sphere_mesh(12, 6) if blast_count > 0 else null
 	if blast_template != null:
@@ -445,6 +489,8 @@ func _process(delta: float) -> void:
 			spark.scale = Vector3.ONE * maxf(0.001, _impact_time * 7.7)
 	if not _puffs.is_empty():
 		_update_puffs(delta)
+	if not _projectiles.is_empty():
+		_update_projectiles(delta)
 	if not _blasts.is_empty():
 		_update_blasts(delta)
 	if not _casings.is_empty():
@@ -544,6 +590,8 @@ func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_
 		trace.show()
 	if not _puffs.is_empty():
 		_launch_puff(start, end)
+	if not _projectiles.is_empty() and ray.length_squared() > 0.01:
+		_launch_projectile(start, end)
 	# Point-blank contact flashes would fill the screen; the hit still lands
 	# and the crosshair/numbers still confirm it.
 	var point_blank := _view_camera() != null and _camera.global_position.distance_to(end) < min_view_clearance
@@ -554,11 +602,14 @@ func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_
 		impact.material_override = _critical_material if hit_enemy and critical else target_impact_material if hit_enemy else impact_material
 		impact.scale = Vector3.ONE * (0.15 if hit_enemy and critical else 0.117)
 		impact.show()
-		for arm in 2:
-			var spark := _sparks[index * 2 + arm]
+		# Symmetric bars repeat after a half turn; custom shards fan the full circle.
+		var fan := TAU if shard_mesh != null else PI
+		for arm in shards_per_hit:
+			var spark := _sparks[index * shards_per_hit + arm]
 			spark.global_position = end + surface_normal * 0.07
-			spark.global_basis = orientation.rotated(orientation.z, PI * (0.25 if arm == 0 else -0.25))
-			spark.material_override = impact.material_override
+			spark.global_basis = orientation.rotated(orientation.z, PI * 0.25 + fan * float(arm) / float(shards_per_hit))
+			if shard_material == null:
+				spark.material_override = impact.material_override
 			spark.scale = Vector3.ONE
 			spark.show()
 
@@ -613,6 +664,38 @@ func _launch_puff(start: Vector3, end: Vector3) -> void:
 	_puff_from[slot] = start
 	_puff_to[slot] = end
 	_puff_age[slot] = 0.0
+
+func _launch_projectile(start: Vector3, end: Vector3) -> void:
+	var slot := _projectile_next
+	_projectile_next = (_projectile_next + 1) % _projectiles.size()
+	_projectile_from[slot] = start
+	_projectile_to[slot] = end
+	_projectile_age[slot] = 0.0
+	_place_projectile(slot, 0.0)
+	_projectiles[slot].show()
+
+func _update_projectiles(delta: float) -> void:
+	for index in range(_projectiles.size()):
+		var age := _projectile_age[index]
+		if age < 0.0:
+			continue
+		age += delta
+		if age >= projectile_flight:
+			_projectile_age[index] = -1.0
+			_projectiles[index].hide()
+			continue
+		_projectile_age[index] = age
+		_place_projectile(index, age)
+
+## Along the ray with a shallow throwing arc, tumbling end over end.
+func _place_projectile(index: int, age: float) -> void:
+	var from := _projectile_from[index]
+	var ray := _projectile_to[index] - from
+	var t := age / projectile_flight if projectile_flight > 0.0 else 1.0
+	var at := from + ray * t + Vector3.UP * (sin(t * PI) * projectile_arc * ray.length())
+	var facing := Basis.looking_at(ray, Vector3.RIGHT if absf(ray.normalized().y) > 0.98 else Vector3.UP)
+	var tumble := Basis(Vector3.RIGHT, float(index) * 1.9 + projectile_spin * age)
+	_projectiles[index].global_transform = Transform3D((facing * tumble).scaled(Vector3.ONE * projectile_scale), at)
 
 func _update_puffs(delta: float) -> void:
 	var camera := _view_camera()

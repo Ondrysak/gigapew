@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"nanite_weave"
-display_name = "Nanite Weave"
-description = "Regenerate 0.4 health per second."
-level_descriptions = PackedStringArray("Regenerate 0.4 health per second.", "Regenerate 0.8 health per second.", "Regenerate 1.2 health per second.", "Regenerate 1.6 health per second.", "Regenerate 2.0 health per second.")
+display_name = "Rejže od Sonyho"
+description = "Obnovuje 0,4 zdraví za sekundu."
+level_descriptions = PackedStringArray("Obnovuje 0,4 zdraví za sekundu.", "Obnovuje 0,8 zdraví za sekundu.", "Obnovuje 1,2 zdraví za sekundu.", "Obnovuje 1,6 zdraví za sekundu.", "Obnovuje 2,0 zdraví za sekundu.")
 max_level = 5
 weight = 0.9
 accent_color = Color(0.45, 1.0, 0.75, 1)

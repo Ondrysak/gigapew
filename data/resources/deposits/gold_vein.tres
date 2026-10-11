@@ -3,11 +3,12 @@
 [ext_resource type="Script" uid="uid://dseg3btyvwqnf" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
 [ext_resource type="Resource" uid="uid://bb2xvcr4a5e0o" path="res://data/resources/gold.tres" id="2_resource"]
 
-[sub_resource type="SphereMesh" id="Mesh_pickup"]
-radius = 0.12
-height = 0.19
-radial_segments = 5
-rings = 2
+[sub_resource type="CylinderMesh" id="Mesh_pickup"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.035
+radial_segments = 12
+rings = 1
 
 [resource]
 script = ExtResource("1_definition")

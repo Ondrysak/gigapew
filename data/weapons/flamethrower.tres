@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Flamethrower"
-description = "Short-range burner that pierces clustered enemies"
+display_name = "Rum + zapalovač"
+description = "Krátký dosah, souvislý plamen. Propálí několik halucinací za sebou."
 damage = 11
 damage_type = 1
 recoil_degrees = 0.04

@@ -10,10 +10,10 @@ shader = ExtResource("3_crt")
 shader_parameter/scanline_count = 320.0
 shader_parameter/scanline_strength = 0.1
 shader_parameter/vignette_strength = 0.7
-shader_parameter/sweep_strength = 0.04
+shader_parameter/sweep_strength = 0.0
 shader_parameter/sweep_speed = 0.09
 shader_parameter/glitch = 0.0
-shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
+shader_parameter/tint = Color(0.48, 0.35, 0.19, 1)
 
 [node name="PauseMenu" type="CanvasLayer" node_paths=PackedStringArray("main_panel", "resume_button", "settings_button", "abandon_button", "confirm_box", "confirm_abandon_button", "cancel_abandon_button", "settings")]
 process_mode = 3
@@ -45,7 +45,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.004, 0.01, 0.02, 0.74)
+color = Color(0.025, 0.02, 0.015, 0.82)
 
 [node name="CRT" type="ColorRect" parent="Root"]
 material = SubResource("Material_crt")
@@ -67,7 +67,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="PanelContainer" parent="Root/Main"]
-custom_minimum_size = Vector2(440, 0)
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
 
 [node name="Rows" type="VBoxContainer" parent="Root/Main/Panel"]
@@ -77,14 +77,14 @@ theme_override_constants/separation = 12
 [node name="Title" type="Label" parent="Root/Main/Panel/Rows"]
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-theme_override_font_sizes/font_size = 44
-text = "PAUSED"
+theme_override_font_sizes/font_size = 36
+text = "PAUZA NA CIGÁRO"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Root/Main/Panel/Rows"]
 layout_mode = 2
 theme_type_variation = &"SectionLabel"
-text = "RUN SUSPENDED  ·  ESC TO RESUME"
+text = "ULICE POČKÁ  ·  ESC ZPÁTKY"
 horizontal_alignment = 1
 
 [node name="Separator" type="HSeparator" parent="Root/Main/Panel/Rows"]
@@ -93,19 +93,19 @@ layout_mode = 2
 [node name="Resume" type="Button" parent="Root/Main/Panel/Rows"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
-text = "RESUME"
+text = "POKRAČOVAT"
 alignment = 0
 
 [node name="Settings" type="Button" parent="Root/Main/Panel/Rows"]
 layout_mode = 2
-text = "SETTINGS"
+text = "NASTAVENÍ"
 alignment = 0
 
 [node name="Abandon" type="Button" parent="Root/Main/Panel/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.62, 0.5, 1)
-theme_override_colors/font_hover_color = Color(1, 0.75, 0.6, 1)
-text = "ABANDON RUN"
+theme_override_colors/font_color = Color(0.83, 0.61, 0.48, 1)
+theme_override_colors/font_hover_color = Color(0.93, 0.78, 0.61, 1)
+text = "VZDÁT VÝPRAVU"
 alignment = 0
 
 [node name="Confirm" type="VBoxContainer" parent="Root/Main/Panel/Rows"]
@@ -116,8 +116,8 @@ theme_override_constants/separation = 10
 [node name="Question" type="Label" parent="Root/Main/Panel/Rows/Confirm"]
 custom_minimum_size = Vector2(380, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.72, 0.55, 1)
-text = "Abandon this run? Bank 50% of carried minerals; the rest is lost."
+theme_override_colors/font_color = Color(0.83, 0.69, 0.5, 1)
+text = "Vzdát tenhle běh? Schováš 50 % nesené kořisti; zbytek je ztracený."
 autowrap_mode = 2
 
 [node name="Buttons" type="HBoxContainer" parent="Root/Main/Panel/Rows/Confirm"]
@@ -129,12 +129,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"AccentButton"
 theme_override_font_sizes/font_size = 20
-text = "ABANDON"
+text = "VZDÁT TO"
 
 [node name="Cancel" type="Button" parent="Root/Main/Panel/Rows/Confirm/Buttons"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "CANCEL"
+text = "NECHAT BÝT"
 
 [node name="Settings" parent="Root" instance=ExtResource("4_settings")]
 visible = false

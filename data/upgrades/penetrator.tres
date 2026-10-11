@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"penetrator"
-display_name = "Penetrator Cores"
-description = "Main gun shots pierce 1 more enemy (total +1)."
-level_descriptions = PackedStringArray("Main gun shots pierce 1 more enemy (total +1).", "Main gun shots pierce 1 more enemy (total +2).", "Main gun shots pierce 1 more enemy (total +3).")
+display_name = "Bez fronty do herny"
+description = "Střely hlavní zbraně projdou o 1 nepřítele dál (celkem +1)."
+level_descriptions = PackedStringArray("Střely hlavní zbraně projdou o 1 nepřítele dál (celkem +1).", "Střely hlavní zbraně projdou o 1 nepřítele dál (celkem +2).", "Střely hlavní zbraně projdou o 1 nepřítele dál (celkem +3).")
 max_level = 3
 weight = 0.8
 accent_color = Color(0.95, 0.85, 0.35, 1)

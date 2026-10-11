@@ -182,10 +182,31 @@ func ability_metadata(slot: int) -> Dictionary:
 		var ability := scene.instantiate() as ActiveAbility
 		if ability == null:
 			return {}
+		var strength_label := "RÁNA"
+		var duration_label := "ČAS"
+		var mastery_effect := "Za stupeň: poškození +25 % základu · prodleva -12 % základu · trvání +15 %."
+		if ability is BattleFrenzy:
+			strength_label = "TEMPO+"
+			mastery_effect = "Za stupeň: bonus rychlosti střelby +25 % základu · prodleva -12 % základu · trvání +15 %."
+		elif ability is Overdrive:
+			strength_label = ""
+			mastery_effect = "Za stupeň: prodleva -12 % základu · trvání +15 %. Síla zrychlení autozbraní se nemění."
+		elif ability is SeismicCharge or ability is SuppressionBarrage:
+			duration_label = ""
+			mastery_effect = "Za stupeň: poškození +25 % základu · prodleva -12 % základu. Dosah a počet ran se nemění."
+		elif ability is BlinkDash or ability is DrillDash or ability is GrappleVault:
+			duration_label = "ŠTÍT"
+			mastery_effect = "Za stupeň: poškození +25 % základu · prodleva -12 % základu · nezranitelnost +15 %. Délka přesunu se nemění."
+		elif ability is ReconFlare:
+			mastery_effect = "Za stupeň: poškození i bonus označení +25 % základu · prodleva -12 % základu · trvání +15 %."
+		elif ability is RepairDrone:
+			mastery_effect = "Za stupeň: poškození +25 % základu · prodleva -12 % základu · trvání, štít i celkové léčení +15 %."
 		_ability_metadata[scene] = {
 			"name": ability.display_name, "description": ability.description,
 			"icon": ability.icon, "color": ability.accent_color,
 			"cooldown": ability.base_cooldown,
+			"mastery_effect": mastery_effect, "strength_label": strength_label,
+			"duration_label": duration_label, "strength_uses_damage": not (ability is BattleFrenzy),
 		}
 		ability.free()
 	return _ability_metadata[scene]
@@ -202,10 +223,10 @@ func ability_upgrade_offer(slot: int) -> UpgradeDefinition:
 		offer.max_level = MAX_ABILITY_RANK
 		_ability_offers[slot] = offer
 	var offer: UpgradeDefinition = _ability_offers[slot]
-	offer.display_name = "%s Mastery" % metadata.name
+	offer.display_name = "%s · mistrovství" % metadata.name
 	offer.icon = metadata.icon
 	offer.accent_color = metadata.color
-	offer.description = "%s\n+25%% damage · -12%% base cooldown · +15%% duration per rank." % metadata.description
+	offer.description = "%s\n%s" % [metadata.description, metadata.mastery_effect]
 	return offer
 
 ## Round-shop boosts are run-local and survive stage changes.

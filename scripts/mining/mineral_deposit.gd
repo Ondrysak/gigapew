@@ -1,12 +1,11 @@
 class_name MineralDeposit
 extends StaticBody3D
 
-## Seeded formation with exact surface colliders and persistent local fractures.
+## Seeded wall machine with exact door colliders and conserved compartment loot.
 signal struck(deposit: MineralDeposit)
 signal fragment_mined(deposit: MineralDeposit, amount: int, position: Vector3)
 signal depleted(deposit: MineralDeposit)
 
-const CRYSTAL_SHADER := preload("res://shaders/deposit_crystal.gdshader")
 const FLASH_TIME := 0.14
 const WEAK_MULTIPLIER := 1.75
 
@@ -32,7 +31,8 @@ func configure(p_definition: DepositDefinition, seed: int, size_scale: float) ->
 	rng.seed = seed
 	total_yield = rng.randi_range(definition.yield_min, maxi(definition.yield_min, definition.yield_max))
 	var count := rng.randi_range(7, 9)
-	var geometry := DepositGeometry.build(rng, count, formation_size)
+	var geometry := DepositGeometry.build(rng, count, formation_size, definition.resource.id)
+	_build_housing(count)
 	var order: Array[int] = []
 	var weights := PackedFloat32Array()
 	var weight_sum := 0.0
@@ -52,17 +52,21 @@ func configure(p_definition: DepositDefinition, seed: int, size_scale: float) ->
 		allocations[order[rank]] = floori(float(total_yield) / float(count)) + (1 if rank < total_yield % count else 0)
 	for index in count:
 		var section: Dictionary = geometry[index]
-		var material := ShaderMaterial.new()
-		material.shader = CRYSTAL_SHADER
-		material.set_shader_parameter("mineral_color", definition.resource.color)
-		material.set_shader_parameter("weak_position", section["weak_position"])
-		material.set_shader_parameter("weak_radius", section["weak_radius"])
-		material.set_shader_parameter("formation_seed", rng.randf_range(0.0, 50.0))
+		var material := StandardMaterial3D.new()
+		material.vertex_color_use_as_albedo = true
+		material.metallic = 0.55
+		material.roughness = 0.72
 		var mesh := MeshInstance3D.new()
 		mesh.name = "Fragment%d" % index
 		mesh.mesh = section["mesh"]
 		mesh.material_override = material
 		add_child(mesh)
+		if definition.resource.id != &"crystal":
+			var center: Vector3 = section["center"]
+			var cell: Vector2 = section["cell"]
+			for reel in 3:
+				var symbol := "7" if definition.resource.id == &"shard" else str((index + reel * 2) % 9 + 1)
+				_label(mesh, symbol, center + Vector3((float(reel) - 1.0) * cell.x * 0.23 - cell.x * 0.04, cell.y * 0.1, 0.099), cell.y * 0.006, Color(0.48, 0.08, 0.045))
 		var collider := CollisionShape3D.new()
 		collider.name = "FragmentSurface%d" % index
 		collider.shape = section["shape"]
@@ -86,17 +90,47 @@ func configure(p_definition: DepositDefinition, seed: int, size_scale: float) ->
 	_remaining = count
 	set_process(false)
 
+func _build_housing(count: int) -> void:
+	var geometry := DepositGeometry.housing(formation_size, count)
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.metallic = 0.6
+	material.roughness = 0.82
+	var housing := MeshInstance3D.new()
+	housing.name = "EmptyHousing"
+	housing.mesh = geometry["mesh"]
+	housing.material_override = material
+	add_child(housing)
+	var collider := CollisionShape3D.new()
+	collider.name = "HousingSurface"
+	collider.shape = geometry["shape"]
+	add_child(collider)
+	var source := "VÝHERNÍ AUTOMAT" if definition.resource.id == &"gold" else ("CIGARETY" if definition.resource.id == &"crystal" else "JACKPOT 777")
+	_label(housing, source, Vector3(0.0, formation_size.y * 0.41, formation_size.z * 0.52 + 0.008), formation_size.x * 0.0011, Color(0.91, 0.75, 0.35))
+	_label(housing, definition.resource.display_name.to_upper() + " · PÁČ ZÁMKY", Vector3(0.0, formation_size.y * 0.32, formation_size.z * 0.52 + 0.009), formation_size.x * 0.00055, Color(0.83, 0.8, 0.68))
+
+func _label(parent: Node3D, text: String, at: Vector3, pixel_size: float, color: Color) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.position = at
+	label.pixel_size = pixel_size
+	label.font_size = 48
+	label.outline_size = 0
+	label.modulate = color
+	parent.add_child(label)
+
 func feedback_at(hit_position: Vector3, shape_index: int) -> Dictionary:
 	var index := _fragment_at(shape_index)
 	if index < 0:
 		return {}
 	var section := _sections[index]
 	var local := to_local(hit_position)
-	var weak_position: Vector3 = section["weak_position"]
+	var mesh: MeshInstance3D = section["mesh"]
+	var weak_position: Vector3 = mesh.transform * (section["weak_position"] as Vector3)
 	var weak_radius: float = section["weak_radius"]
 	return {
 		"fragment": index,
-		"name": definition.resource.display_name,
+		"name": ("Výherní automat" if definition.resource.id == &"gold" else ("Cigaretový automat" if definition.resource.id == &"crystal" else "Jackpot")) + " · " + definition.resource.display_name,
 		"color": definition.resource.color,
 		"progress": clampf(1.0 - float(section["health"]) / float(section["maximum"]), 0.0, 1.0),
 		"weak": local.distance_squared_to(weak_position) <= weak_radius * weak_radius,
@@ -122,17 +156,22 @@ func take_mining_damage(amount: float, hit_position: Vector3, shape_index: int) 
 	var dealt := minf(float(section["health"]), amount * (WEAK_MULTIPLIER if last_hit_weak else 1.0))
 	section["health"] = maxf(0.0, float(section["health"]) - dealt)
 	health = maxf(0.0, health - dealt)
-	var material: ShaderMaterial = section["material"]
-	material.set_shader_parameter("damage", 1.0 - float(section["health"]) / float(section["maximum"]))
+	var material: StandardMaterial3D = section["material"]
+	var damage := 1.0 - float(section["health"]) / float(section["maximum"])
+	var mesh: MeshInstance3D = section["mesh"]
+	# The latch side pulls away from the cabinet before its door tears off.
+	mesh.position.z = damage * 0.065
+	mesh.rotation.y = damage * 0.07
+	var surface: CollisionShape3D = section["collider"]
+	surface.transform = mesh.transform
 	section["flash"] = FLASH_TIME
-	material.set_shader_parameter("flash", 1.0)
+	material.albedo_color = Color(1.25, 1.15, 0.95)
 	if not _active.has(index):
 		_active.append(index)
 	set_process(true)
 	if float(section["health"]) <= 0.0:
 		last_chunk_broken = true
 		_remaining -= 1
-		var mesh: MeshInstance3D = section["mesh"]
 		mesh.hide()
 		var collider: CollisionShape3D = section["collider"]
 		collider.set_deferred("disabled", true)
@@ -143,7 +182,6 @@ func take_mining_damage(amount: float, hit_position: Vector3, shape_index: int) 
 		fragment_mined.emit(self, int(section["yield"]), hit_position)
 	if _remaining == 0:
 		health = 0.0
-		collision_layer = 0
 		depleted.emit(self)
 
 func _fragment_at(shape_index: int) -> int:
@@ -160,8 +198,8 @@ func _process(delta: float) -> void:
 		var section := _sections[_active[active_index]]
 		var flash := maxf(0.0, float(section["flash"]) - delta)
 		section["flash"] = flash
-		var material: ShaderMaterial = section["material"]
-		material.set_shader_parameter("flash", flash / FLASH_TIME)
+		var material: StandardMaterial3D = section["material"]
+		material.albedo_color = Color.WHITE.lerp(Color(1.25, 1.15, 0.95), flash / FLASH_TIME)
 		if flash <= 0.0:
 			_active.remove_at(active_index)
 	if _active.is_empty():

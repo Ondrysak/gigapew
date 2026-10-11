@@ -45,14 +45,14 @@ theme_override_constants/separation = 18
 [node name="Title" type="Label" parent="Margin/Rows/Header"]
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
-text = "ARMORY"
+text = "TRVALÉ BONUSY"
 
 [node name="Subtitle" type="Label" parent="Margin/Rows/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 8
 theme_type_variation = &"SectionLabel"
-text = "PERMANENT UPGRADES  ·  PAID IN BANKED GOLD"
+text = "TRVALÁ VYLEPŠENÍ  ·  ZA ULOŽENÉ DROBNÉ"
 
 [node name="CurrencyBar" parent="Margin/Rows/Header" instance=ExtResource("3_currency")]
 layout_mode = 2
@@ -82,10 +82,11 @@ theme_override_constants/separation = 24
 
 [node name="Back" type="Button" parent="Margin/Rows/Footer"]
 layout_mode = 2
-text = "BACK  [ESC]"
+text = "ZPĚT  [ESC]"
 
 [node name="Status" type="Label" parent="Margin/Rows/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"DimLabel"
 vertical_alignment = 1
+autowrap_mode = 2

@@ -11,23 +11,22 @@ shader = ExtResource("5_crt")
 shader_parameter/scanline_count = 320.0
 shader_parameter/scanline_strength = 0.14
 shader_parameter/vignette_strength = 0.8
-shader_parameter/sweep_strength = 0.06
+shader_parameter/sweep_strength = 0.0
 shader_parameter/sweep_speed = 0.18
-shader_parameter/glitch = 0.8
-shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
+shader_parameter/glitch = 0.0
+shader_parameter/tint = Color(0.48, 0.35, 0.19, 1)
 
-[node name="Intro" type="Node" unique_id=1712859928 node_paths=PackedStringArray("backdrop", "logo", "fade", "crt", "skip_hint")]
+[node name="Intro" type="Node" unique_id=1712859928 node_paths=PackedStringArray("backdrop", "logo", "fade", "skip_hint")]
 script = ExtResource("1_intro")
 backdrop = NodePath("StageBackdrop")
 logo = NodePath("Overlay/Frame/Center/Logo")
 fade = NodePath("Overlay/Frame/Fade")
-crt = NodePath("Overlay/Frame/CRT")
 skip_hint = NodePath("Overlay/Frame/SkipHint")
 
 [node name="StageBackdrop" parent="." unique_id=540573425 instance=ExtResource("2_backdrop")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25470734, 0.06814003, -0.18156815)
-orbit_radius = 30.0
-orbit_height = 1.1
+orbit_radius = 11.0
+orbit_height = 8.0
 orbit_speed = 0.02
 orbit_angle = 0.0
 look_height = 1.0
@@ -103,7 +102,7 @@ offset_bottom = -18.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_type_variation = &"DimLabel"
-text = "PRESS ANY KEY TO SKIP"
+text = "LIBOVOLNÁ KLÁVESA PŘESKOČÍ ÚVOD"
 horizontal_alignment = 2
 vertical_alignment = 1
 

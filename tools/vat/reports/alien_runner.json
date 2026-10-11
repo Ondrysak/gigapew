@@ -1,52 +1,45 @@
 {
  "id": "alien_runner",
- "source_vertices": 869,
- "columns": 869,
+ "source_vertices": 934,
+ "columns": 934,
  "texture": [
-  869,
-  167
+  934,
+  45
  ],
  "clips": [
   {
    "name": "move",
-   "action": "AlienArmature|AlienArmature|Alien_Run",
+   "action": "Walk",
    "start": 0,
-   "frames": 18,
-   "fps": 20.571428571428573,
-   "loop": true
-  },
-  {
-   "name": "idle",
-   "action": "AlienArmature|AlienArmature|Alien_Idle",
-   "start": 18,
-   "frames": 83,
-   "fps": 19.919999999999998,
+   "frames": 8,
+   "fps": 19.2,
    "loop": true
   },
   {
    "name": "attack",
-   "action": "AlienArmature|AlienArmature|Alien_Punch",
-   "start": 101,
-   "frames": 19,
-   "fps": 19.636363636363637,
+   "action": "Attack",
+   "start": 8,
+   "frames": 13,
+   "fps": 20.57142857142857,
    "loop": false
   },
   {
    "name": "death",
-   "action": "AlienArmature|AlienArmature|Alien_Death",
-   "start": 120,
-   "frames": 47,
-   "fps": 20.072727272727274,
+   "action": "Death",
+   "start": 21,
+   "frames": 24,
+   "fps": 19.71428571428571,
    "loop": false
   }
  ],
  "materials": [
-  "Main",
-  "Stripe",
-  "Eyes",
-  "Nails",
-  "White"
+  "svab_pale",
+  "svab_shell",
+  "svab_belly",
+  "svab_eye",
+  "svab_wing",
+  "svab_leg"
  ],
  "textures": {},
- "rest_vertices": 869
+ "rest_vertices": 934
 }

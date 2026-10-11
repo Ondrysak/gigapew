@@ -1,7 +1,6 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/menu/stage_backdrop.gd" id="1_backdrop"]
-[ext_resource type="PackedScene" path="res://scenes/levels/yard.tscn" id="2_world"]
 [ext_resource type="PackedScene" path="res://assets/monsters/robot_grunt/robot_grunt.glb" id="3_grunt"]
 [ext_resource type="PackedScene" path="res://assets/monsters/robot_runner/robot_runner.glb" id="4_runner"]
 [ext_resource type="PackedScene" path="res://assets/monsters/robot_spitter/robot_spitter.glb" id="5_spitter"]
@@ -22,18 +21,11 @@ crowd = NodePath("Crowd")
 sentinel = NodePath("Sentinel")
 monster_definitions = Array[ExtResource("8_def")]([ExtResource("9_grunt_def"), ExtResource("10_runner_def"), ExtResource("11_spitter_def"), ExtResource("12_tank_def"), ExtResource("13_boss_def")])
 vat_shader = ExtResource("14_vat_shader")
-march_range = Vector2(-30, 30)
-
-[node name="World" parent="." instance=ExtResource("2_world")]
+march_range = Vector2(-5, 5)
 
 [node name="Sentinel" parent="." instance=ExtResource("7_dreadnought")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, -5)
 
-[node name="SentinelGlow" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, -2)
-light_color = Color(1, 0.3, 0.55, 1)
-light_energy = 2.2
-omni_range = 14.0
 
 [node name="Crowd" type="Node3D" parent="."]
 

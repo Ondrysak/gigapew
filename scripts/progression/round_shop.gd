@@ -10,7 +10,7 @@ extends RefCounted
 enum Track { FIREPOWER, PAYLOAD, ELEMENT, SUIT }
 enum Section { MODS, SUIT }
 
-const TRACK_NAMES: Array[String] = ["FIREPOWER", "PAYLOAD", "ELEMENT", "SUIT"]
+const TRACK_NAMES: Array[String] = ["RÁNA", "NÁLOŽ", "ŽIVEL", "HADRY"]
 const MOD_SLOTS := 4
 const SUIT_SLOTS := 2
 ## Every price adds the stage's gold: BASE_GOLD + GOLD_PER_STAGE per cleared
@@ -22,17 +22,17 @@ const GOLD_STAGE_CAP := 5
 ## `stat` names the primary/run stat the preview compares. ELEMENT conversions
 ## are mutually exclusive: each conversion replaces the primary's damage type.
 const CATALOG := {
-	&"damage": {"name": "Hardened Output", "effect": "+20% base damage per rank", "track": Track.FIREPOWER, "stat": "DMG", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
-	&"cadence": {"name": "Accelerated Cycling", "effect": "+15% attack rate per rank", "track": Track.FIREPOWER, "stat": "RATE", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
-	&"projectiles": {"name": "Projectile Splitter", "effect": "+2 pellets per shot", "track": Track.PAYLOAD, "stat": "PELLETS", "max_rank": 6, "price": {&"gold": 0, &"crystal": 5}},
-	&"splash": {"name": "Blast Chamber", "effect": "+1.1 m blast on every hit", "track": Track.PAYLOAD, "stat": "SPLASH", "max_rank": 4, "price": {&"gold": 0, &"crystal": 5}},
-	&"pierce": {"name": "Penetrator", "effect": "Shots pierce +1 enemy", "track": Track.PAYLOAD, "stat": "PIERCE", "max_rank": 4, "price": {&"gold": 0, &"shard": 1}},
-	&"fire": {"name": "Cinder Conversion", "effect": "Fire damage: ignites targets", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 7}},
-	&"frost": {"name": "Cryo Conversion", "effect": "Frost damage: slows targets", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 3, &"shard": 1}},
-	&"shock": {"name": "Arc Conversion", "effect": "Shock damage: chains to others", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 3, &"shard": 1}},
-	&"armor": {"name": "Field Plating", "effect": "+1 armor against every hit", "track": Track.SUIT, "stat": "ARMOR", "max_rank": 5, "price": {&"gold": 0, &"crystal": 3}},
-	&"health": {"name": "Reinforced Suit", "effect": "+15 maximum health", "track": Track.SUIT, "stat": "HEALTH", "max_rank": 5, "price": {&"gold": -1, &"crystal": 2}},
-	&"power": {"name": "Combat Calibration", "effect": "+10% damage, every weapon", "track": Track.SUIT, "stat": "POWER", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
+	&"damage": {"name": "Rána z bazaru", "effect": "+20 % základního poškození za stupeň", "track": Track.FIREPOWER, "stat": "DMG", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
+	&"cadence": {"name": "Tempo posledního setu", "effect": "+15 % rychlosti útoku za stupeň", "track": Track.FIREPOWER, "stat": "RATE", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
+	&"projectiles": {"name": "Dvojitej panák", "effect": "+2 projektily na výstřel", "track": Track.PAYLOAD, "stat": "PELLETS", "max_rank": 6, "price": {&"gold": 0, &"crystal": 5}},
+	&"splash": {"name": "Rána jak z výčepu", "effect": "+1,1 m poloměru výbuchu při zásahu", "track": Track.PAYLOAD, "stat": "SPLASH", "max_rank": 4, "price": {&"gold": 0, &"crystal": 5}},
+	&"pierce": {"name": "Bez fronty do herny", "effect": "Střely projdou o 1 nepřítele dál", "track": Track.PAYLOAD, "stat": "PIERCE", "max_rank": 4, "price": {&"gold": 0, &"shard": 1}},
+	&"fire": {"name": "Rum a zapalovač", "effect": "Ohnivé poškození: zapálí cíl", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 7}},
+	&"frost": {"name": "Fernet z mrazáku", "effect": "Mrazivé poškození: zpomalí cíl", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 3, &"shard": 1}},
+	&"shock": {"name": "Zkrat v zásuvce", "effect": "Bleskové poškození: přeskočí na další", "track": Track.ELEMENT, "stat": "TYPE", "max_rank": 1, "price": {&"gold": -2, &"crystal": 3, &"shard": 1}},
+	&"armor": {"name": "Kožená bunda", "effect": "+1 ochrany proti každému zásahu", "track": Track.SUIT, "stat": "ARMOR", "max_rank": 5, "price": {&"gold": 0, &"crystal": 3}},
+	&"health": {"name": "Játra z oceli", "effect": "+15 maximálního zdraví", "track": Track.SUIT, "stat": "HEALTH", "max_rank": 5, "price": {&"gold": -1, &"crystal": 2}},
+	&"power": {"name": "Škola disrespectu", "effect": "+10 % poškození všech zbraní", "track": Track.SUIT, "stat": "POWER", "max_rank": 5, "price": {&"gold": 0, &"crystal": 2}},
 }
 
 ## Offers 0..MOD_SLOTS-1 are weapon mods, the rest suit systems:
@@ -171,16 +171,23 @@ func ability_preview(slot: int) -> Dictionary:
 	var current := _state.ability_rank(slot)
 	return {"name": metadata.name, "icon": metadata.icon, "description": metadata.description,
 		"rank": current, "max_rank": RunState.MAX_ABILITY_RANK, "stat": "ABILITY",
-		"effect": "+25% base damage · -12% base cooldown · +15% duration per rank",
+		"effect": metadata.mastery_effect,
 		"from": _ability_stats(slot, current),
 		"to": _ability_stats(slot, current + 1) if _state.can_upgrade_ability(slot) else ""}
 
 func _ability_stats(slot: int, ability_rank: int) -> String:
 	var metadata := _state.ability_metadata(slot)
 	var cooldown: float = metadata.cooldown * ActiveAbility.ability_cooldown_scale(ability_rank) * _state.ability_cooldown_multiplier
-	return "DMG %d%% · CD %.1fs · TIME %d%%" % [
-		roundi(100.0 * ActiveAbility.ability_damage_scale(ability_rank) * _state.damage_multiplier),
-		cooldown, roundi(100.0 * ActiveAbility.ability_duration_scale(ability_rank))]
+	var parts := PackedStringArray()
+	if not String(metadata.strength_label).is_empty():
+		var strength := ActiveAbility.ability_damage_scale(ability_rank)
+		if bool(metadata.strength_uses_damage):
+			strength *= _state.damage_multiplier
+		parts.append("%s %d%%" % [metadata.strength_label, roundi(100.0 * strength)])
+	parts.append("PAUZA %.1fs" % cooldown)
+	if not String(metadata.duration_label).is_empty():
+		parts.append("%s %d%%" % [metadata.duration_label, roundi(100.0 * ActiveAbility.ability_duration_scale(ability_rank))])
+	return " · ".join(parts)
 
 func reroll_cost() -> Dictionary:
 	return {&"gold": 3 + _rerolls * 3, &"crystal": 1 + _rerolls}

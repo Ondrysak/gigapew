@@ -1,15 +1,11 @@
 class_name MiningTool
 extends Node3D
 
-## Proximity drill: aiming at visible ore raises it automatically; held F cuts.
+## Páčidlo: visible close machine compartments auto-raise it; held F pries.
 const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 
 ## Node moved between the stowed and raised poses.
 @export var model: Node3D
-## Node spun around `spin_axis` while drilling.
-@export var spinner: Node3D
-@export var spin_axis := Vector3(0.0, 0.0, 1.0)
-@export var spin_speed := 40.0
 ## Offset from the authored pose when not in use.
 @export var stowed_offset := Vector3(-0.05, -0.38, 0.18)
 @export var raise_speed := 7.0
@@ -19,7 +15,7 @@ const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 @export var mining_per_second := 45.0
 @export var tick_interval := 0.15
 
-## Same-section contact ramps to a 35% faster cut; changing sections resets it.
+## Staying on one latch loosens it for up to 35% faster prying.
 @export_range(0.3, 1.2) var resonance_seconds := 0.65
 
 
@@ -28,14 +24,10 @@ const FeedbackController := preload("res://scripts/mining/mining_feedback.gd")
 ## Should use vertex color as albedo.
 @export var spark_material: Material
 @export var rock_spark_color := Color(1.0, 0.72, 0.3)
-@export var drill_sound: AudioStream
 @export var rock_sound: AudioStream
-@export var drill_volume_db := -17.0
 @export var sound_bus: StringName = &"SFX"
-## Zero disables the temporal halo without removing target information.
-@export_range(0.0, 1.0) var feedback_strength := 0.65
 
-## Public drill state for HUD integrations and targeted smoke checks.
+## Public salvage state for HUD integrations and targeted smoke checks.
 var resonance := 0.0
 var target_deposit: MineralDeposit
 var target_fragment := -1
@@ -50,18 +42,19 @@ var _raise := 0.0
 var _kick := 0.0
 var _contact := 0.0
 var _rest := Vector3.ZERO
+var _rest_rotation := Vector3.ZERO
+var _pry_phase := 0.0
 var _sparks: Array[CPUParticles3D] = []
 var _next_spark := 0
-var _drill_voice: AudioStreamPlayer
 var _impact_voice: AudioStreamPlayer
 var _rock_stream: AudioStream
 var _break_stream: AudioStream
 var _fracture_progress := 0.0
-var _weak_contact := false
 
 func _ready() -> void:
 	if model != null:
 		_rest = model.position
+		_rest_rotation = model.rotation
 		model.visible = false
 	for _index in 3:
 		var emitter := CPUParticles3D.new()
@@ -84,11 +77,6 @@ func _ready() -> void:
 		add_child(emitter)
 		emitter.top_level = true
 		_sparks.append(emitter)
-	_drill_voice = AudioStreamPlayer.new()
-	_drill_voice.stream = drill_sound if drill_sound != null else MiningSynth.drill_loop()
-	_drill_voice.volume_db = drill_volume_db
-	_drill_voice.bus = sound_bus
-	add_child(_drill_voice)
 	_rock_stream = rock_sound if rock_sound != null else MiningSynth.cue(&"clank")
 	_break_stream = MiningSynth.cue(&"section")
 	_impact_voice = AudioStreamPlayer.new()
@@ -98,7 +86,6 @@ func _ready() -> void:
 	add_child(_impact_voice)
 	feedback = FeedbackController.new()
 	add_child(feedback)
-	feedback.strength = feedback_strength
 
 ## Call after the tool is a child of the player's camera.
 func setup(player: ArenaPlayer, run_state: RunState) -> void:
@@ -108,7 +95,7 @@ func setup(player: ArenaPlayer, run_state: RunState) -> void:
 	feedback.setup(player)
 	_player.mining_tool = self
 
-## The first physics surface must be a live ore fragment within drill reach.
+## The first physics surface must be a live machine compartment within reach.
 func has_target() -> bool:
 	if not _enabled() or _query == null:
 		return false
@@ -130,9 +117,8 @@ func cancel() -> void:
 	_using = false
 	_tick = 0.0
 	_contact = 0.0
+	_pry_phase = 0.0
 	_clear_target()
-	if _drill_voice != null:
-		_drill_voice.stop()
 	if _impact_voice != null:
 		_impact_voice.stop()
 	if feedback != null:
@@ -141,12 +127,7 @@ func cancel() -> void:
 func _physics_process(delta: float) -> void:
 	var enabled := _enabled()
 	var using := enabled and _player.drilling()
-	if using != _using:
-		_using = using
-		if using:
-			_drill_voice.play()
-		else:
-			_drill_voice.stop()
+	_using = using
 	_contact = maxf(0.0, _contact - delta)
 	if not enabled or _query == null:
 		_clear_target()
@@ -170,7 +151,6 @@ func _physics_process(delta: float) -> void:
 	else:
 		resonance = 0.0
 	_fracture_progress = float(data.get("progress", 0.0))
-	_weak_contact = bool(data.get("weak", false)) and using
 	feedback.set_target(data, using, resonance)
 	if not using:
 		# The first tick of the next press lands immediately.
@@ -192,7 +172,6 @@ func _clear_target() -> void:
 	target_fragment = -1
 	resonance = 0.0
 	_fracture_progress = 0.0
-	_weak_contact = false
 
 func _strike(hit: Dictionary, data: Dictionary) -> void:
 	var struck := false
@@ -205,14 +184,12 @@ func _strike(hit: Dictionary, data: Dictionary) -> void:
 			var multiplier := _run_state.mining_multiplier if _run_state != null else 1.0
 			var cut_rate := mining_per_second * (1.0 + resonance * 0.35)
 			deposit.take_mining_damage(cut_rate * tick_interval * multiplier, point, int(hit["shape"]))
-			var color: Color = data["color"]
+			var color := Color(0.95, 0.65, 0.27)
 			var broken := deposit.last_chunk_broken
 			var weak := deposit.last_hit_weak
 			_play(_break_stream if broken else _rock_stream)
 			_impact_voice.pitch_scale = 0.95 + _fracture_progress * 0.2 + resonance * 0.15 + (0.15 if weak else 0.0)
 			_spark(point, normal, color.lightened(0.3) if weak else color, broken, weak)
-			if broken:
-				feedback.fragment_beat()
 			_kick = 1.8 if broken else (1.05 if weak else 0.65) + _fracture_progress * 0.25
 			struck = true
 		elif _contact == 0.0:
@@ -239,7 +216,6 @@ func _spark(at: Vector3, normal: Vector3, color: Color, broken := false, weak :=
 	emitter.restart()
 
 func _process(delta: float) -> void:
-	feedback.strength = feedback_strength
 	if model == null:
 		return
 	var ready := _player != null and _player.mining_ready()
@@ -249,16 +225,15 @@ func _process(delta: float) -> void:
 	if not model.visible:
 		return
 	var eased := _raise * _raise * (3.0 - 2.0 * _raise)
-	var jitter := Vector3.ZERO
 	if _using:
-		var strength := 0.004 + (0.006 + resonance * 0.003 + _fracture_progress * 0.002 if _contact > 0.0 else 0.0)
-		jitter = Vector3(randf_range(-strength, strength), randf_range(-strength, strength), 0.0)
-	model.position = _rest + stowed_offset * (1.0 - eased) + jitter + Vector3(0.0, 0.0, -0.06 * _kick)
-	if spinner != null and _using:
-		spinner.rotate_object_local(spin_axis.normalized(), spin_speed * delta * (1.3 + resonance * 0.2 if _contact > 0.0 else 1.0))
-	if _using:
-		var contact_pitch := 1.1 + resonance * 0.25 + _fracture_progress * 0.1 + (0.08 if _weak_contact else 0.0)
-		_drill_voice.pitch_scale = lerpf(_drill_voice.pitch_scale, contact_pitch if _contact > 0.0 else 1.0, 1.0 - exp(-10.0 * delta))
+		_pry_phase = fmod(_pry_phase + delta * (2.4 + resonance * 0.35), 1.0)
+	else:
+		_pry_phase = 0.0
+	# Drive the hooked tip forward, then pull the grip down and back for leverage.
+	# The steel bar never spins about its shaft.
+	var leverage := sin(_pry_phase * TAU) if _using else 0.0
+	model.position = _rest + stowed_offset * (1.0 - eased) + Vector3(-0.018 * leverage, -0.035 * leverage, -0.035 * leverage + 0.025 * _kick)
+	model.rotation = _rest_rotation + Vector3(0.24 * leverage - 0.07 * _kick, 0.035 * leverage, -0.06 * leverage)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PAUSED:

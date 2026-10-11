@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"chain_reaction"
-display_name = "Chain Reaction"
-description = "Kills have a 15% chance to explode for 25 damage in 2.5 m. Explosion kills can explode again."
-level_descriptions = PackedStringArray("Kills have a 15% chance to explode for 25 damage in 2.5 m. Explosion kills can explode again.", "Kills have a 25% chance to explode for 35 damage in 3 m. Explosion kills can explode again.", "Kills have a 35% chance to explode for 50 damage in 3.5 m. Explosion kills can explode again.")
+display_name = "Domino v herně"
+description = "Zabití má 15% šanci vybuchnout: 25 poškození do 2,5 m. Zabití výbuchem může vybuchnout znovu."
+level_descriptions = PackedStringArray("Zabití má 15% šanci vybuchnout: 25 poškození do 2,5 m. Zabití výbuchem může vybuchnout znovu.", "Zabití má 25% šanci vybuchnout: 35 poškození do 3 m. Zabití výbuchem může vybuchnout znovu.", "Zabití má 35% šanci vybuchnout: 50 poškození do 3,5 m. Zabití výbuchem může vybuchnout znovu.")
 kind = 3
 max_level = 3
 weight = 1.0

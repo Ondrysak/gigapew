@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"hardened_rounds"
-display_name = "Hardened Rounds"
-description = "All weapons deal 12% more damage (total +12%)."
-level_descriptions = PackedStringArray("All weapons deal 12% more damage (total +12%).", "All weapons deal 12% more damage (total +24%).", "All weapons deal 12% more damage (total +36%).", "All weapons deal 12% more damage (total +48%).", "All weapons deal 12% more damage (total +60%).")
+display_name = "Disrespect bohům"
+description = "Všechny zbraně způsobí o 12 % více poškození (celkem +12 %)."
+level_descriptions = PackedStringArray("Všechny zbraně způsobí o 12 % více poškození (celkem +12 %).", "Všechny zbraně způsobí o 12 % více poškození (celkem +24 %).", "Všechny zbraně způsobí o 12 % více poškození (celkem +36 %).", "Všechny zbraně způsobí o 12 % více poškození (celkem +48 %).", "Všechny zbraně způsobí o 12 % více poškození (celkem +60 %).")
 max_level = 5
 weight = 1.0
 accent_color = Color(1.0, 0.3, 0.3, 1)

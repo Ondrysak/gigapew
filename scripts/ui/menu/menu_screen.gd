@@ -14,10 +14,12 @@ signal back_requested
 func _ready() -> void:
 	if back_button != null:
 		back_button.pressed.connect(back_requested.emit)
+	StreetWear.apply_tree(self)
 
 func open() -> void:
 	show()
 	refresh()
+	StreetWear.apply_tree(self)
 	if default_focus != null and default_focus.is_visible_in_tree():
 		default_focus.grab_focus.call_deferred()
 

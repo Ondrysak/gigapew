@@ -12,7 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/menu/settings_screen.tscn" id="10_settings"]
 
 [sub_resource type="Gradient" id="Gradient_shade"]
-colors = PackedColorArray(0, 0.005, 0.012, 0.9, 0, 0.005, 0.012, 0)
+colors = PackedColorArray(0.025, 0.02, 0.015, 0.94, 0.025, 0.02, 0.015, 0)
 
 [sub_resource type="GradientTexture2D" id="Texture_shade"]
 gradient = SubResource("Gradient_shade")
@@ -25,10 +25,10 @@ shader = ExtResource("4_crt")
 shader_parameter/scanline_count = 320.0
 shader_parameter/scanline_strength = 0.1
 shader_parameter/vignette_strength = 0.65
-shader_parameter/sweep_strength = 0.04
+shader_parameter/sweep_strength = 0.0
 shader_parameter/sweep_speed = 0.09
 shader_parameter/glitch = 0.0
-shader_parameter/tint = Color(0.1, 0.85, 0.9, 1)
+shader_parameter/tint = Color(0.48, 0.35, 0.19, 1)
 
 [node name="MainMenu" type="Node" node_paths=PackedStringArray("home", "play_button", "base_button", "records_button", "settings_button", "quit_button", "operator_label", "class_select", "base", "records", "settings", "screen_dim", "fade")]
 script = ExtResource("1_menu")
@@ -47,8 +47,8 @@ screen_dim = NodePath("UI/Root/ScreenDim")
 fade = NodePath("UI/Root/Fade")
 
 [node name="StageBackdrop" parent="." instance=ExtResource("2_backdrop")]
-orbit_radius = 21.0
-orbit_height = 4.5
+orbit_radius = 11.0
+orbit_height = 8.0
 orbit_speed = 0.05
 orbit_angle = 0.9
 look_height = 1.6
@@ -85,7 +85,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.004, 0.01, 0.02, 0.62)
+color = Color(0.025, 0.02, 0.015, 0.72)
 
 [node name="Home" type="Control" parent="UI/Root"]
 layout_mode = 1
@@ -120,7 +120,7 @@ anchor_top = 0.5
 anchor_bottom = 0.5
 offset_left = 64.0
 offset_top = -110.0
-offset_right = 424.0
+offset_right = 484.0
 offset_bottom = 220.0
 grow_vertical = 2
 theme_override_constants/separation = 12
@@ -128,27 +128,27 @@ theme_override_constants/separation = 12
 [node name="Play" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
-text = "DEPLOY"
+text = "VYRAZIT DO ULIC"
 alignment = 0
 
 [node name="Base" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
-text = "BASE WORKSHOP"
+text = "BAZAR A VYLEPŠENÍ"
 alignment = 0
 
 [node name="Records" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
-text = "RECORDS"
+text = "ÚČTY A REKORDY"
 alignment = 0
 
 [node name="Settings" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
-text = "SETTINGS"
+text = "NASTAVENÍ"
 alignment = 0
 
 [node name="Quit" type="Button" parent="UI/Root/Home/Buttons"]
 layout_mode = 2
-text = "QUIT"
+text = "ZABALIT TO"
 alignment = 0
 
 [node name="CurrencyBar" parent="UI/Root/Home" instance=ExtResource("6_currency")]
@@ -174,7 +174,7 @@ offset_bottom = -32.0
 grow_vertical = 0
 theme_type_variation = &"SectionLabel"
 theme_override_font_sizes/font_size = 16
-text = "OPERATOR"
+text = "PARTA"
 vertical_alignment = 1
 
 [node name="Hint" type="Label" parent="UI/Root/Home"]
@@ -191,7 +191,7 @@ offset_bottom = -32.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_type_variation = &"DimLabel"
-text = "ARROWS / MOUSE  ·  ENTER SELECT  ·  ESC BACK"
+text = "ŠIPKY / MYŠ  ·  ENTER VYBRAT  ·  ESC ZPĚT"
 horizontal_alignment = 2
 vertical_alignment = 1
 

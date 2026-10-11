@@ -105,8 +105,8 @@ rings = 1
 
 [node name="SeismicCharge" type="Node3D" node_paths=PackedStringArray("charge", "marker", "shock_template", "flash_template")]
 script = ExtResource("1_ability")
-display_name = "Seismic Charge"
-description = "Lob a demolition charge up to 22 m. It lands, then detonates: massive damage, huge shove."
+display_name = "Odpočet do autodestrukce"
+description = "Hodíš nálož do 22 m. Po dopadu vybuchne: drtivé poškození a pořádné odhození."
 base_cooldown = 12.0
 accent_color = Color(1, 0.48, 0.14, 1)
 synth_activate = &"seismic_throw"

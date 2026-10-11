@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"arc_overclock"
-display_name = "Forked Arc"
-description = "A side bolt forks off every struck enemy and leaps 2 more times."
+display_name = "Rozdvojka z tržnice"
+description = "Z každého zasaženého nepřítele vyrazí boční blesk se 2 dalšími přeskoky."
 kind = 2
 max_level = 1
 weight = 3.0

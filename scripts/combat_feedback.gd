@@ -4,11 +4,11 @@ extends Control
 const CROSS_DIRECTIONS := [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]
 const HIT_DIRECTIONS := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]
 
-@export var reticle_color := Color(0.58, 1.0, 0.95, 0.9)
-@export var kill_color := Color(1.0, 0.68, 0.25)
-@export var damage_color := Color(1.0, 0.13, 0.25)
-@export var confirmation_text := "TARGET DOWN"
-@export var combo_color := Color(1.0, 0.78, 0.36)
+@export var reticle_color := Color(0.9, 0.84, 0.69, 0.95)
+@export var kill_color := Color(0.86, 0.62, 0.32)
+@export var damage_color := Color(0.86, 0.2, 0.16)
+@export var confirmation_text := "ROZPRÁŠENO"
+@export var combo_color := Color(0.84, 0.68, 0.38)
 
 var aiming := true
 var terminal := false
@@ -58,7 +58,7 @@ func show_damage() -> void:
 
 func show_combo(hits: int, bonus: float) -> void:
 	_combo_hits = hits
-	_combo_text = "CHAIN %d   +%d%% NEXT SHOT" % [hits, roundi(bonus * 100.0)] if bonus > 0.0 else "CHAIN %d" % hits
+	_combo_text = "SÉRIE %d   +%d%% DALŠÍ RÁNA" % [hits, roundi(bonus * 100.0)] if bonus > 0.0 else "SÉRIE %d" % hits
 	_combo_time = 2.5 if hits > 0 else 0.0
 	if hits == 3 or hits == 6 or hits == 10:
 		_chain_pulse = 1.0
@@ -107,10 +107,10 @@ func _draw() -> void:
 		var color := combo_color if _combo_hits >= 3 else reticle_color
 		_centered_text(_combo_text, center.y + 86.0 - _chain_pulse * 4.0, 17 + int(_chain_pulse * 3.0), color)
 		var width := 140.0 * (_combo_time / 2.5)
-		draw_line(center + Vector2(-70, 99), center + Vector2(70, 99), Color(0.08, 0.16, 0.2, 0.7), 3.0)
+		draw_line(center + Vector2(-70, 99), center + Vector2(70, 99), Color(0.16, 0.13, 0.09, 0.7), 3.0)
 		draw_line(center + Vector2(-70, 99), center + Vector2(-70 + width, 99), color, 3.0)
 	if not aiming and not terminal:
-		_centered_text("CLICK TO CAPTURE AIM", center.y + 70.0, 17, Color(0.65, 0.85, 0.9))
+		_centered_text("KLIKNI PRO MÍŘENÍ", center.y + 70.0, 17, Color(0.83, 0.76, 0.62))
 
 func _centered_text(text: String, y: float, font_size: int, color: Color) -> void:
 	var font := ThemeDB.fallback_font

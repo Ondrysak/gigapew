@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"nova"
-display_name = "Nova Pulse"
-description = "Periodically release a shockwave that damages and hurls back nearby enemies."
-level_descriptions = PackedStringArray("Periodically release a shockwave that damages and hurls back nearby enemies.", "Stronger, wider and more frequent pulses.", "Stronger, wider and more frequent pulses.", "Stronger, wider and more frequent pulses.", "Stronger, wider and more frequent pulses.")
+display_name = "Zvukovka na doraz"
+description = "Pravidelná tlaková vlna zraňuje a odhazuje blízké nepřátele."
+level_descriptions = PackedStringArray("Pravidelná tlaková vlna zraňuje a odhazuje blízké nepřátele.", "Silnější, širší a častější tlakové vlny.", "Silnější, širší a častější tlakové vlny.", "Silnější, širší a častější tlakové vlny.", "Silnější, širší a častější tlakové vlny.")
 kind = 1
 max_level = 5
 weight = 1.3

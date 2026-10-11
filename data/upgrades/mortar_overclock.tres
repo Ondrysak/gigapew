@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"mortar_overclock"
-display_name = "Cluster Mortar"
-description = "Shells burst into 4 bomblets that scatter around each impact."
+display_name = "Silvestr NONSTOP"
+description = "Každá nálož při dopadu rozhodí 4 menší nálože do okolí."
 kind = 2
 max_level = 1
 weight = 3.0

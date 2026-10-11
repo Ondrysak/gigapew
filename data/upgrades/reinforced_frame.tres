@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"reinforced_frame"
-display_name = "Reinforced Frame"
-description = "+20 max health (total +20)."
-level_descriptions = PackedStringArray("+20 max health (total +20).", "+20 max health (total +40).", "+20 max health (total +60).", "+20 max health (total +80).", "+20 max health (total +100).")
+display_name = "Játra z oceli"
+description = "+20 maximálního zdraví (celkem +20)."
+level_descriptions = PackedStringArray("+20 maximálního zdraví (celkem +20).", "+20 maximálního zdraví (celkem +40).", "+20 maximálního zdraví (celkem +60).", "+20 maximálního zdraví (celkem +80).", "+20 maximálního zdraví (celkem +100).")
 max_level = 5
 weight = 1.0
 accent_color = Color(1.0, 0.45, 0.5, 1)

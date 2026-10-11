@@ -6,7 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-description = "Rapid precision carbine"
+display_name = "Lahve od piva"
+description = "Rychle házené lahve. Prázdný sklo, plná ruka."
 damage = 60
 recoil_degrees = 0.1
 fire_interval = 0.09

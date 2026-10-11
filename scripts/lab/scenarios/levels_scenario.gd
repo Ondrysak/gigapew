@@ -4,7 +4,7 @@ func title() -> String:
 	return "Procedural levels"
 
 func summary() -> String:
-	return "Seeded themed arenas, overlooks, ore outcrops, connected walk-up routes and guaranteed contract ore"
+	return "Seeded arenas, overlooks, wall machines, connected walk-up routes and guaranteed contract loot"
 
 func run() -> void:
 	for stage in 3:
@@ -70,14 +70,14 @@ func _validate_ore(game: ArenaGame, world: ProceduralWorld) -> void:
 				for site: Dictionary in world.mining_sites:
 					if site.get("interior", false) and Vector2(child.global_position.x - site.position.x, child.global_position.z - site.position.z).length() < 1.0:
 						interior_ore += 1
-		lab.check(available >= int(game.quests.requirements()[resource]) and reachable, "%s has enough real reachable initial ore (%d available / %d needed), without a respawn" % [resource.display_name, available, game.quests.requirements()[resource]])
-	lab.check(interior_ore > 0, "contract ore occupies %d interior outcrop faces, not only the perimeter" % interior_ore)
+		lab.check(available >= int(game.quests.requirements()[resource]) and reachable, "%s has enough real reachable initial machine loot (%d available / %d needed), without a respawn" % [resource.display_name, available, game.quests.requirements()[resource]])
+	lab.check(interior_ore > 0, "contract machines occupy %d interior mounting faces, not only the perimeter" % interior_ore)
 
 ## The horde's own heightfield must read each deck as flat high ground and its
 ## ramp as one continuous climb from the floor.
 func _validate_elevation(game: ArenaGame, world: ProceduralWorld) -> void:
 	var stage := game.campaign[game.stage_index]
-	lab.check(world.overlooks.size() == stage.overlook_count and world.outcrops.size() == stage.outcrop_count, "%s places all %d overlooks and %d ore outcrops" % [stage.id, stage.overlook_count, stage.outcrop_count])
+	lab.check(world.overlooks.size() == stage.overlook_count and world.outcrops.size() == stage.outcrop_count, "%s places all %d overlooks and %d machine mounting blocks" % [stage.id, stage.overlook_count, stage.outcrop_count])
 	var continuous := true
 	for overlook: Dictionary in world.overlooks:
 		var top: Vector3 = overlook.center
@@ -187,7 +187,7 @@ func _validate_routes(game: ArenaGame, world: ProceduralWorld) -> void:
 		var cell := Vector2i(floori((stand.x - area.position.x) / 2.0), floori((stand.z - area.position.y) / 2.0))
 		if cell.x < 0 or cell.y < 0 or cell.x >= width or cell.y >= depth or visited[cell.y * width + cell.x] == 0:
 			unreachable.append("%s at %s" % [(site.support as Node).name, stand])
-	lab.check(unreachable.is_empty(), "all guaranteed mineral support faces have a route from spawn %s" % [unreachable])
+	lab.check(unreachable.is_empty(), "all guaranteed machine support faces have a route from spawn %s" % [unreachable])
 	var feet_reachable := true
 	for overlook: Dictionary in world.overlooks:
 		var approach: Vector3 = overlook.foot + overlook.direction * 1.5

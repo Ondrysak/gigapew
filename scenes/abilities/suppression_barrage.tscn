@@ -45,8 +45,8 @@ ring_segments = 4
 
 [node name="SuppressionBarrage" type="Node3D" node_paths=PackedStringArray("flash_template", "scorch_template")]
 script = ExtResource("1_ability")
-display_name = "Suppression Barrage"
-description = "Call in a barrage: 30 shells hammer three rings around you (4, 7 and 10 m), each blasting 55 damage over 2.6 m and knocking enemies back."
+display_name = "Blesky ze stropu"
+description = "Přivoláš 30 výbušných ran do tří kruhů kolem sebe (4, 7 a 10 m). Každá dá 55 poškození do 2,6 m a odhodí nepřátele."
 base_cooldown = 16.0
 accent_color = Color(1, 0.6, 0.25, 1)
 synth_activate = &"autocannon"

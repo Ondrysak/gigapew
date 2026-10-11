@@ -7,12 +7,12 @@ extends PanelContainer
 ## than expiring behind them.
 
 const TIPS := {
-	&"basics": ["MOVE AND SHOOT", "WASD moves and the mouse aims. Hold LMB to fire: your gun never runs dry. The mouse wheel swaps guns."],
-	&"contract": ["YOUR CONTRACT", "The list on the left is this level's job: mine the ore and defeat the listed enemies. Finishing it calls your extraction."],
-	&"mining": ["MINING", "Your drill comes out near ore. Hold F to cut a section; the glowing ◇ weak seam cuts faster."],
-	&"repair": ["LOW HEALTH", "Walk over red repair kits to heal. Enemies drop them, and supply packs land nearby over time."],
-	&"extraction": ["EXTRACTION", "Contract done! Follow the green beam and stand in the pod's ring until it lifts off. Enemies surge until then."],
-	&"combos": ["SKILL COMBOS", "Blast skills inside your Gravity Well CRUSH for +60%. Cast Pulse Barrier near the well to COLLAPSE it. Dash while shielded to SHIELD RAM."],
+	&"basics": ["POHYB A RÁNY", "WASD pro pohyb, myš pro míření. Drž LMB a útoč: munice nikdy nedojde. Kolečkem myši měníš zbraně."],
+	&"contract": ["TVŮJ KŠEFT", "Seznam vlevo je zakázka: vypáč požadovanou kořist z automatů a rozpráš uvedené halucinace. Počítá se jen kořist uvolněná z rozbitých přihrádek, ne peníze v kapse. Splnění přivolá odvoz."],
+	&"mining": ["VYSEKEJ AUTOMAT", "Zamiř zblízka na přihrádku: páčidlo se zvedne samo. Drž F a páč zámek označený + pro ×1,75 síly. Vytrvalé páčení stejné západky přidá až 35 %. Drobné z výherního automatu, Cigára z cigaretového, Kešulky z jackpotu."],
+	&"repair": ["UŽ SE SYPEŠ", "Přejdi přes červené lékárničky a doplň zdraví. Padají z nepřátel; časem poblíž přistanou i balíky zásob."],
+	&"extraction": ["ODVOZ", "Zakázka hotová! Běž ke světelnému sloupu a zůstaň v kruhu odvozu až do odjezdu. Halucinace do té doby přibývají."],
+	&"combos": ["TRIKY DOHROMADY", "Výbušné triky uvnitř Ban zóny spustí POWNED za +60 %. Valhalla poblíž zóny spustí PERMABAN. Úprk pod štítem spustí LAST TIME KRATOS."],
 }
 const MIN_SECONDS := 5.0
 const SECONDS_PER_WORD := 0.32
@@ -30,12 +30,12 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.015, 0.035, 0.05, 0.9)
-	style.border_color = Color(0.25, 0.9, 1.0, 0.9)
+	style.bg_color = Color(0.095, 0.075, 0.055, 0.97)
+	style.border_color = Color(0.64, 0.49, 0.28, 0.9)
 	style.border_width_left = 4
 	style.set_content_margin_all(12.0)
 	style.content_margin_left = 16.0
-	style.set_corner_radius_all(4)
+	style.set_corner_radius_all(0)
 	add_theme_stylebox_override(&"panel", style)
 	set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	offset_left = -280.0
@@ -49,14 +49,15 @@ func _ready() -> void:
 	add_child(rows)
 	_title = Label.new()
 	_title.add_theme_font_size_override(&"font_size", 15)
-	_title.add_theme_color_override(&"font_color", Color(0.45, 0.95, 1.0))
+	_title.add_theme_color_override(&"font_color", Color(0.87, 0.7, 0.4))
 	rows.add_child(_title)
 	_body = Label.new()
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size.x = 528.0
 	_body.add_theme_font_size_override(&"font_size", 14)
-	_body.add_theme_color_override(&"font_color", Color(0.86, 0.93, 0.96))
+	_body.add_theme_color_override(&"font_color", Color(0.86, 0.8, 0.67))
 	rows.add_child(_body)
+	StreetWear.apply_tree(self)
 	hide()
 
 ## Queues a tip unless guided start is off or this profile has seen it.

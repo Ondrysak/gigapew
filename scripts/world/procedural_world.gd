@@ -18,10 +18,11 @@ const RAMP_THICKNESS := 0.6
 ## Outward normals of block faces: north, south, west, east.
 const FACE_NORMALS: Array[Vector3] = [Vector3(0, 0, -1), Vector3(0, 0, 1), Vector3(-1, 0, 0), Vector3(1, 0, 0)]
 const ModuleBatch = preload("res://scenes/levels/yard/module_batch.gd")
-const YARD_FLOOR = preload("res://shaders/yard_floor.gdshader")
+const ZIZKOV_FLOOR = preload("res://shaders/zizkov_floor.gdshader")
+const ZIZKOV_WALL = preload("res://shaders/zizkov_wall.gdshader")
 const FOUNDRY_FLOOR = preload("res://shaders/foundry_floor.gdshader")
 const REACTOR_FLOOR = preload("res://shaders/reactor_floor.gdshader")
-const YARD_WALL_ART = preload("res://assets/third_party/quaternius_megakit/WallAstra_Straight_Flat.gltf")
+const FLAT_WALL_ART = preload("res://assets/third_party/quaternius_megakit/WallAstra_Straight_Flat.gltf")
 const REACTOR_WALL_ART = preload("res://assets/third_party/quaternius_megakit/WallAstra_Straight_Divided.gltf")
 const FOUNDRY_STEEL = preload("res://scenes/levels/foundry/materials/foundry_steel.tres")
 const FOUNDRY_WALL = preload("res://scenes/levels/foundry/materials/foundry_wall.tres")
@@ -60,7 +61,15 @@ var _accent_color: Color
 var _secondary_color: Color
 var _box := BoxMesh.new()
 var _cylinder := CylinderMesh.new()
+var _sphere := SphereMesh.new()
 var _visual_batches: Dictionary = {}
+## Batched dressing materials that skip the shadow pass (small facade detail).
+var _shadowless: Dictionary = {}
+## Žižkov (yard) palette, keyed by role; empty for the other themes.
+var _props: Dictionary[StringName, Material] = {}
+## Žižkov facade runs, recorded per open block face and dressed once every
+## block and ore site exists: {mid, normal, length, height, along_x, key, sites}.
+var _facade_runs: Array[Dictionary] = []
 
 func configure(stage: StageDefinition, seed: int) -> void:
 	assert(not is_inside_tree(), "Configure the procedural world before adding it to the tree.")
@@ -78,6 +87,8 @@ func _ready() -> void:
 	_cylinder.height = 1.0
 	_cylinder.radial_segments = 64
 	_cylinder.rings = 1
+	_sphere.radial_segments = 10
+	_sphere.rings = 5
 	_obstacles = Node3D.new()
 	_obstacles.name = "Obstacles"
 	add_child(_obstacles)
@@ -100,6 +111,8 @@ func _ready() -> void:
 			_build_reactor_core(room)
 	_build_set_pieces()
 	_build_room_features()
+	if _theme == &"yard":
+		_build_zizkov_street()
 	_build_guides()
 	_build_lighting()
 	_flush_visual_batches()
@@ -127,15 +140,73 @@ func _configure_theme() -> void:
 		_rock = _material(Color(0.15, 0.12, 0.23), 0.95, 0.1)
 		_accent_color = Color(0.19, 0.92, 0.86)
 		_secondary_color = Color(0.65, 0.33, 1.0)
+	else:
+		_configure_zizkov()
 	_accent = _material(_accent_color, 0.4, 0.1, true)
 	_secondary = _material(_secondary_color, 0.4, 0.1, true)
+
+## Žižkov: plaster tenements, setts, sodium lamps, road paint and herna neon.
+func _configure_zizkov() -> void:
+	_accent_color = Color(0.95, 0.68, 0.24)
+	_secondary_color = Color(0.95, 0.17, 0.1)
+	var wall := ShaderMaterial.new()
+	wall.shader = ZIZKOV_WALL
+	_wall = wall
+	var brick := ShaderMaterial.new()
+	brick.shader = ZIZKOV_WALL
+	brick.set_shader_parameter("brick_share", 1.0)
+	_rock = brick
+	var skyline := ShaderMaterial.new()
+	skyline.shader = ZIZKOV_WALL
+	skyline.set_shader_parameter("windows", true)
+	_props[&"skyline"] = skyline
+	_steel = _material(Color(0.34, 0.33, 0.31), 0.95, 0.0)
+	_dark = _material(Color(0.05, 0.045, 0.04), 0.9, 0.0)
+	for entry: Array in [
+		[&"cornice", Color(0.6, 0.55, 0.46), 0.9, 0.0, true],
+		[&"frame", Color(0.5, 0.45, 0.37), 0.8, 0.0, false],
+		[&"glass", Color(0.02, 0.025, 0.035), 0.12, 0.3, false],
+		[&"board", Color(0.3, 0.2, 0.12), 0.95, 0.0, false],
+		[&"wood", Color(0.24, 0.13, 0.07), 0.7, 0.0, false],
+		[&"iron", Color(0.055, 0.055, 0.06), 0.55, 0.6, true],
+		[&"pipe", Color(0.32, 0.33, 0.34), 0.5, 0.5, false],
+		[&"sign", Color(0.045, 0.035, 0.035), 0.6, 0.2, true],
+		[&"bin", Color(0.3, 0.31, 0.3), 0.5, 0.6, true],
+		[&"container", Color(0.12, 0.23, 0.15), 0.7, 0.4, true],
+		[&"bag", Color(0.018, 0.018, 0.022), 0.3, 0.0, true],
+		[&"bag_blue", Color(0.1, 0.17, 0.38), 0.35, 0.0, true],
+		[&"paper", Color(0.62, 0.58, 0.5), 0.9, 0.0, false],
+		[&"cardboard", Color(0.45, 0.33, 0.2), 0.95, 0.0, true],
+		[&"roof", Color(0.2, 0.12, 0.085), 0.8, 0.1, true],
+		[&"poster_column", Color(0.3, 0.34, 0.27), 0.8, 0.2, true],
+		[&"graffiti_black", Color(0.025, 0.025, 0.03), 0.6, 0.0, false],
+		[&"graffiti_red", Color(0.78, 0.12, 0.1), 0.6, 0.0, false],
+		[&"graffiti_yellow", Color(0.9, 0.74, 0.15), 0.6, 0.0, false],
+		[&"graffiti_green", Color(0.2, 0.58, 0.26), 0.6, 0.0, false],
+		[&"graffiti_purple", Color(0.45, 0.2, 0.6), 0.6, 0.0, false],
+		[&"graffiti_silver", Color(0.72, 0.74, 0.78), 0.35, 0.6, false],
+	]:
+		_props[entry[0]] = _material(entry[1], entry[2], entry[3])
+		if not entry[4]:
+			_shadowless[_props[entry[0]]] = true
+	for entry: Array in [
+		[&"glass_lit", Color(1.0, 0.64, 0.28), 1.1],
+		[&"glass_tv", Color(0.45, 0.6, 1.0), 0.9],
+		[&"sodium", Color(1.0, 0.6, 0.24), 3.0],
+		[&"neon_red", Color(1.0, 0.1, 0.07), 3.0],
+		[&"neon_yellow", Color(1.0, 0.76, 0.22), 2.6],
+	]:
+		var glow := _material(entry[1], 0.4, 0.0, true)
+		glow.emission_energy_multiplier = entry[2]
+		_props[entry[0]] = glow
+		_shadowless[glow] = true
 
 func _build_floor() -> void:
 	var material := ShaderMaterial.new()
 	match _theme:
 		&"foundry": material.shader = FOUNDRY_FLOOR
 		&"reactor": material.shader = REACTOR_FLOOR
-		_: material.shader = YARD_FLOOR
+		_: material.shader = ZIZKOV_FLOOR
 	material.set_shader_parameter("area_center", _area.get_center())
 	material.set_shader_parameter("area_half_extents", _area.size * 0.5)
 	if _theme == &"foundry":
@@ -174,7 +245,7 @@ func _generate_layout() -> void:
 	_spawn_room = _pick_spawn_room()
 	_prune_unreachable(rooms[_spawn_room].anchor)
 
-## Training Yard: a compound of mixed-shape rooms with looping corridors.
+## Žižkov (yard): a compound of mixed-shape rooms with looping corridors.
 func _plan_compound() -> void:
 	for _index in maxi(1, _stage.overlook_count):
 		_try_room(Vector2i(15, 11), Vector2i(18, 13), [&"hall"], true)
@@ -523,6 +594,13 @@ func _build_spawn() -> void:
 	add_child(spawn)
 	_occupied.append(Rect2(at - Vector2(3.0, 3.0), Vector2(6.0, 6.0)))
 	# Flush floor markings, never raised props on the landing pad.
+	if _theme == &"yard":
+		# Luďas wakes up on the yard's septic lid.
+		_visual(_cylinder, _steel, Vector3(at.x, 0.005, at.y), Vector3(1.05, 0.01, 1.05))
+		_visual(_cylinder, _props[&"iron"], Vector3(at.x, 0.012, at.y), Vector3(0.82, 0.012, 0.82))
+		for bar in 5:
+			_visual(_box, _dark, Vector3(at.x + (bar - 2) * 0.28, 0.02, at.y), Vector3(0.07, 0.01, 1.3 - absf(bar - 2) * 0.3))
+		return
 	_visual(_box, _accent, Vector3(at.x, 0.006, at.y - 1.8), Vector3(3.6, 0.01, 0.08))
 	_visual(_box, _accent, Vector3(at.x, 0.006, at.y + 1.8), Vector3(3.6, 0.01, 0.08))
 
@@ -599,13 +677,18 @@ func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBo
 	var mid := _face_point(rect, face, start + count * 0.5)
 	var length := count * CELL_SIZE
 	var along_x := face < 2
-	# Everything flush on the face: a glowing top trim, a dark mid band above
-	# the ore mounting height, and a hazard kick-plate reading the wall line.
-	_visual(_box, _accent, mid + normal * 0.02 + Vector3.UP * (height - 0.45), Vector3(length, 0.12, 0.04) if along_x else Vector3(0.04, 0.12, length))
-	if count >= 3:
-		_visual(_box, _dark, mid + normal * 0.015 + Vector3.UP * minf(height - 1.3, 3.6), Vector3(length - 1.0, 1.1, 0.03) if along_x else Vector3(0.03, 1.1, length - 1.0))
-	_visual(_box, _secondary, mid + normal * 0.02 + Vector3.UP * 0.09, Vector3(length, 0.18, 0.04) if along_x else Vector3(0.04, 0.18, length))
-	# Contract ore sites need a broad face with two open cells of standing room.
+	var run_sites := mining_sites.size()
+	if _theme == &"yard":
+		# Tenement dressing waits until every machine site and set piece exists.
+		_facade_runs.append({"mid": mid, "normal": normal, "length": length, "height": height, "along_x": along_x, "key": hash([rect.position, face, start])})
+	else:
+		# Everything flush on the face: a glowing top trim, a dark mid band above
+		# the machine mounting height, and a hazard kick-plate reading the wall line.
+		_visual(_box, _accent, mid + normal * 0.02 + Vector3.UP * (height - 0.45), Vector3(length, 0.12, 0.04) if along_x else Vector3(0.04, 0.12, length))
+		if count >= 3:
+			_visual(_box, _dark, mid + normal * 0.015 + Vector3.UP * minf(height - 1.3, 3.6), Vector3(length - 1.0, 1.1, 0.03) if along_x else Vector3(0.03, 1.1, length - 1.0))
+		_visual(_box, _secondary, mid + normal * 0.02 + Vector3.UP * 0.09, Vector3(length, 0.18, 0.04) if along_x else Vector3(0.04, 0.18, length))
+	# Contract machine sites need a broad face with two open cells of standing room.
 	var deep_start := -1
 	for step in range(start, start + count + 1):
 		var deep := step < start + count and _open_at(_face_cell(rect, face, step, 2))
@@ -621,6 +704,8 @@ func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBo
 					point.y = 1.5
 					mining_sites.append({"position": point, "normal": normal, "support": body})
 			deep_start = -1
+	if _theme == &"yard":
+		_facade_runs[-1]["sites"] = mining_sites.size() - run_sites
 
 ## Overlooks favour arena rooms; outcrops spread over the others first.
 func _build_set_pieces() -> void:
@@ -716,7 +801,7 @@ func _build_overlook(deck: Rect2, height: float, direction: Vector2, run: float)
 	overlooks.append({"center": top, "size": deck.size, "height": height, "foot": foot, "direction": outward})
 
 func _try_outcrop(region: Rect2) -> bool:
-	# Long faces must still exceed a full ore formation (about 4.8 m).
+	# Long faces must still exceed a full machine bank (about 4.8 m).
 	var length := _rng.randf_range(5.6, 7.0)
 	var depth := _rng.randf_range(2.6, 3.4)
 	var height := _rng.randf_range(3.4, 4.4)
@@ -727,7 +812,7 @@ func _try_outcrop(region: Rect2) -> bool:
 			for _attempt in 40:
 				var corner := Vector2(_rng.randf_range(region.position.x, region.end.x - extent.x), _rng.randf_range(region.position.y, region.end.y - extent.y))
 				var footprint := Rect2(corner, extent)
-				# Room for a formation and a miner in front, and never inside a
+				# Room for a wall machine and a player in front, and never inside a
 				# wall site's standing spot (2.5 m out plus body radius).
 				if not _area_clear(footprint, 3.6):
 					continue
@@ -748,8 +833,11 @@ func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
 		var normal := Vector3(0.0, 0.0, sign_value) if along_x else Vector3(sign_value, 0.0, 0.0)
 		mining_sites.append({"position": Vector3(center.x, 1.5, center.y) + normal * half_depth, "normal": normal, "support": body, "interior": true})
 	_visual(_box, _dark, position + Vector3.UP * (height * 0.5), Vector3(footprint.size.x * 0.96, 0.012, footprint.size.y * 0.96))
-	# Glowing seams on the short ends and a beacon above mark it from range.
 	var end_offset := Vector3(footprint.size.x * 0.5, 0.0, 0.0) if along_x else Vector3(0.0, 0.0, footprint.size.y * 0.5)
+	if _theme == &"yard":
+		_dress_zizkov_outcrop(position, height, end_offset)
+		return
+	# Glowing seams on the short ends and a beacon above mark it from range.
 	for sign_value in [-1.0, 1.0]:
 		var seam := Vector3(0.012, height * 0.7, footprint.size.y * 0.5) if along_x else Vector3(footprint.size.x * 0.5, height * 0.7, 0.012)
 		_visual(_box, _secondary, position + end_offset * sign_value, seam)
@@ -775,7 +863,10 @@ func _build_pillars(room: Dictionary) -> void:
 			_occupied.append(footprint)
 			var position := Vector3(center.x, _wall_height * 0.5, center.y)
 			_cylinder_body("Pillar%d_%d" % [x, z], position, radius, _wall_height, _steel)
-			_dress_column(position, Vector3(radius * 2.0, _wall_height, radius * 2.0), false)
+			if _theme == &"yard":
+				_dress_zizkov_pillar(position, radius, _wall_height)
+			else:
+				_dress_column(position, Vector3(radius * 2.0, _wall_height, radius * 2.0), false)
 
 ## The reactor itself: a tall glowing landmark visible over every wall.
 func _build_reactor_core(room: Dictionary) -> void:
@@ -807,7 +898,9 @@ func _build_cover() -> void:
 			_occupied.append(footprint)
 			var position := Vector3(point.x, size.y * 0.5, point.y)
 			var label := "IndustrialIsland%d" % index
-			if circular:
+			if _theme == &"yard":
+				_build_zizkov_island(label, position, size, landmark, circular)
+			elif circular:
 				_cylinder_body(label, position, size.x * 0.5, size.y, _steel)
 				_dress_column(position, size, landmark)
 			else:
@@ -871,10 +964,14 @@ func _dress_column(position: Vector3, size: Vector3, landmark: bool) -> void:
 		_add_fill(position + Vector3(0.0, size.y * 0.5 + 0.4, 0.0), _accent_color, 1.4, 13.0)
 
 func _build_skyline() -> void:
+	if _theme == &"yard":
+		_build_zizkov_skyline()
+		_build_tv_tower()
+		return
 	# Reuse the authored kit's batched art only OUTSIDE the playable rectangle.
 	var batch := ModuleBatch.new()
 	batch.name = "ExteriorWallModules"
-	batch.source = REACTOR_WALL_ART if _theme == &"reactor" else YARD_WALL_ART
+	batch.source = REACTOR_WALL_ART if _theme == &"reactor" else FLAT_WALL_ART
 	batch.tint = Color(0.82, 0.58, 0.38) if _theme == &"foundry" else Color.WHITE
 	for side in 4:
 		var horizontal := side < 2
@@ -914,6 +1011,8 @@ func _build_lighting() -> void:
 	elif _theme == &"reactor":
 		environment.background_color = Color(0.018, 0.009, 0.042)
 		environment.ambient_light_color = Color(0.39, 0.43, 0.75)
+	else:
+		_zizkov_night(environment)
 	var world_environment := WorldEnvironment.new()
 	world_environment.environment = environment
 	add_child(world_environment)
@@ -923,16 +1022,466 @@ func _build_lighting() -> void:
 	key.light_energy = 1.2
 	key.shadow_enabled = true
 	key.directional_shadow_max_distance = 70.0
+	if _theme == &"yard":
+		# A smoggy moon; the sodium lamps do the real work.
+		key.light_color = Color(0.62, 0.68, 0.92)
+		key.light_energy = 0.55
+		key.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
 	add_child(key)
-	# One coloured fill per large room, alternating the theme's two hues.
+	# One coloured fill per large room, alternating the theme's two hues; in
+	# Žižkov every one is a sodium lamp hung on a wire across the yard.
 	var lit := 0
 	for room in rooms:
 		var rect := _room_rect(room)
 		if lit >= 8 or rect.size.x * rect.size.y < 140.0 or room.kind == &"hub":
 			continue
 		var center := rect.get_center()
-		_add_fill(Vector3(center.x, _wall_height - 0.5, center.y), _accent_color if lit % 2 == 0 else _secondary_color, 2.0, maxf(rect.size.x, rect.size.y) * 0.9)
+		if _theme == &"yard":
+			_hang_lamp(rect)
+			_add_fill(Vector3(center.x, _wall_height - 0.75, center.y), _accent_color, 2.4, maxf(rect.size.x, rect.size.y) * 0.9)
+		else:
+			_add_fill(Vector3(center.x, _wall_height - 0.5, center.y), _accent_color if lit % 2 == 0 else _secondary_color, 2.0, maxf(rect.size.x, rect.size.y) * 0.9)
 		lit += 1
+
+# ---------------------------------------------------------------- Žižkov dressing
+# Visual only, after the layout: no colliders, and variety comes from hashes,
+# never from the layout RNG, so same-seed collision layouts stay identical.
+
+## Deterministic 0..1 value for a dressing decision.
+func _vary(key: int, salt: int) -> float:
+	return float(hash([key, salt]) & 0xFFFF) / 65535.0
+
+func _run_tangent(run: Dictionary) -> Vector3:
+	return Vector3.RIGHT if run.along_x else Vector3.BACK
+
+## Box on a facade run: `along` from the run middle, `out` of the wall plane;
+## `size` is (width along the wall, height, depth out of it).
+func _facade_box(run: Dictionary, material: Material, along: float, y: float, out: float, size: Vector3, basis := Basis()) -> void:
+	var normal: Vector3 = run.normal
+	var mid: Vector3 = run.mid
+	var at := mid + _run_tangent(run) * along + Vector3.UP * y + normal * out
+	_visual(_box, material, at, size if run.along_x else Vector3(size.z, size.y, size.x), basis)
+
+func _facade_point(run: Dictionary, along: float, y: float, out: float) -> Vector3:
+	var normal: Vector3 = run.normal
+	var mid: Vector3 = run.mid
+	return mid + _run_tangent(run) * along + Vector3.UP * y + normal * out
+
+func _far_from(point: Vector3, taken: Array[Vector3], distance: float) -> bool:
+	for other in taken:
+		if Vector2(point.x - other.x, point.z - other.z).length() < distance:
+			return false
+	return true
+
+## Picks the few signs, lamps and bin corners per level, then dresses every face.
+func _build_zizkov_street() -> void:
+	var order: Array[Dictionary] = _facade_runs.duplicate()
+	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.key) < int(b.key))
+	var signs: Array[Vector3] = []
+	var lamps: Array[Vector3] = []
+	var bins: Array[Vector3] = []
+	var ore: Array[Vector3] = []
+	for site: Dictionary in mining_sites:
+		ore.append(site.position)
+	var herna := 0
+	var pivo := 0
+	for run in order:
+		var mid: Vector3 = run.mid
+		var length: float = run.length
+		run.feature = &""
+		# Signs sit above the ore band; broad mining faces must remain eligible.
+		if run.height >= 5.0 and length >= 8.0 and herna < 2 and _far_from(mid, signs, 28.0):
+			run.feature = &"herna"
+			herna += 1
+			signs.append(mid)
+		elif length >= 6.0 and pivo < 2 and _far_from(mid, signs, 22.0):
+			run.feature = &"pivo"
+			pivo += 1
+			signs.append(mid)
+		run.lamp = length >= 4.0 and lamps.size() < 16 and _far_from(mid, lamps, 12.0)
+		if run.lamp:
+			lamps.append(mid)
+		var corner := _facade_point(run, -length * 0.5 + 1.2, 0.0, 0.0)
+		run.bins = length >= 4.0 and bins.size() < 14 and _far_from(corner, bins, 9.0) and _far_from(corner, ore, 3.4)
+		if run.bins:
+			bins.append(corner)
+	for run in _facade_runs:
+		_dress_tenement(run)
+
+func _dress_tenement(run: Dictionary) -> void:
+	var length: float = run.length
+	var height: float = run.height
+	var key: int = run.key
+	var feature: StringName = run.feature
+	_facade_box(run, _props[&"cornice"], 0.0, height - 0.3, 0.08, Vector3(length, 0.22, 0.16))
+	_facade_box(run, _props[&"cornice"], 0.0, height - 0.5, 0.04, Vector3(length, 0.08, 0.08))
+	var pavlac := feature == &"" and height >= 6.25 and length >= 6.0 and _vary(key, 1) < 0.7
+	if height >= 5.6 and feature == &"" and not pavlac:
+		_facade_box(run, _props[&"cornice"], 0.0, 4.1, 0.04, Vector3(length, 0.12, 0.08))
+	var windows := floori((length - 0.6) / 2.6)
+	if windows > 0:
+		var spacing := length / windows
+		for index in windows:
+			var along := -length * 0.5 + spacing * (index + 0.5)
+			if not (feature == &"pivo" and absf(along) < 1.7):
+				_add_window(run, along, 3.1, hash([key, index]))
+			if height >= 6.25:
+				_add_window(run, along, 5.25, hash([key, index, 2]))
+	if pavlac:
+		_add_pavlac(run)
+	if _vary(key, 2) < 0.45:
+		_facade_box(run, _props[&"pipe"], -length * 0.5 + 0.3, (height - 0.35) * 0.5, 0.1, Vector3(0.11, height - 0.35, 0.11))
+	if feature == &"" and length >= 4.0 and _vary(key, 3) < 0.5:
+		_add_graffiti(run, key)
+	match feature:
+		&"herna": _add_herna(run)
+		&"pivo": _add_pivo(run)
+	if run.lamp:
+		_add_wall_lamp(run, length * 0.5 - 0.55, minf(4.0, height - 0.85))
+	if run.bins:
+		_add_bins(run, key)
+
+func _add_window(run: Dictionary, along: float, y: float, key: int) -> void:
+	var roll := _vary(key, 0)
+	_facade_box(run, _props[&"frame"], along, y, 0.02, Vector3(1.04, 1.44, 0.04))
+	_facade_box(run, _props[&"cornice"], along, y - 0.75, 0.08, Vector3(1.2, 0.07, 0.16))
+	if roll < 0.08:
+		# Boarded up after the last landlord left.
+		_facade_box(run, _props[&"board"], along, y, 0.03, Vector3(0.9, 1.3, 0.06))
+		_facade_box(run, _props[&"wood"], along, y + 0.2, 0.065, Vector3(1.0, 0.16, 0.03), Basis(run.normal, 0.25))
+		return
+	var glass: Material = _props[&"glass"]
+	if roll > 0.9:
+		glass = _props[&"glass_tv"]
+	elif roll > 0.72:
+		glass = _props[&"glass_lit"]
+	_facade_box(run, glass, along, y, 0.025, Vector3(0.84, 1.24, 0.05))
+	_facade_box(run, _props[&"frame"], along, y, 0.035, Vector3(0.06, 1.24, 0.07))
+	_facade_box(run, _props[&"frame"], along, y + 0.22, 0.035, Vector3(0.84, 0.06, 0.07))
+
+## Pavlač: a cantilevered access gallery with a thin iron railing, on brackets.
+func _add_pavlac(run: Dictionary) -> void:
+	var length: float = run.length
+	var normal: Vector3 = run.normal
+	var tangent := _run_tangent(run)
+	var iron: Material = _props[&"iron"]
+	_facade_box(run, _steel, 0.0, 4.2, 0.4, Vector3(length - 0.1, 0.16, 0.8))
+	_facade_box(run, iron, 0.0, 5.24, 0.76, Vector3(length - 0.1, 0.045, 0.045))
+	_facade_box(run, iron, 0.0, 4.36, 0.76, Vector3(length - 0.1, 0.03, 0.03))
+	var posts := floori(length / 0.45)
+	for index in posts + 1:
+		var along := -length * 0.5 + 0.05 + (length - 0.1) * index / float(posts)
+		_facade_box(run, iron, along, 4.76, 0.76, Vector3(0.025, 0.92, 0.025))
+	# Brackets lean out from the wall to the slab's outer edge.
+	var lean := tangent.cross(Vector3.UP).dot(normal)
+	var brace := Basis(tangent, lean * atan2(0.6, 0.62))
+	var braces := maxi(2, floori(length / 2.4))
+	for index in braces:
+		var along := -length * 0.5 + 0.6 + (length - 1.2) * index / float(braces - 1)
+		_facade_box(run, iron, along, 3.81, 0.33, Vector3(0.05, 0.88, 0.05), brace)
+	# Washing on the line, because somebody still lives here.
+	if _vary(run.key, 4) < 0.6:
+		var colours: Array[StringName] = [&"paper", &"bag_blue", &"graffiti_red", &"paper"]
+		for index in 4:
+			var along := -length * 0.25 + index * 0.62 + _vary(run.key, 10 + index) * 0.2
+			_facade_box(run, _props[colours[index]], along, 4.92, 0.8, Vector3(0.5, 0.55 + _vary(run.key, 20 + index) * 0.25, 0.012))
+
+## Throw-ups: a black outline block, a colour fill and a few chrome letters.
+func _add_graffiti(run: Dictionary, key: int) -> void:
+	var length: float = run.length
+	var normal: Vector3 = run.normal
+	var fills: Array[StringName] = [&"graffiti_red", &"graffiti_yellow", &"graffiti_green", &"graffiti_purple", &"graffiti_silver"]
+	var width := minf(length - 1.4, 1.4 + _vary(key, 5) * 1.4)
+	var tall := 0.6 + _vary(key, 6) * 0.45
+	var along := (_vary(key, 7) - 0.5) * (length - width - 1.0)
+	var y := 1.25 + _vary(key, 8) * 0.4
+	var tilt := (_vary(key, 9) - 0.5) * 0.12
+	_facade_box(run, _props[&"graffiti_black"], along, y, 0.006, Vector3(width + 0.16, tall + 0.16, 0.012), Basis(normal, tilt))
+	_facade_box(run, _props[fills[int(_vary(key, 11) * 4.99)]], along, y, 0.013, Vector3(width, tall, 0.012), Basis(normal, tilt))
+	var letters := clampi(floori(width / 0.42), 2, 5)
+	var letter: Material = _props[fills[int(_vary(key, 12) * 4.99)]]
+	for index in letters:
+		var offset := along + (index - (letters - 1) * 0.5) * width / letters
+		_facade_box(run, letter, offset, y + (_vary(key, 30 + index) - 0.5) * 0.12, 0.02, Vector3(width / letters * 0.62, tall * 0.62, 0.012), Basis(normal, tilt + (_vary(key, 40 + index) - 0.5) * 0.5))
+
+## Herna NONSTOP: neon board under the cornice, blade sign, blacked-out shop.
+func _add_herna(run: Dictionary) -> void:
+	var normal: Vector3 = run.normal
+	var tangent := _run_tangent(run)
+	var length: float = run.length
+	var red: Material = _props[&"neon_red"]
+	var yellow: Material = _props[&"neon_yellow"]
+	_facade_box(run, _props[&"sign"], 0.0, 4.25, 0.06, Vector3(3.8, 0.78, 0.12))
+	for sign_value: float in [-1.0, 1.0]:
+		_facade_box(run, yellow, 0.0, 4.25 + sign_value * 0.41, 0.13, Vector3(3.9, 0.05, 0.05))
+		_facade_box(run, yellow, sign_value * 1.95, 4.25, 0.13, Vector3(0.05, 0.87, 0.05))
+	_label("HERNA NONSTOP", _facade_point(run, 0.0, 4.25, 0.135), normal, 78, Color(1.0, 0.16, 0.1), Color(0.45, 0.0, 0.0))
+	# Keep mining faces clear at ground level; only empty faces get a shopfront.
+	if run.sites == 0:
+		_facade_box(run, _props[&"glass"], 0.6, 1.45, 0.03, Vector3(2.2, 1.3, 0.06))
+		for sign_value: float in [-1.0, 1.0]:
+			_facade_box(run, red, 0.6, 1.45 + sign_value * 0.68, 0.07, Vector3(2.3, 0.04, 0.04))
+			_facade_box(run, red, 0.6 + sign_value * 1.13, 1.45, 0.07, Vector3(0.04, 1.4, 0.04))
+		_label("VÝHERNÍ AUTOMATY", _facade_point(run, 0.6, 1.62, 0.07), normal, 34, Color(1.0, 0.82, 0.25), Color(0.3, 0.1, 0.0))
+		_label("777", _facade_point(run, 0.6, 1.2, 0.07), normal, 64, Color(1.0, 0.2, 0.12), Color(0.3, 0.0, 0.0))
+		_facade_box(run, _props[&"frame"], -1.3, 1.1, 0.02, Vector3(1.2, 2.2, 0.04))
+		_facade_box(run, _props[&"sign"], -1.3, 1.05, 0.04, Vector3(1.0, 2.1, 0.04))
+	# Blade sign sticking out over the pavement.
+	var blade := minf(length * 0.5 - 0.8, 2.6)
+	_facade_box(run, _props[&"sign"], blade, 3.25, 0.52, Vector3(0.12, 1.7, 0.8))
+	_facade_box(run, red, blade, 3.25, 0.93, Vector3(0.14, 1.74, 0.04))
+	for side_value: float in [-1.0, 1.0]:
+		_label("H\nE\nR\nN\nA", _facade_point(run, blade + side_value * 0.065, 3.25, 0.52), tangent * side_value, 52, Color(1.0, 0.82, 0.22), Color(0.45, 0.15, 0.0))
+	_add_fill(_facade_point(run, 0.0, 3.9, 1.2), _secondary_color, 1.6, 8.0)
+
+## Hostinec: wooden door, board over it and a lit PIVO blade sign.
+func _add_pivo(run: Dictionary) -> void:
+	var normal: Vector3 = run.normal
+	var tangent := _run_tangent(run)
+	if run.sites == 0:
+		_facade_box(run, _props[&"frame"], 0.0, 1.15, 0.02, Vector3(1.3, 2.3, 0.04))
+		_facade_box(run, _props[&"wood"], 0.0, 1.1, 0.04, Vector3(1.1, 2.2, 0.04))
+		_facade_box(run, _props[&"glass_lit"], 0.0, 1.75, 0.065, Vector3(0.7, 0.5, 0.02))
+	_facade_box(run, _props[&"sign"], 0.0, 2.75, 0.05, Vector3(2.4, 0.5, 0.1))
+	_label("HOSTINEC", _facade_point(run, 0.0, 2.75, 0.105), normal, 56, Color(0.95, 0.85, 0.6), Color(0.15, 0.08, 0.02))
+	_facade_box(run, _props[&"iron"], 1.0, 3.62, 0.4, Vector3(0.05, 0.05, 0.8))
+	_facade_box(run, _props[&"sign"], 1.0, 3.3, 0.55, Vector3(0.1, 0.62, 0.84))
+	for sign_value: float in [-1.0, 1.0]:
+		_facade_box(run, _props[&"neon_yellow"], 1.0, 3.3 + sign_value * 0.33, 0.55, Vector3(0.12, 0.04, 0.88))
+	for side_value: float in [-1.0, 1.0]:
+		_label("PIVO", _facade_point(run, 1.0 + side_value * 0.056, 3.3, 0.55), tangent * side_value, 60, Color(1.0, 0.86, 0.35), Color(0.4, 0.2, 0.0))
+
+func _add_wall_lamp(run: Dictionary, along: float, y: float) -> void:
+	var iron: Material = _props[&"iron"]
+	_facade_box(run, iron, along, y + 0.28, 0.38, Vector3(0.05, 0.05, 0.76))
+	_facade_box(run, iron, along, y + 0.14, 0.72, Vector3(0.025, 0.24, 0.025))
+	_facade_box(run, iron, along, y, 0.72, Vector3(0.38, 0.1, 0.38))
+	_facade_box(run, _props[&"sodium"], along, y - 0.07, 0.72, Vector3(0.28, 0.05, 0.28))
+
+## Popelnice in a row at one end of the face, lids ajar, bags spilling out.
+func _add_bins(run: Dictionary, key: int) -> void:
+	var length: float = run.length
+	var tangent := _run_tangent(run)
+	var count := 2 + int(_vary(key, 13) < 0.5)
+	for index in count:
+		var along := -length * 0.5 + 0.9 + index * 0.66
+		var at := _facade_point(run, along, 0.0, 0.22)
+		_visual(_cylinder, _props[&"bin"], at + Vector3.UP * 0.46, Vector3(0.28, 0.92, 0.28))
+		_visual(_cylinder, _props[&"iron"], at + Vector3.UP * 0.2, Vector3(0.29, 0.05, 0.29))
+		if _vary(key, 50 + index) < 0.55:
+			_visual(_cylinder, _props[&"iron"], at + Vector3.UP * 1.0, Vector3(0.3, 0.04, 0.3), Basis(tangent, 0.5))
+			_visual(_sphere, _props[&"bag"], at + Vector3.UP * 0.98, Vector3(0.42, 0.3, 0.4))
+		else:
+			_visual(_cylinder, _props[&"iron"], at + Vector3.UP * 0.94, Vector3(0.3, 0.04, 0.3))
+	var spill := _facade_point(run, -length * 0.5 + 0.9 + count * 0.66, 0.0, 0.25)
+	_visual(_sphere, _props[&"bag"], spill + Vector3.UP * 0.16, Vector3(0.46, 0.34, 0.4))
+	_visual(_sphere, _props[&"bag_blue"], spill + tangent * 0.36 + Vector3.UP * 0.13, Vector3(0.36, 0.28, 0.34))
+	_visual(_box, _props[&"cardboard"], spill + tangent * 0.2 + Vector3.UP * 0.03, Vector3(0.5, 0.05, 0.42), Basis(Vector3.UP, _vary(key, 14)))
+
+func _label(text: String, position: Vector3, facing: Vector3, font_size: int, color: Color, outline: Color) -> void:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = font_size
+	label.outline_size = 10
+	label.pixel_size = 0.005
+	label.modulate = color
+	label.outline_modulate = outline
+	label.double_sided = false
+	label.position = position
+	label.basis = Basis.looking_at(-facing, Vector3.UP)
+	_decoration.add_child(label)
+
+## Brick shed: posters on the short ends and a lamp on the roof.
+func _dress_zizkov_outcrop(position: Vector3, height: float, end_offset: Vector3) -> void:
+	var key := hash(position)
+	var colours: Array[StringName] = [&"paper", &"graffiti_red", &"graffiti_yellow", &"paper", &"graffiti_green"]
+	var along_x := end_offset.x != 0.0
+	for sign_value: float in [-1.0, 1.0]:
+		var face := position + end_offset * sign_value + end_offset.normalized() * sign_value * 0.008
+		for index in 3:
+			var lateral := (index - 1) * 0.75 + (_vary(key, index) - 0.5) * 0.3
+			var size := Vector3(0.012, 0.95, 0.65) if along_x else Vector3(0.65, 0.95, 0.012)
+			var offset := Vector3(0.0, -0.2 + _vary(key, 5 + index) * 0.6, lateral) if along_x else Vector3(lateral, -0.2 + _vary(key, 5 + index) * 0.6, 0.0)
+			_visual(_box, _props[colours[int(_vary(key, 9 + index) * 4.99)]], face + offset + end_offset.normalized() * sign_value * 0.004 * index, size, Basis(end_offset.normalized(), (_vary(key, 12 + index) - 0.5) * 0.15))
+	var top := position + Vector3.UP * (height * 0.5)
+	_visual(_cylinder, _props[&"iron"], top + Vector3.UP * 0.6, Vector3(0.05, 1.2, 0.05))
+	_visual(_box, _props[&"iron"], top + Vector3.UP * 1.2, Vector3(0.42, 0.1, 0.42))
+	_visual(_box, _props[&"sodium"], top + Vector3.UP * 1.13, Vector3(0.32, 0.05, 0.32))
+	_add_fill(top + Vector3.UP * 1.0, _accent_color, 1.4, 11.0)
+
+## Colonnade pillars: rendered concrete with a dark base and an iron capital.
+func _dress_zizkov_pillar(position: Vector3, radius: float, height: float) -> void:
+	_visual(_cylinder, _dark, position + Vector3.UP * (0.3 - height * 0.5), Vector3(radius + 0.01, 0.6, radius + 0.01))
+	_visual(_cylinder, _props[&"iron"], position + Vector3.UP * (height * 0.5 - 0.2), Vector3(radius + 0.01, 0.25, radius + 0.01))
+	_visual(_cylinder, _dark, position + Vector3.UP * (height * 0.5), Vector3(radius * 0.96, 0.014, radius * 0.96))
+	var key := hash(position)
+	if _vary(key, 0) < 0.6:
+		_visual(_cylinder, _props[&"paper"], position + Vector3.UP * (1.6 - height * 0.5), Vector3(radius + 0.008, 0.8, radius + 0.008))
+
+## Cover islands: a brick chimney stump, plakátovací sloupy, a garage block
+## and overflowing skips. Same bodies as the other themes, new skins.
+func _build_zizkov_island(label: String, position: Vector3, size: Vector3, landmark: bool, circular: bool) -> void:
+	var key := hash(position)
+	var top := position + Vector3.UP * (size.y * 0.5)
+	if circular:
+		var radius := size.x * 0.5
+		_cylinder_body(label, position, radius, size.y, _rock if landmark else _props[&"poster_column"])
+		_visual(_cylinder, _dark, top, Vector3(radius * 0.96, 0.014, radius * 0.96))
+		if landmark:
+			for fraction: float in [-0.2, 0.25]:
+				_visual(_cylinder, _props[&"iron"], position + Vector3.UP * size.y * fraction, Vector3(radius + 0.01, 0.14, radius + 0.01))
+			_visual(_cylinder, _dark, top - Vector3.UP * 0.4, Vector3(radius + 0.005, 0.8, radius + 0.005))
+			_add_fill(top + Vector3.UP * 0.4, _accent_color, 1.4, 13.0)
+			return
+		_visual(_cylinder, _props[&"poster_column"], top - Vector3.UP * 0.12, Vector3(radius + 0.06, 0.14, radius + 0.06))
+		_visual(_cylinder, _props[&"paper"], position + Vector3.UP * (1.7 - size.y * 0.5), Vector3(radius + 0.008, 1.5, radius + 0.008))
+		var posters: Array[StringName] = [&"graffiti_red", &"graffiti_yellow", &"graffiti_green", &"graffiti_purple", &"cardboard"]
+		for index in 5:
+			var angle := TAU * index / 5.0 + _vary(key, index)
+			var facing := Vector3(sin(angle), 0.0, cos(angle))
+			_visual(_box, _props[posters[index]], position + facing * (radius + 0.02) + Vector3.UP * (1.6 + _vary(key, 10 + index) * 0.3 - size.y * 0.5), Vector3(radius * 0.7, 0.9, 0.012), Basis(Vector3.UP, angle))
+		return
+	if landmark:
+		# Garage block: plaster, a rolled-down green shutter each side.
+		_box_body(_obstacles, label, position, size, _wall)
+		var shutter := minf(2.4, size.y - 0.8)
+		for sign_value: float in [-1.0, 1.0]:
+			var face := position + Vector3(0.0, shutter * 0.5 - size.y * 0.5, sign_value * size.z * 0.5)
+			_visual(_box, _props[&"container"], face, Vector3(size.x * 0.62, shutter, 0.03))
+			for slat in 6:
+				_visual(_box, _dark, face + Vector3(0.0, (slat - 2.5) * shutter / 6.0, sign_value * 0.02), Vector3(size.x * 0.62, 0.025, 0.012))
+		_visual(_box, _dark, top, Vector3(size.x * 0.97, 0.012, size.z * 0.97))
+		return
+	# Velkoobjemový kontejner: ribbed green skip with the heap kept flush.
+	_box_body(_obstacles, label, position, size, _props[&"container"])
+	for sign_value: float in [-1.0, 1.0]:
+		var ribs := maxi(2, floori(size.x / 0.55))
+		for rib in ribs:
+			var x := (rib - (ribs - 1) * 0.5) * size.x / ribs
+			_visual(_box, _props[&"iron"], position + Vector3(x, 0.0, sign_value * (size.z * 0.5 + 0.015)), Vector3(0.06, size.y * 0.9, 0.03))
+	_visual(_box, _props[&"iron"], top - Vector3.UP * 0.05, Vector3(size.x + 0.04, 0.1, size.z + 0.04))
+	_visual(_box, _dark, top + Vector3.UP * 0.006, Vector3(size.x * 0.94, 0.012, size.z * 0.94))
+	var heap: Array[StringName] = [&"bag", &"cardboard", &"bag_blue", &"paper", &"bag"]
+	for index in 5:
+		var spot := Vector3((_vary(key, index) - 0.5) * size.x * 0.6, 0.0, (_vary(key, 10 + index) - 0.5) * size.z * 0.6)
+		var bulk := Vector3(0.6, 0.32, 0.5) * (0.7 + _vary(key, 20 + index) * 0.5)
+		_visual(_sphere if index % 2 == 0 else _box, _props[heap[index]], top + spot + Vector3.UP * bulk.y * 0.3, bulk, Basis(Vector3.UP, _vary(key, 30 + index) * TAU))
+
+## A sodium lamp hung on a wire across the room's short axis.
+func _hang_lamp(rect: Rect2) -> void:
+	var center := rect.get_center()
+	var across := Vector3.RIGHT if rect.size.x <= rect.size.y else Vector3.BACK
+	var half := (rect.size.x if rect.size.x <= rect.size.y else rect.size.y) * 0.5
+	var lamp := Vector3(center.x, _wall_height - 0.45, center.y)
+	var iron: Material = _props[&"iron"]
+	for sign_value: float in [-1.0, 1.0]:
+		var anchor: Vector3 = lamp + across * sign_value * half + Vector3.UP * 0.4
+		var wire := lamp + Vector3.UP * 0.12 - anchor
+		var direction := wire.normalized()
+		var side := direction.cross(Vector3.UP).normalized()
+		_visual(_box, iron, anchor + wire * 0.5, Vector3(wire.length(), 0.02, 0.02), Basis(direction, side.cross(direction), side))
+	_visual(_cylinder, iron, lamp + Vector3.UP * 0.04, Vector3(0.34, 0.12, 0.34))
+	_visual(_cylinder, _props[&"sodium"], lamp - Vector3.UP * 0.04, Vector3(0.26, 0.05, 0.26))
+
+## Tenement rows ring the yard outside the walls, with lit windows and roofs.
+func _build_zizkov_skyline() -> void:
+	var skyline: Material = _props[&"skyline"]
+	var roof: Material = _props[&"roof"]
+	for row in 2:
+		var gap := WALL_THICKNESS + 0.4 + row * 15.0
+		for side in 4:
+			var along_x := side < 2
+			var length := _area.size.x if along_x else _area.size.y
+			var cursor := -10.0 - row * 6.0
+			var index := 0
+			while cursor < length + 10.0:
+				var key := hash([row, side, index])
+				index += 1
+				var width := 6.5 + _vary(key, 0) * 7.0
+				var along := cursor + width * 0.5
+				cursor += width
+				if row == 1 and _vary(key, 1) < 0.3:
+					continue
+				var storeys := 3 + int(_vary(key, 2) * 2.99) + row
+				var height := 1.2 + storeys * 3.1
+				var depth := 11.0
+				var outward := -1.0 if side % 2 == 0 else 1.0
+				var edge := (_area.position.y if side == 0 else _area.end.y) if along_x else (_area.position.x if side == 2 else _area.end.x)
+				var across := edge + outward * (gap + depth * 0.5)
+				var start := _area.position.x if along_x else _area.position.y
+				var center := Vector3(start + along, height * 0.5, across) if along_x else Vector3(across, height * 0.5, start + along)
+				var tangent := Vector3.RIGHT if along_x else Vector3.BACK
+				var inward := (Vector3(0.0, 0.0, -outward) if along_x else Vector3(-outward, 0.0, 0.0))
+				_visual(_box, skyline, center, Vector3(width, height, depth) if along_x else Vector3(depth, height, width))
+				var front := center + inward * (depth * 0.5 + 0.15)
+				_visual(_box, _props[&"cornice"], front + Vector3.UP * (height * 0.5 - 0.25), Vector3(width, 0.3, 0.3) if along_x else Vector3(0.3, 0.3, width))
+				var side_len := depth / sqrt(2.0)
+				var pitch := Basis.from_scale(Vector3(1.0, 0.42, 1.0)) * Basis(tangent, PI * 0.25)
+				_visual(_box, roof, center + Vector3.UP * (height * 0.5), Vector3(width, side_len, side_len) if along_x else Vector3(side_len, side_len, width), pitch)
+				for chimney in 2:
+					var spot := (_vary(key, 3 + chimney) - 0.5) * (width - 1.5)
+					_visual(_box, _rock, center + tangent * spot + inward * (1.0 + chimney * 1.6) + Vector3.UP * (height * 0.5 + 1.6), Vector3(0.7, 1.8, 0.7))
+
+## Žižkovský vysílač (1985–92): three tubes, two cabins, the antenna. Far
+## outside the play area and exempt from fog so it always looms over the roofs.
+func _build_tv_tower() -> void:
+	var center := _area.get_center()
+	var base := Vector3(center.x, 0.0, center.y) + Vector3(-0.55, 0.0, -0.83).normalized() * 165.0
+	var concrete := _material(Color(0.6, 0.61, 0.64), 0.55, 0.35)
+	var cabin := _material(Color(0.32, 0.33, 0.36), 0.4, 0.5)
+	var windows := _material(Color(0.95, 0.8, 0.55), 0.4, 0.0, true)
+	windows.emission_energy_multiplier = 1.4
+	var beacon := _material(Color(1.0, 0.08, 0.05), 0.4, 0.0, true)
+	beacon.emission_energy_multiplier = 4.0
+	for material: StandardMaterial3D in [concrete, cabin, windows, beacon]:
+		material.disable_fog = true
+		_shadowless[material] = true
+	# [offset, radius, height]
+	for tube: Array in [[Vector2(0.0, -2.6), 3.2, 134.0], [Vector2(-6.2, 3.4), 2.4, 118.0], [Vector2(6.2, 3.4), 2.4, 124.0]]:
+		var offset: Vector2 = tube[0]
+		var radius: float = tube[1]
+		var height: float = tube[2]
+		var at := base + Vector3(offset.x, height * 0.5, offset.y)
+		_visual(_cylinder, concrete, at, Vector3(radius, height, radius))
+		_visual(_sphere, beacon, base + Vector3(offset.x, height + 0.4, offset.y), Vector3(1.4, 1.4, 1.4))
+	for level: Array in [[66.0, 8.0], [93.0, 7.0]]:
+		var y: float = level[0]
+		var tall: float = level[1]
+		var pod := base + Vector3(0.0, y, 0.6)
+		_visual(_box, cabin, pod, Vector3(19.0, tall, 13.0))
+		_visual(_cylinder, cabin, pod + Vector3(-9.5, 0.0, 0.0), Vector3(6.5, tall, 6.5))
+		_visual(_cylinder, cabin, pod + Vector3(9.5, 0.0, 0.0), Vector3(6.5, tall, 6.5))
+		_visual(_box, windows, pod + Vector3.UP * (tall * 0.12), Vector3(19.1, 1.3, 13.1))
+		_visual(_cylinder, windows, pod + Vector3(-9.5, tall * 0.12, 0.0), Vector3(6.55, 1.3, 6.55))
+		_visual(_cylinder, windows, pod + Vector3(9.5, tall * 0.12, 0.0), Vector3(6.55, 1.3, 6.55))
+	for mast: Array in [[134.0, 160.0, 1.1], [160.0, 192.0, 0.65], [192.0, 216.0, 0.3]]:
+		var low: float = mast[0]
+		var high: float = mast[1]
+		_visual(_cylinder, concrete, base + Vector3(0.0, (low + high) * 0.5, -2.6), Vector3(mast[2], high - low, mast[2]))
+		_visual(_sphere, beacon, base + Vector3(0.0, high, -2.6), Vector3(1.2, 1.2, 1.2))
+
+## Warm sodium night under a smog-lit sky, with smoky haze.
+func _zizkov_night(environment: Environment) -> void:
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color(0.012, 0.015, 0.032)
+	sky_material.sky_horizon_color = Color(0.21, 0.115, 0.055)
+	sky_material.sky_curve = 0.09
+	sky_material.ground_horizon_color = Color(0.21, 0.115, 0.055)
+	sky_material.ground_bottom_color = Color(0.03, 0.02, 0.015)
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	environment.background_mode = Environment.BG_SKY
+	environment.sky = sky
+	environment.ambient_light_color = Color(0.62, 0.47, 0.34)
+	environment.ambient_light_energy = 0.75
+	environment.fog_enabled = true
+	environment.fog_light_color = Color(0.24, 0.15, 0.085)
+	environment.fog_density = 0.014
+	environment.fog_sky_affect = 0.0
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.7
+	environment.glow_bloom = 0.0
+	environment.glow_hdr_threshold = 0.9
 
 func _box_body(parent: Node, label: String, position: Vector3, size: Vector3, material: Material) -> StaticBody3D:
 	var shape := BoxShape3D.new()
@@ -974,10 +1523,13 @@ func _visual(mesh: Mesh, material: Material, position: Vector3, size: Vector3, b
 
 func _flush_visual_batches() -> void:
 	for materials: Dictionary in _visual_batches.values():
-		for entry: Dictionary in materials.values():
+		for material: Material in materials:
+			var entry: Dictionary = materials[material]
 			var batch := ModuleBatch.new()
 			batch.mesh = entry["mesh"]
 			batch.transforms.assign(entry["transforms"])
+			if _shadowless.has(material):
+				batch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_decoration.add_child(batch)
 	_visual_batches.clear()
 

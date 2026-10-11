@@ -5,60 +5,142 @@
 	"max_texture_size": 1024,
 	"monsters": {
 		"robot_grunt": {
-			"source": "essentials/glTF/Enemy_EyeDrone.gltf",
-			"decimate": 0.16,
+			"_role": "Bezdomovec: swarm; plastic bag in the right hand",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/OldClassy_Male.blend",
+			"decimate": 0.32,
 			"fit": "height",
-			"size": 0.75,
-			"lift": 0.3,
+			"size": 1.72,
 			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.55, 0.36, 0.28]},
+				"Face": {"color": [0.55, 0.36, 0.28]},
+				"Shirt": {"color": [0.17, 0.16, 0.09]},
+				"Pants": {"color": [0.14, 0.1, 0.06]},
+				"Detail": {"color": [0.09, 0.07, 0.05]},
+				"Belt": {"color": [0.05, 0.04, 0.03]},
+				"Hat": {"color": [0.07, 0.06, 0.05]},
+				"Hair": {"color": [0.42, 0.4, 0.37]}
+			},
+			"props": [
+				{"bone": "Fist.R", "shape": "box", "size": [0.42, 0.16, 0.55], "offset": [0.0, 0.0, -0.42], "material": "Igelitka", "color": [0.86, 0.85, 0.8], "roughness": 0.5}
+			],
 			"clips": [
-				{"name": "move", "action": "Idle", "loop": true},
-				{"name": "attack", "action": "Attack", "loop": false}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Punch", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"robot_runner": {
-			"source": "essentials/glTF/Enemy_QuadShell.gltf",
-			"decimate": 0.055,
-			"fit": "footprint",
-			"size": 1.25,
+			"_role": "Feťák: fast runner; pale, washed-out hoodie",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/Casual2_Male.blend",
+			"decimate": 0.55,
+			"fit": "height",
+			"size": 1.8,
 			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.62, 0.6, 0.48]},
+				"Face": {"color": [0.62, 0.6, 0.48]},
+				"Shirt": {"color": [0.3, 0.32, 0.28]},
+				"Pants": {"color": [0.1, 0.12, 0.2]},
+				"Belt": {"color": [0.05, 0.04, 0.03]},
+				"Hair": {"color": [0.18, 0.14, 0.08]}
+			},
 			"clips": [
 				{"name": "move", "action": "Run", "loop": true},
-				{"name": "attack", "action": "Attack", "loop": false},
-				{"name": "death", "action": "TurnOff", "loop": false}
+				{"name": "attack", "action": "Punch", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"robot_spitter": {
-			"source": "mech/Textured/glTF/Leela.gltf",
-			"decimate": 0.4,
+			"_role": "Alkoholik: ranged; sšusťákovka tracksuit, green bottle in hand",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/Casual_Bald.blend",
+			"decimate": 0.8,
 			"fit": "height",
-			"size": 1.9,
+			"size": 1.75,
 			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.74, 0.42, 0.34]},
+				"Face": {"color": [0.74, 0.42, 0.34]},
+				"Shirt": {"color": [0.34, 0.12, 0.4]},
+				"Pants": {"color": [0.12, 0.16, 0.36]},
+				"Belt": {"color": [0.05, 0.04, 0.03]},
+				"Hair": {"color": [0.16, 0.12, 0.08]}
+			},
+			"props": [
+				{"bone": "Fist.R", "shape": "cylinder", "segments": 8, "size": [0.13, 0.13, 0.5], "offset": [0.0, 0.0, 0.05], "material": "Lahev", "color": [0.08, 0.3, 0.1], "roughness": 0.15}
+			],
 			"clips": [
 				{"name": "move", "action": "Walk", "loop": true},
 				{"name": "idle", "action": "Idle", "loop": true},
-				{"name": "attack", "action": "Shoot", "loop": false},
+				{"name": "attack", "action": "SwordSlash", "loop": false},
 				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"robot_tank": {
-			"source": "essentials/glTF/Enemy_Trilobite.gltf",
-			"decimate": 0.1,
-			"fit": "footprint",
-			"size": 2.5,
+			"_role": "Vekslák: tank; black leather jacket, red shirt, gold chains",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/Suit_Male.blend",
+			"decimate": 0.4,
+			"fit": "height",
+			"size": 2.4,
 			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.66, 0.44, 0.34]},
+				"Face": {"color": [0.66, 0.44, 0.34]},
+				"Black": {"color": [0.035, 0.03, 0.03], "roughness": 0.35},
+				"Shirt": {"color": [0.55, 0.07, 0.07]},
+				"Details": {"color": [0.9, 0.68, 0.18], "metallic": 1.0, "roughness": 0.3},
+				"Belt": {"color": [0.03, 0.02, 0.02]},
+				"Hair": {"color": [0.03, 0.025, 0.02]}
+			},
 			"clips": [
 				{"name": "move", "action": "Walk", "loop": true},
-				{"name": "attack", "action": "Attack", "loop": false},
-				{"name": "death", "action": "TurnOff", "loop": false}
+				{"name": "attack", "action": "Punch", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
+			]
+		},
+		"robot_bulwark": {
+			"_role": "Vyhazovač: front-armoured; all black; the horde draws his herna door (HordeArmorMesh)",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/Worker_Male.blend",
+			"decimate": 0.9,
+			"fit": "height",
+			"size": 2.3,
+			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.62, 0.43, 0.34]},
+				"Face": {"color": [0.62, 0.43, 0.34]},
+				"Shirt": {"color": [0.03, 0.03, 0.03]},
+				"Vest": {"color": [0.05, 0.05, 0.06], "roughness": 0.4},
+				"Pants": {"color": [0.04, 0.04, 0.05]},
+				"Hat": {"color": [0.62, 0.43, 0.34]}
+			},
+			"clips": [
+				{"name": "move", "action": "Walk_Carry", "loop": true},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"robot_boss": {
-			"source": "mech/Textured/glTF/George.gltf",
-			"decimate": 0.5,
+			"_role": "Pan Herna: boss; gaudy gold suit, purple trousers",
+			"source": "people/Ultimate Animated Character Pack - Nov 2019/Blends/OldClassy_Male.blend",
+			"decimate": 1.0,
 			"fit": "height",
-			"size": 5.2,
+			"size": 4.4,
 			"yaw": 180,
+			"smooth": true,
+			"materials": {
+				"Skin": {"color": [0.72, 0.46, 0.36]},
+				"Face": {"color": [0.72, 0.46, 0.36]},
+				"Shirt": {"color": [0.85, 0.66, 0.16], "metallic": 0.8, "roughness": 0.35},
+				"Pants": {"color": [0.3, 0.05, 0.36]},
+				"Detail": {"color": [0.95, 0.8, 0.3], "metallic": 1.0, "roughness": 0.25},
+				"Belt": {"color": [0.95, 0.8, 0.3], "metallic": 1.0, "roughness": 0.25},
+				"Hat": {"color": [0.04, 0.03, 0.03]},
+				"Hair": {"color": [0.05, 0.04, 0.03]}
+			},
 			"clips": [
 				{"name": "move", "action": "Walk", "loop": true},
 				{"name": "idle", "action": "Idle", "loop": true},
@@ -67,72 +149,73 @@
 			]
 		},
 		"alien_grunt": {
-			"source": "bug/alien-bug.glb",
+			"_role": "Bílá myška: white mouse swarm",
+			"source": "delirium/mys.blend",
 			"decimate": 1.0,
-			"fit": "footprint",
-			"size": 0.95,
+			"smooth": true,
+			"fit": "height",
+			"size": 1.1,
 			"yaw": 180,
 			"clips": [
-				{"name": "move", "action": "Run", "loop": true},
-				{"name": "idle", "action": "Idle", "loop": true},
-				{"name": "attack", "action": "Attack.000", "loop": false}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"alien_runner": {
-			"source": "alien/FBX/Alien.fbx",
-			"decimate": 0.45,
+			"_role": "Šváb z herny: six-legged fast runner",
+			"source": "delirium/svab.blend",
+			"decimate": 1.0,
 			"smooth": true,
 			"fit": "height",
-			"size": 1.3,
+			"size": 0.9,
 			"yaw": 180,
-			"materials": {
-				"Eyes": {"emission": [0.5, 1.0, 0.2], "emission_strength": 2.0}
-			},
 			"clips": [
-				{"name": "move", "action": "Alien_Run", "loop": true},
-				{"name": "idle", "action": "Alien_Idle", "loop": true},
-				{"name": "attack", "action": "Alien_Punch", "loop": false},
-				{"name": "death", "action": "Alien_Death", "loop": false}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"alien_spitter": {
-			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Oculichrysalis.gltf",
-			"decimate": 0.4,
+			"_role": "Lahev rumu: walking rum bottle spitter",
+			"source": "delirium/lahev.blend",
+			"decimate": 1.0,
+			"smooth": true,
 			"fit": "height",
-			"size": 1.8,
+			"size": 1.6,
 			"yaw": 180,
-			"materials": {
-				"M_Alien_Eyes": {"emission": [1.0, 0.85, 0.2], "emission_strength": 2.5}
-			},
 			"clips": [
-				{"name": "move", "action": "Alien_Idle", "loop": true}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"alien_tank": {
-			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Scolitex.gltf",
-			"decimate": 0.3,
-			"fit": "footprint",
-			"size": 2.5,
+			"_role": "Jednoruký bandita: slot machine ram",
+			"source": "delirium/automat.blend",
+			"decimate": 1.0,
+			"smooth": true,
+			"fit": "height",
+			"size": 2.1,
 			"yaw": 180,
-			"materials": {
-				"M_Alien_Eyes": {"emission": [1.0, 0.25, 0.1], "emission_strength": 2.5}
-			},
 			"clips": [
-				{"name": "move", "action": "Alien_Idle", "loop": true}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		},
 		"alien_boss": {
-			"source": "megakit/Modular SciFi MegaKit[Standard]/glTF/Aliens/Alien_Cyclop.gltf",
+			"_role": "Pan Jackpot: golden slot machine boss",
+			"source": "delirium/jackpot.blend",
 			"decimate": 1.0,
+			"smooth": true,
 			"fit": "height",
-			"size": 5.0,
+			"size": 4.2,
 			"yaw": 180,
-			"materials": {
-				"M_Alien_Body_Blue": {"color": [0.42, 0.08, 0.36]},
-				"M_Alien_Eyes": {"emission": [0.4, 1.0, 0.3], "emission_strength": 3.0}
-			},
 			"clips": [
-				{"name": "move", "action": "Alien_Idle", "loop": true}
+				{"name": "move", "action": "Walk", "loop": true},
+				{"name": "attack", "action": "Attack", "loop": false},
+				{"name": "death", "action": "Death", "loop": false}
 			]
 		}
 	}

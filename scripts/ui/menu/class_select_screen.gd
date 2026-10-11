@@ -28,8 +28,8 @@ const ICON_BADGE := preload("res://scripts/ui/menu/icon_badge.gd")
 @export var stats_label: RichTextLabel
 @export var action_button: Button
 @export var status_label: Label
-@export var good_color := Color(0.4, 1, 0.7)
-@export var bad_color := Color(1, 0.45, 0.4)
+@export var good_color := Color(0.66, 0.7, 0.44)
+@export var bad_color := Color(0.8, 0.46, 0.36)
 
 var _cards: Array[ClassCard] = []
 var _options: Array[AbilityOption] = []
@@ -57,6 +57,7 @@ func _ready() -> void:
 		option.focus_entered.connect(_on_option_focused.bind(index))
 		_options.append(option)
 	action_button.pressed.connect(_on_action_pressed)
+	StreetWear.apply_tree(self)
 
 func refresh() -> void:
 	if _selected == null:
@@ -103,10 +104,10 @@ func _on_action_pressed() -> void:
 		return
 	if Profile.unlock_class(_selected):
 		Profile.selected_class_id = _selected.id
-		status_label.text = "%s unlocked." % _selected.display_name
+		status_label.text = "%s je v partě." % _selected.display_name
 	else:
 		var missing := _selected.unlock_cost - Profile.currency(_selected.unlock_currency)
-		status_label.text = "Need %d more %s." % [missing, currency_bar.label_for(_selected.unlock_currency).to_lower()]
+		status_label.text = "Ještě chybí %d %s." % [missing, currency_bar.label_for(_selected.unlock_currency).to_lower()]
 	_redraw()
 
 func _redraw() -> void:
@@ -121,29 +122,29 @@ func _redraw() -> void:
 	accent_bar.color = accent
 	class_icon.texture = _selected.icon
 	class_badge.visible = _selected.icon != null
-	class_icon.modulate = Color.WHITE if unlocked else Color(0.42, 0.44, 0.5)
+	class_icon.modulate = Color.WHITE if unlocked else Color(0.45, 0.41, 0.34)
 	if _class_badge_style == null:
 		_class_badge_style = class_badge.get_theme_stylebox(&"panel").duplicate() as StyleBoxFlat
 		class_badge.add_theme_stylebox_override(&"panel", _class_badge_style)
 	_class_badge_style.border_color = accent if unlocked else accent.darkened(0.45)
 	name_label.text = _selected.display_name.to_upper()
-	name_label.add_theme_color_override(&"font_color", accent.lightened(0.35))
+	name_label.add_theme_color_override(&"font_color", Color(0.88, 0.82, 0.68))
 	tagline_label.text = _selected.tagline.to_upper()
-	tagline_label.add_theme_color_override(&"font_color", accent)
+	tagline_label.add_theme_color_override(&"font_color", Color(0.75, 0.68, 0.53))
 	description_label.text = _selected.description
 	_redraw_loadout(_selected)
 	_redraw_abilities()
 	var stats := StatText.bbcode(_selected, good_color, bad_color)
-	stats_label.text = stats if not stats.is_empty() else "Standard-issue baseline."
+	stats_label.text = stats if not stats.is_empty() else "Základní parametry beze změn."
 	if unlocked:
-		action_button.text = "DEPLOY AS %s" % _selected.display_name.to_upper()
+		action_button.text = "VYRAZIT DO ULIC"
 		action_button.disabled = false
 	else:
-		action_button.text = "UNLOCK  ·  %s" % _cost_text(_selected)
+		action_button.text = "PŘIBRAT DO PARTY  ·  %s" % _cost_text(_selected)
 		action_button.disabled = not Profile.can_afford_class(_selected)
 		if action_button.disabled and status_label.text.is_empty():
-			status_label.text = "Mine rare %s deposits and complete level contracts to earn more." \
-					% currency_bar.label_for(_selected.unlock_currency).to_lower()
+			status_label.text = "Páč přihrádky automatů a plň kontrakty pro další kořist (%s)." \
+					% currency_bar.label_for(_selected.unlock_currency)
 
 func _redraw_abilities() -> void:
 	var options := _selected.ability_scenes
@@ -156,15 +157,15 @@ func _redraw_abilities() -> void:
 			continue
 		var scene := options[index]
 		var info := _ability_info(scene)
-		tile.show_option(scene, info.name, info.icon, info.accent, scene == _preview, "KEY %d · KIT SKILL" % (index + 1))
+		tile.show_option(scene, info.name, info.icon, info.accent, scene == _preview, "KLÁVESA %d · SKILL" % (index + 1))
 		tile.tooltip_text = "%s\n%s" % [info.name, info.description]
 	ability_option_row.show()
 	var shown := _ability_info(_preview)
 	ability_name_label.text = String(shown.name).to_upper()
 	ability_icon.texture = shown.icon
 	ability_icon.visible = shown.icon != null
-	ability_name_label.add_theme_color_override(&"font_color", Color(shown.accent).lightened(0.35))
-	ability_description_label.text = "%.1fs recharge · %s\nAll five skills available at deployment. Upgrade each independently during the run." % [shown.cooldown, shown.description]
+	ability_name_label.add_theme_color_override(&"font_color", Color(0.88, 0.82, 0.68))
+	ability_description_label.text = "%.1fs prodleva · %s\nKaždý trik vylepšuješ zvlášť. S radami do začátku se další triky odemykají podle úrovně; bez rad máš všech pět hned." % [shown.cooldown, shown.description]
 
 func _cost_text(definition: ClassDefinition) -> String:
 	return "%d %s" % [definition.unlock_cost, currency_bar.label_for(definition.unlock_currency)]
@@ -180,7 +181,7 @@ func _redraw_loadout(definition: ClassDefinition) -> void:
 	badge.visible = weapon != null and weapon.icon != null
 	if badge.visible:
 		badge.show_icon(weapon.icon, definition.accent_color.darkened(0.3))
-	(chip.get_child(1) as Label).text = weapon.display_name if weapon != null else "No primary firearm"
+	(chip.get_child(1) as Label).text = weapon.display_name if weapon != null else "Bez hlavní zbraně"
 	var extras := PackedStringArray()
 	for upgrade in definition.starting_upgrades:
 		if upgrade != null:
@@ -205,7 +206,7 @@ func _loadout_chip() -> HBoxContainer:
 func _ability_info(scene: PackedScene) -> Dictionary:
 	if _abilities.has(scene):
 		return _abilities[scene]
-	var info := {"name": "No ability", "description": "This operator has no active ability.", "cooldown": 0.0, "accent": Color(0.6, 1, 1), "icon": GameIcons.lookup(&"hud", &"ability")}
+	var info := {"name": "Bez skillu", "description": "Tahle postava nemá aktivní skill.", "cooldown": 0.0, "accent": Color(0.65, 0.5, 0.29), "icon": GameIcons.lookup(&"hud", &"ability")}
 	if scene != null:
 		var node := scene.instantiate()
 		var ability := node as ActiveAbility

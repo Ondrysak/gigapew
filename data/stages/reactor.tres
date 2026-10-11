@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("definition")
 id = &"reactor"
-display_name = "Reactor Core"
-subtitle = "Sector 03 / containment chamber"
+display_name = "Hlavák"
+subtitle = "Kruh III / Tartarus"
 world_scene = ExtResource("world")
 play_area = Rect2(-52, -52, 104, 104)
 layout_theme = &"reactor"

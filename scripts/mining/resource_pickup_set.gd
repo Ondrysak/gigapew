@@ -1,8 +1,8 @@
 class_name ResourcePickupSet
 extends RefCounted
 
-## Struct-of-arrays nuggets of one resource drawn by a single MultiMesh.
-## Nuggets pop out ballistically, rest on the floor, then home in on the
+## Struct-of-arrays coins, cigarette packs or tokens drawn by one MultiMesh.
+## Loot pops out ballistically, rests on the floor, then homes in on the
 ## player. Nothing is allocated per drop or per frame.
 
 const STRIDE := 16
@@ -142,7 +142,7 @@ func _remove(index: int) -> void:
 
 func _write(index: int) -> void:
 	var age := ages[index]
-	# Pop in from small, then spin slowly so nuggets glint.
+	# Pop in from small, then slowly turn the physical loot.
 	var size := scale * minf(1.0, 0.4 + age * 4.0)
 	var basis := (Basis(Vector3.UP, phases[index] + age * SPIN) * Basis(Vector3.RIGHT, TILT)).scaled(Vector3(size, size, size))
 	var position := positions[index]

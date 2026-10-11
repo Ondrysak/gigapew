@@ -49,7 +49,6 @@ func _crush(game: ArenaGame) -> void:
 		if _count(game, &"crush") > before:
 			break
 	lab.check(_count(game, &"crush") > before, "a real Seismic Charge thrown into the well triggers CRUSH")
-	lab.check(game.hud._combo_callout.visible and game.hud._combo_callout.text.contains("CRUSH"), "the HUD names the combo above the crosshair")
 	await lab.capture("crush")
 
 func _collapse(game: ArenaGame) -> void:

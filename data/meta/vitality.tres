@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 max_health_bonus = 10
 id = &"vitality"
-display_name = "Vitality"
-description = "Reinforced suit frame: +10 max health per level."
+display_name = "Trénink u výčepu"
+description = "Za každou úroveň: +10 maximálního zdraví."
 accent_color = Color(0.3, 1, 0.55, 1)
 costs = PackedInt32Array(50, 100, 180, 300, 450)
 currency = &"gold"

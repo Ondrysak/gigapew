@@ -224,16 +224,16 @@ func _update_prompt() -> void:
 		match _state:
 			State.IDLE:
 				if affordable:
-					prompt.text = "[E] ACTIVATE TURRET\n%d CRYSTALS" % cost
+					prompt.text = "[E] ZAPNOUT VĚŽ\n%d CIGÁR" % cost
 					prompt.modulate = prompt_color
 				else:
-					prompt.text = "TURRET: %d CRYSTALS\nYOU HAVE %d" % [cost, held]
+					prompt.text = "VĚŽ: %d CIGÁR\nMÁŠ %d" % [cost, held]
 					prompt.modulate = denied_color if _deny_timer > 0.0 else prompt_color.darkened(0.3)
 			State.ACTIVE:
-				prompt.text = "TURRET ONLINE\n%ds" % seconds
+				prompt.text = "VĚŽ BĚŽÍ\n%ds" % seconds
 				prompt.modulate = active_color
 			State.COOLDOWN:
-				prompt.text = "RECHARGING\n%ds" % seconds
+				prompt.text = "PAUZA\n%ds" % seconds
 				prompt.modulate = prompt_color.darkened(0.35)
 	if not prompt.visible:
 		prompt.show()

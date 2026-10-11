@@ -3,12 +3,8 @@
 [ext_resource type="Script" uid="uid://dseg3btyvwqnf" path="res://scripts/mining/deposit_definition.gd" id="1_definition"]
 [ext_resource type="Resource" uid="uid://bv3q7r331q43s" path="res://data/resources/crystal.tres" id="2_resource"]
 
-[sub_resource type="CylinderMesh" id="Mesh_pickup"]
-top_radius = 0.0
-bottom_radius = 0.085
-height = 0.3
-radial_segments = 6
-rings = 1
+[sub_resource type="BoxMesh" id="Mesh_pickup"]
+size = Vector3(0.13, 0.2, 0.065)
 
 [resource]
 script = ExtResource("1_definition")

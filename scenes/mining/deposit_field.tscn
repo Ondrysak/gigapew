@@ -7,21 +7,23 @@
 [ext_resource type="Resource" path="res://data/resources/deposits/void_shard.tres" id="5_shard"]
 
 [sub_resource type="BoxMesh" id="Mesh_chip"]
-size = Vector3(0.07, 0.07, 0.07)
+size = Vector3(0.055, 0.009, 0.035)
 
 [sub_resource type="StandardMaterial3D" id="Mat_chip"]
 shading_mode = 0
 vertex_color_use_as_albedo = true
 albedo_color = Color(1, 1, 1, 1)
 
-[sub_resource type="SphereMesh" id="Mesh_pickup"]
-radius = 0.12
-height = 0.24
-radial_segments = 5
-rings = 2
+[sub_resource type="CylinderMesh" id="Mesh_pickup"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.04
+radial_segments = 10
+rings = 1
 
 [sub_resource type="StandardMaterial3D" id="Mat_pickup"]
-shading_mode = 0
+metallic = 0.55
+roughness = 0.58
 vertex_color_use_as_albedo = true
 albedo_color = Color(1, 1, 1, 1)
 

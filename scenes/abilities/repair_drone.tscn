@@ -83,8 +83,8 @@ ring_segments = 4
 
 [node name="RepairDrone" type="Node3D" node_paths=PackedStringArray("drone", "rotor", "bubble", "beam_template", "pulse_template")]
 script = ExtResource("1_ability")
-display_name = "Repair Drone"
-description = "Deploy a drone for 8 s: a 2.5 s shield on launch, 40 HP healed over the duration, and a zap at the nearest enemy within 9 m every 0.5 s for 18 damage."
+display_name = "Sony s rejzí"
+description = "Pomocník na 8 s: při startu štít na 2,5 s, celkem obnoví 40 zdraví a každých 0,5 s šlehne nejbližšího nepřítele do 9 m za 18 poškození."
 base_cooldown = 24.0
 accent_color = Color(0.45, 1, 0.8, 1)
 synth_activate = &"overdrive"

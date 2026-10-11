@@ -6,10 +6,10 @@ enum Kind { KINETIC, FIRE, FROST, SHOCK }
 
 static func label(kind: int) -> String:
 	match kind:
-		Kind.FIRE: return "Fire"
-		Kind.FROST: return "Frost"
-		Kind.SHOCK: return "Shock"
-	return "Kinetic"
+		Kind.FIRE: return "Oheň"
+		Kind.FROST: return "Mráz"
+		Kind.SHOCK: return "Blesk"
+	return "Náraz"
 
 static func color(kind: int) -> Color:
 	match kind:

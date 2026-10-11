@@ -11,12 +11,12 @@ extends Node
 const LINES := {
 	&"arrive": {"priority": 2, "cooldown": 0.0, "clips": [&"ijee_haa"]},
 	&"multikill": {"priority": 1, "cooldown": 9.0, "clips": [&"ijee_1", &"ijee_2"]},
-	&"combo": {"priority": 2, "cooldown": 5.0, "clips": [&"aaa", &"uuu"]},
+	&"combo": {"priority": 2, "cooldown": 5.0, "clips": [&"aaa", &"uuu", &"jedno_kolo", &"plna_rychlost"]},
 	&"skill": {"priority": 3, "cooldown": 0.0, "sequence": [&"jaj", &"krajic", &"chleba"]},
 	&"hurt": {"priority": 2, "cooldown": 12.0, "clips": [&"hrrr"]},
 	&"heal": {"priority": 1, "cooldown": 15.0, "clips": [&"blp"]},
-	&"extraction": {"priority": 3, "cooldown": 0.0, "clips": [&"howl_1", &"howl_2"]},
-	&"clear": {"priority": 3, "cooldown": 0.0, "clips": [&"hehehe"]},
+	&"extraction": {"priority": 3, "cooldown": 0.0, "clips": [&"howl_1", &"howl_2", &"street_racer"]},
+	&"clear": {"priority": 3, "cooldown": 0.0, "clips": [&"hehehe", &"takhle"]},
 	&"death": {"priority": 4, "cooldown": 0.0, "clips": [&"nee_old"]},
 }
 const CLIP_PATH := "res://assets/voice/ludas/%s.wav"

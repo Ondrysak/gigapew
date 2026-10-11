@@ -1,34 +1,12 @@
 class_name MiningSynth
 extends RefCounted
 
-## Default procedural mining sounds. Scenes export AudioStream overrides;
-## these only fill the gaps so the project stays asset-free.
+## Procedural metal clanks, latch snaps and currency pickup sounds.
 
 const SAMPLE_RATE := 22050
 
-## Seamless drill hum: every partial completes whole cycles per loop.
-static func drill_loop() -> AudioStreamWAV:
-	var duration := 0.4
-	var count := int(duration * SAMPLE_RATE)
-	var bytes := PackedByteArray()
-	bytes.resize(count * 2)
-	var random := RandomNumberGenerator.new()
-	random.seed = 7331
-	for i in count:
-		var t := float(i) / SAMPLE_RATE
-		var saw := fmod(t * 95.0, 1.0) * 2.0 - 1.0
-		var grind := random.randf_range(-1.0, 1.0) * (0.55 + 0.45 * sin(TAU * 30.0 * t))
-		var sample := saw * 0.32 + sin(TAU * 190.0 * t) * 0.18 + grind * 0.16
-		bytes.encode_s16(i * 2, int(clampf(sample, -1.0, 1.0) * 32767.0))
-	var stream := _stream(bytes)
-	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	stream.loop_begin = 0
-	stream.loop_end = count
-	return stream
 
-## One-shot cues: &"clank" (bit on rock), &"thud" (bit on enemy),
-## &"crunch" (deposit breaks), &"tink" (nugget collected).
-## &"section" adds a short rising crystal beat to a drill section break.
+## One-shot cues: metal contact, compartment tear, housing rattle, coin pickup.
 static func cue(name: StringName) -> AudioStreamWAV:
 	var duration := 0.12
 	match name:
@@ -58,8 +36,7 @@ static func cue(name: StringName) -> AudioStreamWAV:
 				var frequency := lerpf(1320.0, 1760.0, minf(1.0, progress * 3.0))
 				sample = (sin(TAU * frequency * t) * 0.5 + sin(TAU * frequency * 2.0 * t) * 0.15) * exp(-t * 32.0)
 			&"section":
-				var frequency := lerpf(720.0, 1080.0, minf(1.0, progress * 4.0))
-				sample = (sin(TAU * frequency * t) * 0.42 + sin(TAU * frequency * 1.5 * t) * 0.2) * exp(-t * 16.0) + noise * exp(-t * 45.0) * 0.15
+				sample = (sin(TAU * 430.0 * t) * 0.46 + sin(TAU * 1730.0 * t) * 0.22) * exp(-t * 21.0) + noise * exp(-t * 32.0) * 0.45
 		# Short fades remove clicks at both edges.
 		sample *= minf(1.0, t * 1000.0) * minf(1.0, (duration - t) * 400.0)
 		bytes.encode_s16(i * 2, int(clampf(sample, -1.0, 1.0) * 32767.0))

@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"saw_overclock"
-display_name = "Twin Saw Rings"
-description = "A second, counter-rotating ring of blades joins and every blade cuts wider."
+display_name = "Dvojitej kolotoč"
+description = "Přidá druhý kruh kotoučů v opačném směru. Každý kotouč řeže větší plochu."
 kind = 2
 max_level = 1
 weight = 3.0

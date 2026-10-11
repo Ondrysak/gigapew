@@ -5,14 +5,15 @@ extends Node3D
 ## previews orbit beneath the menu. Crowd roots are markers; their actual
 ## meshes/materials come from the same definitions and baker as the horde.
 
+const YARD_STAGE: StageDefinition = preload("res://data/stages/yard.tres")
 @export var camera: Camera3D
 @export var crowd: Node3D
 @export var sentinel: Node3D
 @export var monster_definitions: Array[HordeEnemyDefinition]
 @export var vat_shader: Shader
 @export var orbit_center := Vector3.ZERO
-@export var orbit_radius := 20.0
-@export var orbit_height := 5.0
+@export var orbit_radius := 11.0
+@export var orbit_height := 8.0
 ## Radians per second.
 @export var orbit_speed := 0.06
 @export var orbit_angle := 0.4
@@ -32,6 +33,17 @@ var _preview_fps := PackedFloat32Array()
 var _meshes: Array[ArrayMesh] = []
 
 func _ready() -> void:
+	# This instance is only the menu's scenery; gameplay stage assets stay intact.
+	var world := ProceduralWorld.new()
+	world.name = "PragueBackdrop"
+	world.configure(YARD_STAGE, 1996)
+	add_child(world)
+	var spawn := world.get_node("PlayerSpawn") as Marker3D
+	orbit_center = spawn.position
+	if crowd != null:
+		crowd.position = orbit_center
+	if sentinel != null:
+		sentinel.position += orbit_center
 	_meshes.resize(monster_definitions.size())
 	if sentinel != null:
 		_add_preview(sentinel, 4)
@@ -40,6 +52,8 @@ func _ready() -> void:
 			var member := child as Node3D
 			if member == null:
 				continue
+			member.position.x *= 0.45
+			member.position.z *= 0.16
 			member.look_at(member.global_position + Vector3.BACK, Vector3.UP)
 			var type := 0
 			if member.name.begins_with("Runner"):

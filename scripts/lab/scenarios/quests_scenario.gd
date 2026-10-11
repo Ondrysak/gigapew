@@ -1,23 +1,23 @@
 extends LabScenario
 
 func title() -> String:
-	return "Mining and kill contracts"
+	return "Salvage and kill contracts"
 
 func summary() -> String:
-	return "Real drill and firearm progress, exact species, no deadline and all three pod extractions"
+	return "Real crowbar and firearm progress, exact species, no deadline and all three pod extractions"
 
 func run() -> void:
 	var game := await lab.start_game(&"driller", 0, true, 8721)
 	game._rng.seed = 3981
 	await lab.wait(0.3)
 	await lab.capture("arrival")
-	lab.check(game.quests.completed_count() == 0 and not game.round_shop.visible, "arrival exposes fresh mining and kill objectives without advancing")
+	lab.check(game.quests.completed_count() == 0 and not game.round_shop.visible, "arrival exposes fresh salvage and kill objectives without advancing")
 	var gold := game.quests.quests[0].definition as ResourceDefinition
 	game.run_state.add_resource(gold, 7)
 	Profile.add_currency(gold.id, 11)
 	game.deposits.drop(gold, 3, game.player.global_position)
 	await lab.wait(0.8)
-	lab.check(game.quests.quests[0].progress == 0, "carried ore, profile currency and collected reward nuggets do not count as mining")
+	lab.check(game.quests.quests[0].progress == 0, "carried loot, profile currency and collected reward pickups do not count as machine salvage")
 	await _sustained_pressure(game)
 	await _drill_input(game)
 	await _fire_input(game)
@@ -152,21 +152,21 @@ func _drill_input(game: ArenaGame) -> void:
 			deposit = child
 			break
 	if deposit == null:
-		lab.check(false, "generated contract supplies a live reachable drilling target")
+		lab.check(false, "generated contract supplies a live reachable machine compartment")
 		return
-	lab.check(await lab.aim_deposit(deposit, 2.2), "camera and real physics ray acquire a guaranteed procedural ore section")
+	lab.check(await lab.aim_deposit(deposit, 2.2), "camera and real physics ray acquire a guaranteed wall machine latch")
 	var before := deposit.yield_emitted
 	Input.action_press(&"mine")
 	await lab.wait(0.9)
 	Input.action_release(&"mine")
-	lab.check(deposit.yield_emitted > before and game.quests.quests[0].progress == deposit.yield_emitted, "actual held F fractures ore and advances mining by exactly conserved emitted units")
-	await lab.capture("drilling_progress")
+	lab.check(deposit.yield_emitted > before and game.quests.quests[0].progress == deposit.yield_emitted, "actual held F breaks a compartment and advances salvage by exactly conserved emitted units")
+	await lab.capture("prying_progress")
 	var progress: int = game.quests.quests[0].progress
 	game.get_tree().paused = true
 	Input.action_press(&"mine")
 	await lab.wait(0.3)
 	Input.action_release(&"mine")
-	lab.check(game.quests.quests[0].progress == progress, "paused held drill cannot advance ore objectives")
+	lab.check(game.quests.quests[0].progress == progress, "paused held crowbar cannot advance salvage objectives")
 	game.get_tree().paused = false
 
 func _fire_input(game: ArenaGame) -> void:
@@ -178,12 +178,12 @@ func _fire_input(game: ArenaGame) -> void:
 	var enemy := quest.definition as HordeEnemyDefinition
 	game.horde.set_physics_process(false)
 	game.horde.clear()
-	# Face back into the clear ore circuit, not through the wall just drilled.
+	# Face back into the clear machine circuit, not through the wall just pried.
 	var stand := game.player.global_position
 	var away := game.player.global_basis.z
 	var target := stand + away * 5.0
 	var point := Vector2(target.x, target.z)
-	lab.check(not game.horde.is_blocked(point, enemy.radius), "procedural ore circuit provides a clear real shooting fixture")
+	lab.check(not game.horde.is_blocked(point, enemy.radius), "procedural machine circuit provides a clear real shooting fixture")
 	var slot := game.horde.spawn(enemy, point, 0.04)
 	if slot < 0:
 		lab.check(false, "real firearm quest target is admitted")

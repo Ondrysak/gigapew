@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"mortar"
-display_name = "Auto Mortar"
-description = "Lob explosive shells at enemies within 25 m."
-level_descriptions = PackedStringArray("Lob explosive shells at enemies within 25 m.", "Bigger, harder-hitting blasts.", "Fire an extra shell per salvo.", "Bigger, harder-hitting blasts.", "Fire an extra shell per salvo.")
+display_name = "Ohňostroj z pavlače"
+description = "Automaticky hází výbušné nálože na nepřátele do 25 m."
+level_descriptions = PackedStringArray("Automaticky hází výbušné nálože na nepřátele do 25 m.", "Větší a silnější výbuchy.", "+1 nálož v každé salvě.", "Větší a silnější výbuchy.", "+1 nálož v každé salvě.")
 kind = 1
 max_level = 5
 weight = 1.3

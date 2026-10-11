@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Autocannon"
-description = "Explosive cannon with enemy-clearing splash"
+display_name = "Absintovej molotov"
+description = "Rána s výbuchem do okolí. Rozhání namačkané halucinace."
 damage = 78
 recoil_degrees = 0.24
 fire_interval = 0.19

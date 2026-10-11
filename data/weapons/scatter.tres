@@ -6,8 +6,8 @@
 
 [resource]
 script = ExtResource("1_definition")
-display_name = "Scatter"
-description = "Seven-pellet close-range shotgun"
+display_name = "Vinyly"
+description = "Sedm projektilů do vějíře. Zblízka smetou celý houf."
 damage = 32
 recoil_degrees = 0.2
 fire_interval = 0.38

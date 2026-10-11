@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 pickup_radius = 0.5
 id = &"magnetism"
-display_name = "Magnetism"
-description = "Stronger collector field: +0.5 m pickup radius per level."
+display_name = "Velká igelitka"
+description = "Za každou úroveň: +0,5 m dosahu sbírání."
 accent_color = Color(0.7, 0.5, 1, 1)
 costs = PackedInt32Array(50, 90, 160, 260, 400)
 currency = &"gold"

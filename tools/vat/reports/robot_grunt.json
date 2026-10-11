@@ -1,45 +1,48 @@
 {
  "id": "robot_grunt",
- "source_vertices": 886,
- "columns": 708,
+ "source_vertices": 935,
+ "columns": 951,
  "texture": [
-  708,
-  80
+  951,
+  88
  ],
  "clips": [
   {
    "name": "move",
-   "action": "Idle",
+   "action": "Walk",
    "start": 0,
-   "frames": 67,
-   "fps": 20.099999999999998,
+   "frames": 25,
+   "fps": 20.0,
    "loop": true
   },
   {
    "name": "attack",
-   "action": "Attack",
-   "start": 67,
-   "frames": 13,
-   "fps": 19.999999205271436,
+   "action": "Punch",
+   "start": 25,
+   "frames": 16,
+   "fps": 20.0,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 41,
+   "frames": 47,
+   "fps": 20.072727272727274,
    "loop": false
   }
  ],
  "materials": [
-  "MI_Enemies"
+  "Skin",
+  "Pants",
+  "Shirt",
+  "Detail",
+  "Belt",
+  "Face",
+  "Hat",
+  "Hair",
+  "Igelitka"
  ],
- "textures": {
-  "T_Enemies_BaseColor.png": [
-   1024,
-   1024
-  ],
-  "T_Enemies_Normal": [
-   1024,
-   1024
-  ],
-  "T_Enemies_ORM": [
-   1024,
-   1024
-  ]
- },
- "rest_vertices": 886
+ "textures": {},
+ "rest_vertices": 935
 }

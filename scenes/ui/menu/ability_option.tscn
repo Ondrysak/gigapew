@@ -3,33 +3,33 @@
 [ext_resource type="Script" path="res://scripts/ui/menu/ability_option.gd" id="1_option"]
 
 [sub_resource type="StyleBoxFlat" id="Style_normal"]
-bg_color = Color(0.02, 0.04, 0.06, 0.95)
+bg_color = Color(0.075, 0.065, 0.05, 0.98)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.1, 0.5, 0.55, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+border_color = Color(0.37, 0.31, 0.22, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
 
 [sub_resource type="StyleBoxFlat" id="Style_hover"]
-bg_color = Color(0.05, 0.1, 0.13, 0.98)
+bg_color = Color(0.13, 0.105, 0.075, 0.98)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.4, 1, 1, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-shadow_color = Color(0.1, 0.8, 0.9, 0.2)
-shadow_size = 8
+border_color = Color(0.65, 0.54, 0.36, 1)
+corner_radius_top_left = 0
+corner_radius_top_right = 0
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+shadow_color = Color(0, 0, 0, 0)
+shadow_size = 0
 
 [node name="AbilityOption" type="Button" node_paths=PackedStringArray("accent_bar", "icon_rect", "name_label", "status_label")]
-custom_minimum_size = Vector2(120, 66)
+custom_minimum_size = Vector2(120, 110)
 size_flags_horizontal = 3
 theme_override_styles/normal = SubResource("Style_normal")
 theme_override_styles/hover = SubResource("Style_hover")
@@ -62,7 +62,7 @@ theme_override_constants/separation = 3
 custom_minimum_size = Vector2(0, 3)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.1, 0.85, 0.9, 1)
+color = Color(0.65, 0.48, 0.27, 1)
 
 [node name="Body" type="HBoxContainer" parent="Margin/Rows"]
 custom_minimum_size = Vector2(0, 28)
@@ -86,10 +86,9 @@ size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/line_spacing = -2
 theme_override_font_sizes/font_size = 14
-text = "Ability"
+text = "Skill"
 vertical_alignment = 1
 autowrap_mode = 3
-max_lines_visible = 2
 
 [node name="StatusRow" type="HBoxContainer" parent="Margin/Rows"]
 layout_mode = 2
@@ -102,6 +101,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_font_sizes/font_size = 12
-text = "KIT SKILL"
+text = "SKILL Z VÝBAVY"
 vertical_alignment = 1
 text_overrun_behavior = 3

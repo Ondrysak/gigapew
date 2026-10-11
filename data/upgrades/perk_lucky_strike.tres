@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"lucky_strike"
-display_name = "Lucky Strike"
-description = "8% rolled crit chance: x2.25 body damage. Aimed head/core hits always deal x3.25."
-level_descriptions = PackedStringArray("8% rolled crit chance: x2.25 body damage. Aimed head/core hits always deal x3.25.", "16% rolled crit chance: x2.5 body damage. Aimed head/core hits always deal x3.5.", "24% rolled crit chance: x2.75 body damage. Aimed head/core hits always deal x3.75.")
+display_name = "Štěstí z automatu"
+description = "8% šance na kritický zásah: tělo ×2,25. Mířená hlava či slabé místo vždy ×3,25."
+level_descriptions = PackedStringArray("8% šance na kritický zásah: tělo ×2,25. Mířená hlava či slabé místo vždy ×3,25.", "16% šance na kritický zásah: tělo ×2,5. Mířená hlava či slabé místo vždy ×3,5.", "24% šance na kritický zásah: tělo ×2,75. Mířená hlava či slabé místo vždy ×3,75.")
 kind = 3
 max_level = 3
 weight = 1.0

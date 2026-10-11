@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"saw"
-display_name = "Saw Orbit"
-description = "Two spinning saw blades orbit you, cutting every enemy they pass."
-level_descriptions = PackedStringArray("Two spinning saw blades orbit you, cutting every enemy they pass.", "Blades cut 25% harder and more often.", "Add a third blade.", "Blades cut 25% harder and more often.", "Add a fourth blade.")
+display_name = "Cirkulárka z bazaru"
+description = "Dva rotující pilové kotouče tě obíhají a řežou každého nepřítele v cestě."
+level_descriptions = PackedStringArray("Dva rotující pilové kotouče tě obíhají a řežou každého nepřítele v cestě.", "Poškození kotoučů +25 % ze základu a častější zásahy.", "Přidá třetí kotouč.", "Poškození kotoučů +25 % ze základu a častější zásahy.", "Přidá čtvrtý kotouč.")
 kind = 1
 max_level = 5
 weight = 1.3

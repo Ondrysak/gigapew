@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"adrenaline"
-display_name = "Adrenaline"
-description = "The lower your health, the faster your main gun fires: up to +40% fire rate near death."
-level_descriptions = PackedStringArray("The lower your health, the faster your main gun fires: up to +40% fire rate near death.", "The lower your health, the faster your main gun fires: up to +60% fire rate near death.", "The lower your health, the faster your main gun fires: up to +80% fire rate near death.")
+display_name = "Panika před zavíračkou"
+description = "Čím méně zdraví, tím rychlejší hlavní zbraň: u smrti až +40 % rychlosti střelby."
+level_descriptions = PackedStringArray("Čím méně zdraví, tím rychlejší hlavní zbraň: u smrti až +40 % rychlosti střelby.", "Čím méně zdraví, tím rychlejší hlavní zbraň: u smrti až +60 % rychlosti střelby.", "Čím méně zdraví, tím rychlejší hlavní zbraň: u smrti až +80 % rychlosti střelby.")
 kind = 3
 max_level = 3
 weight = 1.0

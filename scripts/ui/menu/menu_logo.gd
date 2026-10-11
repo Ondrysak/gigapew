@@ -1,8 +1,8 @@
 class_name MenuLogo
 extends Control
 
-## Neon title with chromatic ghost copies. `reveal`, `glitch` and `underline`
-## are tweenable; idle glitch bursts keep a static logo alive.
+## A misregistered two-ink street poster. Reveal remains tweenable for the
+## intro; the printed copies stay fixed rather than flashing like a display.
 
 @export var title_label: Label
 @export var ghost_labels: Array[Label] = []
@@ -13,21 +13,18 @@ extends Control
 	set(value):
 		reveal = value
 		_apply_reveal()
-## 0 = stable; 1 = heavy jitter and flicker.
-@export_range(0.0, 1.0) var glitch := 0.0
 ## Underline width fraction.
 @export_range(0.0, 1.0) var underline_ratio := 1.0:
 	set(value):
 		underline_ratio = value
 		if underline != null:
 			underline.scale.x = value
-## Random seconds between idle glitch bursts; x <= 0 disables them.
-@export var idle_burst_interval := Vector2(2.5, 6.0)
-@export var ghost_spread := 16.0
+@export var ghost_spread := 2.0
 
 var _ghost_bases: Array[Vector2] = []
-var _burst := 0.0
-var _next_burst := 0.0
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.055, 0.045, 0.032, 0.96))
 
 func _ready() -> void:
 	for ghost in ghost_labels:
@@ -35,24 +32,17 @@ func _ready() -> void:
 	if underline != null:
 		underline.pivot_offset = Vector2(underline.size.x * 0.5, 0.0)
 		underline.scale.x = underline_ratio
-	_next_burst = randf_range(idle_burst_interval.x, idle_burst_interval.y)
 	_apply_reveal()
+	StreetWear.apply(self, true)
+	_apply_print()
 
-func _process(delta: float) -> void:
-	if idle_burst_interval.x > 0.0:
-		_next_burst -= delta
-		if _next_burst <= 0.0:
-			_burst = 0.35
-			_next_burst = randf_range(idle_burst_interval.x, idle_burst_interval.y)
-	_burst = maxf(_burst - delta, 0.0)
-	var amount := maxf(glitch, _burst * 2.0)
+func _apply_print() -> void:
 	for index in range(ghost_labels.size()):
 		var side := -1.0 if index % 2 == 0 else 1.0
-		var jitter := Vector2(randf_range(-1.0, 1.0), randf_range(-0.3, 0.3)) * ghost_spread * amount
-		ghost_labels[index].position = _ghost_bases[index] + Vector2(side * (2.0 + amount * 6.0), 0.0) + jitter
-		ghost_labels[index].modulate.a = 0.35 + amount * 0.5
+		ghost_labels[index].position = _ghost_bases[index] + Vector2(side * ghost_spread, side)
+		ghost_labels[index].modulate.a = 0.42
 	if title_label != null:
-		title_label.modulate.a = 1.0 - (0.7 if randf() < amount * 0.25 else 0.0)
+		title_label.modulate.a = 1.0
 
 func _apply_reveal() -> void:
 	if title_label == null:

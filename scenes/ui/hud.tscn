@@ -17,24 +17,20 @@ content_margin_left = 14.0
 content_margin_top = 10.0
 content_margin_right = 14.0
 content_margin_bottom = 10.0
-bg_color = Color(0.012, 0.03, 0.045, 0.86)
+bg_color = Color(0.075, 0.063, 0.05, 0.96)
 border_width_left = 3
 border_width_bottom = 1
-border_color = Color(0.07, 0.72, 0.76, 1)
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
+border_color = Color(0.48, 0.39, 0.26, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_threat"]
 content_margin_left = 14.0
 content_margin_top = 8.0
 content_margin_right = 14.0
 content_margin_bottom = 8.0
-bg_color = Color(0.025, 0.028, 0.038, 0.86)
+bg_color = Color(0.09, 0.067, 0.053, 0.96)
 border_width_right = 3
 border_width_bottom = 1
-border_color = Color(1, 0.48, 0.17, 1)
-corner_radius_top_left = 6
-corner_radius_bottom_left = 6
+border_color = Color(0.65, 0.4, 0.23, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_boss"]
 content_margin_left = 12.0
@@ -46,13 +42,7 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.36, 0.2, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-shadow_color = Color(0.9, 0.15, 0.05, 0.28)
-shadow_size = 12
+border_color = Color(0.7, 0.39, 0.23, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_boss_badge"]
 content_margin_left = 6.0
@@ -64,80 +54,50 @@ border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(1, 0.55, 0.3, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+border_color = Color(0.73, 0.48, 0.28, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_level"]
 content_margin_left = 8.0
 content_margin_top = 1.0
 content_margin_right = 8.0
 content_margin_bottom = 1.0
-bg_color = Color(0.05, 0.3, 0.26, 1)
+bg_color = Color(0.2, 0.21, 0.12, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.3, 1, 0.78, 1)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
+border_color = Color(0.57, 0.58, 0.35, 1)
 
 [sub_resource type="StyleBoxFlat" id="Style_death"]
 content_margin_left = 36.0
 content_margin_top = 26.0
 content_margin_right = 36.0
 content_margin_bottom = 26.0
-bg_color = Color(0.016, 0.022, 0.032, 0.97)
+bg_color = Color(0.095, 0.075, 0.059, 0.99)
 border_width_left = 1
 border_width_top = 4
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(1, 0.25, 0.32, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-shadow_color = Color(0, 0, 0, 0.7)
-shadow_size = 18
+border_color = Color(0.52, 0.24, 0.19, 1)
 
 [sub_resource type="StyleBoxFlat" id="Bar_background"]
-bg_color = Color(0.01, 0.025, 0.035, 0.9)
+bg_color = Color(0.04, 0.035, 0.028, 0.95)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.07, 0.3, 0.34, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
+border_color = Color(0.35, 0.29, 0.2, 1)
 
 [sub_resource type="StyleBoxFlat" id="Bar_xp"]
-bg_color = Color(0.2, 1, 0.75, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
+bg_color = Color(0.64, 0.61, 0.35, 1)
 
 [sub_resource type="StyleBoxFlat" id="Bar_health"]
-bg_color = Color(0.3, 0.9, 0.62, 1)
+bg_color = Color(0.57, 0.61, 0.36, 1)
 border_width_bottom = 3
-border_color = Color(0.16, 0.55, 0.4, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
+border_color = Color(0.34, 0.37, 0.21, 1)
 
 [sub_resource type="StyleBoxFlat" id="Bar_supply"]
-bg_color = Color(1, 0.55, 0.22, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
+bg_color = Color(0.78, 0.54, 0.27, 1)
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -157,15 +117,15 @@ theme_override_constants/separation = 4
 
 [node name="Sector" type="Label" parent="Stage/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.83, 0.96, 0.99, 1)
+theme_override_colors/font_color = Color(0.89, 0.83, 0.7, 1)
 theme_override_font_sizes/font_size = 17
-text = "01 / 03   TRAINING YARD"
+text = "01 / 03   ŽIŽKOV"
 
 [node name="Subtitle" type="Label" parent="Stage/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.35, 0.72, 0.78, 1)
+theme_override_colors/font_color = Color(0.74, 0.67, 0.53, 1)
 theme_override_font_sizes/font_size = 12
-text = "Sector 01 / live-fire proving ground"
+text = "První okruh / dvorky a herny"
 
 [node name="Resources" type="HBoxContainer" parent="Stage/Rows"]
 custom_minimum_size = Vector2(0, 32)
@@ -192,7 +152,7 @@ stretch_mode = 5
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.6, 0.35, 1)
 theme_override_font_sizes/font_size = 11
-text = "SUPPLY"
+text = "ZÁSOBY"
 
 [node name="Bar" type="ProgressBar" parent="Stage/Rows/Supply"]
 custom_minimum_size = Vector2(150, 8)
@@ -224,12 +184,12 @@ alignment = 1
 
 [node name="Label" type="Label" parent="Contract"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.86, 0.98, 1, 1)
+theme_override_colors/font_color = Color(0.89, 0.83, 0.7, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 23
-text = "CONTRACT  0 / 4"
+text = "ZAKÁZKA  0 / 4"
 
 [node name="Boss" type="PanelContainer" parent="."]
 visible = false
@@ -283,15 +243,15 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 22
-text = "DREADNOUGHT"
+text = "PAN HERNA"
 vertical_alignment = 1
 
 [node name="Phase" type="Label" parent="Boss/Row/Info/Header"]
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.3, 0.45, 1)
+theme_override_colors/font_color = Color(0.86, 0.38, 0.28, 1)
 theme_override_font_sizes/font_size = 13
-text = "ENRAGED"
+text = "V RAUŠI"
 vertical_alignment = 1
 
 [node name="Percent" type="Label" parent="Boss/Row/Info/Header"]
@@ -344,7 +304,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.85, 0.6, 0.45, 1)
 theme_override_font_sizes/font_size = 12
-text = "HOSTILES"
+text = "HALUCINACE"
 
 [node name="Value" type="Label" parent="Threat/Rows/Hostiles"]
 layout_mode = 2
@@ -374,9 +334,9 @@ stretch_mode = 5
 [node name="Caption" type="Label" parent="Threat/Rows/Kills"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.62, 0.68, 0.72, 1)
+theme_override_colors/font_color = Color(0.74, 0.68, 0.56, 1)
 theme_override_font_sizes/font_size = 12
-text = "KILLS"
+text = "ROZPRÁŠENO"
 
 [node name="Value" type="Label" parent="Threat/Rows/Kills"]
 layout_mode = 2
@@ -428,16 +388,16 @@ theme_override_styles/panel = SubResource("Style_level")
 
 [node name="Label" type="Label" parent="Vitals/Rows/Top/Level"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 1, 0.94, 1)
+theme_override_colors/font_color = Color(0.86, 0.82, 0.64, 1)
 theme_override_font_sizes/font_size = 14
-text = "LV 1"
+text = "ÚR 1"
 
 [node name="ClassName" type="Label" parent="Vitals/Rows/Top"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+theme_override_colors/font_color = Color(0.78, 0.73, 0.51, 1)
 theme_override_font_sizes/font_size = 13
-text = "SCOUT"
+text = "LUĎAS"
 vertical_alignment = 1
 
 [node name="XPIcon" type="TextureRect" parent="Vitals/Rows/Top"]
@@ -452,7 +412,7 @@ stretch_mode = 5
 
 [node name="XPValue" type="Label" parent="Vitals/Rows/Top"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.78, 0.7, 1)
+theme_override_colors/font_color = Color(0.72, 0.7, 0.49, 1)
 theme_override_font_sizes/font_size = 12
 text = "0 / 10"
 vertical_alignment = 1
@@ -500,7 +460,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0.03, 0.04, 1)
+theme_override_colors/font_outline_color = Color(0.025, 0.02, 0.015, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 16
 text = "100 / 100"
@@ -525,7 +485,7 @@ stretch_mode = 5
 
 [node name="Value" type="Label" parent="Vitals/Rows/Health/Armor"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.62, 0.78, 1, 1)
+theme_override_colors/font_color = Color(0.78, 0.75, 0.59, 1)
 theme_override_font_sizes/font_size = 18
 text = "0"
 vertical_alignment = 1
@@ -567,12 +527,12 @@ theme_override_constants/separation = 6
 [node name="Title" type="Label" parent="Primary/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.97, 1, 1)
+theme_override_colors/font_color = Color(0.86, 0.79, 0.65, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 17
-text = "PRIMARY"
+text = "ZBRAŇ"
 vertical_alignment = 1
 
 [node name="Mods" type="HBoxContainer" parent="Primary/Header"]
@@ -608,11 +568,11 @@ offset_top = 14.0
 offset_right = 150.0
 offset_bottom = 40.0
 mouse_filter = 2
-theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_color = Color(0.86, 0.73, 0.43, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 18
-text = "HOLD F  ·  MINE"
+text = "DRŽ F · VYPÁČ PŘIHRÁDKU"
 horizontal_alignment = 1
 
 [node name="Controls" type="Label" parent="."]
@@ -625,12 +585,12 @@ offset_right = -16.0
 offset_bottom = -6.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.62, 0.74, 0.78, 0.55)
+theme_override_colors/font_color = Color(0.76, 0.7, 0.57, 0.85)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 11
-text = "WASD MOVE · SPACE JUMP · LMB FIRE · 1–5 ABILITIES · WHEEL CHANGE PRIMARY · F HOLD MINE · E INTERACT · ESC PAUSE"
+text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · 1–5 TRIKY · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · E POUŽÍT · ESC PAUZA"
 horizontal_alignment = 1
 
 [node name="Warning" type="Control" parent="."]
@@ -679,11 +639,11 @@ theme_override_constants/separation = 0
 
 [node name="Title" type="Label" parent="Warning/Content/Text"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.32, 0.22, 1)
+theme_override_colors/font_color = Color(0.88, 0.49, 0.29, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 38
-text = "WARNING"
+text = "BACHA"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="Warning/Content/Text"]
@@ -692,7 +652,7 @@ theme_override_colors/font_color = Color(1, 0.84, 0.7, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 16
-text = "BOSS INBOUND"
+text = "BLÍŽÍ SE PAN HERNA"
 horizontal_alignment = 1
 
 [node name="SkullRight" type="TextureRect" parent="Warning/Content"]
@@ -771,12 +731,12 @@ stretch_mode = 5
 
 [node name="Label" type="Label" parent="Death/Center/Panel/Rows/Title"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.3, 0.36, 1)
+theme_override_colors/font_color = Color(0.89, 0.73, 0.5, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 3
 theme_override_constants/shadow_offset_y = 3
-theme_override_font_sizes/font_size = 46
-text = "YOU DIED"
+theme_override_font_sizes/font_size = 42
+text = "KONEC SETU"
 
 [node name="SkullRight" type="TextureRect" parent="Death/Center/Panel/Rows/Title"]
 texture_filter = 1
@@ -790,9 +750,11 @@ stretch_mode = 5
 
 [node name="Where" type="Label" parent="Death/Center/Panel/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.68, 0.72, 1)
+theme_override_colors/font_color = Color(0.78, 0.7, 0.57, 1)
 theme_override_font_sizes/font_size = 14
-text = "SIGNAL LOST"
+text = "ZASE V SEPTIKU"
+autowrap_mode = 2
+custom_minimum_size = Vector2(528, 0)
 horizontal_alignment = 1
 
 [node name="Stats" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
@@ -803,23 +765,23 @@ alignment = 1
 
 [node name="BankedCaption" type="Label" parent="Death/Center/Panel/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.75, 0.8, 1)
+theme_override_colors/font_color = Color(0.76, 0.72, 0.46, 1)
 theme_override_font_sizes/font_size = 12
-text = "MINERALS BANKED"
+text = "ULOŽENÁ KOŘIST"
 horizontal_alignment = 1
 
 [node name="Banked" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="Rule" type="ColorRect" parent="Death/Center/Panel/Rows"]
 custom_minimum_size = Vector2(0, 1)
 layout_mode = 2
 mouse_filter = 2
-color = Color(1, 0.3, 0.36, 0.35)
+color = Color(0.67, 0.43, 0.27, 0.5)
 
 [node name="Keys" type="HBoxContainer" parent="Death/Center/Panel/Rows"]
 layout_mode = 2
@@ -857,15 +819,15 @@ stretch_mode = 5
 
 [node name="Title" type="Label" parent="Objective/Rows/Header"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.72, 0.3, 1)
+theme_override_colors/font_color = Color(0.87, 0.69, 0.38, 1)
 theme_override_font_sizes/font_size = 14
-text = "OPTIONAL · DEFENSE VEIN"
+text = "VOLITELNĚ · HLÍDANÝ AUTOMAT"
 
 [node name="Detail" type="Label" parent="Objective/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.72, 0.84, 0.86, 1)
+theme_override_colors/font_color = Color(0.81, 0.75, 0.62, 1)
 theme_override_font_sizes/font_size = 12
-text = "Mine the vein. Survive its responders."
+text = "Vypáč automat. Přežij jeho hlídače."
 
 [node name="Progress" type="ProgressBar" parent="Objective/Rows"]
 custom_minimum_size = Vector2(0, 5)
@@ -901,20 +863,20 @@ mouse_filter = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 13
-text = "BREACH RAM"
+text = "ROZBĚH PROTI TOBĚ"
 
 [node name="Time" type="Label" parent="BossCue/Rows/Header"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.86, 0.88, 1)
+theme_override_colors/font_color = Color(0.81, 0.75, 0.62, 1)
 theme_override_font_sizes/font_size = 12
 text = "1.2s"
 
 [node name="Instruction" type="Label" parent="BossCue/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.78, 0.86, 0.88, 1)
+theme_override_colors/font_color = Color(0.81, 0.75, 0.62, 1)
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
-text = "Leave the marked lane."
+text = "Uhni z vyznačené dráhy."
 
 [node name="Progress" type="ProgressBar" parent="BossCue/Rows"]
 custom_minimum_size = Vector2(0, 3)
@@ -946,13 +908,13 @@ mouse_filter = 2
 [node name="Title" type="Label" parent="Quests/Rows/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.4, 1, 0.85, 1)
+theme_override_colors/font_color = Color(0.8, 0.73, 0.46, 1)
 theme_override_font_sizes/font_size = 14
-text = "LEVEL CONTRACT"
+text = "TVŮJ KŠEFT"
 
 [node name="Seed" type="Label" parent="Quests/Rows/Header"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.62, 0.66, 1)
+theme_override_colors/font_color = Color(0.69, 0.63, 0.5, 1)
 theme_override_font_sizes/font_size = 11
 
 [node name="List" type="VBoxContainer" parent="Quests/Rows"]
@@ -962,6 +924,6 @@ theme_override_constants/separation = 10
 
 [node name="Hint" type="Label" parent="Quests/Rows"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.76, 0.8, 1)
+theme_override_colors/font_color = Color(0.78, 0.71, 0.57, 1)
 theme_override_font_sizes/font_size = 11
-text = "Aim nearby ore · hold F to mine · finish all to extract"
+text = "Zamiř zblízka na přihrádku · drž F a páč · dokonči zakázku pro odvoz"

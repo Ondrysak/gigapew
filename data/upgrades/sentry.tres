@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"sentry"
-display_name = "Sentry Turret"
-description = "Every 7 s, deploy a turret at your feet that shoots enemies within 20 m for 12 s."
-level_descriptions = PackedStringArray("Every 7 s, deploy a turret at your feet that shoots enemies within 20 m for 12 s.", "Turrets hit harder, fire faster and deploy more often.", "Deploy two turrets at a time.", "Turrets hit harder, fire faster and deploy more often.", "Deploy three turrets at a time.")
+display_name = "Vyhazovač na baterky"
+description = "Každých 7 s postaví u nohou střílející věžičku. Vydrží 12 s a míří do 20 m."
+level_descriptions = PackedStringArray("Každých 7 s postaví u nohou střílející věžičku. Vydrží 12 s a míří do 20 m.", "Věžičky mají vyšší poškození, rychlejší střelbu a častější nasazení.", "Postaví dvě věžičky najednou.", "Věžičky mají vyšší poškození, rychlejší střelbu a častější nasazení.", "Postaví tři věžičky najednou.")
 kind = 1
 max_level = 5
 weight = 1.3

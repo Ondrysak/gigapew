@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 armor = 0.5
 id = &"plating"
-display_name = "Plating"
-description = "Ablative underlayer: +0.5 armor per level."
+display_name = "Kožená bunda"
+description = "Za každou úroveň: +0,5 ochrany proti každému zásahu."
 accent_color = Color(0.75, 0.82, 0.9, 1)
 costs = PackedInt32Array(60, 120, 200, 320, 450)
 currency = &"gold"

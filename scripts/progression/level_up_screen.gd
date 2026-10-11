@@ -37,11 +37,12 @@ func _ready() -> void:
 			continue
 		card.pressed.connect(_choose.bind(_cards.size()))
 		_cards.append(card)
+	StreetWear.apply_tree(self)
 
-func present(offers: Array[UpgradeDefinition], run_state: RunState, title: String = "LEVEL UP", subtitle: String = "") -> void:
+func present(offers: Array[UpgradeDefinition], run_state: RunState, title: String = "DALŠÍ ÚROVEŇ", subtitle: String = "") -> void:
 	_offers.assign(offers)
 	title_label.text = title
-	level_label.text = subtitle if not subtitle.is_empty() else "OPERATOR LEVEL %d" % run_state.level
+	level_label.text = subtitle if not subtitle.is_empty() else "ÚROVEŇ %d" % run_state.level
 	for index in range(_cards.size()):
 		var card := _cards[index]
 		if index < _offers.size():

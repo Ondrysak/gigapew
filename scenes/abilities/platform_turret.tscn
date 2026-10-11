@@ -103,8 +103,8 @@ ring_segments = 6
 
 [node name="PlatformTurret" type="Node3D" node_paths=PackedStringArray("turret", "turret_yaw", "turret_pitch", "muzzle", "muzzle_flash", "warning_lights", "tracer_template", "shock_template")]
 script = ExtResource("1_ability")
-display_name = "Platform Turret"
-description = "Drop a heavy turret where you aim (up to 8 m); its landing hits for 40. For 15 s it fires piercing tracers at the nearest enemy within 24 m: 28 damage each, 8 shots a second, through 3 enemies."
+display_name = "4 setupy"
+description = "Postavíš těžký setup do 8 m; dopad zasáhne za 40. Na 15 s pálí na nejbližšího nepřítele do 24 m: 28 poškození, 8 ran/s, průraz 3 nepřátel."
 base_cooldown = 22.0
 accent_color = Color(0.5, 1, 0.4, 1)
 synth_activate = &"seismic_throw"

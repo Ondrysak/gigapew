@@ -6,6 +6,6 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"shard"
-display_name = "Void Shard"
+display_name = "Kešulky"
 color = Color(0.68, 0.36, 1, 1)
 icon = ExtResource("icon_px")

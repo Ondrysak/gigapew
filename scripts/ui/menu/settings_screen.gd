@@ -35,7 +35,7 @@ func refresh() -> void:
 	sensitivity_slider.set_value_no_signal(settings.mouse_sensitivity)
 	fullscreen_toggle.set_pressed_no_signal(settings.fullscreen)
 	guided_toggle.set_pressed_no_signal(settings.guided_start)
-	reset_tips_button.text = "SHOW TIPS AGAIN"
+	reset_tips_button.text = "ZNOVU UKAZOVAT RADY"
 	_show_volume(master_value, settings.master_volume)
 	_show_volume(music_value, settings.music_volume)
 	_show_volume(sfx_value, settings.sfx_volume)
@@ -54,7 +54,7 @@ func _on_fullscreen_toggled(pressed: bool) -> void:
 
 func _on_reset_tips() -> void:
 	Profile.reset_tips()
-	reset_tips_button.text = "TIPS WILL SHOW AGAIN"
+	reset_tips_button.text = "RADY SE ZNOVU UKÁŽOU"
 
 func _show_volume(label: Label, value: float) -> void:
 	label.text = "%d%%" % roundi(value * 100.0)

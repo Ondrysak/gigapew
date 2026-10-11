@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"nova_overclock"
-display_name = "Collapse Nova"
-description = "After each pulse, a wider ring collapses back and drags enemies toward you."
+display_name = "Zpátky na parket"
+description = "Po každé vlně se širší kruh stáhne zpátky a přitáhne nepřátele k tobě."
 kind = 2
 max_level = 1
 weight = 3.0

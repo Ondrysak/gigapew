@@ -1,53 +1,43 @@
 {
  "id": "alien_grunt",
- "source_vertices": 700,
- "columns": 700,
+ "source_vertices": 854,
+ "columns": 854,
  "texture": [
-  700,
-  49
+  854,
+  44
  ],
  "clips": [
   {
    "name": "move",
-   "action": "Run",
+   "action": "Walk",
    "start": 0,
-   "frames": 8,
-   "fps": 19.2,
-   "loop": true
-  },
-  {
-   "name": "idle",
-   "action": "Idle",
-   "start": 8,
-   "frames": 32,
-   "fps": 19.692307692307693,
+   "frames": 10,
+   "fps": 20.0,
    "loop": true
   },
   {
    "name": "attack",
-   "action": "Attack.000",
-   "start": 40,
-   "frames": 9,
-   "fps": 19.2,
+   "action": "Attack",
+   "start": 10,
+   "frames": 13,
+   "fps": 20.57142857142857,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 23,
+   "frames": 21,
+   "fps": 20.0,
    "loop": false
   }
  ],
  "materials": [
-  "Bug"
+  "mys_fur",
+  "mys_pink",
+  "mys_eye",
+  "mys_whisker"
  ],
- "textures": {
-  "bug-d": [
-   512,
-   512
-  ],
-  "bug-n": [
-   512,
-   512
-  ],
-  "bug-rought": [
-   512,
-   512
-  ]
- },
- "rest_vertices": 700
+ "textures": {},
+ "rest_vertices": 854
 }

@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"salvage_magnet"
-display_name = "Salvage Magnet"
-description = "Pickup radius +1.2 m (total 4.2 m)."
-level_descriptions = PackedStringArray("Pickup radius +1.2 m (total 4.2 m).", "Pickup radius +1.2 m (total 5.4 m).", "Pickup radius +1.2 m (total 6.6 m).", "Pickup radius +1.2 m (total 7.8 m).", "Pickup radius +1.2 m (total 9.0 m).")
+display_name = "Igelitka bez dna"
+description = "Dosah sbírání +1,2 m (celkem +1,2 m)."
+level_descriptions = PackedStringArray("Dosah sbírání +1,2 m (celkem +1,2 m).", "Dosah sbírání +1,2 m (celkem +2,4 m).", "Dosah sbírání +1,2 m (celkem +3,6 m).", "Dosah sbírání +1,2 m (celkem +4,8 m).", "Dosah sbírání +1,2 m (celkem +6,0 m).")
 max_level = 5
 weight = 1.0
 accent_color = Color(0.4, 0.95, 1.0, 1)

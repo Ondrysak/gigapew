@@ -54,8 +54,8 @@ rings = 6
 
 [node name="GrappleVault" type="Node3D" node_paths=PackedStringArray("line", "ring_template", "dust_template")]
 script = ExtResource("1_ability")
-display_name = "Grapple Vault"
-description = "Grapple up and over the swarm, untouchable for 0.5 s, then slam down: the landing shockwave hits everything within 5.5 m for heavy damage and hurls it back."
+display_name = "Vytrhnu hajzl z podlahy"
+description = "Přehoupneš se nad davem, 0,5 s nezranitelný. Dopad silně zraní a odhodí všechno do 5,5 m."
 base_cooldown = 9.0
 accent_color = Color(0.4, 0.8, 1, 1)
 synth_activate = &"blink"

@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"mod_quickdraw"
-display_name = "Quickdraw Capacitor"
-description = "The first main-gun shot within 1.5 s after switching weapons deals +75% damage; the bonus is spent even on a miss."
+display_name = "Rychlej crossfader"
+description = "První výstřel hlavní zbraní do 1,5 s po výměně má +75 % poškození. Bonus se spotřebuje i při minutí."
 kind = 4
 max_level = 1
 weight = 0.8

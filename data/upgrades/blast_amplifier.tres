@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"blast_amplifier"
-display_name = "Blast Amplifier"
-description = "Auto weapon areas and chain reach +12% (total +12%)."
-level_descriptions = PackedStringArray("Auto weapon areas and chain reach +12% (total +12%).", "Auto weapon areas and chain reach +12% (total +24%).", "Auto weapon areas and chain reach +12% (total +36%).", "Auto weapon areas and chain reach +12% (total +48%).", "Auto weapon areas and chain reach +12% (total +60%).")
+display_name = "Basy přes celej Žižkov"
+description = "Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +12 %)."
+level_descriptions = PackedStringArray("Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +12 %).", "Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +24 %).", "Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +36 %).", "Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +48 %).", "Dosah plošných útoků a řetězení automatických zbraní +12 % (celkem +60 %).")
 max_level = 5
 weight = 0.9
 accent_color = Color(0.8, 0.5, 1.0, 1)

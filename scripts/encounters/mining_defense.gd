@@ -1,7 +1,7 @@
 class_name MiningDefense
 extends Node3D
 
-## Optional Yard defense vein: normal mineral extraction, then one earned upgrade choice.
+## Optional Yard guarded machine: conserved compartment loot, then an earned upgrade.
 signal reward_ready
 
 enum State { WAITING, MINING, DEFENDING, READY, CLAIMED, CANCELLED }
@@ -14,7 +14,7 @@ const BULWARK := preload("res://data/enemies/robot_bulwark.tres")
 const RESPONSE_LIMIT := 5
 const PACKS := [[GRUNT, GRUNT, GRUNT, GRUNT, GRUNT], [RUNNER, RUNNER, RUNNER, RUNNER], [BULWARK, GRUNT, GRUNT, SPITTER]]
 
-@export var display_name := "Defense vein"
+@export var display_name := "Hlídaný automat"
 @export var support_path := NodePath("World/Obstacles/CrateStackN")
 @export var vein_height := 1.4
 @export var vein_health := 420.0
@@ -262,18 +262,18 @@ func _update_frame() -> void:
 	var color := Color(0.25, 0.85, 0.95)
 	match state:
 		State.WAITING:
-			_status.text = "DEFENSE VEIN  /  MINE TO START"
+			_status.text = "HLÍDANÝ AUTOMAT / DRŽ F A PÁČ"
 		State.MINING, State.DEFENDING:
 			color = Color(1.0, 0.48, 0.16)
-			_status.text = "%d%% CUT  /  RESPONSE %d/3  /  %d HOSTILES" % [roundi(value * 100.0), mini(pack_index + 1, 3), enemies_remaining()]
+			_status.text = "%d%% VYPÁČENO / VLNA %d/3 / %d HALUCINACÍ" % [roundi(value * 100.0), mini(pack_index + 1, 3), enemies_remaining()]
 		State.READY:
 			color = Color(0.3, 1.0, 0.65)
-			_status.text = "SECURED  /  [E] CHOOSE UPGRADE"
+			_status.text = "AUTOMAT TVŮJ / [E] VYBER VYLEPŠENÍ"
 		State.CLAIMED:
 			color = Color(0.25, 0.4, 0.45)
-			_status.text = "SECURED  /  REWARD CLAIMED"
+			_status.text = "AUTOMAT TVŮJ / ODMĚNA VYBRÁNA"
 		State.CANCELLED:
-			_status.text = "OFFLINE"
+			_status.text = "MIMO PROVOZ"
 	_beacon_material.albedo_color = color
 	for index in 3:
 		get_node("ResponseLamp%d" % index).visible = index >= completed_packs

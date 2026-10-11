@@ -18,6 +18,7 @@ func _ready() -> void:
 		_cards.append(card)
 	if not _cards.is_empty():
 		default_focus = _cards[0].buy_button
+	StreetWear.apply_tree(self)
 
 func refresh() -> void:
 	var upgrades := Profile.meta_pool.upgrades
@@ -28,12 +29,12 @@ func refresh() -> void:
 		var affordable := cost >= 0 and Profile.currency(upgrade.currency) >= cost
 		_cards[index].show_upgrade(upgrade, Profile.meta_level(upgrade), price, affordable)
 	if status_label.text.is_empty():
-		status_label.text = "Upgrades apply to every operator at the start of each run."
+		status_label.text = "Vylepšení platí pro všechny postavy od začátku každého běhu."
 
 func _on_purchase_requested(definition: MetaUpgradeDefinition) -> void:
 	var level := Profile.meta_level(definition)
 	if Profile.buy_meta(definition):
-		status_label.text = "%s upgraded to level %d." % [definition.display_name, level + 1]
+		status_label.text = "%s: úroveň %d." % [definition.display_name, level + 1]
 	else:
-		status_label.text = "Not enough %s." % currency_bar.label_for(definition.currency).to_lower()
+		status_label.text = "Chybí platidlo: %s." % currency_bar.label_for(definition.currency)
 	refresh()

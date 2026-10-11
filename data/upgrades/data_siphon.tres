@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"data_siphon"
-display_name = "Data Siphon"
-description = "Gain 10% more experience (total +10%)."
-level_descriptions = PackedStringArray("Gain 10% more experience (total +10%).", "Gain 10% more experience (total +20%).", "Gain 10% more experience (total +30%).", "Gain 10% more experience (total +40%).", "Gain 10% more experience (total +50%).")
+display_name = "Legendary zkušenosti"
+description = "Získáš o 10 % více zkušeností (celkem +10 %)."
+level_descriptions = PackedStringArray("Získáš o 10 % více zkušeností (celkem +10 %).", "Získáš o 10 % více zkušeností (celkem +20 %).", "Získáš o 10 % více zkušeností (celkem +30 %).", "Získáš o 10 % více zkušeností (celkem +40 %).", "Získáš o 10 % více zkušeností (celkem +50 %).")
 max_level = 5
 weight = 0.8
 accent_color = Color(0.4, 1.0, 0.5, 1)

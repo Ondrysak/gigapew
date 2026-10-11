@@ -47,8 +47,8 @@ ring_segments = 6
 
 [node name="Bulwark" type="Node3D" node_paths=PackedStringArray("bubble", "shock_template")]
 script = ExtResource("1_ability")
-display_name = "Bulwark"
-description = "Slam down a shield dome: 4 s of total immunity, and the shockwave hurls the horde back."
+display_name = "Jsem god"
+description = "Práskneš ochrannou kupoli: 4 s úplné nezranitelnosti a tlaková vlna odhodí dav."
 base_cooldown = 20.0
 accent_color = Color(1, 0.74, 0.22, 1)
 synth_activate = &"bulwark"

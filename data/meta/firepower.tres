@@ -7,8 +7,8 @@
 script = ExtResource("1_definition")
 damage_multiplier = 0.05
 id = &"firepower"
-display_name = "Firepower"
-description = "Tuned capacitors: all weapons deal +5% damage per level."
+display_name = "Škola disrespectu"
+description = "Za každou úroveň: všechny zbraně mají +5 % poškození."
 accent_color = Color(1, 0.35, 0.3, 1)
 costs = PackedInt32Array(60, 120, 200, 320, 450)
 currency = &"gold"

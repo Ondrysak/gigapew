@@ -7,8 +7,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"rockets_overclock"
-display_name = "Splitter Rockets"
-description = "Every rocket splits into 2 homing mini-rockets when it explodes."
+display_name = "Dvě za cenu jedný"
+description = "Každá rachejtle při výbuchu vypustí 2 menší naváděné rachejtle."
 kind = 2
 max_level = 1
 weight = 3.0

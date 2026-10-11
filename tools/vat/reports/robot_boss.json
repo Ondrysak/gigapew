@@ -1,53 +1,55 @@
 {
  "id": "robot_boss",
- "source_vertices": 4981,
- "columns": 5116,
+ "source_vertices": 2776,
+ "columns": 2776,
  "texture": [
-  4096,
-  252
+  2776,
+  171
  ],
  "clips": [
   {
    "name": "move",
    "action": "Walk",
    "start": 0,
-   "frames": 17,
-   "fps": 20.4,
+   "frames": 25,
+   "fps": 20.0,
    "loop": true
   },
   {
    "name": "idle",
    "action": "Idle",
-   "start": 17,
-   "frames": 67,
-   "fps": 20.099999999999998,
+   "start": 25,
+   "frames": 83,
+   "fps": 19.919999999999998,
    "loop": true
   },
   {
    "name": "attack",
    "action": "Punch",
-   "start": 84,
-   "frames": 12,
-   "fps": 19.41176416139703,
+   "start": 108,
+   "frames": 16,
+   "fps": 20.0,
    "loop": false
   },
   {
    "name": "death",
    "action": "Death",
-   "start": 96,
-   "frames": 30,
-   "fps": 20.232559485716674,
+   "start": 124,
+   "frames": 47,
+   "fps": 20.072727272727274,
    "loop": false
   }
  ],
  "materials": [
-  "George_Texture"
+  "Skin",
+  "Pants",
+  "Shirt",
+  "Detail",
+  "Belt",
+  "Face",
+  "Hat",
+  "Hair"
  ],
- "textures": {
-  "George_Texture": [
-   1024,
-   1024
-  ]
- },
- "rest_vertices": 4981
+ "textures": {},
+ "rest_vertices": 2776
 }

@@ -137,7 +137,7 @@ billboard = 1
 pixel_size = 0.003
 font_size = 38
 outline_size = 8
-text = "[E] ACTIVATE TURRET"
+text = "[E] ZAPNOUT VĚŽ"
 
 [node name="CableStart" type="Marker3D" parent="."]
 position = Vector3(0.3, 0.02, 0)

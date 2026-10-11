@@ -1,10 +1,8 @@
 class_name DepositField
 extends Node3D
 
-## Mineral deposits embedded in the stage's perimeter walls and obstacles,
-## plus the resource nuggets they (and boss drops) spill. Placement probes the
-## real colliders with rays, so any world scene with a PlayerSpawn marker,
-## an Obstacles node of StaticBody3Ds and walls on the play_area edges works.
+## Wall-mounted machines and the currency they (and boss drops) spill.
+## Placement probes real support faces; procedural and authored worlds share it.
 
 signal deposit_broken(definition: DepositDefinition, position: Vector3)
 
@@ -60,6 +58,8 @@ const PROBE_OUT := 1.6
 const PROBE_IN := 0.5
 const POPUP_TIME := 1.1
 
+const CIGARETTE_PACK_SHADER := preload("res://shaders/cigarette_pack.gdshader")
+
 var _world: Node3D
 var _area := Rect2()
 var _player: ArenaPlayer
@@ -76,6 +76,7 @@ var _cap := 0
 var _respawn_timer := 0.0
 var _spawn_point := Vector3.ZERO
 var _alive: Array[MineralDeposit] = []
+var _emptied: Array[MineralDeposit] = []
 var _placed: Dictionary = {}
 # Authored encounter formations do not consume random caps or respawn budgets.
 var _reserved_centers := PackedVector3Array()
@@ -259,7 +260,12 @@ func _set_for(definition: ResourceDefinition) -> ResourcePickupSet:
 		mesh = style.pickup_mesh
 		size = style.pickup_scale
 	pickups = ResourcePickupSet.new()
-	pickups.build(self, definition, mesh, pickup_material, max_pickups_per_resource, size)
+	var material := pickup_material
+	if definition.id == &"crystal":
+		var pack_material := ShaderMaterial.new()
+		pack_material.shader = CIGARETTE_PACK_SHADER
+		material = pack_material
+	pickups.build(self, definition, mesh, material, max_pickups_per_resource, size)
 	_sets[definition] = pickups
 	_set_list.append(pickups)
 	return pickups
@@ -568,6 +574,10 @@ func _is_clear(point: Vector3, bounds: Vector3, respawn: bool) -> bool:
 		var other_radius := Vector2(deposit.formation_size.x * 0.5, deposit.formation_size.z).length()
 		if deposit.global_position.distance_to(point) < maxf(min_spacing, radius + other_radius + 0.4):
 			return false
+	for deposit in _emptied:
+		var other_radius := Vector2(deposit.formation_size.x * 0.5, deposit.formation_size.z).length()
+		if deposit.global_position.distance_to(point) < maxf(min_spacing, radius + other_radius + 0.4):
+			return false
 	return true
 
 func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: Vector3, bounds: Vector3, support: StaticBody3D) -> bool:
@@ -625,7 +635,7 @@ func _on_deposit_struck(deposit: MineralDeposit) -> void:
 	_chip_cooldown = 0.06
 	var emitter := _chips[_next_chip]
 	_next_chip = (_next_chip + 1) % _chips.size()
-	_fire_emitter(emitter, deposit.last_hit_position, deposit.global_basis.z, deposit.definition.resource.color)
+	_fire_emitter(emitter, deposit.last_hit_position, deposit.global_basis.z, Color(0.58, 0.55, 0.46))
 
 func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -> void:
 	var definition := deposit.definition
@@ -636,7 +646,7 @@ func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -
 	if _quests != null:
 		_quests.record_mined(definition.resource, amount)
 	if not _bursts.is_empty():
-		_fire_emitter(_bursts[_next_burst], center, normal, definition.resource.color)
+		_fire_emitter(_bursts[_next_burst], center, normal, Color(0.65, 0.58, 0.42))
 		_next_burst = (_next_burst + 1) % _bursts.size()
 	_break_voice.global_position = center
 	_break_voice.pitch_scale = _rng.randf_range(0.9, 1.1)
@@ -648,7 +658,7 @@ func _on_deposit_depleted(deposit: MineralDeposit) -> void:
 	var definition := deposit.definition
 	var center := deposit.last_hit_position
 	_alive.erase(deposit)
-	deposit.queue_free()
+	_emptied.append(deposit)
 	deposit_broken.emit(definition, center)
 
 # ---------------------------------------------------------------- effects

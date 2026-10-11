@@ -7,16 +7,12 @@ content_margin_left = 4.0
 content_margin_top = 4.0
 content_margin_right = 4.0
 content_margin_bottom = 4.0
-bg_color = Color(0.01, 0.025, 0.04, 0.95)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
+bg_color = Color(0.09, 0.075, 0.055, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
 border_width_bottom = 2
-border_color = Color(0.1, 0.4, 0.45, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+border_color = Color(0.38, 0.32, 0.24, 1)
 
 [node name="MetaCard" type="PanelContainer" node_paths=PackedStringArray("accent_bar", "badge", "icon_rect", "name_label", "level_label", "pips", "description_label", "effect_label", "buy_button")]
 custom_minimum_size = Vector2(270, 236)
@@ -37,10 +33,11 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Accent" type="ColorRect" parent="Rows"]
-custom_minimum_size = Vector2(0, 4)
+custom_minimum_size = Vector2(48, 3)
 layout_mode = 2
 mouse_filter = 2
-color = Color(1, 0.75, 0.25, 1)
+size_flags_horizontal = 0
+color = Color(0.68, 0.49, 0.25, 1)
 
 [node name="Header" type="HBoxContainer" parent="Rows"]
 layout_mode = 2
@@ -69,13 +66,13 @@ theme_override_constants/separation = 0
 [node name="Name" type="Label" parent="Rows/Header/Titles"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "UPGRADE"
-text_overrun_behavior = 3
+text = "VYLEPŠENÍ"
+autowrap_mode = 2
 
 [node name="Level" type="Label" parent="Rows/Header/Titles"]
 layout_mode = 2
 theme_type_variation = &"DimLabel"
-text = "LV 0 / 5"
+text = "ÚR 0 / 5"
 
 [node name="Pips" type="HBoxContainer" parent="Rows"]
 layout_mode = 2
@@ -86,20 +83,20 @@ theme_override_constants/separation = 6
 custom_minimum_size = Vector2(230, 0)
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.72, 0.84, 0.88, 1)
+theme_override_colors/font_color = Color(0.76, 0.70, 0.57, 1)
 theme_override_font_sizes/font_size = 15
-text = "Description"
+text = "Účinek"
 autowrap_mode = 2
 
 [node name="Effect" type="Label" parent="Rows"]
 custom_minimum_size = Vector2(230, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 1, 0.75, 1)
+theme_override_colors/font_color = Color(0.74, 0.75, 0.53, 1)
 theme_override_font_sizes/font_size = 15
-text = "NOW  —"
+text = "TEĎ  —"
 autowrap_mode = 2
 
 [node name="Buy" type="Button" parent="Rows"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "UPGRADE"
+text = "VYLEPŠIT"

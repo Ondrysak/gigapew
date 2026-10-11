@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"mod_longshot"
-display_name = "Longshot Optics"
-description = "Main-gun direct hits beyond 15 m deal +40% damage. Position carefully and pick distant targets."
+display_name = "Přes celou pavlač"
+description = "Přímé zásahy hlavní zbraní za vzdáleností 15 m mají +40 % poškození."
 kind = 4
 max_level = 1
 weight = 0.8

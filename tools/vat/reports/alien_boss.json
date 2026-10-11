@@ -1,25 +1,56 @@
 {
  "id": "alien_boss",
- "source_vertices": 1046,
- "columns": 1046,
+ "source_vertices": 1944,
+ "columns": 1944,
  "texture": [
-  1046,
-  67
+  1944,
+  99
  ],
  "clips": [
   {
    "name": "move",
-   "action": "Alien_Idle",
+   "action": "Walk",
    "start": 0,
-   "frames": 67,
-   "fps": 19.90099122647906,
+   "frames": 27,
+   "fps": 20.25,
    "loop": true
+  },
+  {
+   "name": "attack",
+   "action": "Attack",
+   "start": 27,
+   "frames": 31,
+   "fps": 20.0,
+   "loop": false
+  },
+  {
+   "name": "death",
+   "action": "Death",
+   "start": 58,
+   "frames": 41,
+   "fps": 20.0,
+   "loop": false
   }
  ],
  "materials": [
-  "M_Alien_Eyes",
-  "M_Alien_Body_Blue"
+  "jackpot_gold",
+  "jackpot_red",
+  "jackpot_marquee",
+  "jackpot_eyes",
+  "jackpot_bulb",
+  "jackpot_chrome",
+  "jackpot_dark",
+  "jackpot_lamp_0",
+  "jackpot_reel",
+  "jackpot_seven",
+  "jackpot_lamp_1",
+  "jackpot_lamp_2",
+  "jackpot_lamp_3",
+  "jackpot_jewel",
+  "jackpot_cuff",
+  "jackpot_glove",
+  "jackpot_leg"
  ],
  "textures": {},
- "rest_vertices": 1046
+ "rest_vertices": 1944
 }

@@ -2,32 +2,28 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://7bro4fb3vc7d"
-path.s3tc="res://.godot/imported/robot_boss_George_Texture.png-37fe89f41afa26f12e484fe50b823580.s3tc.ctex"
+uid="uid://bq3kokbicf2wd"
+path="res://.godot/imported/robot_bulwark_normals.exr-5dbc123ffe4eef7c2f952969582d1e37.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
-}
-generator_parameters={
-"md5": "a6d8e71e2abe540afbf5a080bfc519fe"
+"vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/monsters/robot_boss/robot_boss_George_Texture.png"
-dest_files=["res://.godot/imported/robot_boss_George_Texture.png-37fe89f41afa26f12e484fe50b823580.s3tc.ctex"]
+source_file="res://assets/monsters/robot_bulwark/robot_bulwark_normals.exr"
+dest_files=["res://.godot/imported/robot_bulwark_normals.exr-5dbc123ffe4eef7c2f952969582d1e37.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
-compress/hdr_compression=1
-compress/normal_map=0
+compress/hdr_compression=0
+compress/normal_map=2
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
@@ -35,7 +31,7 @@ process/channel_remap/red=0
 process/channel_remap/green=1
 process/channel_remap/blue=2
 process/channel_remap/alpha=3
-process/fix_alpha_border=true
+process/fix_alpha_border=false
 process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false

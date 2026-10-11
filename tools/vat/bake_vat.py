@@ -41,6 +41,10 @@ def load_config(path):
 
 
 def import_source(path):
+	if path.lower().endswith(".blend"):
+		# A .blend opens as the whole file: its armature, meshes and actions.
+		bpy.ops.wm.open_mainfile(filepath=path)
+		return
 	bpy.ops.wm.read_factory_settings(use_empty=True)
 	if path.lower().endswith(".fbx"):
 		bpy.ops.import_scene.fbx(filepath=path)
@@ -228,23 +232,61 @@ def write_exr(path, width, height, pixels):
 
 
 def apply_materials(mesh, spec):
+	"""Recolour named materials. Overridden materials are rebuilt as a single
+	Principled BSDF feeding the output, so the glTF export carries the colour even
+	when the source routed shading through another node."""
 	overrides = spec.get("materials", {})
 	for material in mesh.materials:
 		if material is None or material.name not in overrides:
 			continue
 		override = overrides[material.name]
 		material.use_nodes = True
-		bsdf = next((n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
-		if bsdf is None:
-			continue
-		if "color" in override:
-			socket = bsdf.inputs["Base Color"]
-			for link in list(socket.links):
-				material.node_tree.links.remove(link)
-			socket.default_value = (*override["color"], 1.0)
+		tree = material.node_tree
+		tree.nodes.clear()
+		bsdf = tree.nodes.new("ShaderNodeBsdfPrincipled")
+		output = tree.nodes.new("ShaderNodeOutputMaterial")
+		tree.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+		bsdf.inputs["Base Color"].default_value = (*override.get("color", (0.5, 0.5, 0.5)), 1.0)
+		bsdf.inputs["Roughness"].default_value = override.get("roughness", 0.8)
+		bsdf.inputs["Metallic"].default_value = override.get("metallic", 0.0)
 		if "emission" in override:
 			bsdf.inputs["Emission Color"].default_value = (*override["emission"], 1.0)
 			bsdf.inputs["Emission Strength"].default_value = override.get("emission_strength", 1.0)
+
+
+def add_props(rig, spec):
+	"""Rigid low-poly props (a plastic bag, a bottle, a door) skinned with weight 1
+	to one bone, so they follow the hand through every baked clip. Offsets are in
+	the source's rest world space, relative to the bone head."""
+	props = []
+	for index, prop in enumerate(spec.get("props", [])):
+		bone = rig.data.bones[prop["bone"]]
+		head = rig.matrix_world @ bone.head_local
+		if prop.get("shape", "box") == "cylinder":
+			bpy.ops.mesh.primitive_cylinder_add(vertices=prop.get("segments", 8), radius=0.5, depth=1.0)
+		else:
+			bpy.ops.mesh.primitive_cube_add(size=1.0)
+		obj = bpy.context.active_object
+		obj.name = "Prop_%d" % index
+		obj.scale = prop["size"]
+		obj.rotation_euler = [math.radians(a) for a in prop.get("rotation", (0, 0, 0))]
+		obj.location = head + Vector(prop.get("offset", (0, 0, 0)))
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+		material = bpy.data.materials.new(prop.get("material", "Prop_%d" % index))
+		material.use_nodes = True
+		bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+		bsdf.inputs["Base Color"].default_value = (*prop.get("color", (0.5, 0.5, 0.5)), 1.0)
+		bsdf.inputs["Roughness"].default_value = prop.get("roughness", 0.7)
+		if "emission" in prop:
+			bsdf.inputs["Emission Color"].default_value = (*prop["emission"], 1.0)
+			bsdf.inputs["Emission Strength"].default_value = prop.get("emission_strength", 1.0)
+		obj.data.materials.append(material)
+		group = obj.vertex_groups.new(name=prop["bone"])
+		group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+		modifier = obj.modifiers.new("Armature", "ARMATURE")
+		modifier.object = rig
+		props.append(obj)
+	return props
 
 
 def downscale_textures(max_size):
@@ -404,6 +446,7 @@ def bake(monster_id, config):
 			for face in obj.data.polygons:
 				face.use_smooth = True
 			obj.data.update()
+	meshes.extend(add_props(rig, spec))
 	obj = join(meshes)
 	mesh = obj.data
 	apply_materials(mesh, spec)

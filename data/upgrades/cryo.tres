@@ -7,9 +7,9 @@
 [resource]
 script = ExtResource("1_definition")
 id = &"cryo"
-display_name = "Cryo Field"
-description = "A frost aura pulses around you, damaging enemies within 5 m and slowing them by 55%."
-level_descriptions = PackedStringArray("A frost aura pulses around you, damaging enemies within 5 m and slowing them by 55%.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.", "Colder, wider and more frequent pulses.")
+display_name = "Ledovej Fernet"
+description = "Mrazivé pulzy kolem tebe zraňují nepřátele do 5 m a zpomalují je o 55 %."
+level_descriptions = PackedStringArray("Mrazivé pulzy kolem tebe zraňují nepřátele do 5 m a zpomalují je o 55 %.", "Silnější, širší a častější mrazivé pulzy.", "Silnější, širší a častější mrazivé pulzy.", "Silnější, širší a častější mrazivé pulzy.", "Silnější, širší a častější mrazivé pulzy.")
 kind = 1
 max_level = 5
 weight = 1.3

@@ -16,7 +16,7 @@ signal purchase_requested(definition: MetaUpgradeDefinition)
 @export var effect_label: Label
 @export var buy_button: Button
 @export var pip_size := Vector2(26, 8)
-@export var pip_empty_color := Color(0.08, 0.16, 0.19, 1)
+@export var pip_empty_color := Color(0.18, 0.15, 0.11, 1)
 
 var definition: MetaUpgradeDefinition
 
@@ -26,19 +26,20 @@ func _ready() -> void:
 	buy_button.pressed.connect(func() -> void: purchase_requested.emit(definition))
 	_badge = badge.get_theme_stylebox(&"panel").duplicate() as StyleBoxFlat
 	badge.add_theme_stylebox_override(&"panel", _badge)
+	StreetWear.apply_tree(self)
 
 ## Redraws for `level` owned; `price_text` is empty when maxed.
 func show_upgrade(upgrade: MetaUpgradeDefinition, level: int, price_text: String, affordable: bool) -> void:
 	definition = upgrade
-	var accent := upgrade.accent_color
+	var accent := upgrade.accent_color.lerp(Color(0.48, 0.43, 0.32), 0.65)
 	var maximum := upgrade.max_level()
 	accent_bar.color = accent
 	icon_rect.texture = upgrade.icon
 	badge.visible = upgrade.icon != null
 	_badge.border_color = accent.darkened(0.25) if level > 0 else accent.darkened(0.6)
 	name_label.text = upgrade.display_name.to_upper()
-	name_label.add_theme_color_override(&"font_color", accent.lightened(0.3))
-	level_label.text = "LV %d / %d" % [level, maximum]
+	name_label.add_theme_color_override(&"font_color", Color(0.87, 0.81, 0.67))
+	level_label.text = "ÚR %d / %d" % [level, maximum]
 	description_label.text = upgrade.description
 	while pips.get_child_count() < maximum:
 		var pip := ColorRect.new()
@@ -51,10 +52,10 @@ func show_upgrade(upgrade: MetaUpgradeDefinition, level: int, price_text: String
 		pip.color = accent if index < level else pip_empty_color
 	var now := StatText.summary(upgrade, level) if level > 0 else "—"
 	if level >= maximum:
-		effect_label.text = "NOW  %s" % now
-		buy_button.text = "MAXED"
+		effect_label.text = "TEĎ  %s" % now
+		buy_button.text = "MAXIMUM"
 		buy_button.disabled = true
 	else:
-		effect_label.text = "NOW  %s\nNEXT  %s" % [now, StatText.summary(upgrade, level + 1)]
-		buy_button.text = "UPGRADE  ·  %s" % price_text
+		effect_label.text = "TEĎ  %s\nPOTOM  %s" % [now, StatText.summary(upgrade, level + 1)]
+		buy_button.text = "VYLEPŠIT  ·  %s" % price_text
 		buy_button.disabled = not affordable
