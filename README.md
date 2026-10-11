@@ -20,6 +20,14 @@ The implemented asset changes are:
   (`grime`); a bedroll, ragged backpack and second bottle add silhouette.
   Bezdomovec, Feťák and Alkoholik also spawn in Hlavák, so every sector has
   homeless in its crowd.
+- Fourteen shop venues stand as storefronts on tenement walls: Večerka NONSTOP, Bazar
+  Roháč, Potraviny pivo 18, Second hand Nositel, Hospoda točené 32, Železářství,
+  Trafika losy, Absintherie, Výdejna PPL, Drogerie Savo, Řeznictví, Herna žetony,
+  Pekárna 6:00 and Žižkovský tunel. Each has its own awning, sign, window goods and
+  hand-lettered tagline; Žižkov may show all of them, Palmovka and Hlavák their own
+  subsets, and the stage-clear shop is named after one of the sector's venues. They are
+  flavour only: stock, prices, layouts, mining sites and RNG order are unchanged. A
+  florist was deliberately left out.
 - The first weapon, **Lahve od piva** (`pulse`), is a dirty fingerless-gloved hand
   holding a brown beer bottle, with pooled tumbling flying bottles and glass/foam
   impacts. It has no muzzle flash or brass casings; damage and cadence are unchanged.
@@ -51,8 +59,9 @@ The implemented asset changes are:
 The later-sector environments retain their existing designs. All six primary guns
 are original improvised junk models with unchanged numbers (see below).
 The narrative ending is specified in the bible, not a newly implemented cutscene.
-Authored combat lab arenas deliberately retain their original sci-fi dressing;
-the `levels`, `quests` and `onboarding` scenarios exercise generated campaign worlds.
+The authored lab arenas (Yard, Foundry, Reactor) are now dressed as Žižkov courtyards,
+Palmovka and Hlavák through `scenes/levels/arena_skin.gd`; collisions and gameplay nodes
+are unchanged. The `levels`, `quests`, `onboarding` and `venues` scenarios exercise generated campaign worlds.
 
 
 ## Linux release
@@ -273,6 +282,7 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Salvage:** `ResourceDefinition` data lives in `data/resources/`; internal deposit types remain in `data/resources/deposits/`. `DepositGeometry` builds machine doors and exact triangle colliders; `MineralDeposit` owns health, opening transforms, permanent housing and conserved integer loot. `DepositField` retains seeded site/stock placement. `MiningTool` owns crowbar contact/leverage; `MiningFeedback` draws mechanical latch markers and Czech telemetry. `ResourcePickupSet` pools coin/token meshes and paper packs using `shaders/cigarette_pack.gdshader`. Mining-named APIs/input IDs remain intentional internals; the obsolete crystal/history shaders are removed.
 - **Survival pickups:** `scripts/progression/pickup_field.gd` pools XP, magnets, repairs and a separate two-pack timed repair supply set. `PickupGeometry` builds their faceted silhouettes once at setup. Kill thresholds and supply interval are exports; grounded placement uses the horde heightfield, and supply routes reject obstacles and cliffs. Collection never overwrites the persistent profile. The radar reads the same live pickup pools.
 - **Procedural levels:** `data/stages/*.tres` configure play area, `layout_theme`, `cover_count`, `overlook_count`, `outcrop_count`, `quest_scale` and `SpawnSchedule`. `ProceduralWorld` (`scripts/world/procedural_world.gd`, `scenes/levels/procedural.tscn`) is configured with the stage and seed before entering the tree. It carves a 2 m grid identical to the horde grid: the theme plan places rooms, corridors join them (spanning tree plus loops, or the Reactor's spokes and chords), and alcoves are added. Ring cores are refilled and cells unreachable from spawn are pruned. Remaining rock merges greedily into exact axis-aligned blocks under `Obstacles`; broad block faces with two open cells in front become contract `mining_sites`. Overlook decks and tilted ramp boxes live under `Elevation`, which the horde rasterises into its walkable heightfield. Set pieces, pillars and cover check carved floor plus margins, so passages and ore standing room stay open. `layout_open` is public for the radar. Original authored worlds remain explicit lab fixtures with their own play areas.
+- **Shop venues:** `ShopVenue` resources (`scripts/data/shop_venue.gd`, `data/venues/*.tres`, listed in `data/venues/catalog.tres`) carry the shop name, sign text, tagline, window goods and colours. `ProceduralWorld` builds storefronts ~4 physics frames after the world, on wall stretches a physics query finds clear, through the batched visual path (`shaders/venue_front.gdshader`) with a private RNG seeded from the stage seed, so layouts and the global RNG are untouched. The round shop header reads the sector's first seeded venue.
 - **Level contracts:** `LevelQuests` (`scripts/level_quests.gd`) selects seeded resource/ordinary-species targets, clamps progress and emits completion once. `DepositField` records conserved raw section fractures; `ArenaGame` records exact horde victim definitions. Inventory/banking signals never count. `HordeDirector` sustains every ordinary wave; `SpawnSchedule.ramp_duration` bounds pressure ramping, not level length, and `surge` multiplies spawning during extraction. Boss release is explicit. Completion defers beyond the current impact, rejects stale source ids and respects death and earned upgrade choices, then spawns an `ExtractionPod` (`scripts/extraction_pod.gd`, collision-free) at `ProceduralWorld.extraction_point()`; only its stale-checked `departed` signal clears the stage.
 - **Skill combos:** `ActiveAbility.blast()` wraps every skill's area damage and applies POWNED (`crush`) against `ArenaPlayer.active_gravity_well()`; `arrive()` is called at movement-skill landings for LAST TIME KRATOS (`ram`) via `is_shielded_by_other()`; Valhalla calls `GravityWell.collapse()` for PERMABAN (`collapse`). `ArenaPlayer.ability_combo` drives the HUD callout (rate-limited per combo), while `combo_counts` records every trigger.
 - **Luďas's voice:** `LudasVoice` (`scripts/audio/ludas_voice.gd`, owned by `ArenaGame` so it survives stage loads) plays recorded reactions from `assets/voice/ludas/`: arrival, kill bursts (12 kills within 1.5 s), combos, a skill unlock (*Jaj… krajíc… chleba* in sequence), dropping below 40% health, healing, extraction, stage clear and death. One line plays at a time; a higher-priority reaction interrupts a lower one, and each reaction has its own cooldown. The reskin plan lives in `docs/ludas/BIBLE.md`.
@@ -319,6 +329,7 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `mining` | automatic crowbar, held-F leverage strip, opened compartments and empty housing | firearm/reach rejection, conserved loot, wall occlusion, pause and return to gun |
 | `street` | all twenty homeless faces on the Bezdomovec, the eight archetypes on the other two bodies, close faces, the harder men, the boss and a crowd per sector | atlas ranges and grime on every human, 18+ of 20 faces appear in a crowd, homeless admitted by the real director in all three sectors |
 | `menu` | intro, every party member and scrollable skill details, workshop tabs, records, settings and pause/abandon screens | saved gear, free primary switching and gadgets reapplied exactly once |
+| `venues` | all fourteen storefronts in a generated Žižkov, natural views of all three sectors and the stage-clear shop for several venues | unique ids and text, no florist, identical carve/mining sites/RNG end state with and without storefronts, venue named in the shop header, Label3D/instance/batch/light bounds |
 | `icons` | one gallery page per icon group | visual review |
 
 ```sh
@@ -348,12 +359,15 @@ scroll-layout follow-ups cover real mouse purchases and complete party/skill
 descriptions. Screenshots were visually reviewed for menu, HUD/death, shop,
 mastery, tutorial, boss and extraction surfaces; this is not FPS certification.
 
-The street-faces and junk-guns pass then ran the full rendered lab again across
-all 25 scenarios: **199 captures, zero check failures or script/engine errors**,
-plus the precision/nested-blast regression (`failures=0`). Face galleries for
-each homeless model, close faces, the harder men, the boss, a crowd per sector
-and all six guns in hand were inspected as screenshots. Faces look greyer under
-the authored lab arena's cold lighting than they will in the warm generated
-sectors, which this run did not capture; frame rate is not measured.
+The street-faces and junk-guns pass, shipped as 0.4.0, ran the full rendered lab
+across 25 scenarios: **199 captures, zero check failures or script/engine errors**,
+plus the precision/nested-blast regression (`failures=0`).
 
-Version 0.4.0 packages these changes; its verification and limits are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
+After the lab arenas were reskinned and the shop venues added, the full lab ran again
+across all 26 scenarios: **244 captures, zero check failures or script/engine
+errors**, and the precision regression passed (`failures=0`). Arena, storefront and
+stage-clear shop captures were inspected as screenshots, as were the eight invented
+archetypes on the runner and spitter bodies. Frame rate is not measured, and the
+storefront taglines are small: legible at about 3 m, marginal across a street.
+
+Version 0.4.0 packages the faces and guns; the arena reskin, archetypes and venues are unreleased source changes.

@@ -1,6 +1,7 @@
 [gd_scene load_steps=39 format=3]
 
-[ext_resource type="Shader" path="res://shaders/yard_floor.gdshader" id="floor_shader"]
+[ext_resource type="Shader" path="res://shaders/zizkov_floor.gdshader" id="floor_shader"]
+[ext_resource type="Script" path="res://scenes/levels/arena_skin.gd" id="arena_skin"]
 [ext_resource type="Script" path="res://scenes/levels/yard/module_batch.gd" id="module_batch"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/WallAstra_Straight_Flat.gltf" id="kit_wall"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/TopCables_Straight.gltf" id="kit_cables"]
@@ -66,14 +67,31 @@ height = 1.0
 radial_segments = 16
 rings = 1
 
+[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
+sky_top_color = Color(0.022, 0.02, 0.036, 1)
+sky_horizon_color = Color(0.34, 0.19, 0.09, 1)
+sky_curve = 0.22
+ground_bottom_color = Color(0.03, 0.02, 0.015, 1)
+ground_horizon_color = Color(0.34, 0.19, 0.09, 1)
+
+[sub_resource type="Sky" id="Sky_night"]
+sky_material = SubResource("Sky_material")
+
 [sub_resource type="Environment" id="Environment_arena"]
-background_mode = 1
-background_color = Color(0.012, 0.023, 0.048, 1)
+background_mode = 2
+sky = SubResource("Sky_night")
 ambient_light_source = 2
-ambient_light_color = Color(0.37, 0.51, 0.69, 1)
-ambient_light_energy = 0.68
+ambient_light_color = Color(0.62, 0.47, 0.34, 1)
+ambient_light_energy = 0.95
 reflected_light_source = 1
 tonemap_mode = 0
+fog_enabled = true
+fog_light_color = Color(0.24, 0.15, 0.085, 1)
+fog_density = 0.014
+fog_sky_affect = 0.0
+glow_enabled = true
+glow_intensity = 0.7
+glow_hdr_threshold = 0.9
 
 [sub_resource type="BoxShape3D" id="shape_box_65_1_65"]
 size = Vector3(65, 1, 65)
@@ -113,38 +131,41 @@ size = Vector3(6, 2.1988, 7.652)
 size = Vector3(6, 1.8241, 6.5774)
 
 [node name="Yard" type="Node3D"]
+script = ExtResource("arena_skin")
+arena = "yard"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_arena")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.92, -0.48, 0)
-light_color = Color(0.67, 0.8, 1, 1)
-light_energy = 1.25
+light_color = Color(0.86, 0.76, 0.64, 1)
+light_energy = 0.9
+sky_mode = 1
 shadow_enabled = true
 directional_shadow_max_distance = 55.0
 
 [node name="CyanFill" type="OmniLight3D" parent="."]
 position = Vector3(-18, 6.5, 6)
-light_color = Color(0.08, 0.73, 0.86, 1)
-light_energy = 3.4
+light_color = Color(1, 0.6, 0.22, 1)
+light_energy = 3.2
 omni_range = 36
 
 [node name="AmberFill" type="OmniLight3D" parent="."]
 position = Vector3(16, 7, -18)
-light_color = Color(1, 0.43, 0.12, 1)
-light_energy = 3.8
+light_color = Color(1, 0.46, 0.14, 1)
+light_energy = 3.6
 omni_range = 36
 
 [node name="CyanFillSouth" type="OmniLight3D" parent="."]
 position = Vector3(14, 6.5, 20)
-light_color = Color(0.08, 0.73, 0.86, 1)
-light_energy = 3
+light_color = Color(0.88, 0.9, 0.64, 1)
+light_energy = 2.4
 omni_range = 32
 
 [node name="AmberFillWest" type="OmniLight3D" parent="."]
 position = Vector3(-20, 6.5, -22)
-light_color = Color(1, 0.43, 0.12, 1)
+light_color = Color(1, 0.68, 0.32, 1)
 light_energy = 2.8
 omni_range = 30
 
@@ -3099,25 +3120,28 @@ surface_material_override/0 = SubResource("Material_cyan")
 position = Vector3(0, 8.1, -32.35)
 pixel_size = 0.021
 font_size = 128
-outline_size = 0
-modulate = Color(0.65, 0.82, 0.86, 1)
-text = "01"
+outline_size = 8
+modulate = Color(0.93, 0.8, 0.5, 1)
+outline_modulate = Color(0.14, 0.08, 0.03, 1)
+text = "I."
 
 [node name="GateCaption" type="Label3D" parent="NorthGate"]
 position = Vector3(0, 6.45, -32.34)
 pixel_size = 0.0135
 font_size = 42
-outline_size = 0
-modulate = Color(0.65, 0.82, 0.86, 1)
-text = "COMBAT SYSTEMS"
+outline_size = 10
+modulate = Color(1, 0.2, 0.11, 1)
+outline_modulate = Color(0.32, 0.02, 0.01, 1)
+text = "HERNA NONSTOP"
 
 [node name="GateHeader" type="Label3D" parent="NorthGate"]
 position = Vector3(0, 9.405, -31.97)
 pixel_size = 0.0105
 font_size = 46
-outline_size = 0
-modulate = Color(0.65, 0.82, 0.86, 1)
-text = "T R A I N I N G   Y A R D"
+outline_size = 6
+modulate = Color(0.93, 0.8, 0.5, 1)
+outline_modulate = Color(0.14, 0.08, 0.03, 1)
+text = "Ž I Ž K O V   ·   D V O R K Y"
 
 [node name="Skyline" type="Node3D" parent="."]
 

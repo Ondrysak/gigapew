@@ -27,6 +27,30 @@ const REACTOR_WALL_ART = preload("res://assets/third_party/quaternius_megakit/Wa
 const FOUNDRY_STEEL = preload("res://scenes/levels/foundry/materials/foundry_steel.tres")
 const FOUNDRY_WALL = preload("res://scenes/levels/foundry/materials/foundry_wall.tres")
 const FOUNDRY_DARK = preload("res://scenes/levels/foundry/materials/foundry_dark.tres")
+const VENUE_FRONT = preload("res://shaders/venue_front.gdshader")
+
+## Storefront kit (visual only), see `_dress_storefront`.
+const STORE_MIN_GAP := 3.4
+## The shopfront is a plaster slab standing this far off the wall (covering the
+## tenement's own ground-floor windows); every part sits in front of it.
+const STORE_BASE := 0.18
+const STORE_WALL := Color(0.4, 0.36, 0.29)
+const STORE_SPACING := 9.0
+const STORE_SALT := 0x53544F52
+const STORE_FILLS := 4
+const STORE_COUNT := {&"yard": 10, &"foundry": 6, &"reactor": 6}
+const STORE_PLASTER := Color(0.5, 0.45, 0.36)
+const STORE_DARK := Color(0.055, 0.048, 0.042)
+const STORE_IRON := Color(0.055, 0.055, 0.06)
+const STORE_WOOD := Color(0.24, 0.13, 0.07)
+const STORE_PAPER := Color(0.82, 0.8, 0.7)
+const STORE_INK := Color(0.09, 0.07, 0.1)
+const STORE_CARD := Color(0.45, 0.33, 0.2)
+const STORE_STEEL := Color(0.55, 0.56, 0.57)
+const STORE_BLUE := Color(0.1, 0.17, 0.32)
+const STORE_MUSTARD := Color(0.85, 0.64, 0.12)
+const STORE_CONCRETE := Color(0.34, 0.33, 0.3)
+const STORE_STONE := Color(0.6, 0.57, 0.5)
 
 var level_seed: int
 var mining_sites: Array[Dictionary] = []
@@ -70,6 +94,23 @@ var _props: Dictionary[StringName, Material] = {}
 ## Žižkov facade runs, recorded per open block face and dressed once every
 ## block and ore site exists: {mid, normal, length, height, along_x, key, sites}.
 var _facade_runs: Array[Dictionary] = []
+
+## Storefronts are visual dressing only. `storefronts_enabled` (set before the
+## world enters the tree) off leaves the bare facades. `venue_override` (ids from
+## the venue catalog; static so a lab can set it before a game builds its world)
+## replaces the seeded lineup and relaxes the spacing.
+var storefronts_enabled := true
+static var venue_override: Array[StringName] = []
+## {venue, position, normal, tangent, width, labels, reach, key} per storefront.
+var venue_sites: Array[Dictionary] = []
+var _store_batches: Dictionary = {}
+var _venue_fills := 0
+var _store_frames := 0
+## Herna/Pivo face centres of the yard, kept apart from storefronts.
+var _sign_points: Array[Vector3] = []
+var _site: Dictionary = {}
+## +1/-1: which end of the shopfront carries the door.
+var _ds := 1.0
 
 func configure(stage: StageDefinition, seed: int) -> void:
 	assert(not is_inside_tree(), "Configure the procedural world before adding it to the tree.")
@@ -116,6 +157,9 @@ func _ready() -> void:
 	_build_guides()
 	_build_lighting()
 	_flush_visual_batches()
+	# Storefronts wait until the game's deposit field has placed its machines (a few
+	# physics frames), so they never stand under one; see `_physics_process`.
+	set_physics_process(storefronts_enabled)
 
 func _configure_theme() -> void:
 	_wall_height = 5.0
@@ -678,10 +722,9 @@ func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBo
 	var length := count * CELL_SIZE
 	var along_x := face < 2
 	var run_sites := mining_sites.size()
-	if _theme == &"yard":
-		# Tenement dressing waits until every machine site and set piece exists.
-		_facade_runs.append({"mid": mid, "normal": normal, "length": length, "height": height, "along_x": along_x, "key": hash([rect.position, face, start])})
-	else:
+	# Tenement dressing waits until every machine site and set piece exists.
+	_facade_runs.append({"mid": mid, "normal": normal, "length": length, "height": height, "along_x": along_x, "key": hash([rect.position, face, start])})
+	if _theme != &"yard":
 		# Everything flush on the face: a glowing top trim, a dark mid band above
 		# the machine mounting height, and a hazard kick-plate reading the wall line.
 		_visual(_box, _accent, mid + normal * 0.02 + Vector3.UP * (height - 0.45), Vector3(length, 0.12, 0.04) if along_x else Vector3(0.04, 0.12, length))
@@ -704,8 +747,7 @@ func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBo
 					point.y = 1.5
 					mining_sites.append({"position": point, "normal": normal, "support": body})
 			deep_start = -1
-	if _theme == &"yard":
-		_facade_runs[-1]["sites"] = mining_sites.size() - run_sites
+	_facade_runs[-1]["sites"] = mining_sites.size() - run_sites
 
 ## Overlooks favour arena rooms; outcrops spread over the others first.
 func _build_set_pieces() -> void:
@@ -1105,6 +1147,7 @@ func _build_zizkov_street() -> void:
 		run.bins = length >= 4.0 and bins.size() < 14 and _far_from(corner, bins, 9.0) and _far_from(corner, ore, 3.4)
 		if run.bins:
 			bins.append(corner)
+	_sign_points = signs
 	for run in _facade_runs:
 		_dress_tenement(run)
 
@@ -1290,6 +1333,492 @@ func _label(text: String, position: Vector3, facing: Vector3, font_size: int, co
 	label.position = position
 	label.basis = Basis.looking_at(-facing, Vector3.UP)
 	_decoration.add_child(label)
+
+## ------------------------------------------------------------ storefronts
+## Venue shopfronts on tenement faces. Visual only: every part is an instance of
+## three shared primitive meshes (one draw call each), none has a collider, and
+## the gameplay RNG is never drawn from: venues and faces are picked with a
+## private RNG seeded from the level seed, so layout, mining sites and RNG order
+## are identical without them. They are built a few physics frames after the
+## world, once the game's machines stand, on stretches of wall that are free.
+
+func _physics_process(_delta: float) -> void:
+	_store_frames += 1
+	var field: DepositField = null
+	if get_parent() != null:
+		for sibling in get_parent().get_children():
+			if sibling is DepositField:
+				field = sibling
+	if _store_frames >= 4 and (field == null or field.deposit_count() > 0 or _store_frames >= 120):
+		set_physics_process(false)
+		_build_storefronts()
+
+## Runs once the game has placed its machines: finds the free stretches of
+## every face and dresses storefronts there, as three batched meshes.
+func _build_storefronts() -> void:
+	var order: Array[Dictionary] = _facade_runs.duplicate()
+	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.key) < int(b.key))
+	for run in order:
+		run.venue = null
+	_choose_storefronts(order, _sign_points.duplicate())
+	for run in order:
+		if run.venue != null:
+			_dress_storefront(run)
+	_flush_store_batches()
+
+## The widest stretch of a face where nothing solid (machine, cover island, ramp)
+## stands within a metre of the wall at storefront height: Vector2(centre along
+## the face, length), or ZERO when none fits a shopfront. Wall lamps, pipes and
+## bins keep their own corners. Reads the physics world; changes nothing in it.
+func _storefront_slot(run: Dictionary) -> Vector2:
+	var length: float = run.length
+	var low := -length * 0.5 + (3.6 if run.get("bins", false) else 0.45)
+	var high := length * 0.5 - (0.85 if run.get("lamp", false) else 0.3)
+	var query := PhysicsShapeQueryParameters3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(0.5, 3.0, 1.0) if run.along_x else Vector3(1.0, 3.0, 0.5)
+	query.shape = box
+	query.collision_mask = 1
+	var space := get_world_3d().direct_space_state
+	var best := Vector2.ZERO
+	var start := low
+	var along := low
+	while along + 0.5 <= high + 0.001:
+		query.transform = Transform3D(Basis(), to_global(_facade_point(run, along + 0.25, 1.6, 0.55)))
+		if not space.intersect_shape(query, 1).is_empty():
+			if along - start > best.y:
+				best = Vector2((start + along) * 0.5, along - start)
+			start = along + 0.5
+		along += 0.5
+	if along - start > best.y:
+		best = Vector2((start + along) * 0.5, along - start)
+	return best if best.y >= STORE_MIN_GAP else Vector2.ZERO
+
+## Walks a seeded shuffle of the faces with room and gives each the next venue
+## of the sector's seeded lineup (the first is the stage-clear shop's).
+func _choose_storefronts(order: Array[Dictionary], taken: Array[Vector3]) -> void:
+	if not storefronts_enabled:
+		return
+	var catalog := ShopVenueCatalog.shared()
+	var lineup: Array[ShopVenue] = []
+	if venue_override.is_empty():
+		lineup = catalog.order_for(_theme, level_seed)
+		lineup.resize(mini(lineup.size(), int(STORE_COUNT.get(_theme, 6))))
+	else:
+		for id in venue_override:
+			lineup.append(catalog.find(id))
+	var pool: Array[Dictionary] = []
+	for run in order:
+		if run.get("feature", &"") == &"":
+			run.slot = _storefront_slot(run)
+			if run.slot.y > 0.0:
+				pool.append(run)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([level_seed, STORE_SALT])
+	for index in range(pool.size() - 1, 0, -1):
+		var pick := rng.randi_range(0, index)
+		var swap := pool[index]
+		pool[index] = pool[pick]
+		pool[pick] = swap
+	var spacing := STORE_SPACING if venue_override.is_empty() else STORE_SPACING * 0.5
+	var next := 0
+	for run in pool:
+		if next >= lineup.size():
+			break
+		var slot: Vector2 = run.slot
+		var at := _facade_point(run, slot.x, 0.0, 0.0)
+		if not _far_from(at, taken, spacing):
+			continue
+		run.venue = lineup[next]
+		run.venue_along = slot.x
+		run.venue_width = minf(slot.y - 0.3, 6.0 if lineup[next].facade_style == &"arch" else 5.4)
+		taken.append(at)
+		next += 1
+
+func _storefront_width(run: Dictionary) -> float:
+	return run.venue_width
+
+func _dress_storefront(face: Dictionary) -> void:
+	var venue: ShopVenue = face.venue
+	var width := _storefront_width(face)
+	# Everything below is placed relative to the shopfront's own centre.
+	var run := face.duplicate()
+	run.mid = _facade_point(face, face.venue_along, 0.0, 0.0)
+	_ds = 1.0 if _vary(run.key, 60) < 0.5 else -1.0
+	_site = {"venue": venue, "position": run.mid, "normal": run.normal, "tangent": _run_tangent(run), "width": width, "labels": [], "reach": 0.0, "key": run.key}
+	venue_sites.append(_site)
+	_vbox(run, STORE_CONCRETE if venue.facade_style == &"arch" else STORE_WALL, 0.0, 1.9, -0.01, Vector3(width + 0.1, 3.8, 0.02))
+	if venue.facade_style == &"arch":
+		_store_arch(run, venue, width)
+	else:
+		_store_front(run, venue, width)
+	_store_sign(run, venue, width)
+	if venue.fill_energy > 0.0 and _venue_fills < STORE_FILLS:
+		_venue_fills += 1
+		_add_fill(_facade_point(run, 0.0, 2.1, 1.5), venue.glow_color, venue.fill_energy, 7.0)
+
+## Queues one storefront part; see `_flush_store_batches` (three draw calls per
+## street: one per primitive mesh, all sharing the venue_front shader).
+func _store_part(mesh: Mesh, color: Color, energy: float, at: Vector3, size: Vector3, basis: Basis) -> void:
+	if not _store_batches.has(mesh):
+		_store_batches[mesh] = {"transforms": [], "paint": []}
+	var batch: Dictionary = _store_batches[mesh]
+	batch.transforms.append(Transform3D(basis * Basis.from_scale(size), at))
+	var linear := color.srgb_to_linear()
+	batch.paint.append(Color(linear.r, linear.g, linear.b, energy))
+
+func _flush_store_batches() -> void:
+	if _store_batches.is_empty():
+		return
+	var material := ShaderMaterial.new()
+	material.shader = VENUE_FRONT
+	for mesh: Mesh in _store_batches:
+		var batch: Dictionary = _store_batches[mesh]
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.use_custom_data = true
+		multimesh.mesh = mesh
+		multimesh.instance_count = batch.transforms.size()
+		for index in batch.transforms.size():
+			multimesh.set_instance_transform(index, batch.transforms[index])
+			multimesh.set_instance_custom_data(index, batch.paint[index])
+		var instance := MultiMeshInstance3D.new()
+		instance.name = "Storefronts"
+		instance.multimesh = multimesh
+		instance.material_override = material
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_decoration.add_child(instance)
+	_store_batches.clear()
+
+## Box on the shopfront; `u` runs along the shop with the door at +u (mirrored
+## per shop), `size` is (along, height, depth out of the wall).
+func _vbox(run: Dictionary, color: Color, u: float, y: float, out: float, size: Vector3, energy: float = 0.0, basis := Basis()) -> void:
+	_store_part(_box, color, energy, _facade_point(run, _ds * u, y, out + STORE_BASE), size if run.along_x else Vector3(size.z, size.y, size.x), basis)
+	_site.reach = maxf(_site.reach, out + STORE_BASE + size.z * 0.5)
+
+## Upright cylinder on the shopfront.
+func _vcyl(run: Dictionary, color: Color, u: float, y: float, out: float, radius: float, height: float, energy: float = 0.0) -> void:
+	_store_part(_cylinder, color, energy, _facade_point(run, _ds * u, y, out + STORE_BASE), Vector3(radius, height, radius), Basis())
+	_site.reach = maxf(_site.reach, out + STORE_BASE + radius)
+
+## Flat disc facing out of the wall.
+func _vdisc(run: Dictionary, color: Color, u: float, y: float, out: float, radius: float, energy: float = 0.0) -> void:
+	_store_part(_cylinder, color, energy, _facade_point(run, _ds * u, y, out + STORE_BASE), Vector3(radius, 0.03, radius), Basis(_run_tangent(run), PI * 0.5))
+	_site.reach = maxf(_site.reach, out + STORE_BASE + 0.015)
+
+func _vball(run: Dictionary, color: Color, u: float, y: float, out: float, size: Vector3) -> void:
+	_store_part(_sphere, color, 0.0, _facade_point(run, _ds * u, y, out + STORE_BASE), size, Basis())
+	_site.reach = maxf(_site.reach, out + STORE_BASE + size.z * 0.5)
+
+## +1 or -1 so that `Basis(tangent, sign * angle)` lowers an outward bar or
+## leans an upright one against the wall.
+func _slope_sign(run: Dictionary) -> float:
+	return _run_tangent(run).cross(run.normal).dot(Vector3.UP)
+
+func _venue_label(run: Dictionary, text: String, u: float, y: float, out: float, font_size: int, pixel_size: float, color: Color, outline_size: int, tilt: float, wrap_pixels: float, fit: Vector2) -> Label3D:
+	var label := Label3D.new()
+	label.text = text
+	label.font_size = font_size
+	label.pixel_size = pixel_size
+	label.modulate = color
+	label.outline_size = outline_size
+	label.outline_modulate = Color(0.0, 0.0, 0.0, 0.85)
+	label.double_sided = false
+	if wrap_pixels > 0.0:
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.width = wrap_pixels
+	label.position = _facade_point(run, _ds * u, y, out + STORE_BASE)
+	var normal: Vector3 = run.normal
+	label.basis = Basis.looking_at(-normal, Vector3.UP) * Basis(Vector3.BACK, tilt)
+	label.set_meta(&"fit", fit)
+	_decoration.add_child(label)
+	_site.labels.append(label)
+	return label
+
+## Lit sign board with the venue's sign text across the shop.
+func _store_sign(run: Dictionary, venue: ShopVenue, width: float) -> void:
+	var arch := venue.facade_style == &"arch"
+	var board_w := minf(width, 3.7) if arch else width
+	var board_h := 0.5 if arch else 0.62
+	var y := 3.52 if arch else 3.38
+	var tilt := (_vary(run.key, 61) - 0.5) * 0.04 if arch else 0.0
+	_vbox(run, venue.sign_color, 0.0, y, 0.07, Vector3(board_w, board_h, 0.14), 0.45, Basis(run.normal, tilt))
+	if venue.facade_style == &"neon" or venue.bulbs:
+		for side in [-1.0, 1.0]:
+			_vbox(run, venue.glow_color, 0.0, y + side * (board_h * 0.5 + 0.02), 0.1, Vector3(board_w + 0.06, 0.05, 0.05), 2.4)
+		_vbox(run, venue.glow_color, -board_w * 0.5, y, 0.1, Vector3(0.05, board_h, 0.05), 2.4)
+		_vbox(run, venue.glow_color, board_w * 0.5, y, 0.1, Vector3(0.05, board_h, 0.05), 2.4)
+	else:
+		for side in [-1.0, 1.0]:
+			_vbox(run, STORE_PLASTER, 0.0, y + side * (board_h * 0.5 + 0.03), 0.09, Vector3(board_w + 0.14, 0.07, 0.18))
+	if venue.bulbs:
+		var bulbs := int(board_w / 0.34)
+		for index in bulbs:
+			var u := -board_w * 0.5 + 0.17 + index * (board_w - 0.34) / (bulbs - 1)
+			var lit := STORE_MUSTARD if index % 2 == 0 else venue.glow_color
+			for side in [-1.0, 1.0]:
+				_vbox(run, lit, u, y + side * (board_h * 0.5 + 0.1), 0.12, Vector3(0.08, 0.08, 0.08), 3.0)
+	var fit := board_w - 0.3
+	var size := clampi(int(fit / (venue.sign_text.length() * 0.7 * 0.005)), 24, 76)
+	var dark_text := venue.text_color.get_luminance() < 0.2
+	_venue_label(run, venue.sign_text, 0.0, y, 0.145, size, 0.005, venue.text_color, 0 if dark_text else 8, tilt, 0.0, Vector2(board_w - 0.1, board_h - 0.06))
+
+## Hand-written note with the venue's tagline, taped on the glass or the riser.
+func _store_paper(run: Dictionary, venue: ShopVenue, u: float, y: float, out: float, w: float, h: float, font: int) -> void:
+	var tilt := (_vary(run.key, 62) - 0.5) * 0.08
+	_vbox(run, STORE_PAPER, u, y, out, Vector3(w, h, 0.012), 0.3, Basis(run.normal, tilt))
+	for side: float in [-1.0, 1.0]:
+		_vbox(run, STORE_MUSTARD, u + side * (w * 0.5 - 0.12), y + h * 0.5, out + 0.007, Vector3(0.14, 0.05, 0.014))
+	_venue_label(run, venue.tagline, u, y, out + 0.015, font, 0.004, STORE_INK, 0, tilt, (w - 0.16) / 0.004, Vector2(w - 0.1, h - 0.06))
+
+## Window, door, awning, goods and pavement stock of every non-arch venue.
+func _store_front(run: Dictionary, venue: ShopVenue, width: float) -> void:
+	var half := width * 0.5
+	var neon := venue.facade_style == &"neon"
+	var compact := width < 4.6
+	var door := 0.86 if compact else 1.0
+	var u0 := -half + 0.2
+	var u1 := half - door - 0.48
+	var ww := u1 - u0
+	var uc := (u0 + u1) * 0.5
+	var ud := half - 0.28 - door * 0.5
+	var back := venue.glow_color.darkened(0.8) if neon else venue.glow_color.lerp(STORE_PAPER, 0.3).darkened(0.3 + (1.0 - minf(venue.window_glow, 1.0)) * 0.4)
+	var back_energy := 0.8 * venue.window_glow
+	for side: float in [-1.0, 1.0]:
+		_vbox(run, STORE_PLASTER, side * (half - 0.1), 1.55, 0.05, Vector3(0.2, 3.1, 0.1))
+	_vbox(run, STORE_PLASTER, u1 + 0.06, 1.55, 0.05, Vector3(0.12, 3.1, 0.1))
+	# Window: lit back wall, rails, sill.
+	_vbox(run, back, uc, 1.38, 0.03, Vector3(ww, 1.7, 0.04), back_energy)
+	_vbox(run, STORE_PLASTER, uc, 2.27, 0.07, Vector3(ww + 0.2, 0.1, 0.12))
+	_vbox(run, STORE_PLASTER, uc, 0.5, 0.1, Vector3(ww + 0.3, 0.07, 0.2))
+	if venue.facade_style == &"tiled":
+		for row in 2:
+			for index in int(ww / 0.25) + 1:
+				var tile := STORE_PAPER if (index + row) % 2 == 0 else venue.awning_color
+				_vbox(run, tile, u0 + 0.125 + index * 0.25, 0.12 + row * 0.2, 0.05, Vector3(0.25, 0.2, 0.06))
+	else:
+		_vbox(run, STORE_DARK, uc, 0.23, 0.05, Vector3(ww + 0.1, 0.46, 0.08))
+	if neon:
+		for side: float in [-1.0, 1.0]:
+			_vbox(run, venue.glow_color, uc, 1.38 + side * 0.88, 0.1, Vector3(ww + 0.1, 0.05, 0.05), 2.8)
+			_vbox(run, venue.glow_color, uc + side * (ww * 0.5 + 0.025), 1.38, 0.1, Vector3(0.05, 1.8, 0.05), 2.8)
+	# Door.
+	_vbox(run, STORE_PLASTER, ud, 1.1, 0.05, Vector3(door + 0.16, 2.2, 0.1))
+	_vbox(run, STORE_DARK if neon else STORE_WOOD, ud, 1.05, 0.08, Vector3(door, 2.1, 0.05))
+	_vbox(run, back, ud, 1.65, 0.11, Vector3(door * 0.6, 0.62, 0.02), back_energy)
+	_vbox(run, STORE_IRON, ud - door * 0.36, 1.0, 0.13, Vector3(0.05, 0.2, 0.05))
+	if neon:
+		_vbox(run, venue.glow_color, ud, 2.2, 0.09, Vector3(door + 0.16, 0.04, 0.04), 2.8)
+		for side: float in [-1.0, 1.0]:
+			_vbox(run, venue.glow_color, ud + side * (door + 0.16) * 0.5, 1.1, 0.09, Vector3(0.04, 2.2, 0.04), 2.8)
+	else:
+		_store_awning(run, venue, width)
+	# The note: on the glass, or on the dark riser of the lit-frame venues.
+	var paper_w := 0.0
+	if neon:
+		_store_paper(run, venue, uc, 0.25, 0.1, minf(ww + 0.1, 2.7), 0.4, 22)
+	else:
+		paper_w = minf(ww - 0.5, 2.3)
+		_store_paper(run, venue, uc, 0.95, 0.075, paper_w, 0.62, 24 if compact else 28)
+	_store_goods(run, venue, u0, u1, paper_w)
+	_store_stock(run, venue, u0)
+
+func _store_awning(run: Dictionary, venue: ShopVenue, width: float) -> void:
+	var count := maxi(8, roundi(width / 0.42))
+	var stripe := (width + 0.1) / count
+	var slope := Basis(_run_tangent(run), -_slope_sign(run) * 0.53)
+	for index in count:
+		var u := -width * 0.5 - 0.05 + stripe * (index + 0.5)
+		var color := venue.awning_color if index % 2 == 0 else venue.awning_alt
+		_vbox(run, color, u, 2.65, 0.38, Vector3(stripe, 0.04, 0.79), 0.0, slope)
+		_vbox(run, color, u, 2.42, 0.735, Vector3(stripe, 0.2, 0.03))
+
+func _store_goods(run: Dictionary, venue: ShopVenue, u0: float, u1: float, paper_w: float) -> void:
+	var shape := venue.goods_shape
+	var colors := venue.goods_colors
+	var ww := u1 - u0
+	var uc := (u0 + u1) * 0.5
+	var key: int = run.key
+	match shape:
+		&"tickets":
+			_vbox(run, STORE_DARK, uc, 1.8, 0.045, Vector3(ww - 0.1, 0.8, 0.02))
+			var cols := int((ww - 0.3) / 0.18)
+			for row in 3:
+				for col in cols:
+					var u := u0 + 0.15 + col * (ww - 0.3) / (cols - 1)
+					_vbox(run, colors[(row + col) % colors.size()], u, 2.02 - row * 0.26, 0.06, Vector3(0.14, 0.2, 0.012), 0.3)
+		&"sausages":
+			_vbox(run, STORE_IRON, uc, 2.15, 0.1, Vector3(ww - 0.1, 0.03, 0.03))
+			var hooks := int((ww - 0.4) / 0.32)
+			for index in hooks:
+				var u := u0 + 0.2 + index * (ww - 0.4) / (hooks - 1)
+				for link in 3:
+					_vcyl(run, colors[(index + link) % 2], u, 2.0 - link * 0.21, 0.1, 0.045, 0.2)
+				if index % 3 == 1:
+					_vball(run, colors[0], u + 0.15, 1.8, 0.1, Vector3(0.16, 0.2, 0.16))
+			_vbox(run, STORE_PAPER, uc, 0.56, 0.12, Vector3(ww - 0.3, 0.06, 0.26))
+			for index in 2:
+				_vball(run, colors[index], u0 + 0.28 + index * (ww - 0.56), 0.68, 0.12, Vector3(0.22, 0.18, 0.2))
+		&"machines":
+			var count := maxi(2, int(ww / 0.6))
+			for index in count:
+				_slot_machine(run, venue, u0 + ww / count * (index + 0.5))
+		&"coats":
+			_vbox(run, STORE_IRON, uc, 2.1, 0.14, Vector3(ww - 0.1, 0.03, 0.03))
+			var coats := int((ww - 0.3) / 0.36)
+			for index in coats:
+				var u := u0 + 0.2 + index * (ww - 0.4) / (coats - 1)
+				var tall := 0.62 + _vary(key, 120 + index) * 0.16
+				_vbox(run, colors[index % colors.size()], u, 2.08 - tall * 0.5, 0.14, Vector3(0.3, tall, 0.09))
+				_vbox(run, STORE_DARK, u, 2.04, 0.15, Vector3(0.12, 0.08, 0.1))
+			_goods_zones(run, venue, u0, u1, paper_w, 0.55, 0.27)
+		_:
+			var neon := venue.facade_style == &"neon"
+			var shelves: Array[float] = [1.45]
+			if neon:
+				shelves = [1.05, 1.6]
+			var count := int((ww - 0.4) / 0.27) + 1
+			for shelf in shelves:
+				_vbox(run, STORE_WOOD, uc, shelf, 0.08, Vector3(ww - 0.1, 0.05, 0.22))
+				for index in count:
+					_goods_item(run, venue, u0 + 0.2 + index * (ww - 0.4) / (count - 1), shelf + 0.025, index + int(shelf * 10.0))
+			if neon:
+				for index in count:
+					_goods_item(run, venue, u0 + 0.2 + index * (ww - 0.4) / (count - 1), 0.55, index + 3)
+			else:
+				_goods_zones(run, venue, u0, u1, paper_w, 0.55, 0.27)
+
+## Goods standing on the window floor to both sides of the taped note.
+func _goods_zones(run: Dictionary, venue: ShopVenue, u0: float, u1: float, paper_w: float, y: float, pitch: float) -> void:
+	var uc := (u0 + u1) * 0.5
+	for side: float in [-1.0, 1.0]:
+		var from := uc + side * (paper_w * 0.5 + 0.15)
+		var span := absf((u1 - 0.2 if side > 0.0 else u0 + 0.2) - from)
+		for index in int(span / pitch) + 1:
+			_goods_item(run, venue, from + side * index * pitch, y, index + (0 if side > 0.0 else 7))
+
+func _slot_machine(run: Dictionary, venue: ShopVenue, u: float) -> void:
+	var colors := venue.goods_colors
+	_vbox(run, STORE_DARK, u, 1.15, 0.2, Vector3(0.4, 1.3, 0.28))
+	_vbox(run, venue.glow_color, u, 1.9, 0.2, Vector3(0.4, 0.12, 0.3), 2.0)
+	_vbox(run, colors[1], u, 1.5, 0.35, Vector3(0.32, 0.26, 0.02), 1.6)
+	for reel in 3:
+		_vbox(run, venue.glow_color, u + (reel - 1) * 0.1, 1.5, 0.362, Vector3(0.07, 0.17, 0.02), 2.4)
+	_vbox(run, STORE_IRON, u, 0.82, 0.36, Vector3(0.26, 0.07, 0.1))
+
+## One window item standing on y.
+func _goods_item(run: Dictionary, venue: ShopVenue, u: float, y: float, index: int) -> void:
+	var colors := venue.goods_colors
+	var tint := colors[index % colors.size()]
+	var key: int = run.key
+	var roll := _vary(key, 100 + index)
+	var lit := 1.6 if venue.facade_style == &"neon" else 0.0
+	match venue.goods_shape:
+		&"bottles", &"mixed":
+			if venue.goods_shape == &"mixed" and index % 3 == 1:
+				_vbox(run, tint, u, y + 0.17, 0.12, Vector3(0.2, 0.34, 0.09))
+			else:
+				var tall := 0.26 + roll * 0.1
+				_vcyl(run, tint, u, y + tall * 0.5, 0.12, 0.055, tall, lit)
+				_vcyl(run, tint, u, y + tall + 0.07, 0.12, 0.026, 0.14, lit)
+		&"shoes", &"coats":
+			if index % 2 == 0 or venue.goods_shape == &"coats":
+				_vbox(run, tint, u, y + 0.16, 0.12, Vector3(0.12, 0.26, 0.1))
+				_vbox(run, tint, u + 0.07, y + 0.05, 0.12, Vector3(0.26, 0.1, 0.1))
+			else:
+				for tape in 3:
+					_vbox(run, STORE_DARK, u, y + 0.015 + tape * 0.03, 0.12, Vector3(0.2, 0.025, 0.13))
+				_vbox(run, colors[1], u, y + 0.1, 0.12, Vector3(0.12, 0.01, 0.08))
+		&"crates":
+			match index % 3:
+				0:
+					_vball(run, colors[0], u, y + 0.14, 0.12, Vector3(0.18, 0.24, 0.18))
+					_vcyl(run, colors[1], u, y + 0.31, 0.12, 0.04, 0.12)
+				1:
+					_vbox(run, colors[2], u, y + 0.05, 0.12, Vector3(0.22, 0.1, 0.15))
+					_vbox(run, colors[0], u, y + 0.15, 0.12, Vector3(0.22, 0.1, 0.15))
+				_:
+					_vcyl(run, colors[1], u, y + 0.15, 0.12, 0.055, 0.3)
+					_vcyl(run, colors[1], u, y + 0.35, 0.12, 0.026, 0.14)
+		&"glasses":
+			_vcyl(run, colors[0], u, y + 0.1, 0.12, 0.052, 0.2)
+			_vcyl(run, colors[1], u, y + 0.225, 0.12, 0.054, 0.05)
+		&"tools":
+			match index % 4:
+				0: _vcyl(run, colors[0], u, y + 0.12, 0.12, 0.13, 0.24)
+				1: _vbox(run, STORE_PAPER, u, y + 0.2, 0.12, Vector3(0.28, 0.4, 0.12))
+				2: _vball(run, STORE_BLUE, u, y + 0.15, 0.12, Vector3(0.3, 0.3, 0.2))
+				_: _vball(run, colors[1], u, y + 0.09, 0.12, Vector3(0.22, 0.18, 0.2))
+		&"parcels":
+			var w := 0.22 + roll * 0.14
+			var h := 0.16 + _vary(key, 140 + index) * 0.14
+			_vbox(run, STORE_CARD, u, y + h * 0.5, 0.12, Vector3(w, h, 0.2))
+			_vbox(run, colors[1], u, y + h * 0.5, 0.222, Vector3(0.05, h, 0.004))
+			if index % 2 == 0:
+				_vbox(run, STORE_CARD, u, y + h + 0.07, 0.12, Vector3(w * 0.7, 0.14, 0.16))
+		&"loaves":
+			if index % 2 == 0:
+				_vball(run, tint, u, y + 0.08, 0.12, Vector3(0.32, 0.15, 0.16))
+			else:
+				for roll_index in 3:
+					_vball(run, tint, u + (roll_index - 1) * 0.08, y + 0.05 + (0.07 if roll_index == 1 else 0.0), 0.12, Vector3(0.1, 0.08, 0.1))
+
+## What spills onto the pavement in front of the window (all under 0.6 m deep).
+func _store_stock(run: Dictionary, venue: ShopVenue, u0: float) -> void:
+	match venue.goods_shape:
+		&"crates":
+			for index in 2:
+				var u := u0 + 0.4 + index * 0.62
+				_vbox(run, STORE_CARD, u, 0.15, 0.3, Vector3(0.5, 0.3, 0.34))
+				_vball(run, venue.goods_colors[0], u - 0.1, 0.4, 0.3, Vector3(0.2, 0.26, 0.2))
+				_vcyl(run, venue.goods_colors[1], u - 0.1, 0.57, 0.3, 0.04, 0.12)
+				_vball(run, venue.goods_colors[0], u + 0.12, 0.38, 0.3, Vector3(0.2, 0.26, 0.2))
+		&"glasses":
+			_vcyl(run, STORE_WOOD, u0 + 0.5, 0.375, 0.4, 0.3, 0.75)
+			for band in [0.18, 0.56]:
+				_vcyl(run, STORE_IRON, u0 + 0.5, band, 0.4, 0.31, 0.05)
+			_vcyl(run, STORE_CARD, u0 + 0.5, 0.76, 0.4, 0.27, 0.03)
+		&"tools":
+			var lean := _slope_sign(run) * 0.12
+			for index in 2:
+				var u := u0 + 0.2 + index * 0.3
+				var basis := Basis(_run_tangent(run), lean)
+				_vbox(run, STORE_WOOD, u, 0.68, 0.1, Vector3(0.04, 1.3, 0.04), 0.0, basis)
+				_vbox(run, STORE_STEEL, u, 0.12, 0.11, Vector3(0.2, 0.26, 0.03))
+			_vcyl(run, STORE_STEEL, u0 + 0.9, 0.15, 0.3, 0.16, 0.3)
+		&"parcels":
+			_vbox(run, STORE_CARD, u0 + 0.45, 0.175, 0.32, Vector3(0.52, 0.35, 0.36))
+			_vbox(run, STORE_CARD, u0 + 0.5, 0.5, 0.3, Vector3(0.4, 0.3, 0.3))
+			_vbox(run, STORE_PAPER, u0 + 0.42, 0.77, 0.3, Vector3(0.34, 0.25, 0.28))
+			_vbox(run, STORE_MUSTARD, u0 + 0.5, 0.5, 0.452, Vector3(0.06, 0.3, 0.004))
+		&"shoes":
+			_vbox(run, STORE_CARD, u0 + 0.5, 0.17, 0.3, Vector3(0.6, 0.34, 0.3))
+			for index in 7:
+				_vbox(run, STORE_DARK if index % 2 == 0 else venue.goods_colors[1], u0 + 0.28 + index * 0.07, 0.36, 0.3, Vector3(0.012, 0.3, 0.26))
+
+## Žižkovský tunel: a dark mouth in a stone ring, a lamp at the far end, jars of
+## memories on a shelf, graveyard soil in sacks and the tagline painted by hand.
+func _store_arch(run: Dictionary, venue: ShopVenue, width: float) -> void:
+	var colors := venue.goods_colors
+	var radius := minf(1.4, (width - 0.9) * 0.5)
+	_vdisc(run, STORE_STONE, 0.0, radius, 0.02, radius + 0.24)
+	_vbox(run, STORE_STONE, 0.0, radius * 0.5, 0.02, Vector3(radius * 2.0 + 0.48, radius, 0.04))
+	_vdisc(run, STORE_DARK, 0.0, radius, 0.05, radius)
+	_vbox(run, STORE_DARK, 0.0, radius * 0.5, 0.05, Vector3(radius * 2.0, radius, 0.03))
+	_vbox(run, STORE_STONE, 0.0, radius * 2.0 + 0.1, 0.06, Vector3(0.3, 0.3, 0.08))
+	_vdisc(run, venue.glow_color.darkened(0.3), 0.0, radius + 0.6, 0.07, 0.24, 1.0)
+	for lamp in 3:
+		_vbox(run, venue.glow_color, (lamp - 1) * radius * 0.6, radius * 2.0 - 0.25 - absf(lamp - 1) * 0.12, 0.08, Vector3(0.12, 0.05, 0.05), 2.5)
+	var tilt := (_vary(run.key, 63) - 0.5) * 0.06
+	_venue_label(run, venue.tagline, 0.0, 0.62, 0.075, 28, 0.0042, Color(0.9, 0.88, 0.8), 0, tilt, (radius * 2.0 - 0.3) / 0.0042, Vector2(radius * 2.0 - 0.1, 0.8))
+	# Jars of memories on a shelf inside the mouth, graveyard soil on the floor.
+	_vbox(run, STORE_WOOD, 0.0, 1.1, 0.1, Vector3(radius * 1.5, 0.04, 0.2))
+	for jar in 5:
+		var pale := jar % 2 == 0
+		_vcyl(run, colors[1] if pale else STORE_DARK, (jar - 2) * radius * 0.3, 1.22, 0.1, 0.06, 0.2, 0.8 if pale else 0.0)
+	for sack in 2:
+		_vball(run, colors[0], (sack * 2.0 - 1.0) * (radius - 0.3), 0.15, 0.3, Vector3(0.4, 0.3, 0.3))
+	_vball(run, STORE_DARK, -radius + 0.3, 0.38, 0.28, Vector3(0.3, 0.2, 0.24))
 
 ## Brick shed: posters on the short ends and a lamp on the roof.
 func _dress_zizkov_outcrop(position: Vector3, height: float, end_offset: Vector3) -> void:

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ShopVenue" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="1_venue"]
+
+[resource]
+script = ExtResource("1_venue")
+id = &"vecerka"
+display_name = "Večerka co má otevřeno do 4:00"
+sign_text = "VEČERKA NONSTOP"
+tagline = "absint, čipsy, cigára, EZ rank up"
+goods = Array[String](["absint", "čipsy", "cigára"])
+sectors = Array[StringName]([&"yard", &"reactor"])
+facade_style = &"awning"
+goods_shape = &"mixed"
+awning_color = Color(0.120, 0.400, 0.200, 1)
+awning_alt = Color(0.850, 0.640, 0.120, 1)
+sign_color = Color(0.040, 0.100, 0.060, 1)
+text_color = Color(1.000, 0.920, 0.450, 1)
+glow_color = Color(0.850, 1.000, 0.600, 1)
+goods_colors = Array[Color]([Color(0.120, 0.400, 0.200, 1), Color(0.850, 0.640, 0.120, 1), Color(0.600, 0.160, 0.100, 1)])
+bulbs = false
+fill_energy = 0.0
+window_glow = 1.00

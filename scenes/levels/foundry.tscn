@@ -1,6 +1,7 @@
 [gd_scene load_steps=72 format=3]
 
-[ext_resource type="Shader" path="res://shaders/foundry_floor.gdshader" id="floor_shader"]
+[ext_resource type="Shader" path="res://shaders/palmovka_floor.gdshader" id="floor_shader"]
+[ext_resource type="Script" path="res://scenes/levels/arena_skin.gd" id="arena_skin"]
 
 [ext_resource type="PackedScene" path="res://scenes/levels/foundry/furnace.tscn" id="2_furnace"]
 
@@ -107,11 +108,18 @@ shader = ExtResource("floor_shader")
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
-background_color = Color(0.045, 0.018, 0.012, 1)
+background_color = Color(0.13, 0.075, 0.045, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.72, 0.47, 0.32, 1)
+ambient_light_color = Color(0.62, 0.52, 0.44, 1)
 ambient_light_energy = 0.72
 reflected_light_source = 1
+fog_enabled = true
+fog_light_color = Color(0.22, 0.13, 0.075, 1)
+fog_density = 0.01
+fog_sky_affect = 0.0
+glow_enabled = true
+glow_intensity = 0.6
+glow_hdr_threshold = 0.9
 
 [sub_resource type="BoxShape3D" id="shape_floor"]
 size = Vector3(98, 1, 54)
@@ -170,13 +178,15 @@ size = Vector3(7.8, 2.9, 12)
 size = Vector3(7.8, 2.598409, 8.832327)
 
 [node name="Foundry" type="Node3D"]
+script = ExtResource("arena_skin")
+arena = "foundry"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("environment")
 
 [node name="KeyLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.8776, 0.4159, -0.2385, 0, 0.4976, 0.8674, 0.4794, -0.7612, 0.4367, 0, 20, 0)
-light_color = Color(0.82, 0.86, 1, 1)
+light_color = Color(0.92, 0.8, 0.66, 1)
 light_energy = 1.1
 shadow_enabled = true
 directional_shadow_max_distance = 55.0

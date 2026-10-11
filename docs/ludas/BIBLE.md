@@ -35,6 +35,11 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   opilci a feťáci, čtyři tvrdší chlapi; osm z nich jsou nové archetypy) a špínu v shaderu. Bezdomovec, Feťák a
   Alkoholik se objevují ve všech třech sektorech včetně Hlaváku. Obličeje jsou
   malované z parametrů; nejsou podle fotek ani skutečných lidí.
+- Čtrnáct obchodů (Večerka NONSTOP, Bazar Roháč, Potraviny pivo 18, Second hand
+  Nositel, Hospoda točené 32, Železářství, Trafika losy, Absintherie, Výdejna PPL,
+  Drogerie Savo, Řeznictví, Herna žetony, Pekárna 6:00, Žižkovský tunel) stojí jako
+  výlohy na činžácích a pojmenovávají obchod mezi sektory. Květinářství záměrně
+  chybí („vegetariánský mor“). Jen kulisa a hlášky; hratelnost se nemění.
 
 
 ## 1. Logline

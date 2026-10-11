@@ -14,9 +14,11 @@ const AMBER := Color(0.72, 0.55, 0.32)
 const GOOD := Color(0.66, 0.69, 0.46)
 const BAD := Color(0.78, 0.43, 0.34)
 
+var venue: ShopVenue
 var _shop: RoundShop
 var _state: RunState
 var _title: Label
+var _venue_line: Label
 var _summary: Label
 var _wallet: Dictionary = {}
 var _primary_name: Label
@@ -52,9 +54,16 @@ func _ready() -> void:
 	margin.add_child(rows)
 	var header := _row()
 	rows.add_child(header)
+	var heading := VBoxContainer.new()
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_theme_constant_override(&"separation", 0)
+	header.add_child(heading)
 	_title = _label("SEKTOR HOTOVÝ", 26, TEXT)
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(_title)
+	_title.clip_text = true
+	heading.add_child(_title)
+	_venue_line = _label("", 14, AMBER)
+	_venue_line.clip_text = true
+	heading.add_child(_venue_line)
 	for mineral in MINERALS:
 		header.add_child(GameIcons.rect(mineral.icon, 24))
 		var value := _label("0", 18, TEXT)
@@ -189,11 +198,15 @@ func _build_offer(parent: Container, index: int) -> Dictionary:
 	bottom.add_child(buy)
 	return {"panel": panel, "icon": icon, "title": title, "rank": rank, "effect": effect, "comparison": comparison, "buy": buy}
 
-func open(state: RunState, stage: int, final_stage: bool, summary: String) -> void:
+## `venue` only names the shop (header and tagline); it never changes stock or prices.
+func open(state: RunState, stage: int, final_stage: bool, summary: String, shop_venue: ShopVenue = null) -> void:
 	_state = state
 	_shop = RoundShop.new()
 	_shop.setup(state, stage, randi())
-	_title.text = "SEKTOR %d HOTOVÝ · BAZAR" % (stage + 1)
+	venue = shop_venue
+	_title.text = "SEKTOR %d HOTOVÝ · %s" % [stage + 1, venue.display_name.to_upper() if venue != null else "BAZAR"]
+	_venue_line.text = venue.tagline if venue != null else ""
+	_venue_line.visible = venue != null
 	_summary.text = summary.replace("\n", "   ")
 	_continue.text = "ZPÁTKY DO BAZARU" if final_stage else "DO SEKTORU %d" % (stage + 2)
 	_selector.clear()

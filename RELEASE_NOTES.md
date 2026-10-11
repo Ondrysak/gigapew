@@ -6,6 +6,17 @@
   harder ones, and is quantized to a small flat palette so it stays cartoonish. The
   generator reads no image file; characters are designed from broad categories, not
   from any photograph. `street` lab scenario updated.
+- Fourteen shop venues as storefronts on the tenement walls (all in Žižkov, subsets in
+  Palmovka and Hlavák) and as the named venue of the stage-clear shop, with their own
+  awnings, signs, window goods and taglines: Večerka NONSTOP, Bazar Roháč, Potraviny
+  pivo 18, Second hand Nositel, Hospoda točené 32, Železářství, Trafika losy,
+  Absintherie, Výdejna PPL, Drogerie Savo, Řeznictví, Herna žetony, Pekárna 6:00 and
+  Žižkovský tunel. Flavour only; stock, prices, layouts and RNG order are unchanged.
+  A florist was deliberately omitted. New `venues` lab scenario.
+- The lab's authored arenas are reskinned from cyan sci-fi to Žižkov courtyards,
+  Palmovka and Hlavák (warm sodium light, plaster/tile, Czech signs). Colliders,
+  node paths and gameplay hooks are unchanged. Hazard arcs stay blue-white so
+  shocks read.
 
 # Kakaboomboom 0.4.0
 

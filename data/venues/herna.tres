@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ShopVenue" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="1_venue"]
+
+[resource]
+script = ExtResource("1_venue")
+id = &"herna"
+display_name = "Herna / automat"
+sign_text = "HERNA · ŽETONY"
+tagline = "LudasToken ekonomika reálnýho světa, skill issue"
+goods = Array[String](["žetony", "automat", "777"])
+sectors = Array[StringName]([&"yard", &"reactor"])
+facade_style = &"neon"
+goods_shape = &"machines"
+awning_color = Color(0.055, 0.048, 0.042, 1)
+awning_alt = Color(0.055, 0.048, 0.042, 1)
+sign_color = Color(0.055, 0.048, 0.042, 1)
+text_color = Color(1.000, 0.820, 0.250, 1)
+glow_color = Color(1.000, 0.120, 0.080, 1)
+goods_colors = Array[Color]([Color(1.000, 0.120, 0.080, 1), Color(0.850, 0.640, 0.120, 1), Color(0.055, 0.048, 0.042, 1)])
+bulbs = true
+fill_energy = 2.0
+window_glow = 1.00

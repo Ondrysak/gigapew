@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ShopVenueCatalog" load_steps=17 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue_catalog.gd" id="1_catalog"]
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="2_venue"]
+[ext_resource type="Resource" path="res://data/venues/vecerka.tres" id="v1"]
+[ext_resource type="Resource" path="res://data/venues/bazar.tres" id="v2"]
+[ext_resource type="Resource" path="res://data/venues/potraviny.tres" id="v3"]
+[ext_resource type="Resource" path="res://data/venues/secondhand.tres" id="v4"]
+[ext_resource type="Resource" path="res://data/venues/hospoda.tres" id="v5"]
+[ext_resource type="Resource" path="res://data/venues/zelezarstvi.tres" id="v6"]
+[ext_resource type="Resource" path="res://data/venues/trafika.tres" id="v7"]
+[ext_resource type="Resource" path="res://data/venues/absintherie.tres" id="v8"]
+[ext_resource type="Resource" path="res://data/venues/ppl.tres" id="v9"]
+[ext_resource type="Resource" path="res://data/venues/drogerie.tres" id="v10"]
+[ext_resource type="Resource" path="res://data/venues/reznictvi.tres" id="v11"]
+[ext_resource type="Resource" path="res://data/venues/herna.tres" id="v12"]
+[ext_resource type="Resource" path="res://data/venues/pekarna.tres" id="v13"]
+[ext_resource type="Resource" path="res://data/venues/tunel.tres" id="v14"]
+
+[resource]
+script = ExtResource("1_catalog")
+venues = Array[ExtResource("2_venue")]([ExtResource("v1"), ExtResource("v2"), ExtResource("v3"), ExtResource("v4"), ExtResource("v5"), ExtResource("v6"), ExtResource("v7"), ExtResource("v8"), ExtResource("v9"), ExtResource("v10"), ExtResource("v11"), ExtResource("v12"), ExtResource("v13"), ExtResource("v14")])

@@ -1,6 +1,7 @@
 [gd_scene load_steps=41 format=3]
 
-[ext_resource type="Shader" path="res://shaders/reactor_floor.gdshader" id="floor_shader"]
+[ext_resource type="Shader" path="res://shaders/hlavak_floor.gdshader" id="floor_shader"]
+[ext_resource type="Script" path="res://scenes/levels/arena_skin.gd" id="arena_skin"]
 [ext_resource type="Script" path="res://scenes/levels/yard/module_batch.gd" id="module_batch"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/WallAstra_Straight_Divided.gltf" id="kit_wall"]
 [ext_resource type="PackedScene" path="res://assets/third_party/quaternius_megakit/Column_Pipes.gltf" id="kit_column"]
@@ -62,11 +63,18 @@ ring_segments = 8
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
-background_color = Color(0.018, 0.009, 0.042, 1)
+background_color = Color(0.1, 0.055, 0.08, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.39, 0.43, 0.75, 1)
+ambient_light_color = Color(0.6, 0.48, 0.38, 1)
 ambient_light_energy = 0.72
 reflected_light_source = 1
+fog_enabled = true
+fog_light_color = Color(0.18, 0.13, 0.1, 1)
+fog_density = 0.009
+fog_sky_affect = 0.0
+glow_enabled = true
+glow_intensity = 0.6
+glow_hdr_threshold = 0.9
 
 [sub_resource type="BoxShape3D" id="shape_box_77p2_1_77p2"]
 size = Vector3(77.2, 1, 77.2)
@@ -123,14 +131,16 @@ material = SubResource("mat_dark")
 size = Vector3(1, 1, 1)
 
 [node name="Reactor" type="Node3D"]
+script = ExtResource("arena_skin")
+arena = "reactor"
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("environment")
 
 [node name="KeyLight" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-1.05, -0.5, 0)
-light_color = Color(0.82, 0.86, 1, 1)
-light_energy = 1.2
+light_color = Color(0.92, 0.82, 0.7, 1)
+light_energy = 1
 shadow_enabled = true
 directional_shadow_max_distance = 55.0
 
@@ -3054,26 +3064,27 @@ surface_material_override/0 = SubResource("mat_glow")
 position = Vector3(0, 10.08, -37.94)
 pixel_size = 0.02
 font_size = 64
-outline_size = 0
-modulate = Color(0.8, 0.9, 1, 1)
-text = "03 / REACTOR"
+outline_size = 8
+modulate = Color(0.93, 0.8, 0.5, 1)
+outline_modulate = Color(0.16, 0.08, 0.03, 1)
+text = "HLAVÁK · TARTARUS"
 
 [node name="TealFill" type="OmniLight3D" parent="."]
 position = Vector3(-18, 7, -14)
-light_color = Color(0.05, 0.95, 0.78, 1)
-light_energy = 4.2
+light_color = Color(0.88, 0.76, 0.32, 1)
+light_energy = 2.8
 omni_range = 40
 
 [node name="VioletFill" type="OmniLight3D" parent="."]
 position = Vector3(18, 7, 14)
-light_color = Color(0.6, 0.17, 1, 1)
-light_energy = 4.2
+light_color = Color(0.62, 0.2, 0.88, 1)
+light_energy = 3.4
 omni_range = 40
 
 [node name="CoreLight" type="OmniLight3D" parent="."]
 position = Vector3(0, 11, 0)
-light_color = Color(0.45, 0.4, 1, 1)
-light_energy = 3
+light_color = Color(0.78, 0.55, 0.92, 1)
+light_energy = 2.4
 omni_range = 30
 
 [node name="PlayerSpawn" type="Marker3D" parent="."]

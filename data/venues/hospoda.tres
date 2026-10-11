@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ShopVenue" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="1_venue"]
+
+[resource]
+script = ExtResource("1_venue")
+id = &"hospoda"
+display_name = "Hospoda s točeným za 32"
+sign_text = "HOSPODA · TOČENÉ 32"
+tagline = "kde se chlastá od oběda a pije se do dna"
+goods = Array[String](["půllitr", "točené", "utopenec"])
+sectors = Array[StringName]([&"yard", &"foundry"])
+facade_style = &"awning"
+goods_shape = &"glasses"
+awning_color = Color(0.300, 0.170, 0.080, 1)
+awning_alt = Color(0.850, 0.640, 0.120, 1)
+sign_color = Color(0.120, 0.070, 0.040, 1)
+text_color = Color(1.000, 0.800, 0.350, 1)
+glow_color = Color(1.000, 0.600, 0.240, 1)
+goods_colors = Array[Color]([Color(0.900, 0.620, 0.100, 1), Color(0.820, 0.800, 0.700, 1), Color(0.300, 0.170, 0.080, 1)])
+bulbs = false
+fill_energy = 0.0
+window_glow = 0.55

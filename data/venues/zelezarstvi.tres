@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ShopVenue" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="1_venue"]
+
+[resource]
+script = ExtResource("1_venue")
+id = &"zelezarstvi"
+display_name = "Železářství"
+sign_text = "ŽELEZÁŘSTVÍ"
+tagline = "lopatka, hadr, igelitka, vápno. Nářadí na work, zejo"
+goods = Array[String](["lopatka", "hadr", "igelitka", "vápno"])
+sectors = Array[StringName]([&"yard", &"foundry"])
+facade_style = &"awning"
+goods_shape = &"tools"
+awning_color = Color(0.280, 0.300, 0.280, 1)
+awning_alt = Color(0.900, 0.380, 0.050, 1)
+sign_color = Color(0.120, 0.130, 0.140, 1)
+text_color = Color(0.900, 0.600, 0.150, 1)
+glow_color = Color(1.000, 0.880, 0.550, 1)
+goods_colors = Array[Color]([Color(0.550, 0.560, 0.570, 1), Color(0.300, 0.170, 0.080, 1), Color(0.900, 0.380, 0.050, 1)])
+bulbs = false
+fill_energy = 0.0
+window_glow = 0.90

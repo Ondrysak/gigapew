@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ShopVenue" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/shop_venue.gd" id="1_venue"]
+
+[resource]
+script = ExtResource("1_venue")
+id = &"absintherie"
+display_name = "Absintherie / bar s podsvícením"
+sign_text = "ABSINTHERIE"
+tagline = "zelená víla, blesky, karma"
+goods = Array[String](["absint", "víla", "blesky"])
+sectors = Array[StringName]([&"yard", &"reactor"])
+facade_style = &"neon"
+goods_shape = &"bottles"
+awning_color = Color(0.055, 0.048, 0.042, 1)
+awning_alt = Color(0.055, 0.048, 0.042, 1)
+sign_color = Color(0.020, 0.050, 0.030, 1)
+text_color = Color(0.450, 1.000, 0.350, 1)
+glow_color = Color(0.450, 1.000, 0.350, 1)
+goods_colors = Array[Color]([Color(0.450, 1.000, 0.350, 1), Color(0.120, 0.400, 0.200, 1), Color(0.055, 0.048, 0.042, 1)])
+bulbs = false
+fill_energy = 1.8
+window_glow = 1.00

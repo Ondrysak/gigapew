@@ -530,7 +530,7 @@ func _finish_stage_clear() -> void:
 	hud.feedback.reset()
 	damage_numbers.hide()
 	get_tree().paused = true
-	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked))
+	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked), ShopVenueCatalog.shared().shop_venue(campaign[stage_index].layout_theme, level_seed))
 
 func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:
