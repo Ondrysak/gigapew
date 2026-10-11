@@ -1,4 +1,7 @@
-# Unreleased source changes
+# Kakaboomboom 0.4.1
+
+Prague street arenas, fourteen shop venues, more invented faces and cleaner levels; Godot
+4.7.2 Linux x86_64 release. The 0.4.0 notes follow.
 
 - Removed the painted guide lines from generated levels: the corridor centre lines,
   room outlines, the landing-pad bars, and the glowing wall-top and wall-base neon
@@ -21,6 +24,14 @@
   Palmovka and Hlavák (warm sodium light, plaster/tile, Czech signs). Colliders,
   node paths and gameplay hooks are unchanged. Hazard arcs stay blue-white so
   shocks read.
+
+## 0.4.1 verification and limits
+
+The full rendered lab (26 scenarios, 244 captures) and the precision/nested-blast
+regression passed with zero failures before packaging; the packaged archive and its files
+passed SHA-256 verification and the extracted executable booted outside the source project.
+Frame rate is not measured. Storefront taglines are small: legible at about 3 m. Hlavák is
+darker after the guide lines were removed. The package contains no reference photographs.
 
 # Kakaboomboom 0.4.0
 

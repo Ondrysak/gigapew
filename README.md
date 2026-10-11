@@ -66,16 +66,16 @@ are unchanged. The `levels`, `quests`, `onboarding` and `venues` scenarios exerc
 
 ## Linux release
 
-Current game version: **0.4.0**. Downloadable/local release notes are in
+Current game version: **0.4.1**. Downloadable/local release notes are in
 [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 To play the packaged release:
 
 ```sh
 cd export/linux
-sha256sum -c kakaboomboom-0.4.0-linux-x86_64.tar.gz.sha256
-tar -xzf kakaboomboom-0.4.0-linux-x86_64.tar.gz
-cd kakaboomboom-0.4.0-linux-x86_64
+sha256sum -c kakaboomboom-0.4.1-linux-x86_64.tar.gz.sha256
+tar -xzf kakaboomboom-0.4.1-linux-x86_64.tar.gz
+cd kakaboomboom-0.4.1-linux-x86_64
 sha256sum -c SHA256SUMS
 ./kakaboomboom.x86_64
 ```
@@ -370,4 +370,4 @@ stage-clear shop captures were inspected as screenshots, as were the eight inven
 archetypes on the runner and spitter bodies. Frame rate is not measured, and the
 storefront taglines are small: legible at about 3 m, marginal across a street.
 
-Version 0.4.0 packages the faces and guns; the arena reskin, archetypes and venues are unreleased source changes.
+Version 0.4.1 packages the faces, guns, arenas, archetypes, venues and the guide-line removal.
