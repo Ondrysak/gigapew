@@ -1,6 +1,6 @@
 extends LabScenario
 
-const GUNS := ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower"]
+const GUNS := ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower", "maschine", "cihlomet", "tvarohomet"]
 ## Longer guns need the model shifted and a wider frame; the rest share the default.
 const LAYOUT := {"rail": {"z": 0.42, "size": 1.0, "projectile": 0.95}, "minigun": {"projectile": 0.3}, "scatter": {"projectile": 0.3}, "autocannon": {"projectile": 0.6}}
 
@@ -8,7 +8,7 @@ func title() -> String:
 	return "Gun models"
 
 func summary() -> String:
-	return "Improvised junk weapons: side and three-quarter views, plus each pooled projectile (bottle, rebar spike, vinyl, pigeon, molotov)"
+	return "Improvised junk weapons: side and three-quarter views, plus each pooled projectile, including beats, hollow bricks and curd"
 
 func run() -> void:
 	var root := Node3D.new()

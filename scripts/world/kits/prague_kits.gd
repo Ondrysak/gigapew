@@ -86,7 +86,7 @@ static func _load_quotes() -> void:
 	if _quotes_loaded:
 		return
 	_quotes_loaded = true
-	_quote_font = ThemeDB.fallback_font
+	_quote_font = StreetWear.BODY_FONT
 	var source := FileAccess.open("res://hlasky.txt", FileAccess.READ)
 	if source == null:
 		push_error("Quote signage cannot read res://hlasky.txt")

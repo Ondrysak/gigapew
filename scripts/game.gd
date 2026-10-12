@@ -113,6 +113,7 @@ func _ready() -> void:
 
 func _new_run() -> void:
 	get_tree().paused = false
+	Music.new_run()
 	_cancel_gear()
 	class_definition = Profile.roster.find(Profile.selected_class_id)
 	run_state = RunState.new()
@@ -172,15 +173,15 @@ func _process(delta: float) -> void:
 			_burst_kills = 0
 		_music_kill_heat = move_toward(_music_kill_heat, 0.0, delta * 0.28)
 		_music_damage_heat = move_toward(_music_damage_heat, 0.0, delta * 0.5)
+		var tool := player.mining_tool
+		var contact := tool.resonance if tool != null and player.drilling() and is_instance_valid(tool.target_deposit) else 0.0
+		Music.set_mining(contact)
 		_music_timer -= delta
 		if _music_timer <= 0.0:
 			_music_timer = 0.25
 			Music.set_intensity(_crowd_intensity())
-			var tool := player.mining_tool
-			var contact := tool.resonance if tool != null and player.drilling() and is_instance_valid(tool.target_deposit) else 0.0
-			Music.set_mining(contact)
 
-## Crowd pressure, actual kill momentum, health loss and low-health danger.
+## Hit-chain drive or crowd/danger pressure, whichever is stronger.
 func _crowd_intensity() -> float:
 	var near := horde.query_radius(player.global_position, music_radius, _nearby)
 	var represented := 0
@@ -190,7 +191,8 @@ func _crowd_intensity() -> float:
 	var global := clampf(float(horde.population_count) / maxf(1.0, campaign[stage_index].schedule.max_alive), 0.0, 1.0)
 	var health_ratio := float(player.health) / maxi(player.max_health, 1)
 	var danger := 1.0 - smoothstep(0.15, 0.5, health_ratio)
-	return clampf(0.12 + local * 0.6 + global * 0.3 + danger * 0.18 + _music_kill_heat * 0.2 + _music_damage_heat * 0.15, 0.0, 1.0)
+	var pressure := clampf(0.12 + local * 0.6 + global * 0.3 + danger * 0.18 + _music_kill_heat * 0.2 + _music_damage_heat * 0.15, 0.0, 1.0)
+	return maxf(pressure, lerpf(0.12, 1.0, player.combo_intensity))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():

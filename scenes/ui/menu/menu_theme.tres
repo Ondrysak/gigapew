@@ -1,5 +1,8 @@
 [gd_resource type="Theme" format=3 uid="uid://b3j1wsgjn2pc3"]
 
+[ext_resource type="Font" path="res://assets/fonts/rave_display.tres" id="1_display"]
+[ext_resource type="Font" path="res://assets/fonts/rave_body.tres" id="2_body"]
+
 [sub_resource type="StyleBoxFlat" id="Accent_disabled"]
 content_margin_left = 28.0
 content_margin_top = 12.0
@@ -151,6 +154,7 @@ border_width_bottom = 2
 border_color = Color(0.48, 0.34, 0.2, 1)
 
 [resource]
+default_font = ExtResource("2_body")
 default_font_size = 18
 AccentButton/base_type = &"Button"
 AccentButton/colors/font_color = Color(0.94, 0.79, 0.55, 1)
@@ -159,6 +163,7 @@ AccentButton/colors/font_focus_color = Color(1, 0.87, 0.64, 1)
 AccentButton/colors/font_hover_color = Color(1, 0.9, 0.69, 1)
 AccentButton/colors/font_pressed_color = Color(0.98, 0.94, 0.84, 1)
 AccentButton/font_sizes/font_size = 24
+AccentButton/fonts/font = ExtResource("1_display")
 AccentButton/styles/disabled = SubResource("Accent_disabled")
 AccentButton/styles/hover = SubResource("Accent_hover")
 AccentButton/styles/normal = SubResource("Accent_normal")
@@ -189,6 +194,10 @@ CheckButton/styles/pressed = SubResource("Empty")
 DimLabel/base_type = &"Label"
 DimLabel/colors/font_color = Color(0.59, 0.53, 0.43, 1)
 DimLabel/font_sizes/font_size = 15
+DisplayLabel/base_type = &"Label"
+DisplayLabel/fonts/font = ExtResource("1_display")
+BodyLabel/base_type = &"Label"
+BodyLabel/fonts/font = ExtResource("2_body")
 HSeparator/constants/separation = 12
 HSeparator/styles/separator = SubResource("Separator")
 HSlider/styles/focus = SubResource("Focus")
@@ -201,6 +210,7 @@ HeaderLabel/colors/font_shadow_color = Color(0.006, 0.004, 0.005, 0.9)
 HeaderLabel/constants/shadow_offset_x = 3
 HeaderLabel/constants/shadow_offset_y = 3
 HeaderLabel/font_sizes/font_size = 38
+HeaderLabel/fonts/font = ExtResource("1_display")
 Label/colors/font_color = Color(0.85, 0.8, 0.68, 1)
 Label/colors/font_shadow_color = Color(0.006, 0.004, 0.005, 0.85)
 Label/constants/shadow_offset_x = 2
@@ -208,6 +218,11 @@ Label/constants/shadow_offset_y = 2
 PanelContainer/styles/panel = SubResource("Panel")
 RichTextLabel/colors/default_color = Color(0.85, 0.8, 0.68, 1)
 RichTextLabel/font_sizes/normal_font_size = 17
+RichTextLabel/fonts/normal_font = ExtResource("2_body")
+RichTextLabel/fonts/bold_font = ExtResource("2_body")
+RichTextLabel/fonts/italics_font = ExtResource("2_body")
+RichTextLabel/fonts/bold_italics_font = ExtResource("2_body")
+RichTextLabel/fonts/mono_font = ExtResource("2_body")
 SectionLabel/base_type = &"Label"
 SectionLabel/colors/font_color = Color(0.7, 0.53, 0.32, 1)
 SectionLabel/font_sizes/font_size = 14

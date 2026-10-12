@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/nemakacenko.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"nemakacenko"
+display_name = "Nemakačenko"
+description = "Nech automatiku pracovat: dosah sběru XP +1,5 m a prodleva automatických zbraní -10 %."
+level_descriptions = PackedStringArray("Dosah sběru XP +1,5 m a prodleva automatických zbraní -10 % ze základu.", "Dosah sběru XP celkem +3 m a prodleva automatických zbraní -20 % ze základu.", "Dosah sběru XP celkem +4,5 m a prodleva automatických zbraní -30 % ze základu.")
+max_level = 3
+weight = 0.9
+accent_color = Color(0.5, 0.95, 0.35, 1)
+pickup_radius = 1.5
+cooldown_multiplier = -0.1
+icon = ExtResource("icon_px")

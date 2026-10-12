@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/tvarohomet.tscn" id="2_view"]
+[ext_resource type="Texture2D" path="res://assets/icons/weapons/tvarohomet.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+display_name = "Tvarohomet"
+description = "Tvaroh (hlasky.txt:68). Pumpa vystřelí bílou hroudu; studený rozstřik poškodí a zpomalí celý houf v okolí zásahu."
+damage = 115
+damage_type = 2
+recoil_degrees = 0.11
+fire_interval = 0.34
+range_meters = 26.0
+knockback = 5.0
+view_scene = ExtResource("2_view")
+icon = ExtResource("icon_px")
+explosion_radius = 2.8
+explosion_damage_fraction = 0.65
+explosion_knockback = 7.0

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/tartarus.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"tartarus"
+display_name = "Tartarus"
+description = "No mercy: poškození +8 % a průraz +1, ale maximum zdraví -8."
+level_descriptions = PackedStringArray("Poškození +8 %, průraz +1 a maximum zdraví -8.", "Celkem poškození +16 %, průraz +2 a maximum zdraví -16.", "Celkem poškození +24 %, průraz +3 a maximum zdraví -24.")
+max_level = 3
+weight = 0.75
+accent_color = Color(0.9, 0.22, 0.38, 1)
+damage_multiplier = 0.08
+pierce_bonus = 1
+max_health_bonus = -8
+icon = ExtResource("icon_px")

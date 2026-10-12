@@ -1,20 +1,120 @@
-# Unreleased
+# Kakaboomboom 0.7.0
 
-- Generated 186 BPM hardtek replaces the 126 BPM stage score: real PROTOKSEED
-  D kicks, tempo-locked break chops and acid/FX textures combine with synthesized
-  rolling bass, percussion and the owner's recorded vocal chops.
-- Thirteen worker-rendered stems share a sample-locked 16-bar phrase. Private
-  seeded fills vary the arrangement; musical boundaries use the rounded PCM
-  grid, not nominal tempo, and source samples decode once into a shared bank.
+Reactive generated hardtek, richer Prague interiors, quote-inspired weapons and
+skills, cracked typography and combo-driven hallucinations; Godot 4.7.2 Linux x86_64.
+
+- Release verification: native `combo_pressure music producer quotes` produced
+  21 captures with zero failures. The standalone Linux package was launched
+  outside the source tree with isolated save data; Real producer selection,
+  deployment, movement, firing, Brucelee and pause were exercised. Native window
+  close exited with code 0. Archive and package SHA-256 checks passed.
+
+- Cracked typography: bundled Rubik Glitch for titles, actions, card names,
+  kills and criticals; compact Barlow Semi Condensed for descriptions,
+  settings and small HUD/music readouts. Both cover Czech diacritics.
+- The combo is now a large fractured **SÉRIE** with offset print layers and
+  a readable bonus line. Up to 10 beats keep 6 s grace and 1.5 s decay
+  steps; by 100 beats they tighten to 3 s and 0.45 s.
+- Hallucinations and soundtrack follow the actual hit chain. The saved
+  hallucination setting is a ceiling: no chain uses 28% of it, 100 beats use
+  all of it. Combo pressure can push music to the lead layer and decays
+  back down. The world feedback loop is stronger at every ceiling while
+  keeping the centre aim area and HUD clear.
+- Native `combo_pressure gunplay hallucinations music hud menu levelup shop`
+  (81 captures) plus corrected `combo_pressure hallucinations` (24 captures,
+  zero failures); combat regressions passed.
+- Ten actual ten-line random draws from `hlasky.txt` produced ten playable
+  additions, all selected from the first draw of their round: three guns,
+  three skills and four ranked passives. README records each source line.
+- New guns: Maschine (six shock pellets), Cihlomet (three piercing bricks
+  with heavy knockback), Tvarohomet (visible curd with frost splash).
+  Each has an original held/projectile model, pixel icon and Workshop
+  blueprint. Primary selection derives from the recipe catalog, not a fixed
+  six-gun list; purchased mod ranks carry across all nine guns.
+- Free Real producer starts with Maschine and keeps all five independent
+  skills: Brucelee's guarded directional flurry, Crossfader's alternating
+  pull/push pulses, Party without me's remote frost speaker, then the
+  existing Ban zóna/Valhalla. The class picker wraps compact cards instead
+  of clipping the fifth kit. Existing classes are unchanged.
+- New three-rank passives: Nemakačenko (XP reach + auto recharge),
+  Tartarus (damage/pierce at max-health cost), Krajíc chleba
+  (health/regen at movement cost), Rave (primary cadence + area).
+- New native `quotes` regression plus expanded abilities, gun galleries,
+  held-fire cadence and menu coverage passed: seven scenarios, 106 captures,
+  zero failures. Precision/nested-blast combat regressions also passed.
+- Final native `producer shop levelup`: seventeen captures, zero failures
+  or script/engine errors. The new skills reject wall/other-deck targets;
+  Brucelee expiry, overlapping shields and node removal release protection
+  correctly. Crossfader moves an enemy through actual horde physics; the
+  remote speaker keeps pulsing after departure, rejects missing floor
+  without cooldown loss, freezes in pause and cancels on inactivity.
+  Total distinct affected-scenario coverage: ten scenarios, 123 captures.
+- Hit chains now keep a six-second grace period, then shed ten percent
+  (rounded up, at least one beat) every 1.5 seconds instead of resetting.
+  Misses neither wipe nor refresh them; actual damage costs two beats,
+  blocked damage costs none, and death clears the chain. The existing
+  +8%-per-beat/+40%-maximum next-shot reward is unchanged.
+  HUD countdowns follow the gameplay timer; pause freezes count and timing,
+  and losing beats no longer triggers an upward milestone celebration.
+- Native `gunplay combos hud`: twelve captures, zero failures. Real shots,
+  a movement gap, a miss, damage, two decay steps, renewed hits and pause
+  exercise the new chain; precision/nested-blast regressions also passed.
+- Every new game/run restart now generates a fresh 180/186/192/198 BPM hardtek
+  composition: new minor key, harmony, acid riff, melody, hat accents, vocal
+  placement and a shaped 32-bar arrangement, not merely randomized fills.
+- All 87 PROTOKSEED WAVs are retained as complete recordings: 52 tuned kicks,
+  four drum loops, two 303s, 17 ambience recordings, eleven FX and one lead.
+  The complete bank is a selection pool between runs, not a sample carousel:
+  each run keeps one key-matched kick, drum loop, 303, ambience and transition
+  FX. Drum/303 phrases repeat every two bars; texture windows and rates stay
+  fixed. Sampled leads replace rather than stack with the generated melody.
+  Six original vocal samples remain in the mix. Removed the old five-clip bank.
+- Thirteen persistent worker-rendered stems share the exact rounded PCM grid.
+  Private composition randomness never consumes gameplay RNG. New-run
+  generations cancel obsolete work and reject stale callbacks; sector changes
+  preserve the current mix. Explicit catalog preloads include all recordings
+  in packed exports; source audio decodes once into a shared read-only bank.
 - Actual crowd pressure, kill momentum, health loss, low-health danger and
   held-F contact/resonance drive the mix. Boss/extraction peaks change on bars;
   recorded kill/salvage/danger/departure accents use beat timing and bounded
-  priority/cooldowns. Spoken reactions duck the backing and silence remix
-  vocals; pause softens the mix and cancels queued gameplay accents.
-- Native gameplay audio captures verified pressure, kill bursts, critical
-  health, prying, boss entry/recovery, speech precedence and pause. A packed-only
-  runtime decoded all eleven sample-bank entries and produced real mixer
-  frames from the generated score, without access to the source tree.
+  priority/cooldowns. Spoken reactions silence just the remix vocals; backing
+  gain stays steady through effects, voice, accents, stingers and pause.
+  Removed automatic duck/recovery envelopes and pause attenuation; normal
+  reactive arrangements, track crossfades, volume settings and limiter remain.
+- Live HARDTEK HUD lists every stage stem and the gameplay accent, with real
+  pre-FX PCM RMS bars, in-mix dots, beat/bar timing and active cues. Its header
+  now shows mix ID, key, BPM and bar out of 32; ambience/sampled leads are named.
+  Generation, vocal priority, full-volume pause, mute and stop are visible; the panel
+  updates through pause and fits beneath the radar at 1280×720 and 960×600.
+- Fast machine fractures now feed music contact every gameplay frame rather
+  than every 250 ms. Native failing-before/passing-after playback demonstrated
+  acid activation during the short latch contact, not only a later vocal accent.
+- The `music` lab retains actual notes/rests, speech, pause, hard-mute and
+  fast-pry regressions, plus actual changed kick PCM on a new-run restart and
+  preservation across sector loads; source meters do not alter playback.
+- Native `music hud voice mining` run: 29 captures, zero failures. A separate
+  13-capture gameplay probe also verified boss-layer replacement, live accents,
+  stingers, volume attenuation, stop and the compact viewport layout.
+- Steady-volume follow-up: native `music voice` run, ten captures and zero
+  failures. Actual firing, speech, all four generated stingers, salvage accents
+  and pause preserve the backing gain; vocal-priority and hard-mute checks pass.
+- Earlier native gameplay audio captures verified pressure, kill bursts,
+  critical health, prying, boss entry/recovery, speech precedence and pause.
+  The previous eleven-entry bank also passed a packed-only native mixer probe.
+- Earlier full-bank native PCM audits exercised all four tempos, exact loop
+  alignment of all thirteen stems, every pack recording's nonzero contribution,
+  private RNG and changed rendered compositions. Rapid restarts published only
+  the final generation, whose thirteen PCM hashes matched a fresh seeded render.
+  A packed-only build decoded all 93 entries and emitted 59,392 real mixer frames.
+- Full-pack follow-up: native `music voice hud`, sixteen captures and zero
+  failures. The short salvage vocal is observed during real contact as well
+  as afterwards, so variable beat timing cannot hide it behind a screenshot.
+- Consistent-set follow-up: native `music voice`, twelve captures and zero
+  failures, including identical rendered downbeat kick PCM throughout a run,
+  changed music on restart, sector continuity and unchanged backing gain.
+  Three additional full-score renders verified one source per instrumental
+  role across all 32 bars, fixed phrase/texture windows, different run PCM and
+  actual native mixer output. Seeded selections still reached all 87 pack clips.
 - Existing vocal-burst fixtures now use the protected spawn floor rather than
   assuming the street ahead contains space for every requested enemy.
 - PROTOKSEED redistribution terms were not supplied; these audio assets are

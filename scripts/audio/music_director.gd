@@ -13,15 +13,6 @@ const INTENSITY_ATTACK := 0.9
 const INTENSITY_RELEASE := 3.0
 ## Seconds of the boss crossfade; it is timed to land on the next bar line.
 const BOSS_FADE := 0.4
-## Stinger -> [music duck level, seconds held].
-const STINGER_DUCK := {
-	&"level_up": [0.7, 0.6],
-	&"stage_clear": [0.35, 2.0],
-	&"death": [0.3, 2.0],
-	&"run_complete": [0.3, 3.6],
-}
-## Seconds for the music to come back after a stinger's duck.
-const DUCK_RECOVER := 1.2
 const STINGER_VOLUME_DB := -1.0
 const SILENT_DB := -80.0
 
@@ -42,9 +33,36 @@ class Track:
 	var fade_target := 0.0
 	var fade_rate := 1.0
 	var playing := false
-
 	func is_ready() -> bool:
 		return rendered == stems.size()
+
+## Caller-owned HUD snapshot. Gains show routed layers; RMS shows actual PCM
+## activity before bus effects, including track fades and bus volumes.
+class MixMeter:
+	var gains: Array[float] = []
+	var rms: Array[float] = []
+	var rendered := 0
+	var playing := false
+	var muted := false
+	var position := 0.0
+	var seed := 0
+	var bpm := 0
+	var bars := 0
+	var bar_seconds := 0.0
+	var identity := ""
+	var tonic := ""
+	var accent_gain := 0.0
+	var accent_rms := 0.0
+	var accent: StringName = &""
+	var voice: StringName = &""
+	var stingers: Array[StringName] = []
+
+	func _init() -> void:
+		gains.resize(MusicScore.TRACK_STEMS[&"stage"].size())
+		gains.fill(0.0)
+		rms.resize(gains.size())
+		rms.fill(0.0)
+
 
 var _tracks: Dictionary = {}
 var _stingers: Dictionary = {}
@@ -54,18 +72,19 @@ var _target_intensity := 0.0
 var _boss := false
 var _boss_mix := 0.0
 var _boss_switch_at := 0.0
-var _duck := 1.0
-var _duck_floor := 1.0
-var _duck_hold := 0.0
 var _clock := 0.0
 var _last_ticks := 0
 var _render_usec := 0
-## Pending [track, stem] render jobs, shared with the workers under _mutex.
+## Pending [track, stem, generation, composition] jobs, protected by _mutex.
 var _jobs: Array = []
 var _mutex := Mutex.new()
+var _work_ready := Semaphore.new()
 var _threads: Array[Thread] = []
 var _sample_bank: Dictionary = {}
-var _composition_seed := 0
+var _composition: MusicComposition
+var _generation := 0
+var _mix_identity := ""
+var _mix_tonic := ""
 var _mining := 0.0
 var _mining_target := 0.0
 var _voice_source: WeakRef
@@ -75,13 +94,14 @@ var _pending_accent: StringName = &""
 var _accent_at := 0.0
 var _accent_expires := 0.0
 var _accent_cooldown := 0.0
+var _playing_accent: StringName = &""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	MusicSynth.cancelled = false
 	_sample_bank = MusicSamples.load_bank()
-	# Musical variation is session-private, independent of the game's RNG.
-	_composition_seed = Time.get_ticks_usec()
+	if _sample_bank.is_empty():
+		return
 	_accent_player = _make_player("GameplayVocal")
 	_accent_player.volume_db = -4.0
 	for track: StringName in MusicScore.TRACK_STEMS:
@@ -90,24 +110,69 @@ func _ready() -> void:
 		for stem: StringName in MusicScore.TRACK_STEMS[track]:
 			state.stems.append(stem)
 			state.players.append(_make_player("%s_%s" % [track, stem]))
-			_jobs.append([track, stem])
+			if track != &"stage":
+				_jobs.append([track, stem, 0, null])
 		_tracks[track] = state
 	for stinger_name: StringName in MusicScore.STINGERS:
 		var player := _make_player("stinger_%s" % stinger_name)
 		player.volume_db = STINGER_VOLUME_DB
 		_stingers[stinger_name] = player
-		_jobs.append([MusicScore.STINGER_TRACK, stinger_name])
+		_jobs.append([MusicScore.STINGER_TRACK, stinger_name, 0, null])
 	_last_ticks = Time.get_ticks_usec()
 	for _worker in clampi(OS.get_processor_count() - 2, 1, 3):
 		var thread := Thread.new()
 		thread.start(_render_worker, Thread.PRIORITY_LOW)
 		_threads.append(thread)
+	for _job in _jobs.size():
+		_work_ready.post()
 
 func _exit_tree() -> void:
 	MusicSynth.cancelled = true
+	if _composition != null:
+		_composition.cancel()
+	for _thread in _threads:
+		_work_ready.post()
 	for thread in _threads:
 		thread.wait_to_finish()
 	_threads.clear()
+
+## One fresh shared score per actual new run, never per sector load.
+## Cancel obsolete work and reject its deferred results after rapid restarts.
+func new_run(seed_value: int = -1) -> void:
+	if _composition != null:
+		_composition.cancel()
+	var state: Track = _tracks[&"stage"]
+	_halt(state)
+	state.rendered = 0
+	for player in state.players:
+		player.stream = null
+	if _current == &"stage":
+		_current = &""
+	_composition = MusicComposition.build(seed_value if seed_value >= 0 else Time.get_ticks_usec())
+	_mix_identity = _composition.identity.get_slice(" · ", 0)
+	_mix_tonic = MusicComposition.TONIC_NAMES[_composition.key - 36]
+	_intensity = 0.0
+	_target_intensity = 0.12
+	_boss = false
+	_boss_mix = 0.0
+	_boss_switch_at = _clock
+	_mining = 0.0
+	_mining_target = 0.0
+	_pending_accent = &""
+	_accent_cooldown = 0.0
+	_accent_player.stop()
+	for player: AudioStreamPlayer in _stingers.values():
+		player.stop()
+	_mutex.lock()
+	_generation += 1
+	for i in range(_jobs.size() - 1, -1, -1):
+		if _jobs[i][0] == &"stage":
+			_jobs.remove_at(i)
+	for stem in state.stems:
+		_jobs.append([&"stage", stem, _generation, _composition])
+	_mutex.unlock()
+	for _stem in state.stems:
+		_work_ready.post()
 
 ## Plays a track (&"menu" or &"stage"), crossfading from whatever plays. Replaying the current
 ## track is a no-op; a track still rendering starts as soon as it is ready. Intensity and boss
@@ -119,12 +184,12 @@ func play(track: StringName) -> void:
 	if state == null:
 		push_warning("Music: unknown track '%s'" % track)
 		return
-	_fade_out_all(1.0 / TRACK_FADE)
 	_current = track
 	_target_intensity = 0.0
 	_boss = false
 	_boss_switch_at = _clock
 	if state.is_ready():
+		_fade_out_all(1.0 / TRACK_FADE)
 		_start(state)
 	else:
 		_prioritize(track)
@@ -149,9 +214,9 @@ func accent(kind: StringName) -> void:
 		return
 	_pending_accent = kind
 	_accent_at = _clock + _time_to_next_beat()
-	_accent_expires = _clock + MusicScore.bar_seconds(&"stage") * 4.0
+	_accent_expires = _clock + MusicScore.bar_seconds(&"stage", _composition) * 4.0
 
-## Swaps the stage to its boss layers (and boss harmony), landing on the next bar line.
+## Swaps to boss layers on the next bar, retaining the run's shared harmony.
 func set_boss(active: bool) -> void:
 	if active == _boss:
 		return
@@ -173,9 +238,6 @@ func stinger(stinger_name: StringName) -> void:
 	if player.stream == null:
 		return
 	player.play()
-	var duck: Array = STINGER_DUCK[stinger_name]
-	_duck_floor = minf(_duck_floor, duck[0])
-	_duck_hold = maxf(_duck_hold, duck[1])
 
 ## Fades out every track over `fade` seconds (0 stops at once).
 func stop(fade := 1.0) -> void:
@@ -191,6 +253,76 @@ func stop(fade := 1.0) -> void:
 	else:
 		_fade_out_all(1.0 / fade)
 
+## Read-only, bounded sampling of the native mono PCM16 players; call at 20 Hz.
+## Does not add audio buses/effects, alter playback or allocate per-stem buffers.
+func sample_mix(meter: MixMeter) -> void:
+	var state: Track = _tracks[&"stage"]
+	var bus_gain := _meter_bus_gain(BUS)
+	var clock_offset := AudioServer.get_time_since_last_mix() - AudioServer.get_output_latency()
+	meter.rendered = state.rendered
+	meter.playing = state.playing
+	meter.muted = bus_gain <= 0.0001
+	meter.position = 0.0
+	meter.seed = _composition.seed if _composition != null else 0
+	meter.bpm = _composition.bpm if _composition != null else 0
+	meter.bars = _composition.bars if _composition != null else 0
+	meter.bar_seconds = MusicScore.bar_seconds(&"stage", _composition)
+	meter.identity = _mix_identity
+	meter.tonic = _mix_tonic
+	if state.playing:
+		var loop_seconds := meter.bar_seconds * meter.bars
+		meter.position = fposmod(state.players[0].get_playback_position() + clock_offset, loop_seconds)
+	for i in state.players.size():
+		var player := state.players[i]
+		var gain := db_to_linear(player.volume_db) * bus_gain if player.playing and player.volume_db > SILENT_DB else 0.0
+		meter.gains[i] = gain
+		meter.rms[i] = _meter_pcm(player, gain, clock_offset) if gain > 0.0001 else 0.0
+	meter.accent_gain = db_to_linear(_accent_player.volume_db) * bus_gain if _accent_player.playing else 0.0
+	meter.accent_rms = _meter_pcm(_accent_player, meter.accent_gain, clock_offset) if meter.accent_gain > 0.0001 else 0.0
+	meter.accent = _playing_accent if _accent_player.playing else &""
+	var source: LudasVoice = _voice_source.get_ref() as LudasVoice if _voice_source != null else null
+	meter.voice = source.speaking if source != null else &""
+	meter.stingers.clear()
+	if not meter.muted:
+		for id: StringName in _stingers:
+			var player: AudioStreamPlayer = _stingers[id]
+			if player.playing:
+				meter.stingers.append(id)
+
+
+func _meter_bus_gain(bus_name: StringName) -> float:
+	var gain := 1.0
+	var bus := AudioServer.get_bus_index(bus_name)
+	while bus >= 0:
+		if AudioServer.is_bus_mute(bus):
+			return 0.0
+		gain *= db_to_linear(AudioServer.get_bus_volume_db(bus))
+		if bus == 0:
+			break
+		bus = AudioServer.get_bus_index(AudioServer.get_bus_send(bus))
+	return gain
+
+
+func _meter_pcm(player: AudioStreamPlayer, gain: float, clock_offset: float) -> float:
+	var stream := player.stream as AudioStreamWAV
+	# All synthesized stems/stingers and selected accent imports are mono PCM16.
+	var data := stream.data
+	var frames := data.size() / 2
+	var cursor := floori((player.get_playback_position() + clock_offset * player.pitch_scale) * stream.mix_rate)
+	var stride := maxi(1, roundi(stream.mix_rate * player.pitch_scale * 0.046 / 128.0))
+	var energy := 0.0
+	# 46 ms trailing window, decimated to 128 readings. Silence between notes
+	# stays silence; loops wrap, whereas one-shots never borrow their end tail.
+	for sample in 128:
+		var frame := cursor - sample * stride
+		if stream.loop_mode != AudioStreamWAV.LOOP_DISABLED:
+			frame = posmod(frame, frames)
+		elif frame < 0 or frame >= frames:
+			continue
+		var value := data.decode_s16(frame * 2) / 32768.0
+		energy += value * value
+	return sqrt(energy / 128.0) * gain
+
 func _process(_delta: float) -> void:
 	# Real time, so fades ignore Engine.time_scale and pauses.
 	var ticks := Time.get_ticks_usec()
@@ -202,12 +334,6 @@ func _process(_delta: float) -> void:
 	_intensity += (_target_intensity - _intensity) * (1.0 - exp(-dt / smoothing))
 	if _clock >= _boss_switch_at:
 		_boss_mix = move_toward(_boss_mix, 1.0 if _boss else 0.0, dt / BOSS_FADE)
-	if _duck_hold > 0.0:
-		_duck_hold -= dt
-		_duck = move_toward(_duck, _duck_floor, dt * 6.0)
-	else:
-		_duck_floor = 1.0
-		_duck = move_toward(_duck, 1.0, dt / DUCK_RECOVER)
 	var source: LudasVoice = _voice_source.get_ref() as LudasVoice if _voice_source != null else null
 	var speaking := source != null and source.speaking != &""
 	_voice_mix = move_toward(_voice_mix, 1.0 if speaking else 0.0, dt * 8.0)
@@ -259,11 +385,10 @@ func _stem_gain(track: StringName, stem: StringName) -> float:
 	return 1.0
 
 func _apply_volumes(state: Track) -> void:
-	var level := smoothstep(0.0, 1.0, state.fade) * _duck
+	var level := smoothstep(0.0, 1.0, state.fade)
 	if state.id == &"stage":
-		level *= 0.8 * lerpf(1.0, 0.58, _voice_mix)
-		if get_tree().paused:
-			level *= 0.28
+		# Keep backing gain steady through speech, effects, cues and pause.
+		level *= 0.8
 	for i in state.players.size():
 		var gain := level * _stem_gain(state.id, state.stems[i])
 		state.players[i].volume_db = linear_to_db(gain) if gain > 0.0001 else SILENT_DB
@@ -299,7 +424,7 @@ func _time_to_next_bar() -> float:
 	var state: Track = _tracks.get(_current)
 	if state == null or not state.playing:
 		return 0.0
-	var bar := MusicScore.bar_seconds(state.id)
+	var bar := MusicScore.bar_seconds(state.id, _composition)
 	var position := state.players[0].get_playback_position() + AudioServer.get_time_since_last_mix()
 	return bar - fmod(position, bar)
 
@@ -308,7 +433,7 @@ func _time_to_next_beat() -> float:
 	var state: Track = _tracks.get(_current)
 	if state == null or not state.playing:
 		return 0.0
-	var beat := MusicScore.bar_seconds(state.id) * 0.25
+	var beat := MusicScore.bar_seconds(state.id, _composition) * 0.25
 	var position := state.players[0].get_playback_position() + AudioServer.get_time_since_last_mix()
 	return beat - fmod(position, beat)
 
@@ -334,12 +459,11 @@ func _update_accent(speaking: bool) -> void:
 		return
 	var definition: Array = ACCENTS[_pending_accent]
 	_accent_player.stream = definition[1]
+	_playing_accent = _pending_accent
 	_accent_player.pitch_scale = float(definition[2])
 	_accent_player.play()
-	_accent_cooldown = _clock + MusicScore.bar_seconds(&"stage") * 2.0
+	_accent_cooldown = _clock + MusicScore.bar_seconds(&"stage", _composition) * 2.0
 	_pending_accent = &""
-	_duck_floor = minf(_duck_floor, 0.65)
-	_duck_hold = maxf(_duck_hold, 0.7)
 
 func _make_player(player_name: String) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
@@ -362,22 +486,29 @@ func _prioritize(track: StringName) -> void:
 	_jobs = first + rest
 	_mutex.unlock()
 
-# Runs on a worker thread: renders queued stems until the queue is empty or the game quits.
+# Persistent worker: waits for jobs and exits only when the game quits.
 func _render_worker() -> void:
 	var synth := MusicSynth.new(1337, _sample_bank)
-	while not MusicSynth.cancelled:
+	while true:
+		_work_ready.wait()
+		if MusicSynth.cancelled:
+			return
 		_mutex.lock()
 		var job: Array = [] if _jobs.is_empty() else _jobs.pop_front()
 		_mutex.unlock()
 		if job.is_empty():
-			return
+			continue
+		var composition: MusicComposition = job[3]
+		if composition != null and composition.is_cancelled():
+			continue
 		var begin := Time.get_ticks_usec()
-		var stream := MusicScore.render(synth, job[0], job[1], _composition_seed)
-		if stream == null:
-			return
-		_on_stem_rendered.call_deferred(job[0], job[1], stream, Time.get_ticks_usec() - begin)
+		var stream := MusicScore.render(synth, job[0], job[1], composition)
+		if stream != null:
+			_on_stem_rendered.call_deferred(job[0], job[1], stream, Time.get_ticks_usec() - begin, job[2])
 
-func _on_stem_rendered(track: StringName, stem: StringName, stream: AudioStreamWAV, usec: int) -> void:
+func _on_stem_rendered(track: StringName, stem: StringName, stream: AudioStreamWAV, usec: int, generation: int) -> void:
+	if track == &"stage" and generation != _generation:
+		return
 	_render_usec += usec
 	if track == MusicScore.STINGER_TRACK:
 		(_stingers[stem] as AudioStreamPlayer).stream = stream
@@ -389,4 +520,5 @@ func _on_stem_rendered(track: StringName, stem: StringName, stream: AudioStreamW
 		return
 	print_verbose("Music: '%s' ready (render CPU so far %.2f s)" % [track, _render_usec / 1000000.0])
 	if track == _current:
+		_fade_out_all(1.0 / TRACK_FADE)
 		_start(state)

@@ -14,7 +14,7 @@ func run() -> void:
 	game.horde.target = null
 	player.global_position = Vector3(0, 1, 12)
 	player.shot_fired.connect(_count_shot)
-	for id in ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower"]:
+	for id in ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower", "maschine", "cihlomet", "tvarohomet"]:
 		lab.equip_weapon(id)
 		await lab.wait(0.3)
 		if player.weapon.spin_up_time > 0.0:

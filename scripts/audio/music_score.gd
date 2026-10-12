@@ -11,23 +11,9 @@ const TRACK_STEMS := {
 	&"stage": [&"pad", &"pulse", &"drums", &"drive", &"arp", &"lead", &"perc", &"tension", &"boss_pad", &"boss_drive", &"breaks", &"rave", &"vocals"],
 }
 const STINGERS := [&"level_up", &"stage_clear", &"death", &"run_complete"]
-const TRACK_BPM := {&"menu": 90.0, &"stage": 186.0}
-const TRACK_BARS := {&"menu": 16, &"stage": 16}
+const MENU_BPM := 90.0
+const MENU_BARS := 16
 
-# Sixteen-bar D-minor phrase, one harmony per four bars: i - VI - III - VII.
-const STAGE_ROOTS := [38, 34, 41, 36]
-const STAGE_PADS := [[57, 62, 65, 69], [58, 62, 65, 70], [57, 60, 65, 69], [55, 60, 64, 67]]
-const STAGE_ARPS := [[62, 65, 69, 74], [62, 65, 70, 74], [65, 69, 72, 77], [64, 67, 72, 76]]
-const ACID_PATTERN := [0, 12, 0, 7, 0, 0, 10, 12, 0, 7, 12, 0, 3, 0, 7, 10]
-## Short, spacious version of the menu's A-D-F-E-D motif.
-const STAGE_MOTIF := [[0, 2, 69], [3, 2, 74], [6, 2, 77], [10, 2, 76], [13, 2, 74]]
-const HAT_ACCENTS := [0.45, 0.7, 1.0, 0.6]
-## D-minor-compatible boss bed: darker voicings, not a competing key over the main rhythm.
-const BOSS_PADS := [[50, 57, 62, 65], [50, 58, 62, 65], [53, 57, 60, 65], [48, 55, 60, 64]]
-## Eight-beat source-loop sixteenths containing useful snare/hat transients.
-const BREAK_CHOPS := [4, 6, 10, 12, 16, 22, 26, 28]
-const VOCAL_KEYS := [&"voice_fast", &"voice_hrrr", &"voice_ijee", &"voice_aaa", &"voice_chleba", &"voice_takhle"]
-const VOCAL_BARS := [1, 3, 5, 9, 11, 13]
 
 # Menu (90 BPM): moody 8-bar harmony played twice, Dm Bb Gm Asus4-A.
 const MENU_ROOTS := [38, 34, 31, 33]
@@ -36,7 +22,7 @@ const MENU_BAR_CHORDS := [
 	[55, 62, 67, 70], [55, 62, 67, 70], [57, 62, 64, 69], [57, 61, 64, 69],
 ]
 const MENU_ARP := [0, 1, 2, 3, 2, 1, 2, 1]
-## The game's motif (the stage lead opens with it): [16th step, length, midi] over 8 bars.
+## Menu motif: [16th step, length, MIDI] over eight bars.
 const MENU_MOTIF := [
 	[0, 4, 69], [4, 4, 74], [8, 4, 77], [12, 8, 76], [20, 12, 74],
 	[32, 4, 74], [36, 4, 77], [40, 4, 81], [44, 8, 79], [52, 12, 77],
@@ -55,17 +41,19 @@ const FINALE_MOTIF := [81, 86, 90, 88, 86]
 const DEATH_CHORD := [50, 53, 57, 62]
 
 ## Seconds per bar of a looping track.
-static func bar_seconds(track: StringName) -> float:
-	return step_samples(float(TRACK_BPM.get(track, 120.0))) * 16.0 / MusicSynth.RATE
+static func bar_seconds(track: StringName, composition: MusicComposition = null) -> float:
+	if track == &"stage":
+		return composition.step * 16.0 / MusicSynth.RATE if composition != null else 0.0
+	return step_samples(MENU_BPM) * 16.0 / MusicSynth.RATE
 
 ## Rounded samples per 16th; all timing, including director bar quantization, uses this grid.
 static func step_samples(bpm: float) -> int:
 	return roundi(MusicSynth.RATE * 15.0 / bpm)
 
 ## Renders one stem (or stinger when track is STINGER_TRACK). Returns null when cancelled.
-static func render(synth: MusicSynth, track: StringName, stem: StringName, composition_seed: int = 1337) -> AudioStreamWAV:
+static func render(synth: MusicSynth, track: StringName, stem: StringName, composition: MusicComposition = null) -> AudioStreamWAV:
 	var random := RandomNumberGenerator.new()
-	random.seed = composition_seed ^ hash(track) ^ hash(stem)
+	random.seed = (composition.seed if composition != null else 1337) ^ hash(track) ^ hash(stem)
 	synth.noise_cursor = random.randi() & MusicSynth.NOISE_MASK
 	var buf := PackedFloat32Array()
 	var loop := true
@@ -73,207 +61,170 @@ static func render(synth: MusicSynth, track: StringName, stem: StringName, compo
 		&"menu":
 			buf = _menu(synth, stem)
 		&"stage":
-			buf = _stage(synth, stem, random)
+			assert(composition != null, "Stage rendering requires a run composition")
+			buf = _stage(synth, stem, random, composition)
 		STINGER_TRACK:
 			buf = _stinger(synth, stem)
 			loop = false
-	if MusicSynth.cancelled or buf.is_empty():
+	if MusicSynth.cancelled or (composition != null and composition.is_cancelled()) or buf.is_empty():
 		return null
 	return synth.to_wav(buf, loop)
 
 # --- Stage -------------------------------------------------------------------------------------
 
-static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGenerator) -> PackedFloat32Array:
-	var step := step_samples(TRACK_BPM[&"stage"])
+static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGenerator, mix: MusicComposition) -> PackedFloat32Array:
+	var step := mix.step
 	var beat := step * 4
 	var bar := step * 16
-	var bars: int = TRACK_BARS[&"stage"]
-	var buf := MusicSynth.buffer(bar * bars)
-	# Per-stem peaks are ceilings, never loudness boosts: sparse accents stay sparse and the
-	# actual D-series kick remains far louder than any individual melodic layer.
-	var peak := 0.16
-	match stem:
-		&"pad":
-			_pad_voices(synth, buf, _four_bar_chords(STAGE_PADS), bar, 0.022, beat, beat * 2, 8.0)
-			synth.sweep_lowpass(buf, 780.0, 300.0, 2.0)
-			synth.pump(buf, beat, 0.55, 0.65)
-			peak = 0.10
-		&"pulse":
-			# The quiet-pressure mix still has a deep offbeat pulse under the hard kick.
-			for b in bars:
-				var root: int = STAGE_ROOTS[b / 4] - 12
+	var buf := MusicSynth.buffer(bar * mix.bars)
+	for b in mix.bars:
+		if MusicSynth.cancelled or mix.is_cancelled():
+			return PackedFloat32Array()
+		var at := b * bar
+		var root: int = mix.roots[b / 4]
+		var density: int = mix.sections[b / 4]
+		match stem:
+			&"pad", &"boss_pad":
+				var chord: Array = mix.pads[b / 4]
+				for note: int in chord:
+					synth.pad_note(buf, at, bar, note - (12 if stem == &"boss_pad" else 0), 0.022, beat, beat * 2, 8.0)
+				if b % 4 == 0:
+					_grain(synth, buf, at, mix.ambient_clip, 0.018, bar * 2, mix.ambient_position)
+			&"pulse":
 				for q in 4:
-					var at := b * bar + q * beat + 2 * step
-					synth.sine_note(buf, at, step, MusicSynth.hz(root), 0.10, 64, step / 2)
-					synth.bass_note(buf, at, step, root + 12, 0.035, 90.0, 360.0, 24.0, 0.9, 1.7, 0.35)
-			synth.pump(buf, beat, 0.65, 0.7)
-			peak = 0.13
-		&"drums":
-			for b in bars:
-				var at := b * bar
-				var heavy := b >= 8 or b % 4 == 0
+					var onset := at + q * beat + 2 * step
+					synth.sine_note(buf, onset, step, MusicSynth.hz(root - 12), 0.1, 64, step / 2)
+					synth.bass_note(buf, onset, step, root, 0.035, 90.0, 360.0, 24.0, 0.9, 1.7, 0.35)
+			&"drums":
 				for q in 4:
-					var key: StringName = &"kick_heavy" if heavy and q % 2 == 0 else &"kick"
-					synth.sample_hit(buf, at + q * beat, key, 0.56 if q == 0 else 0.52, 1.0, 0, beat - 80, false, 30)
-				# Fourth-bar pickup rolls are seeded; the core four-on-floor never disappears.
+					synth.sample_hit(buf, at + q * beat, mix.kick_clip, 0.56 if q == 0 else 0.52, 1.0, 0, beat - 80, false, 30)
 				if b % 4 == 3:
-					var pickup := 14 if random.randf() < 0.5 else 15
-					synth.sample_hit(buf, at + pickup * step, &"kick", 0.24, 1.08, 0, step - 80, false, 30)
+					synth.sample_hit(buf, at + (14 if density >= 2 else 15) * step, mix.kick_clip, 0.22, 1.0, 0, step - 80, false, 30)
 				for s in [4, 12]:
 					synth.snare(buf, at + s * step, 0.085, 0.12, 190.0)
 					synth.clap(buf, at + s * step, 0.095)
 				for s in [2, 6, 10, 14]:
 					synth.hat(buf, at + s * step, 0.12, 28.0, 0.12)
-				if b % 4 == 3:
-					synth.snare(buf, at + 15 * step, 0.05, 0.0, 230.0)
-			peak = 0.66
-		&"drive":
-			# Rolling, clipped acid attacks sit between kick transients instead of masking them.
-			for b in bars:
-				var root: int = STAGE_ROOTS[b / 4]
-				var rotation := random.randi_range(0, 3) * 4
+			&"drive", &"boss_drive":
+				var boss := stem == &"boss_drive"
 				for s in 16:
-					if s % 4 == 0 or (b % 4 == 0 and s == 15):
+					if s % 4 == 0 or (not boss and density == 0 and s % 4 != 2):
 						continue
-					var offset: int = ACID_PATTERN[(s + rotation) % 16]
-					var accent := s % 4 == 2
-					var cutoff := 1600.0 if accent else 850.0
-					if b % 4 == 3:
-						cutoff += s * 65.0
-					synth.bass_note(buf, b * bar + s * step, int(step * 0.72), root + offset, 0.13 if accent else 0.085, 140.0, cutoff, 25.0, 2.1, 3.0, 0.3)
-			synth.pump(buf, beat, 0.75, 0.65)
-			peak = 0.15
-		&"arp":
-			for b in bars:
-				var chord: Array = STAGE_ARPS[b / 4]
-				var rotation := random.randi_range(0, 3)
+					var offset: int = mix.acid_pattern[(s + (4 if boss else 0)) % 16]
+					var gain := 0.15 if boss else 0.11
+					var cutoff := 1900.0 if boss else 850.0 + density * 320.0
+					synth.bass_note(buf, at + s * step, int(step * 0.76), mix.key + offset, gain, 140.0, cutoff, 25.0, 2.1, 3.0, 0.3)
+				if boss and b % 4 == 3:
+					synth.lead_note(buf, at + 10 * step, 2 * step, root + 24, 0.035, 1250.0, 10.0, 0.0, 0.4, 1.7)
+			&"arp":
+				var chord: Array = mix.arps[b / 4]
 				for s in range(2, 16, 2):
-					if b % 4 < 2 and s in [6, 10]:
+					if density == 0 and s in [6, 10, 14]:
 						continue
-					var note: int = chord[(s / 2 + rotation) % 4]
-					synth.pluck(buf, b * bar + s * step, step * 2, note, 0.065, 24.0, 5.0, 0.2)
-			synth.echo(buf, step * 3, 0.25, 0.22, 0.55)
-			synth.pump(buf, beat, 0.5, 0.6)
-			peak = 0.085
-		&"lead":
-			# Calls only at phrase openings, with a short answer two bars later: no wall of lead.
-			for phrase in 4:
-				var at := phrase * 4 * bar
-				var transpose := -2 if phrase == 3 else 0
-				for note in STAGE_MOTIF:
-					synth.lead_note(buf, at + note[0] * step, note[1] * step - 100, note[2] + transpose, 0.085, 1650.0, 5.0, 0.002, 0.1, 1.2)
-				synth.pluck(buf, at + 2 * bar + 10 * step, step * 3, 77 + transpose, 0.055, 15.0, 5.0)
-				synth.pluck(buf, at + 2 * bar + 14 * step, step * 2, 74 + transpose, 0.06, 18.0, 5.0)
-			synth.echo(buf, step * 3, 0.22, 0.20, 0.6)
-			synth.pump(buf, beat, 0.4, 0.5)
-			peak = 0.115
-		&"perc":
-			for b in bars:
+					var note: int = chord[(s / 2 + b) % chord.size()]
+					synth.pluck(buf, at + s * step, step * 2, note, 0.065, 24.0, 5.0, 0.2)
+			&"lead":
+				if mix.lead_clip != &"":
+					if b % 4 == 2:
+						_grid_slice(synth, buf, at, mix.lead_clip, 0.045, 4.0, mix.lead_beat, mix)
+				elif b % 4 == 0:
+					for note: Array in mix.motif:
+						synth.lead_note(buf, at + int(note[0]) * step, int(note[1]) * step - 100, int(note[2]), 0.085, 1650.0, 5.0, 0.002, 0.1, 1.2)
+			&"perc":
 				for s in 16:
-					if s % 4 == 0:
+					if s % 4 == 0 or (density == 0 and s % 2 == 1):
 						continue
-					var hit_at := b * bar + s * step
-					var gain: float = 0.11 * HAT_ACCENTS[s % 4] * random.randf_range(0.85, 1.0)
-					if s == 6 or s == 14:
-						synth.hat(buf, hit_at, gain, 13.0, 0.18)
-					else:
-						synth.hat(buf, hit_at, gain, 75.0, 0.05)
+					var gain: float = 0.11 * mix.hat_accents[s] * random.randf_range(0.85, 1.0)
+					synth.hat(buf, at + s * step, gain, 13.0 if s in [6, 14] else 75.0, 0.18 if s in [6, 14] else 0.05)
 				if b % 4 == 3:
 					for s in [11, 13, 15]:
-						synth.tom(buf, b * bar + s * step, 0.07, 170.0 - s * 5.0, 75.0, 24.0, 0.12)
-					if random.randf() < 0.65:
-						synth.hat(buf, b * bar + 15 * step + step / 2, 0.07, 90.0, 0.035)
-			for b in [0, 8]:
-				synth.cymbal(buf, b * bar, 0.065, 6.0, 0.8)
-			peak = 0.14
-		&"tension":
-			# Low, gated tension and two finite rises; no continuous high-frequency siren.
-			for b in range(2, bars, 4):
-				synth.bass_note(buf, b * bar + 6 * step, beat * 2, STAGE_ROOTS[b / 4] + 12, 0.065, 180.0, 1050.0, 3.0, 1.8, 2.0, 0.5)
-			for b in [7, 15]:
-				synth.riser(buf, b * bar + 8 * step, beat * 2, 0.13, 250.0, 3900.0)
-			synth.pump(buf, beat, 0.65, 0.7)
-			peak = 0.12
-		&"boss_pad":
-			_pad_voices(synth, buf, _four_bar_chords(BOSS_PADS), bar, 0.025, beat / 2, beat, 12.0)
-			synth.sweep_lowpass(buf, 650.0, 230.0, 4.0)
-			synth.pump(buf, beat, 0.7, 0.6)
-			peak = 0.11
-		&"boss_drive":
-			for b in bars:
-				var root: int = STAGE_ROOTS[b / 4]
-				for s in 16:
-					if s % 4 == 0:
-						continue
-					var offset := 12 if s % 4 == 3 else 0
-					if b % 4 == 3 and s >= 12:
-						offset += 7
-					synth.bass_note(buf, b * bar + s * step, int(step * 0.83), root + offset, 0.15 if s % 4 == 2 else 0.10, 130.0, 1900.0 if b % 2 == 1 else 1150.0, 32.0, 2.7, 4.0, 0.45)
-				if b % 4 == 3:
-					for s in [10, 12, 14, 15]:
-						synth.sample_hit(buf, b * bar + s * step, &"kick_heavy", 0.11, 1.15, 0, step - 60, false, 30)
+						synth.tom(buf, at + s * step, 0.07, 170.0 - s * 5.0, 75.0, 24.0, 0.12)
+				if b % 8 == 0:
+					synth.cymbal(buf, at, 0.065, 6.0, 0.8)
+			&"tension":
 				if b % 4 == 2:
-					synth.lead_note(buf, b * bar + 10 * step, 2 * step, root + 24, 0.035, 1250.0, 10.0, 0.0, 0.4, 1.7)
-			synth.pump(buf, beat, 0.8, 0.65)
-			peak = 0.19
-		&"breaks":
-			# Measured eight-beat source follows the rounded destination grid, not nominal BPM.
-			var bpm := MusicSynth.RATE * 60.0 / beat
-			var rate := bpm / MusicSamples.BREAK_BPM
-			var source_step := MusicSynth.RATE * 15.0 / MusicSamples.BREAK_BPM
-			for b in bars:
-				var at := b * bar
-				if b % 4 == 2:
-					synth.sample_hit(buf, at, &"break", 0.14, rate, roundi((b % 2) * 16 * source_step), bar, true, 40)
-				elif b % 4 == 3:
-					for s in 16:
-						if s % 4 == 0:
-							continue
-						var chop: int = BREAK_CHOPS[random.randi_range(0, BREAK_CHOPS.size() - 1)]
-						synth.sample_hit(buf, at + s * step, &"break", 0.14 if s % 4 == 2 else 0.09, rate, roundi(chop * source_step), step, true, 45)
+					synth.bass_note(buf, at + 6 * step, beat * 2, root + 12, 0.065, 180.0, 1050.0, 3.0, 1.8, 2.0, 0.5)
+				if b % 8 == 7:
+					synth.riser(buf, at + 8 * step, beat * 2, 0.13, 250.0, 3900.0)
+			&"breaks":
+				var key: StringName = mix.break_clip
+				var source_at := mix.break_beat + (b % 2) * 4.0
+				if density >= 2 or b % 4 == 2:
+					_grid_slice(synth, buf, at, key, 0.14, 4.0, source_at, mix)
 				else:
 					for s in [6, 14]:
-						synth.sample_hit(buf, at + s * step, &"break", 0.085, rate, roundi(10 * source_step), step * 2, true, 45)
-			synth.pump(buf, beat, 0.6, 0.6)
-			peak = 0.16
+						_grid_slice(synth, buf, at + s * step, key, 0.1, 0.5, source_at + s * 0.25, mix)
+			&"rave":
+				# Repeat one intact two-bar 303 phrase; no new source or random chop per bar.
+				_grid_slice(synth, buf, at, mix.acid_clip, 0.07, 4.0, mix.acid_beat + (b % 2) * 4.0, mix)
+				# One recurring transition sound, only at eight-bar phrase endings.
+				if b % 8 == 7:
+					_grain(synth, buf, at + 10 * step, mix.fx_clip, 0.075, beat * 2, mix.fx_position)
+			&"vocals":
+				var index := mix.vocal_bars.find(b)
+				if index >= 0:
+					var key: StringName = mix.vocals[index % mix.vocals.size()]
+					var rate := random.randf_range(0.94, 1.08)
+					synth.sample_hit(buf, at + 10 * step, key, 0.3, rate, 0, beat * 2, false, 110)
+			_:
+				return PackedFloat32Array()
+	if mix.is_cancelled():
+		return PackedFloat32Array()
+	var peak := 0.16
+	match stem:
+		&"pad", &"boss_pad":
+			synth.sweep_lowpass(buf, 780.0, 300.0, 2.0)
+			peak = 0.11
+		&"pulse":
+			peak = 0.13
+		&"drums":
+			peak = 0.66
+		&"drive":
+			peak = 0.15
+		&"arp":
+			synth.echo(buf, step * 3, 0.25, 0.22, 0.55)
+			peak = 0.085
+		&"lead":
+			synth.echo(buf, step * 3, 0.22, 0.20, 0.6)
+			peak = 0.115
+		&"perc":
+			peak = 0.14
+		&"tension":
+			peak = 0.12
+		&"boss_drive":
+			peak = 0.19
 		&"rave":
-			for b in bars:
-				if b % 4 != 1 and b % 4 != 3:
-					continue
-				var at := b * bar
-				var rate := random.randf_range(0.88, 1.05)
-				for s in [2, 10]:
-					synth.sample_hit(buf, at + s * step, &"stab", 0.11, rate, 0, step * 2, false, 90)
-				if b % 4 == 3:
-					synth.sample_hit(buf, at + 14 * step, &"stab", 0.075, rate * 1.12, 0, step, false, 90)
-			for b in [7, 15]:
-				synth.sample_hit(buf, b * bar + 12 * step, &"fx", 0.075, 0.9, 0, beat, false, 120)
 			synth.echo(buf, step * 3, 0.16, 0.14, 0.65)
-			synth.pump(buf, beat, 0.7, 0.6)
 			peak = 0.15
 		&"vocals":
-			# Six short callouts per 16-bar loop leave space for full gameplay speech.
-			for k in VOCAL_KEYS.size():
-				var at: int = VOCAL_BARS[k] * bar + 10 * step
-				var key: StringName = VOCAL_KEYS[k]
-				var rate := random.randf_range(0.94, 1.08)
-				var length := beat * 3 if k == 0 or k == 2 else beat * 2
-				synth.sample_hit(buf, at, key, 0.3, rate, 0, length, false, 110)
-				if k == 1 or k == 3:
-					synth.sample_hit(buf, at + 4 * step, key, 0.1, rate * 1.07, 0, step, false, 110)
-			synth.pump(buf, beat, 0.3, 0.5)
 			peak = 0.22
-		_:
-			return PackedFloat32Array()
+	if stem != &"drums":
+		synth.pump(buf, beat, 0.55, 0.65)
 	synth.normalize(buf, peak, false)
 	return buf
+
+## The source window is chosen once per run and reused without pitch/offset randomization.
+static func _grain(synth: MusicSynth, buf: PackedFloat32Array, at: int, key: StringName, gain: float, length: int, position: float) -> void:
+	var source_frames := synth.sample_frames(key)
+	var span := mini(source_frames, length)
+	var source_start := roundi(position * maxi(0, source_frames - span))
+	synth.sample_hit(buf, at, key, gain, 1.0, source_start, length, false, 220)
+
+## Follow each recording's exact PCM beat grid, not its rounded 170 BPM label.
+static func _grid_slice(synth: MusicSynth, buf: PackedFloat32Array, at: int, key: StringName, gain: float, beats: float, source_beat: float, mix: MusicComposition) -> void:
+	var clip: Dictionary = MusicSamples.PACK.CLIPS[key]
+	var source_beat_frames: float = MusicSynth.RATE * 60.0 / float(clip.bpm)
+	var actual_bpm := MusicSynth.RATE * 60.0 / (mix.step * 4.0)
+	var source_start := roundi(fposmod(source_beat, float(clip.beats)) * source_beat_frames)
+	synth.sample_hit(buf, at, key, gain, actual_bpm / float(clip.bpm), source_start, roundi(beats * mix.step * 4.0), true, 45)
+
 
 # --- Menu --------------------------------------------------------------------------------------
 
 static func _menu(synth: MusicSynth, stem: StringName) -> PackedFloat32Array:
-	var step := step_samples(TRACK_BPM[&"menu"])
+	var step := step_samples(MENU_BPM)
 	var bar := step * 16
-	var bars: int = TRACK_BARS[&"menu"]
+	var bars: int = MENU_BARS
 	match stem:
 		&"pad":
 			# Pad, sub and arp repeat every 8 bars: render once, then double.
@@ -400,13 +351,6 @@ static func _fanfare(synth: MusicSynth, buf: PackedFloat32Array, hit: int, hold:
 
 # --- Helpers -----------------------------------------------------------------------------------
 
-## Expands one chord per four bars into the full sixteen-bar phrase.
-static func _four_bar_chords(chords: Array) -> Array:
-	var result := []
-	for chord in chords:
-		for _bar in 4:
-			result.append(chord)
-	return result
 
 ## Renders each chord voice as a legato line: repeated pitches across bars merge into one note,
 ## and every note releases over the next one's attack.

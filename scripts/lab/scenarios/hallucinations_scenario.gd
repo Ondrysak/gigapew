@@ -7,9 +7,10 @@ func title() -> String:
 	return "Recursive hallucinations"
 
 func summary() -> String:
-	return "Self-repeating native heads and limbs, inward head zoom and ghosted vision; real paused intensity input, precision shots and frozen anatomy"
+	return "Combo-driven world tunnels and recursive native anatomy; rendered 65%/100% ceilings, real paused settings, clear aim/HUD and precision shots"
 
 func run() -> void:
+	Profile.set_setting("hallucination_intensity", 0.65)
 	var game := await lab.start_game()
 	game.player.set_physics_process(false)
 	game.player.global_position = Vector3(0, 1, 15)
@@ -39,6 +40,29 @@ func run() -> void:
 	await lab.capture("default")
 	await lab.capture_strip("recursive_anatomy", 9, 0.8)
 
+	# Build the drive from actual direct-hit transactions, not an assigned count.
+	var vision := game.get_node("HallucinationVision") as HallucinationVision
+	var low_drive := vision.effective_intensity
+	lab.check(is_equal_approx(low_drive, 0.65 * 0.28), "an idle combo retains the low baseline beneath the saved 65% ceiling")
+	var combo_gun := lab.weapon("pulse").duplicate() as WeaponDefinition
+	combo_gun.damage = 0.01
+	combo_gun.jitter_degrees = 0.0
+	combo_gun.pierce = 0
+	game.run_state.initialize_primary(combo_gun)
+	game.player.refresh_weapon()
+	lab.aim_at(game.horde.weak_spot_position(mega))
+	for shot in 100:
+		game.player._shoot()
+	lab.check(game.player.combo_hits == 100, "100 real direct-hit shots build the full hallucination drive")
+	for frame in 240:
+		if is_equal_approx(vision.effective_intensity, 0.65):
+			break
+		await lab.get_tree().process_frame
+	game.horde._physics_process(0.3)
+	game.horde._process(0.0)
+	lab.aim_at(game.horde.enemy_position(mega))
+	lab.check(is_equal_approx(vision.effective_intensity, 0.65), "the real direct-hit chain raises hallucinations to the saved 65% ceiling")
+
 	# Hold poses and simulation while exercising the actual settings control.
 	# Only the new shader treatment may change between these snapshots.
 	game.set_process(false)
@@ -46,6 +70,12 @@ func run() -> void:
 	game.horde._fx.set_process(false)
 	game.player.set_process(false)
 	game._open_pause()
+	game.pause_menu.hide()
+	var default_feedback := await _image()
+	lab._save(default_feedback, "feedback_default_paused")
+	var default_source := await _without_feedback(vision)
+	lab._save(default_source, "feedback_default_source")
+	game.pause_menu.show()
 	game.pause_menu.settings_button.pressed.emit()
 	var settings = game.pause_menu.settings
 	await lab.frames(3)
@@ -63,24 +93,37 @@ func run() -> void:
 	game.pause_menu.hide()
 	var full := await _image()
 	await lab.capture("full")
+	var full_source := await _without_feedback(vision)
+	lab._save(full_source, "feedback_full_source")
+	lab.check(is_equal_approx(vision.effective_intensity, 1.0), "paused full slider input reaches the ceiling without changing the held combo")
 	var anatomy := _region(game.player.camera, game.horde.enemy_position(mega), Vector2i(100, 100))
 	var head := _region(game.player.camera, game.horde.weak_spot_position(mega), Vector2i(7, 7))
 	lab.check(_difference(off, full, anatomy) > 0.002, "actual paused slider input visibly adds recursive native anatomy")
 	lab.check(_difference(off, full, head) < 0.0005, "hallucination intensity leaves the main precision head readable")
 	var periphery := Rect2i(40, 285, 130, 155)
-	lab.check(_difference(off, full, periphery) > 0.01, "intensity adds strong peripheral feedback echoes and blur to the rendered world")
+	lab.check(_difference(off, full, periphery) > 0.01, "intensity adds strong peripheral feedback echoes to the rendered world")
+	var default_amount := _difference(default_source, default_feedback, periphery)
+	var full_amount := _difference(full_source, full, periphery)
+	lab.check(default_amount > 0.01, "the 65%% combo-driven ceiling visibly recurses the actual world (RGB difference %.4f)" % default_amount)
+	lab.check(full_amount > default_amount * 1.05, "100%% strengthens the world-only feedback beyond 65%% (%.4f vs %.4f)" % [full_amount, default_amount])
+	var size := default_feedback.get_size()
+	var clear_center := Rect2i(size / 2 - Vector2i(20, 20), Vector2i(40, 40))
+	lab.check(_difference(default_source, default_feedback, clear_center) < 0.0005 and _difference(full_source, full, clear_center) < 0.0005, "both ceilings preserve the clear pixel-circular aim center")
 	# HUD panels are translucent; their opaque health bar and text must stay unchanged.
 	lab.check(_difference(off, full, Rect2i(60, 638, 290, 18)) < 0.0005, "world feedback does not blur the health bar or its text")
+	lab.check(_difference(default_source, default_feedback, Rect2i(60, 638, 290, 18)) < 0.0005, "65% world feedback leaves the opaque HUD text and health bar crisp")
 	await lab.wait(0.4)
 	var held := await _image()
 	lab.check(_difference(full, held, anatomy) < 0.0005, "recursive anatomical motion remains frozen while paused")
 	lab.check(_difference(full, held, periphery) < 0.0005, "feedback zoom stops flowing while paused")
+	lab.check(is_equal_approx(vision.effective_intensity, 1.0) and game.player.combo_hits == 100, "pause freezes the combo-driven shader intensity as well as its clock")
 	game.pause_menu.show()
 	settings.hallucinations_slider.grab_focus()
 	await _slider_key(KEY_HOME)
 	game.pause_menu.hide()
 	var restored := await _image()
 	lab.check(_difference(off, restored, anatomy) < 0.0005 and _difference(off, restored, periphery) < 0.0005, "off removes recursive anatomy and the feedback pass, restoring the original scene")
+	lab.check(vision.effective_intensity == 0.0 and not vision.visible, "slider zero disables both shader intensity and the screen-reading layer exactly")
 	game._on_resume()
 	Profile.set_setting("hallucination_intensity", 1.0)
 
@@ -95,7 +138,7 @@ func run() -> void:
 	lab.aim_at(game.horde.weak_spot_position(mega))
 	game.player._shoot()
 	var precision := game.run_state.crit_multiplier + RunState.WEAK_SPOT_CRIT_BONUS
-	lab.check(is_equal_approx(before - game.horde._hp[mega], 10.0 * precision), "full hallucination intensity preserves real precision-shot damage")
+	lab.check(is_equal_approx(before - game.horde._hp[mega], 10.0 * (1.0 + game.player._combo_bonus()) * precision), "full hallucination intensity preserves real precision-shot damage and the earned combo bonus")
 	game.horde._process(0.0)
 	await lab.capture("precision_flash")
 	game.horde._physics_process(0.3)
@@ -161,6 +204,16 @@ func _head_cycle_boundary(game: ArenaGame, mega: int, species: String) -> void:
 	game.set_process(true)
 	game.horde.set_process(true)
 	game.horde._fx.set_process(true)
+
+func _without_feedback(vision: HallucinationVision) -> Image:
+	# Hold the same anatomy, camera, clock and HUD; remove only the screen pass.
+	# This comparison proves rendered recursion, not unrelated anatomy changes.
+	var was_visible := vision.visible
+	vision.visible = false
+	var source := await _image()
+	vision.visible = was_visible
+	await lab.frames(2)
+	return source
 
 
 func _slider_key(key: Key) -> void:

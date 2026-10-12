@@ -46,7 +46,7 @@ corner_radius_bottom_right = 0
 corner_radius_bottom_left = 0
 
 [node name="ClassCard" type="Button" node_paths=PackedStringArray("accent_bar", "badge", "icon_rect", "lock_icon", "name_label", "tagline_label", "status_label")]
-custom_minimum_size = Vector2(262, 196)
+custom_minimum_size = Vector2(212, 196)
 theme_override_styles/normal = SubResource("Style_normal")
 theme_override_styles/hover = SubResource("Style_hover")
 theme_override_styles/pressed = SubResource("Style_hover")
@@ -105,13 +105,14 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
+theme_type_variation = &"DisplayLabel"
 theme_override_font_sizes/font_size = 19
 text = "POSTAVA"
 vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="Tagline" type="Label" parent="Margin/Rows"]
-custom_minimum_size = Vector2(220, 0)
+custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2

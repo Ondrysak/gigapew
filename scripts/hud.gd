@@ -181,6 +181,10 @@ func _ready() -> void:
 	_build_abilities()
 	_build_combo_callout()
 	_build_gear_overlay()
+	var music_layers := MusicLayers.new()
+	music_layers.name = "MusicLayers"
+	add_child(music_layers)
+	move_child(music_layers, feedback.get_index())
 	tutor = Tutor.new()
 	add_child(tutor)
 	StreetWear.apply_tree(self)

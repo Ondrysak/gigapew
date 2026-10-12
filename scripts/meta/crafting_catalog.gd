@@ -20,6 +20,9 @@ static func recipes() -> Array[CraftRecipe]:
 	_weapon(&"weapon_minigun", "Bazarová kadence", preload("res://data/weapons/minigun.tres"), {&"gold": 24, &"crystal": 10})
 	_weapon(&"weapon_autocannon", "Bazarové výbuchy", preload("res://data/weapons/autocannon.tres"), {&"gold": 24, &"crystal": 12, &"shard": 3})
 	_weapon(&"weapon_flamethrower", "Bazarový plamen", preload("res://data/weapons/flamethrower.tres"), {&"gold": 18, &"crystal": 14})
+	_weapon(&"weapon_maschine", "Bedna na hard set", preload("res://data/weapons/maschine.tres"), {&"gold": 22, &"crystal": 12, &"shard": 2})
+	_weapon(&"weapon_cihlomet", "Cihly ze stavby", preload("res://data/weapons/cihlomet.tres"), {&"gold": 20, &"crystal": 8, &"shard": 3})
+	_weapon(&"weapon_tvarohomet", "Tvaroh pod tlakem", preload("res://data/weapons/tvarohomet.tres"), {&"gold": 20, &"crystal": 14, &"shard": 2})
 	_gadget(&"splitter", "Dvojitej panák", &"projectiles", "Na hlavní zbrani: +2 projektily na výstřel s mírným rozptylem.", {&"gold": 15, &"crystal": 10})
 	_gadget(&"blast_chamber", "Rána jak z výčepu", &"splash", "Na hlavní zbrani: +1,1 m poloměru výbuchu; výbuch má nejméně 60 % poškození střely.", {&"gold": 15, &"crystal": 12, &"shard": 2})
 	_gadget(&"fire_converter", "Rum a zapalovač", &"fire", "Na hlavní zbrani: ohnivé poškození zapaluje nepřátele.", {&"gold": 10, &"crystal": 15})
@@ -60,7 +63,7 @@ static func _recipe(id: StringName, title: String, category: StringName, descrip
 	return recipe
 
 static func _weapon(id: StringName, title: String, weapon: WeaponDefinition, costs: Dictionary) -> void:
-	var recipe := _recipe(id, title, &"weapon", "Nastaví výchozí hlavní zbraň: %s. Všech šest základních zbraní můžeš během běhu zdarma měnit." % weapon.display_name, costs)
+	var recipe := _recipe(id, title, &"weapon", "Nastaví výchozí hlavní zbraň: %s. Všechny základní zbraně můžeš během běhu zdarma měnit; výroba uloží výchozí blueprint." % weapon.display_name, costs)
 	recipe.weapon = weapon
 
 static func _gadget(id: StringName, title: String, kind: StringName, description: String, costs: Dictionary) -> void:

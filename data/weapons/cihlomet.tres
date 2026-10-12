@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WeaponDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_definition.gd" id="1_definition"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/cihlomet.tscn" id="2_view"]
+[ext_resource type="Texture2D" path="res://assets/icons/weapons/cihlomet.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+display_name = "Cihlomet"
+description = "Cihlomet (hlasky.txt:32). Tři opravdové cihly v úzké salvě; prorazí dva nepřátele v řadě a odhodí je ze stavby."
+damage = 90
+recoil_degrees = 0.16
+fire_interval = 0.46
+range_meters = 32.0
+pellet_count = 3
+spread_degrees = 1.6
+knockback = 24.0
+pierce = 1
+view_scene = ExtResource("2_view")
+icon = ExtResource("icon_px")

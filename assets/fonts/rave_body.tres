@@ -1,0 +1,10 @@
+[gd_resource type="FontVariation" load_steps=2 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/BarlowSemiCondensed-Medium.ttf" id="1_body"]
+
+[resource]
+resource_name = "Rave Body — Barlow Semi Condensed Medium"
+base_font = ExtResource("1_body")
+opentype_features = {
+"tnum": 1
+}

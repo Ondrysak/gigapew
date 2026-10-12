@@ -93,7 +93,6 @@ func enter_sandbox() -> void:
 	_loading = true
 	_reset()
 	_loading = false
-	RenderingServer.global_shader_parameter_set("hallucination_intensity", float(settings.hallucination_intensity))
 
 func is_sandboxed() -> bool:
 	return not _persistent
@@ -275,13 +274,13 @@ func primary_loadout(class_definition: ClassDefinition) -> WeaponDefinition:
 
 func available_primary_weapons(class_definition: ClassDefinition) -> Array[WeaponDefinition]:
 	var result: Array[WeaponDefinition] = []
-	for path in ["pulse", "scatter", "rail", "minigun", "autocannon", "flamethrower"]:
-		result.append(load("res://data/weapons/%s.tres" % path) as WeaponDefinition)
+	# The workshop is the canonical firearm catalog; recipes persist a starting
+	# blueprint, while every catalog gun remains free to select during a run.
+	for recipe in CraftingCatalog.recipes():
+		if recipe.category == &"weapon" and recipe.weapon != null and not result.has(recipe.weapon):
+			result.append(recipe.weapon)
 	if class_definition != null and class_definition.primary_weapon != null and not result.has(class_definition.primary_weapon):
 		result.append(class_definition.primary_weapon)
-	for recipe in CraftingCatalog.recipes():
-		if recipe.category == &"weapon" and recipe.weapon != null and craft_rank(recipe.id) > 0 and not result.has(recipe.weapon):
-			result.append(recipe.weapon)
 	return result
 
 func crafting_modifiers() -> Dictionary:
@@ -435,7 +434,6 @@ func reset_tips() -> void:
 	_mutated()
 
 func apply_settings() -> void:
-	RenderingServer.global_shader_parameter_set("hallucination_intensity", float(settings.get("hallucination_intensity", DEFAULT_SETTINGS.hallucination_intensity)))
 	for key: String in VOLUME_BUSES:
 		var bus := AudioServer.get_bus_index(VOLUME_BUSES[key])
 		if bus < 0:

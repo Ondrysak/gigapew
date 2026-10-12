@@ -186,6 +186,8 @@ func _update_label(slot: int) -> void:
 	var font_size := 27 if critical else (25 if _killed[slot] != 0 else 21)
 	var label := _labels[slot]
 	label.text = number
+	# Small ordinary hits stay clean; kills/crits carry the fractured flyer ink.
+	label.add_theme_font_override("font", StreetWear.DISPLAY_FONT if critical or _killed[slot] != 0 else StreetWear.BODY_FONT)
 	label.add_theme_color_override("font_color", DamageType.color(_kind[slot]))
 	label.add_theme_font_size_override("font_size", font_size)
 	var icon := _icons[slot]

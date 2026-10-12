@@ -1,6 +1,7 @@
 """Original metre-scale gun assets. Run: blender -b --python tools/guns/build_guns.py
 Rebuild one weapon: blender -b --python tools/guns/build_guns.py -- --weapon pulse
-(ids: pulse rail scatter minigun autocannon flamethrower; repeat --weapon for several)
+(ids: pulse rail scatter minigun autocannon flamethrower maschine cihlomet tvarohomet;
+repeat --weapon for several)
 Godot axes in authoring helpers: X right, Y up, -Z muzzle. No external assets.
 Every gun is improvised junk held by the same grimy fingerless-gloved hand.
 """
@@ -42,7 +43,7 @@ SKIN = material('Grimy skin', (.5,.25,.14), 0,.74)
 NAIL = material('Dirty nail', (.16,.12,.07), 0,.6)
 WOOL = material('Fingerless wool glove', (.11,.042,.032), 0,.97)
 JACKET = material('Worn jacket', (.05,.058,.03), 0,.9)
-# Junk shared by the other five guns: rust, tape, pipe, cardboard, vinyl.
+# Junk shared by the guns: rust, tape, pipe, cardboard, vinyl.
 # Dull finishes with a faint warm self-light, so tobacco, rust and bone stay
 # readable instead of picking up the arenas' blue ambient.
 RUST = material('Rusty rebar', (.2,.05,.018), .1,.72,.5)
@@ -76,6 +77,13 @@ RUMGLASS = material('Rum glass', (.11,.028,.007), 0,.3,.5)
 SPRAY = material('Hairspray can', (.22,.2,.16), .1,.5,.4)
 SPRAYCAP = material('Hairspray cap', (.22,.025,.018), 0,.6,.5)
 LIGHTER = material('Lighter body', (.32,.035,.022), 0,.4,.5)
+PAD = material('Rubber drum pads', (.04,.035,.045), 0,.88,.3)
+PADLIT = material('Cyan beat pads', (.03,.55,.72), 0,.45,.65)
+LED = material('Electrical beat', (.22,.75,1.0), 0,.35,2.0)
+BRICK = material('Chipped red brick', (.42,.12,.052), 0,.96,.4)
+BRICKDARK = material('Brick cavity', (.16,.035,.013), 0,.98,.3)
+CURD = material('White fresh curd', (.88,.91,.82), 0,.86,.3)
+DAIRYBLUE = material('Blue dairy print', (.025,.18,.48), 0,.6,.4)
 SHIFT = (-.03,.075,-.1)
 ROOT = None
 
@@ -597,8 +605,135 @@ def flamer():
     slab('Pipe strap',(-.02,y-.02,-.03),(.06,.012,.03),GAFFER,rot=(0,0,-35))
     MUZZLES['flamethrower']=(0,y,-.505)
 
+def maschine():
+    # hlasky.txt:349: "Ja pres maschine jsem real producer..."
+    # Drum-pad controller bolted to a forward-facing speaker. The electrical
+    # beat template is real zigzag geometry, not a recoloured bottle.
+    y=AIM_Y
+    rig=Rig((.07,-.09,.065),(-.1,.84,-.53)); fist(rig); handle(rig)
+    slab('Drum machine case',(0,y,-.075),(.23,.095,.26),DARKIRON)
+    slab('Controller face',(0,y+.05,-.075),(.218,.009,.248),IRON)
+    for row in range(4):
+        for col in range(4):
+            x=-.076+col*.04; z=-.16+row*.044
+            slab('Drum pad',(x,y+.06,z),(.033,.009,.036),PADLIT if (row+col)%3==0 else PAD)
+    slab('Beat display',(.084,y+.06,-.145),(.025,.004,.068),LED)
+    for z in (-.06,-.015,.028):
+        rod('Encoder',(.085,y+.054,z),(.085,y+.074,z),.013,.012,BONE,10)
+        slab('Encoder notch',(.085,y+.075,z),(.003,.002,.014),SIGNRED)
+    for x in (-.07,-.035,0,.035):
+        slab('Transport button',(x,y+.06,.038),(.022,.008,.014),SIGNRED if x==0 else BONE)
+    slab('Speaker cabinet',(0,y,-.295),(.215,.2,.17),WOOD)
+    slab('Speaker baffle',(0,y,-.386),(.202,.188,.015),DARKIRON)
+    # Recessed cone: axis points downrange, voice-coil cap at the centre.
+    revolve('Speaker cone',[(.0,0),(.027,0),(.05,.009),(.078,.035),(.084,.043)],
+            PAD,origin=(0,y,-.36),axis=(0,0,-1),side=(1,0,0),n=24)
+    torus('Speaker suspension',(0,y,-.4),(0,0,1),.087,.006,PAD,24)
+    torus('Speaker metal rim',(0,y,-.402),(0,0,1),.096,.003,IRON,24)
+    blob('Voice coil cap',(0,y,-.365),(.027,.027,.016),PADLIT,segments=12)
+    for x in (-.09,.09):
+        for dy in (-.078,.078):
+            rod('Cabinet screw',(x,y+dy,-.394),(x,y+dy,-.404),.005,.005,IRON,6)
+    for x in (-.12,.12):
+        rod('Speaker cable',(x,y-.025,-.19),(x,y-.03,.01),.006,.006,SIGNRED,6)
+        tape((x,y-.025,-.205),(x,y-.025,-.178),.01)
+    t=empty('ThrownBeat')
+    points=[(-.012,0,.055),(.018,.006,.025),(-.018,-.006,-.004),(.016,0,-.036),(0,0,-.065)]
+    for a,b in zip(points,points[1:]):
+        rod('Beat zigzag',a,b,.004,.003,LED,5,t)
+    torus('Beat pulse',(0,0,0),(0,0,1),.025,.003,PADLIT,10,parent=t)
+    MUZZLES['maschine']=(0,y,-.41)
+
+def brick(parent, c=(0,0,0), scale=1.0):
+    # Real open cavities between side walls and four cross-webs; terracotta
+    # variation and chips stay legible while a brick tumbles through the air.
+    c=Vector(c)
+    def part(name, p, size, mat=BRICK):
+        slab(name,c+Vector(p)*scale,tuple(v*scale for v in size),mat,parent=parent)
+    part('Brick base',(0,-.022,0),(.11,.012,.17))
+    for x in (-.049,.049):
+        part('Brick side',(x,.005,0),(.012,.045,.17))
+    for z in (-.079,-.027,.027,.079):
+        part('Brick web',(0,.005,z),(.086,.045,.012))
+    for z in (-.052,0,.052):
+        part('Brick cavity floor',(0,-.015,z),(.085,.002,.037),BRICKDARK)
+    part('Chipped corner',(-.05,.022,.067),(.013,.008,.017),BRICKDARK)
+    part('Mortar scar',(.055,0,-.028),(.002,.016,.045),BONE)
+
+def cihlomet():
+    # hlasky.txt:32: "Cihlomet". Open brick feeder, a spring ram and a welded
+    # rectangular guide: clearly a masonry launcher rather than a rifle.
+    y=AIM_Y
+    rig=Rig((.055,-.085,.085),(-.08,.85,-.52)); fist(rig); handle(rig)
+    slab('Launcher bed',(0,y-.03,-.19),(.15,.025,.5),IRON)
+    for x in (-.073,.073):
+        slab('Guide rail',(x,y+.004,-.22),(.014,.065,.46),RUST)
+        slab('Rail lip',(x,y+.04,-.22),(.026,.01,.46),IRON)
+    for z in (-.43,-.21,.025):
+        slab('Cross brace',(0,y-.047,z),(.185,.012,.034),RUSTDARK)
+    # Three clearly exposed bricks in a leaning feeder beside the guide.
+    for k in range(3):
+        brick(None,(-.135,y+.018+k*.06,-.07))
+    for z in (-.155,.015):
+        slab('Feeder upright',(-.195,y+.086,z),(.012,.22,.014),RUSTDARK)
+        slab('Feeder bracket',(-.12,y-.013,z),(.17,.012,.024),IRON)
+    slab('Feed ramp',(-.075,y-.006,-.08),(.065,.016,.16),RUST,rot=(0,0,12))
+    brick(None,(0,y+.017,-.305))
+    rod('Ram guide',(0,y-.007,.08),(0,y-.007,-.165),.015,.015,IRON,8)
+    for k in range(11):
+        torus('Ram spring',(0,y-.007,.05-k*.015),(0,0,1),.025,.004,RUSTDARK,10)
+    pump=empty('Pump')
+    slab('Ram block',(0,y-.009,-.18),(.108,.037,.03),IRON,parent=pump)
+    slab('Pump handle',(.097,y-.047,-.14),(.042,.039,.16),WOOD,parent=pump)
+    tape((.097,y-.047,-.11),(.097,y-.047,-.15),.029,parent=pump)
+    t=empty('ThrownBrick')
+    brick(t)
+    MUZZLES['cihlomet']=(0,y+.018,-.46)
+
+def curd_blob(parent):
+    blob('Curd lump',(0,0,0),(.048,.04,.068),CURD,segments=9,rings=6,parent=parent)
+    for c,r in (((-.033,.016,.014),(.028,.023,.032)),
+                ((.032,-.01,-.025),(.022,.025,.033)),
+                ((.012,.025,-.039),(.027,.023,.031))):
+        blob('Curd granule',c,r,CURD,segments=7,rings=4,parent=parent)
+
+def tvarohomet():
+    # hlasky.txt:68: "Tvaroh". Blue-print dairy tub, pressure gauge, manual pump
+    # and a fat nozzle; the flying template is a lumpy white curd clump.
+    y=AIM_Y
+    rig=Rig((.055,-.085,.08),(-.1,.84,-.53)); fist(rig); handle(rig)
+    slab('Pump frame',(0,y-.028,-.12),(.11,.055,.38),IRON)
+    tub=(-.105,y+.007,-.08)
+    revolve('Dairy tub',[(0,0),(.055,0),(.063,.025),(.074,.145),(.077,.15),(.0,.15)],
+            CURD,n=18,origin=tub)
+    revolve('Dairy blue label',[(.065,.038),(.071,.105)],DAIRYBLUE,n=18,origin=tub,smooth=False)
+    torus('Tub lid rim',(-.105,y+.159,-.08),(0,1,0),.077,.005,DAIRYBLUE,18)
+    slab('Dairy label stripe',(-.105,y+.086,.0),(.052,.023,.003),CURD)
+    # Three raised blocks form a simple dairy mark, not a texture placeholder.
+    for x in (-.125,-.105,-.085):
+        slab('Dairy label mark',(x,y+.086,.002),(.01,.014,.002),DAIRYBLUE)
+    rod('Lid inlet',(-.105,y+.16,-.08),(-.105,y+.205,-.08),.011,.011,IRON,8)
+    rod('Pressure feed',(-.105,y+.205,-.08),(0,y+.205,-.17),.011,.011,IRON,8)
+    rod('Nozzle elbow',(0,y+.205,-.17),(0,y+.024,-.24),.016,.016,IRON,8)
+    pipe('Curd nozzle',(0,y+.024,-.19),(0,y+.024,-.49),.039,.027,BONE,12)
+    torus('Nozzle rim',(0,y+.024,-.49),(0,0,1),.035,.007,DAIRYBLUE,12)
+    for z in (-.26,-.36):
+        tape((0,y+.024,z+.012),(0,y+.024,z-.012),.042,DUCT)
+    # Gauge faces the player, with a red needle set into its pale face.
+    disc('Gauge body',(.065,y+.084,-.145),(0,.3,1),.035,.012,IRON,16)
+    disc('Gauge face',(.065,y+.087,-.136),(0,.3,1),.029,.002,CURD,16)
+    rod('Gauge needle',(.065,y+.087,-.134),(.08,y+.102,-.138),.002,.002,SIGNRED,5)
+    rod('Pump cylinder',(.061,y-.04,-.16),(.061,y-.04,-.32),.023,.023,IRON,10)
+    pump=empty('Pump')
+    rod('Pump rod',(.061,y-.04,-.32),(.061,y-.04,-.405),.008,.008,IRON,8,pump)
+    slab('Pump grip',(.061,y-.04,-.385),(.056,.044,.08),DAIRYBLUE,parent=pump)
+    t=empty('ThrownCurd')
+    curd_blob(t)
+    MUZZLES['tvarohomet']=(0,y+.024,-.498)
+
 if __name__ == '__main__':
-    builders = [('pulse',beer),('rail',excalibur),('scatter',vinyly),('minigun',holubi),('autocannon',molotov),('flamethrower',flamer)]
+    builders = [('pulse',beer),('rail',excalibur),('scatter',vinyly),('minigun',holubi),('autocannon',molotov),('flamethrower',flamer),
+                ('maschine',maschine),('cihlomet',cihlomet),('tvarohomet',tvarohomet)]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--weapon', action='append', choices=[kind for kind, _ in builders],
                         help='Build only this weapon; repeat to select several. Default: all.')

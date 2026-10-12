@@ -1,0 +1,161 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/crossfader.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/crossfader.png" id="icon"]
+[sub_resource type="StandardMaterial3D" id="Case"]
+albedo_color = Color(0.065, 0.075, 0.11, 1)
+metallic = 0.45
+roughness = 0.32
+[sub_resource type="StandardMaterial3D" id="Vinyl"]
+albedo_color = Color(0.018, 0.018, 0.025, 1)
+roughness = 0.22
+[sub_resource type="StandardMaterial3D" id="Metal"]
+albedo_color = Color(0.62, 0.68, 0.75, 1)
+metallic = 0.8
+[sub_resource type="StandardMaterial3D" id="Neon"]
+shading_mode = 0
+albedo_color = Color(0.14, 0.88, 0.94, 1)
+emission_enabled = true
+emission = Color(0.05, 0.65, 0.85, 1)
+emission_energy_multiplier = 1.6
+[sub_resource type="StandardMaterial3D" id="Pulse"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+albedo_color = Color(0.12, 0.8, 1, 0.75)
+[sub_resource type="BoxMesh" id="Deck"]
+size = Vector3(1.65, 0.18, 0.82)
+[sub_resource type="CylinderMesh" id="Record"]
+top_radius = 0.29
+bottom_radius = 0.29
+height = 0.035
+radial_segments = 32
+[sub_resource type="CylinderMesh" id="Label"]
+top_radius = 0.075
+bottom_radius = 0.075
+height = 0.04
+radial_segments = 16
+[sub_resource type="BoxMesh" id="Arm"]
+size = Vector3(0.025, 0.035, 0.36)
+[sub_resource type="BoxMesh" id="Fader"]
+size = Vector3(0.12, 0.075, 0.055)
+[sub_resource type="BoxMesh" id="Speaker"]
+size = Vector3(0.5, 0.85, 0.4)
+[sub_resource type="TorusMesh" id="Ring"]
+inner_radius = 0.965
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+
+[node name="Crossfader" type="Node3D" node_paths=PackedStringArray("stage", "wave", "boundary", "platter_left", "platter_right", "fader")]
+script = ExtResource("1")
+display_name = "Crossfader"
+description = "Rozložíš gramce: šest pulzů po 12 poškození do 6 m střídavě přitahuje dav a odhazuje jej ven. Zóna zůstane na podlaze 3 s; stěny a jiné patro pulz zastaví. Rank přidá pulz, poškození a trvání; zkrátí cooldown. Ban zóna zesílí zásah."
+base_cooldown = 18.0
+accent_color = Color(0.12, 0.85, 1, 1)
+synth_activate = &"overdrive"
+icon = ExtResource("icon")
+stage = NodePath("Stage")
+boundary = NodePath("Stage/Boundary")
+wave = NodePath("Stage/Wave")
+platter_left = NodePath("Stage/Deck/Left")
+platter_right = NodePath("Stage/Deck/Right")
+fader = NodePath("Stage/Deck/Fader")
+
+[node name="Stage" type="Node3D" parent="."]
+visible = false
+[node name="Deck" type="Node3D" parent="Stage"]
+position = Vector3(0, 0.18, -0.9)
+[node name="Chassis" type="MeshInstance3D" parent="Stage/Deck"]
+mesh = SubResource("Deck")
+material_override = SubResource("Case")
+[node name="Left" type="Node3D" parent="Stage/Deck"]
+position = Vector3(-0.44, 0.115, 0)
+[node name="Vinyl" type="MeshInstance3D" parent="Stage/Deck/Left"]
+mesh = SubResource("Record")
+material_override = SubResource("Vinyl")
+[node name="Label" type="MeshInstance3D" parent="Stage/Deck/Left"]
+position = Vector3(0, 0.02, 0)
+mesh = SubResource("Label")
+material_override = SubResource("Neon")
+[node name="Marker" type="MeshInstance3D" parent="Stage/Deck/Left"]
+position = Vector3(0, 0.025, -0.19)
+scale = Vector3(1, 0.3, 0.3)
+mesh = SubResource("Arm")
+material_override = SubResource("Metal")
+[node name="Right" type="Node3D" parent="Stage/Deck"]
+position = Vector3(0.44, 0.115, 0)
+[node name="Vinyl" type="MeshInstance3D" parent="Stage/Deck/Right"]
+mesh = SubResource("Record")
+material_override = SubResource("Vinyl")
+[node name="Label" type="MeshInstance3D" parent="Stage/Deck/Right"]
+position = Vector3(0, 0.02, 0)
+mesh = SubResource("Label")
+material_override = SubResource("Neon")
+[node name="Marker" type="MeshInstance3D" parent="Stage/Deck/Right"]
+position = Vector3(0, 0.025, -0.19)
+scale = Vector3(1, 0.3, 0.3)
+mesh = SubResource("Arm")
+material_override = SubResource("Metal")
+[node name="TonearmLeft" type="MeshInstance3D" parent="Stage/Deck"]
+position = Vector3(-0.64, 0.18, -0.06)
+rotation = Vector3(0, -0.5, 0)
+mesh = SubResource("Arm")
+material_override = SubResource("Metal")
+[node name="TonearmRight" type="MeshInstance3D" parent="Stage/Deck"]
+position = Vector3(0.64, 0.18, -0.06)
+rotation = Vector3(0, 0.5, 0)
+mesh = SubResource("Arm")
+material_override = SubResource("Metal")
+[node name="FaderTrack" type="MeshInstance3D" parent="Stage/Deck"]
+position = Vector3(0, 0.12, 0.31)
+rotation = Vector3(0, 1.570796, 0)
+scale = Vector3(0.6, 0.35, 1.5)
+mesh = SubResource("Arm")
+material_override = SubResource("Metal")
+[node name="Fader" type="MeshInstance3D" parent="Stage/Deck"]
+position = Vector3(-0.24, 0.15, 0.31)
+mesh = SubResource("Fader")
+material_override = SubResource("Neon")
+[node name="SpeakerLeft" type="MeshInstance3D" parent="Stage"]
+position = Vector3(-1.4, 0.425, -0.85)
+rotation = Vector3(0, 0.3, 0)
+mesh = SubResource("Speaker")
+material_override = SubResource("Case")
+[node name="Cone" type="MeshInstance3D" parent="Stage/SpeakerLeft"]
+position = Vector3(0, -0.12, 0.205)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.65, 0.5, 0.65)
+mesh = SubResource("Record")
+material_override = SubResource("Neon")
+[node name="Tweeter" type="MeshInstance3D" parent="Stage/SpeakerLeft"]
+position = Vector3(0, 0.25, 0.21)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Label")
+material_override = SubResource("Metal")
+[node name="SpeakerRight" type="MeshInstance3D" parent="Stage"]
+position = Vector3(1.4, 0.425, -0.85)
+rotation = Vector3(0, -0.3, 0)
+mesh = SubResource("Speaker")
+material_override = SubResource("Case")
+[node name="Cone" type="MeshInstance3D" parent="Stage/SpeakerRight"]
+position = Vector3(0, -0.12, 0.205)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.65, 0.5, 0.65)
+mesh = SubResource("Record")
+material_override = SubResource("Neon")
+[node name="Tweeter" type="MeshInstance3D" parent="Stage/SpeakerRight"]
+position = Vector3(0, 0.25, 0.21)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Label")
+material_override = SubResource("Metal")
+[node name="Boundary" type="MeshInstance3D" parent="Stage"]
+scale = Vector3(6, 1, 6)
+mesh = SubResource("Ring")
+material_override = SubResource("Pulse")
+cast_shadow = 0
+[node name="Wave" type="MeshInstance3D" parent="Stage"]
+position = Vector3(0, 0.08, 0)
+mesh = SubResource("Ring")
+material_override = SubResource("Pulse")
+cast_shadow = 0

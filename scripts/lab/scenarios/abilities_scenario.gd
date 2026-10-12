@@ -4,10 +4,11 @@ func title() -> String:
 	return "Five hero abilities"
 
 func summary() -> String:
-	return "Physical 1–5 inputs, all four kits, real combat effects, independent protection and skill ranks"
+	return "Physical 1–5 inputs, every class kit, real combat effects, independent protection and skill ranks"
 
 func run() -> void:
-	for class_id: StringName in [&"scout", &"gunner", &"driller", &"engineer"]:
+	for definition in Profile.roster.classes:
+		var class_id: StringName = definition.id
 		if is_instance_valid(lab.game):
 			lab.game.free()
 		var game := await lab.start_game(class_id)

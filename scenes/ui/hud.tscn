@@ -184,6 +184,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="Contract"]
 layout_mode = 2
+theme_type_variation = &"DisplayLabel"
 theme_override_colors/font_color = Color(0.89, 0.83, 0.7, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
@@ -238,6 +239,7 @@ theme_override_constants/separation = 10
 [node name="Name" type="Label" parent="Boss/Row/Info/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"DisplayLabel"
 theme_override_colors/font_color = Color(1, 0.86, 0.76, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2

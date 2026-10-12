@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Kakaboomboom"
-config/version="0.6.0"
+config/version="0.7.0"
 run/main_scene="res://scenes/ui/intro.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
@@ -28,6 +28,10 @@ Music="*res://scripts/audio/music_director.gd"
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+
+[gui]
+
+theme/custom_font="res://assets/fonts/rave_body.tres"
 
 [input]
 

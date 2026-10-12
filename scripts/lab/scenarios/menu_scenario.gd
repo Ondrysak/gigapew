@@ -39,8 +39,7 @@ func _class_select(menu: Node) -> void:
 	await lab.wait(0.6)
 	await lab.capture("class_select")
 	await _class_details(screen)
-	# Every other operator through keyboard focus; the sandbox roster starts
-	# with only the first one unlocked, so these are the locked looks.
+	# Preview locked operators and the freely available producer through focus.
 	for card in screen._cards.slice(1):
 		card.grab_focus()
 		await lab.wait(0.4)

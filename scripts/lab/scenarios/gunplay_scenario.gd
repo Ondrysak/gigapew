@@ -4,7 +4,7 @@ func title() -> String:
 	return "Single-primary gunplay"
 
 func summary() -> String:
-	return "Unlimited sustained fire, weapon swaps retain upgrades, stable aim and menu input guards"
+	return "Unlimited fire, forgiving hit-chain grace/decay, unchanged damage bonus, weapon upgrades, stable aim and menu input guards"
 
 func run() -> void:
 	var game := await lab.start_game()
@@ -28,6 +28,42 @@ func run() -> void:
 	lab.check(player.head.global_basis.is_equal_approx(aim_before), "sustained shooting never drifts aim")
 	await lab.capture("unlimited_fire")
 
+	var chain: int = player.combo_hits
+	lab.check(chain >= 7, "real sustained direct hits build a capped-bonus chain")
+	await lab.wait(3.0)
+	lab.check(player.combo_hits == chain, "a three-second movement gap preserves the full hit chain")
+	await lab.capture("combo_grace")
+	var remaining: float = player._combo_left
+	lab.aim_at(player.camera.global_position + Vector3.UP * 10.0)
+	player._shoot()
+	lab.check(player.combo_hits == chain and is_equal_approx(player._combo_left, remaining), "an actual missed shot neither erases nor refreshes the chain")
+	var health_before: int = player.health
+	player._invulnerable = 0.0
+	player.take_damage(1)
+	lab.check(player.health == health_before - 1 and player.combo_hits == chain - 2, "real nonlethal damage costs two beats rather than the whole chain")
+	player.grant_invulnerability(1.0e9)
+	chain = player.combo_hits
+	await _wait_decay(player)
+	var first_decay := maxi(0, chain - maxi(1, ceili(chain * 0.1)))
+	lab.check(player.combo_hits == first_decay and first_decay > 0, "idle expiry removes only one ten-percent step instead of wiping the chain")
+	await lab.capture("combo_decay")
+	await _wait_decay(player)
+	var second_decay := maxi(0, first_decay - maxi(1, ceili(first_decay * 0.1)))
+	lab.check(player.combo_hits == second_decay, "idle decay continues gradually at the next interval")
+	var body := game.horde.enemy_position(target) + Vector3.UP * 0.45
+	player.global_position = game.horde.enemy_position(target) + Vector3(0, 1, 6)
+	await lab.frames(2)
+	lab.aim_at(body)
+	game.horde._hp[target] = 10000.0
+	var damage_before: float = game.horde._hp[target]
+	player._shoot()
+	lab.check(player.combo_hits == second_decay + 1 and game.horde._hp[target] < damage_before, "a fresh real hit resumes the decaying chain")
+	lab.check(absf((damage_before - game.horde._hp[target]) - player.weapon.damage * game.run_state.damage_multiplier * 1.4) < 0.05, "the next real body shot retains the existing forty-percent bonus cap")
+	chain = player.combo_hits
+	await lab.wait(3.0)
+	lab.check(player.combo_hits == chain, "a renewed hit restores the full grace period")
+	await lab.capture("combo_renewed")
+
 	var build := game.run_state.primary
 	build.upgrade(&"damage")
 	build.upgrade(&"cadence")
@@ -48,8 +84,11 @@ func run() -> void:
 	var count: int = shots[0]
 	Input.action_press(&"fire")
 	await lab.wait(0.3)
+	var paused_chain: int = player.combo_hits
+	var paused_grace: float = player._combo_left
 	lab.check(shots[0] == count, "paused held trigger cannot shoot")
 	game._on_resume()
+	lab.check(player.combo_hits == paused_chain and is_equal_approx(player._combo_left, paused_grace), "pause preserves both combo count and remaining decay time")
 	await lab.wait(0.35)
 	lab.check(shots[0] == count, "a held menu click does not fire when play resumes")
 	lab.fire(false)
@@ -58,3 +97,11 @@ func run() -> void:
 	await lab.wait(0.45)
 	lab.fire(false)
 	lab.check(shots[0] > count, "release and a fresh trigger press restores firing after the menu")
+
+func _wait_decay(player: ArenaPlayer) -> void:
+	var before := player.combo_hits
+	for frame in 600:
+		await lab.get_tree().physics_frame
+		if player.combo_hits < before:
+			return
+	lab.check(false, "an idle hit chain eventually decays")

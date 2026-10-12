@@ -1,0 +1,10 @@
+[gd_resource type="FontVariation" load_steps=2 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/RubikGlitch-Regular.ttf" id="1_display"]
+
+[resource]
+resource_name = "Rave Display — Rubik Glitch"
+base_font = ExtResource("1_display")
+opentype_features = {
+"tnum": 1
+}

@@ -352,6 +352,10 @@ func bell(buf: PackedFloat32Array, start: int, length: int, midi: float, gain: f
 
 # --- Sample voices -----------------------------------------------------------------------------
 
+func sample_frames(key: StringName) -> int:
+	var source: PackedFloat32Array = _bank[key]
+	return source.size()
+
 ## Linearly interpolated mono sample, with destination tails wrapping through the loop seam.
 ## `source_start` is in source samples; `length` is in destination samples (0 = remaining source).
 ## Source wrapping is for tempo-locked break chops, not one-shots. Edges fade in/out independently

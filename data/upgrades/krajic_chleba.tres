@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/krajic_chleba.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"krajic_chleba"
+display_name = "Krajíc chleba"
+description = "Pořádná svačina: maximum zdraví +15 a regenerace +0,4/s, ale pohyb -3 %."
+level_descriptions = PackedStringArray("Maximum zdraví +15, regenerace +0,4/s a rychlost pohybu -3 %.", "Celkem maximum zdraví +30, regenerace +0,8/s a rychlost pohybu -6 %.", "Celkem maximum zdraví +45, regenerace +1,2/s a rychlost pohybu -9 %.")
+max_level = 3
+weight = 0.9
+accent_color = Color(0.95, 0.73, 0.38, 1)
+max_health_bonus = 15
+regen_per_second = 0.4
+move_speed_multiplier = -0.03
+icon = ExtResource("icon_px")

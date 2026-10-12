@@ -35,15 +35,16 @@ void fragment() {
 	vec2 centered = (uv - vec2(0.5)) * vec2(aspect, 1.0);
 	float radius = length(centered);
 	float peripheral = smoothstep(0.11, 0.46, radius);
-	if (peripheral <= 0.0) {
+	if (strength <= 0.0 || peripheral <= 0.0) {
 		COLOR = vec4(original, 1.0);
 	} else {
 		float t = hallucination_time;
-		// Soft blur plus a slowly drifting double image.
+		// Keep source edges crisp: the stronger effect comes from recursion,
+		// folding and separated color copies, not an enlarged blur footprint.
 		vec2 drift = vec2(sin(t * 0.21), sin(t * 0.17 + 1.8));
 		vec2 ghost = (vec2(0.86, 0.32) + drift * vec2(0.12, 0.10))
 			* SCREEN_PIXEL_SIZE * ((4.0 + 13.0 * strength) * strength * peripheral);
-		vec2 blur = SCREEN_PIXEL_SIZE * (1.0 + 3.0 * strength) * peripheral;
+		vec2 blur = SCREEN_PIXEL_SIZE * (0.75 + 1.25 * strength) * peripheral;
 		vec3 soft = original * 0.40;
 		soft += world_sample(uv + vec2(blur.x, 0.0), edge) * 0.15;
 		soft += world_sample(uv - vec2(blur.x, 0.0), edge) * 0.15;
@@ -52,7 +53,7 @@ void fragment() {
 		vec3 forward_ghost = world_sample(uv + ghost, edge);
 		vec3 trailing_ghost = world_sample(uv - ghost * 0.78, edge);
 		vec3 afterimage = mix(trailing_ghost, forward_ghost, 0.62);
-		vec3 vision = mix(mix(original, soft, 0.65 * strength), afterimage, 0.55 * strength);
+		vec3 vision = mix(mix(original, soft, 0.24 * strength), afterimage, 0.34 * strength);
 
 		// Fraksl-style video feedback, unrolled. A live loop
 		//   next = frame + decay * hue(warp(previous))
@@ -62,17 +63,20 @@ void fragment() {
 		// further out, so mirror-tiled copies of the world nest inside each
 		// other; depth slides by one level per cycle, shrinking them endlessly
 		// toward the aim point like a video tunnel.
+		float feedback = strength * (1.45 - 0.45 * strength);
 		float flow = fract(t * 0.07);
-		float twist = 0.06 + 0.07 * sin(t * 0.05);
-		vec2 wander = vec2(sin(t * 0.13), cos(t * 0.11)) * 0.010;
+		float twist = (0.08 + 0.10 * sin(t * 0.05)) * (0.70 + 0.80 * strength);
+		vec2 wander = vec2(sin(t * 0.13), cos(t * 0.11)) * 0.016 * feedback;
 		float fold_angle = t * 0.04;
+		float zoom = 1.30 + 0.35 * strength;
+		float decay = 0.80 + 0.08 * strength;
 		vec3 echoes = vec3(0.0);
 		float total = 0.0;
 		for (int level = 0; level < LEVELS; level++) {
 			float depth = float(level) + flow;
 			vec2 p = centered;
 			// Deeper echoes fold into a six-way mirror, like crystaldive's polar folds.
-			float fold = smoothstep(1.5, 3.8, depth) * strength;
+			float fold = smoothstep(0.75, 2.75, depth) * feedback;
 			if (fold > 0.0) {
 				float sector = TAU / 6.0;
 				float theta = atan(p.y, p.x) + fold_angle;
@@ -81,22 +85,23 @@ void fragment() {
 			}
 			float angle = twist * depth;
 			p = mat2(vec2(cos(angle), sin(angle)), vec2(-sin(angle), cos(angle))) * p
-				* pow(1.30, depth) + wander * depth;
+				* pow(zoom, depth) + wander * depth;
 			vec2 q = mirror_wrap(p / vec2(aspect, 1.0) + vec2(0.5));
-			// Chromatic separation widens with depth: blurrier, older echoes.
-			vec2 split = (q - vec2(0.5)) * 0.010 * depth * strength;
+			// Separate crisp RGB copies instead of broadening the blur kernel.
+			vec2 split = (q - vec2(0.5)) * 0.026 * depth * feedback;
 			vec3 echo = vec3(world_sample(q + split, edge).r, world_sample(q, edge).g, world_sample(q - split, edge).b);
-			echo = hue_shift(echo, 0.14 * depth * strength);
+			echo = hue_shift(echo, 0.24 * depth * feedback);
 			float window = smoothstep(0.0, 1.0, depth)
 				* (1.0 - smoothstep(float(LEVELS) - 1.6, float(LEVELS), depth));
-			float weight = pow(0.74, depth) * window;
+			// Retain deeper copies, but normalize the sum rather than darken it.
+			float weight = pow(decay, depth) * window;
 			echoes += echo * weight;
 			total += weight;
 		}
 		echoes /= max(total, 0.0001);
 		float luma = dot(echoes, vec3(0.299, 0.587, 0.114));
-		echoes = mix(vec3(luma), echoes, 1.0 + 0.35 * strength);
-		vision = mix(vision, echoes, 0.72 * strength);
+		echoes = clamp(mix(vec3(luma), echoes, 1.0 + 0.28 * feedback), vec3(0.0), vec3(1.0));
+		vision = mix(vision, echoes, 0.94 * feedback);
 		COLOR = vec4(mix(original, vision, peripheral), 1.0);
 	}
 }

@@ -1,0 +1,103 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_view.gd" id="1_view"]
+[ext_resource type="PackedScene" path="res://assets/guns/tvarohomet.glb" id="2_model"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_impact"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.95, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hit"]
+shading_mode = 0
+albedo_color = Color(0.3, 0.8, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_curd"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.94, 0.98, 0.9, 0.72)
+
+[sub_resource type="StandardMaterial3D" id="Mat_frost"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+albedo_color = Color(0.3, 0.8, 1, 0.35)
+
+[sub_resource type="SphereMesh" id="Mesh_splash"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="Mesh_curd_chip"]
+radius = 0.024
+height = 0.048
+radial_segments = 7
+rings = 4
+
+[node name="Tvarohomet" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template", "blast_template")]
+script = ExtResource("1_view")
+muzzle = NodePath("Model/tvarohomet/Muzzle")
+impact_material = SubResource("Mat_impact")
+target_impact_material = SubResource("Mat_hit")
+shot_cue = &"scatter"
+shot_volume_db = -11.0
+recoil_distance = 0.024
+recoil_angle = 0.036
+recoil_lift = 0.15
+recoil_frequency = 6.5
+recoil_damping = 0.85
+projectile_template = NodePath("Model/tvarohomet/ThrownCurd")
+projectile_pool_size = 12
+projectile_speed = 50.0
+projectile_scale = 2.1
+projectile_arc = 0.012
+projectile_spin = 7.0
+shard_mesh = SubResource("Mesh_curd_chip")
+shard_material = SubResource("Mat_curd")
+shards_per_hit = 5
+blast_template = NodePath("FrostSplashTemplate")
+blast_pool_size = 10
+blast_duration = 0.32
+blast_visual_scale = 0.82
+blast_keep_materials = true
+min_view_clearance = 1.0
+casing_pool_size = 0
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="FrostSplashTemplate" type="Node3D" parent="."]
+visible = false
+
+[node name="ColdHalo" type="MeshInstance3D" parent="FrostSplashTemplate"]
+scale = Vector3(1, 0.65, 1)
+mesh = SubResource("Mesh_splash")
+material_override = SubResource("Mat_frost")
+cast_shadow = 0
+
+[node name="WhiteSplash" type="MeshInstance3D" parent="FrostSplashTemplate"]
+scale = Vector3(0.82, 0.15, 0.82)
+mesh = SubResource("Mesh_splash")
+material_override = SubResource("Mat_curd")
+cast_shadow = 0
+
+[node name="CurdLobeA" type="MeshInstance3D" parent="FrostSplashTemplate"]
+position = Vector3(0.32, 0.12, -0.18)
+scale = Vector3(0.42, 0.3, 0.35)
+mesh = SubResource("Mesh_splash")
+material_override = SubResource("Mat_curd")
+cast_shadow = 0
+
+[node name="CurdLobeB" type="MeshInstance3D" parent="FrostSplashTemplate"]
+position = Vector3(-0.35, 0.18, 0.2)
+scale = Vector3(0.34, 0.4, 0.3)
+mesh = SubResource("Mesh_splash")
+material_override = SubResource("Mat_curd")
+cast_shadow = 0
+
+[node name="CurdLobeC" type="MeshInstance3D" parent="FrostSplashTemplate"]
+position = Vector3(0.1, -0.08, 0.42)
+scale = Vector3(0.3, 0.25, 0.4)
+mesh = SubResource("Mesh_splash")
+material_override = SubResource("Mat_curd")
+cast_shadow = 0

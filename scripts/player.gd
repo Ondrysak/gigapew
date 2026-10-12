@@ -5,7 +5,7 @@ signal health_changed(current: int, maximum: int)
 signal died
 signal shot_fired
 signal hit_confirmed(killed: bool)
-## Consecutive direct-hit shots; misses, taking damage or a 2.5 s gap reset it.
+## Direct-hit chain: forgiving low counts, increasing time pressure at high counts.
 signal combo_changed(hits: int, bonus: float)
 signal weapon_changed(definition: WeaponDefinition)
 signal ability_used(ability: ActiveAbility)
@@ -19,7 +19,12 @@ const JUMP_SPEED := 6.5
 const GRAVITY := 21.0
 const JUMP_GRACE := 0.12
 const MOUSE_SENSITIVITY := 0.0025
-const COMBO_WINDOW := 2.5
+const COMBO_WINDOW := 6.0
+const COMBO_DECAY_INTERVAL := 1.5
+const COMBO_MIN_WINDOW := 3.0
+const COMBO_MIN_DECAY_INTERVAL := 0.45
+const COMBO_PRESSURE_START := 10
+const COMBO_PRESSURE_FULL := 100
 const COMBO_MAX_BONUS := 0.4
 ## Visual camera kick spring (radians, Hz-derived) and its accumulation cap.
 const CAMERA_KICK_OMEGA := TAU * 5.0
@@ -55,6 +60,14 @@ var _draw_left := 0.0
 var _waiting_for_mine_release := false
 var combo_hits := 0
 var _combo_left := 0.0
+## Snapshot the current phase's period; damage never extends its deadline.
+var _combo_period := COMBO_WINDOW
+var combo_intensity: float:
+	get:
+		return clampf(float(combo_hits) / float(COMBO_PRESSURE_FULL), 0.0, 1.0)
+var combo_fraction: float:
+	get:
+		return clampf(_combo_left / _combo_period, 0.0, 1.0)
 var _quickdraw_left := 0.0
 var _waiting_for_fire_release := false
 var _coyote_time := 0.0
@@ -366,10 +379,13 @@ func _physics_process(delta: float) -> void:
 	_invulnerable = maxf(0.0, _invulnerable - delta)
 	for id: StringName in _combo_quiet:
 		_combo_quiet[id] = maxf(0.0, float(_combo_quiet[id]) - delta)
-	if _combo_left > 0.0:
+	if combo_hits > 0:
 		_combo_left -= delta
-		if _combo_left <= 0.0:
-			_reset_combo()
+		while _combo_left <= 0.0 and combo_hits > 0:
+			_lose_combo(maxi(1, ceili(combo_hits * 0.1)))
+			if combo_hits > 0:
+				_combo_period = _combo_phase_period(false)
+				_combo_left += _combo_period
 	_quickdraw_left = maxf(0.0, _quickdraw_left - delta)
 	if run_state != null and run_state.regen_per_second > 0.0 and health < max_health:
 		_regen += run_state.regen_per_second * delta
@@ -495,7 +511,7 @@ func _shoot() -> void:
 	var quickdraw := _quickdraw_left > 0.0
 	if quickdraw:
 		_quickdraw_left = 0.0 # A switched firearm spends its capacitor even on a miss.
-	var combo_bonus := minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08))
+	var combo_bonus := _combo_bonus()
 	var shot_damage := definition.damage * (run_state.damage_multiplier if run_state != null else 1.0) \
 			* (1.0 + combo_bonus) * (1.75 if quickdraw else 1.0)
 	var pierce := definition.pierce + (run_state.pierce_bonus if run_state != null else 0)
@@ -607,10 +623,9 @@ func _shoot() -> void:
 		gear_effects.process_primary_shot(_hit_count, _hit_slots, _hit_generation, _hit_position, _hit_direct_damage, _hit_killed, _hit_applied)
 	if direct_confirmed:
 		combo_hits += 1 # One beat per direct-hit shot, not per pellet or blast victim.
-		_combo_left = COMBO_WINDOW
-		combo_changed.emit(combo_hits, minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08)))
-	else:
-		_reset_combo()
+		_combo_period = _combo_phase_period(true)
+		_combo_left = _combo_period
+		combo_changed.emit(combo_hits, _combo_bonus())
 	if confirmed:
 		var killed := horde.alive_count < alive_before
 		hit_confirmed.emit(killed)
@@ -629,12 +644,25 @@ func _shoot() -> void:
 	var bloom := 0.08 + definition.spread_degrees / 14.0 + definition.jitter_degrees / 10.0 + definition.recoil_degrees * 0.5
 	aim_bloom = minf(1.0, aim_bloom + bloom * (1.0 - aim_bloom * 0.6))
 
-func _reset_combo() -> void:
+## The low-chain grace stays generous; pressure saturates instead of reaching zero.
+func _combo_phase_period(grace: bool) -> float:
+	var pressure := clampf(float(combo_hits - COMBO_PRESSURE_START) / float(COMBO_PRESSURE_FULL - COMBO_PRESSURE_START), 0.0, 1.0)
+	return lerpf(COMBO_WINDOW, COMBO_MIN_WINDOW, pressure) if grace else lerpf(COMBO_DECAY_INTERVAL, COMBO_MIN_DECAY_INTERVAL, pressure)
+
+func _combo_bonus() -> float:
+	return minf(COMBO_MAX_BONUS, maxf(0.0, float(combo_hits - 2) * 0.08))
+
+func _lose_combo(beats: int) -> void:
 	if combo_hits == 0:
 		return
-	combo_hits = 0
-	_combo_left = 0.0
-	combo_changed.emit(0, 0.0)
+	combo_hits = maxi(0, combo_hits - beats)
+	if combo_hits == 0:
+		_combo_left = 0.0
+		_combo_period = COMBO_WINDOW
+	combo_changed.emit(combo_hits, _combo_bonus())
+
+func _reset_combo() -> void:
+	_lose_combo(combo_hits)
 
 func _add_hit(slot: int, amount: float, critical: bool, direct: bool) -> void:
 	var index := _hit_lookup[slot]
@@ -672,17 +700,19 @@ func remove_death_guard(guard: Callable) -> void:
 func take_damage(amount: int) -> void:
 	if not active or amount <= 0 or is_invulnerable():
 		return
-	_reset_combo()
 	var armor := run_state.armor if run_state != null else 0.0
 	var incoming := maxi(1, amount - int(armor))
 	if gear_effects != null:
 		incoming = gear_effects.absorb_damage(incoming)
+	if incoming > 0:
+		_lose_combo(2)
 	health = maxi(0, health - incoming)
 	if health == 0 and _survives_lethal_hit():
 		health = 1
 	health_changed.emit(health, max_health)
 	sound.play_cue(&"hurt")
 	if health == 0:
+		_reset_combo()
 		active = false
 		cancel_actions()
 		velocity = Vector3.ZERO

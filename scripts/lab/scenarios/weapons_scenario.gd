@@ -1,12 +1,12 @@
 extends LabScenario
 
-const WEAPONS := ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower"]
+const WEAPONS := ["pulse", "rail", "scatter", "minigun", "autocannon", "flamethrower", "maschine", "cihlomet", "tvarohomet"]
 
 func title() -> String:
 	return "Weapons"
 
 func summary() -> String:
-	return "Every primary weapon (beer bottles, rebar spikes, vinyl discs, pigeons, molotovs, flame) mid-burst against a pack, plus a close-range flight strip"
+	return "Every primary weapon mid-burst against a pack, including shock beats, piercing bricks and frost curd, plus close-range projectile flight"
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")

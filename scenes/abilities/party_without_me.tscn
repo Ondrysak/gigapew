@@ -1,0 +1,152 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/abilities/party_without_me.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/icons/abilities/party_without_me.png" id="icon"]
+[sub_resource type="StandardMaterial3D" id="Case"]
+albedo_color = Color(0.08, 0.045, 0.14, 1)
+roughness = 0.68
+[sub_resource type="StandardMaterial3D" id="Cone"]
+albedo_color = Color(0.16, 0.18, 0.25, 1)
+metallic = 0.45
+roughness = 0.25
+[sub_resource type="StandardMaterial3D" id="Chrome"]
+albedo_color = Color(0.55, 0.62, 0.72, 1)
+metallic = 0.8
+[sub_resource type="StandardMaterial3D" id="Neon"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.12, 1, 1)
+emission_enabled = true
+emission = Color(0.7, 0.05, 0.95, 1)
+emission_energy_multiplier = 1.5
+[sub_resource type="StandardMaterial3D" id="Pulse"]
+shading_mode = 0
+transparency = 1
+blend_mode = 1
+albedo_color = Color(0.42, 0.8, 1, 0.6)
+[sub_resource type="BoxMesh" id="Cabinet"]
+size = Vector3(0.88, 1.3, 0.62)
+[sub_resource type="CylinderMesh" id="Woofer"]
+top_radius = 0.28
+bottom_radius = 0.21
+height = 0.075
+radial_segments = 24
+[sub_resource type="SphereMesh" id="Dome"]
+radius = 0.08
+height = 0.16
+radial_segments = 12
+rings = 6
+[sub_resource type="TorusMesh" id="Rim"]
+inner_radius = 0.27
+outer_radius = 0.31
+rings = 24
+ring_segments = 6
+[sub_resource type="TorusMesh" id="Wave"]
+inner_radius = 0.96
+outer_radius = 1.0
+rings = 48
+ring_segments = 6
+[sub_resource type="BoxMesh" id="Bar"]
+size = Vector3(0.055, 0.055, 0.4)
+[sub_resource type="CylinderMesh" id="Port"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.035
+radial_segments = 12
+
+[node name="PartyWithoutMe" type="Node3D" node_paths=PackedStringArray("speaker_template")]
+script = ExtResource("1")
+display_name = "Party without me"
+description = "Umístíš reprák na volnou podlahu do 14 m a můžeš odejít. Osm sekund pulzuje do 4,5 m: 14 mrazivého poškození každých 0,8 s a zpomalení na 55 %. Stěny i jiné patro blokují zásah. Rank zvyšuje sílu a dobu párty; zkrátí cooldown."
+base_cooldown = 22.0
+accent_color = Color(0.8, 0.2, 1, 1)
+synth_activate = &"seismic_throw"
+icon = ExtResource("icon")
+speaker_template = NodePath("SpeakerTemplate")
+
+[node name="SpeakerTemplate" type="Node3D" parent="."]
+visible = false
+[node name="Cabinet" type="Node3D" parent="SpeakerTemplate"]
+position = Vector3(0, 0.72, 0)
+[node name="Box" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+mesh = SubResource("Cabinet")
+material_override = SubResource("Case")
+[node name="Woofer" type="Node3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0, -0.15, 0.33)
+rotation = Vector3(1.570796, 0, 0)
+[node name="Cone" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet/Woofer"]
+mesh = SubResource("Woofer")
+material_override = SubResource("Cone")
+[node name="Dustcap" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet/Woofer"]
+position = Vector3(0, 0.05, 0)
+scale = Vector3(1, 0.5, 1)
+mesh = SubResource("Dome")
+material_override = SubResource("Neon")
+[node name="Rim" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0, -0.15, 0.335)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Rim")
+material_override = SubResource("Chrome")
+[node name="Tweeter" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0, 0.36, 0.33)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.42, 1, 0.42)
+mesh = SubResource("Woofer")
+material_override = SubResource("Chrome")
+[node name="PortLeft" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(-0.2, -0.5, 0.325)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Port")
+material_override = SubResource("Cone")
+[node name="PortRight" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0.2, -0.5, 0.325)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Port")
+material_override = SubResource("Cone")
+[node name="HandleLeft" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(-0.16, 0.72, 0)
+scale = Vector3(1, 1, 0.45)
+mesh = SubResource("Bar")
+material_override = SubResource("Chrome")
+[node name="HandleRight" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0.16, 0.72, 0)
+scale = Vector3(1, 1, 0.45)
+mesh = SubResource("Bar")
+material_override = SubResource("Chrome")
+[node name="HandleTop" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0, 0.76, 0)
+rotation = Vector3(0, 1.570796, 0)
+scale = Vector3(1, 1, 0.8)
+mesh = SubResource("Bar")
+material_override = SubResource("Chrome")
+[node name="LedStripLeft" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(-0.37, 0, 0.325)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.5, 0.6, 2.4)
+mesh = SubResource("Bar")
+material_override = SubResource("Neon")
+[node name="LedStripRight" type="MeshInstance3D" parent="SpeakerTemplate/Cabinet"]
+position = Vector3(0.37, 0, 0.325)
+rotation = Vector3(1.570796, 0, 0)
+scale = Vector3(0.5, 0.6, 2.4)
+mesh = SubResource("Bar")
+material_override = SubResource("Neon")
+[node name="FootLeft" type="MeshInstance3D" parent="SpeakerTemplate"]
+position = Vector3(-0.32, 0.045, 0)
+scale = Vector3(2, 1.5, 1.6)
+mesh = SubResource("Bar")
+material_override = SubResource("Chrome")
+[node name="FootRight" type="MeshInstance3D" parent="SpeakerTemplate"]
+position = Vector3(0.32, 0.045, 0)
+scale = Vector3(2, 1.5, 1.6)
+mesh = SubResource("Bar")
+material_override = SubResource("Chrome")
+[node name="Wave" type="MeshInstance3D" parent="SpeakerTemplate"]
+position = Vector3(0, 0.075, 0)
+mesh = SubResource("Wave")
+material_override = SubResource("Pulse")
+cast_shadow = 0
+[node name="Glow" type="OmniLight3D" parent="SpeakerTemplate"]
+position = Vector3(0, 1.2, 0.5)
+light_color = Color(0.72, 0.12, 0.94, 1)
+light_energy = 1.0
+omni_range = 3.5

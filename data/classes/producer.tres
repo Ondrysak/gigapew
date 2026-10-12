@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassDefinition" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/class_definition.gd" id="1_class"]
+[ext_resource type="Resource" path="res://data/weapons/maschine.tres" id="maschine"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/brucelee.tscn" id="brucelee"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/crossfader.tscn" id="crossfader"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/party_without_me.tscn" id="party"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/gravity_well.tscn" id="gravity"]
+[ext_resource type="PackedScene" path="res://scenes/abilities/pulse_barrier.tscn" id="barrier"]
+[ext_resource type="Texture2D" path="res://assets/icons/classes/producer.png" id="icon"]
+
+[resource]
+script = ExtResource("1_class")
+id = &"producer"
+display_name = "Real producer"
+tagline = "Přes maschine jsem real producer."
+description = "Rozjede párty s vlastní Maschine: elektrický zvukový brokovnicový výboj. Brucelee krátce kryje a rozdává směrové údery, Crossfader střídá přitažení a odhoz davu. Party without me nechá na podlaze mrazivý reprák, zatímco ty odejdeš. Ban zóna a Valhalla doplní všech pět skillů."
+accent_color = Color(0.64, 0.24, 0.86, 1)
+primary_weapon = ExtResource("maschine")
+ability_scenes = Array[PackedScene]([ExtResource("brucelee"), ExtResource("crossfader"), ExtResource("party"), ExtResource("gravity"), ExtResource("barrier")])
+unlock_cost = 0
+icon = ExtResource("icon")

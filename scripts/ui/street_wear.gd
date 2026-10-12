@@ -1,10 +1,12 @@
 class_name StreetWear
 extends Control
 
-## Static worn ink, chipped edges and grime. Draw-only: no input/layout changes.
+## Shared poster typography, worn ink, chipped edges and grime; no input changes.
 const DIRT := Color(0.008, 0.007, 0.009, 0.8)
 const FADED_INK := Color(0.58, 0.49, 0.35, 0.13)
 const SCUFF := Color(0.64, 0.56, 0.43, 0.09)
+const DISPLAY_FONT: Font = preload("res://assets/fonts/rave_display.tres")
+const BODY_FONT: Font = preload("res://assets/fonts/rave_body.tres")
 
 var _surface: Control
 var _heavy := false
@@ -13,6 +15,7 @@ var _scuffs: Array[Rect2] = []
 var _seams: Array[PackedVector2Array] = []
 
 static func apply(surface: Control, heavy := false) -> void:
+	_apply_typography(surface)
 	# TabContainer treats even internal Controls as pages. Decorate its bar,
 	# never add a page-shaped overlay to the container itself.
 	if surface is TabContainer:
@@ -33,10 +36,24 @@ static func apply(surface: Control, heavy := false) -> void:
 	wear._rebuild()
 
 static func apply_tree(root: Node) -> void:
+	if root is Control:
+		_apply_typography(root as Control)
 	if root is PanelContainer or root is Button or root is TabContainer:
 		apply(root as Control)
 	for child in root.get_children():
 		apply_tree(child)
+
+static func _apply_typography(surface: Control) -> void:
+	# The project/theme supplies compact body text, including controls created
+	# after this pass. Large unclassified labels/actions get the poster face.
+	# Explicit fonts and body/section variants remain authoritative.
+	if surface.has_theme_font_override(&"font"):
+		return
+	if surface.theme_type_variation in [&"BodyLabel", &"DimLabel", &"SectionLabel"]:
+		return
+	if surface is Label or (surface is Button and not surface is OptionButton and not surface is CheckButton):
+		if surface.theme_type_variation in [&"HeaderLabel", &"DisplayLabel", &"AccentButton"] or surface.get_theme_font_size(&"font_size") >= 24:
+			surface.add_theme_font_override(&"font", DISPLAY_FONT)
 
 func _rebuild() -> void:
 	_chips.clear()

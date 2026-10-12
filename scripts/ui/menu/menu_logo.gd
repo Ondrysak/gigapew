@@ -34,6 +34,7 @@ func _ready() -> void:
 		underline.scale.x = underline_ratio
 	_apply_reveal()
 	StreetWear.apply(self, true)
+	StreetWear.apply_tree(self)
 	_apply_print()
 
 func _apply_print() -> void:

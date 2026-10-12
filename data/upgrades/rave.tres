@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/rave.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"rave"
+display_name = "Rave"
+description = "Rozjeď parket: kadence hlavní zbraně +12 % a plocha efektů +8 %."
+level_descriptions = PackedStringArray("Kadence hlavní zbraně +12 % a plocha efektů +8 %.", "Celkem kadence hlavní zbraně +24 % a plocha efektů +16 %.", "Celkem kadence hlavní zbraně +36 % a plocha efektů +24 %.")
+max_level = 3
+weight = 0.9
+accent_color = Color(0.72, 0.36, 1, 1)
+fire_rate_multiplier = 0.12
+area_multiplier = 0.08
+icon = ExtResource("icon_px")

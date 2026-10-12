@@ -128,11 +128,15 @@ const RAM_KNOCKBACK := 22.0
 func blast(center: Vector3, blast_radius: float, amount: float, knockback: float) -> void:
 	if horde == null:
 		return
+	horde.damage_radius(center, blast_radius, combo_blast_damage(center, blast_radius, amount), knockback)
+
+## Filtered cones and ground pulses share the same CRUSH hook as radial blasts.
+func combo_blast_damage(center: Vector3, blast_radius: float, amount: float) -> float:
 	var well := player.active_gravity_well() if is_instance_valid(player) else null
 	if well != null and well != self and well.overlaps(center, blast_radius):
 		amount *= CRUSH_MULTIPLIER
 		player.announce_combo(&"crush")
-	horde.damage_radius(center, blast_radius, amount, knockback)
+	return amount
 
 ## Movement skills call this where they arrive. Arriving while another skill's
 ## shield holds slams a shockwave (combo: SHIELD RAM), which can itself crush.
