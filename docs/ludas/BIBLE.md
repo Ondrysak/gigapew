@@ -54,6 +54,30 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   tabákovou, rezavou a jantarovou paletu: úvod, menu, výběr party, bazar,
   nastavení/rekordy, pauza, upgrady, HUD/rady, obchod, interakce a smrt/kořist.
   Anglické schválené hlášky a jména z bible zůstávají; nejde o neonový terminál.
+- Každý generovaný sektor má krytou halu v hloubce −4,5 m, průchod,
+  veřejné WC a dva schodišťové vstupy z ulice. Jiřího z Poděbrad nese
+  zelenou linku A, Palmovka žlutou B a Hlavní nádraží červenou C:
+  panely, zářivky, validátory, jízdenkové automaty, lavičky a cedule.
+- WC má skutečné duté mísy se sedátkem, nádržkou, splachovacími tlačítky,
+  trubkami a papírem; kabinky, pisoáry, dvojitá umyvadla, zrcadla,
+  mýdlo, ručníky, vpusti a obsluhu s miskou na drobné.
+  Na ulici jsou přenosné WC, staveniště a malý park. Každý sektor má dvě
+  skutečně průchozí herny, dvě hospody a dva nonstopy; Palmovka navíc večerku.
+  Místnosti mají označený čtyřmetrový vstup z ulice a vlastní přístupné automaty.
+  Těžitelné automaty stojí uvnitř vhodných podniků: výherní v herně či hospodě,
+  vzácný v herně a cigaretové v hospodě, večerce či nonstopu. Nejsou náhodně
+  rozvěšené po venkovních zdech; počáteční dostupný obsah pokryje kontrakt.
+  Varianty mění barvy, opotřebení a rozmístění. Nábytek má skutečné kolize,
+  ale nechává průchody a přístup k automatům; úzké slepé mezery nevznikají.
+  Otočené stěny metra i WC mají shodný viditelný a fyzický půdorys,
+  včetně stěn mezi sousedními podzemními místnostmi.
+- Hlášky z `hlasky.txt` jsou na závěsných cedulích uvnitř podniků, nad vstupy,
+  v metru a WC i na venkovních nástěnkách parku a staveniště. Celé řádky se
+  zalamují podle prostoru; výběr je náhodný podle seedu a nemění herní RNG.
+- Podzemí zabírá rezervovaný půdorys pod neprůchozí hmotou domu:
+  v jednom XZ bodě není zároveň hratelná ulice i spodní patro.
+  Hráč a horda používají stejné rampy; radar rozlišuje patro,
+  kořist a efekty leží na místní podlaze. Odvoz a zásoby shora zůstávají venku.
 - Hlasová banka obsahuje 19 klipů. Z delších zpráv přibyly fráze
   `street_racer`, `jedno_kolo`, `takhle`, `plna_rychlost` pro variace reakcí.
 - Zvolený konec B je zapsaný v kapitole 5; tento asset pass nepřidává

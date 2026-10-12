@@ -162,7 +162,7 @@ func _expire(index: int) -> void:
 	var at := _turrets[index].global_position + Vector3.UP * 0.5
 	var radius := detonation_radius * area_scale()
 	horde.damage_radius(at, radius, damage_amount() * detonation_damage_scale, detonation_knockback)
-	_shocks.spawn(Vector3(at.x, 0.05, at.z), radius, 0.4)
+	_shocks.spawn(Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)) + 0.05, at.z), radius, 0.4)
 	if not crowds_view(at, radius):
 		_blasts.spawn(at, radius, blast_duration)
 	play_cue()

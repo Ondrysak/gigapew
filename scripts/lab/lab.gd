@@ -164,6 +164,7 @@ func aim_at(point: Vector3) -> void:
 func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
 	var player := game.player
 	var stand := deposit.global_position + deposit.global_basis.z.normalized() * distance
+	var right := deposit.global_basis.x.normalized()
 	player.velocity = Vector3.ZERO
 	player.global_position = Vector3(stand.x, game.horde.ground_height(Vector2(stand.x, stand.z)) + 1.0, stand.z)
 	for n in 24:
@@ -174,10 +175,20 @@ func aim_deposit(deposit: MineralDeposit, distance: float) -> bool:
 			continue
 		var mesh: MeshInstance3D = section["mesh"]
 		var point: Vector3 = mesh.transform * (section["weak_position"] as Vector3)
-		aim_at(deposit.to_global(point))
+		var latch := deposit.to_global(point)
+		if distance <= player.mining_tool.reach:
+			var approach := stand + right * (latch - deposit.global_position).dot(right)
+			var floor_y := game.horde.ground_height(Vector2(approach.x, approach.z))
+			if not is_finite(floor_y) or game.horde.is_blocked(Vector2(approach.x, approach.z), 0.4):
+				continue
+			player.velocity = Vector3.ZERO
+			player.global_position = Vector3(approach.x, floor_y + 0.95, approach.z)
+			for frame in 12:
+				await get_tree().physics_frame
+		aim_at(latch)
 		await get_tree().physics_frame
 		query.from = player.camera.global_position
-		query.to = query.from - player.head.global_basis.z * (3.05 if distance <= 3.2 else distance + 3.0)
+		query.to = query.from - player.head.global_basis.z * (player.mining_tool.reach if distance <= player.mining_tool.reach else distance + 3.0)
 		var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
 		if not hit.is_empty() and hit["collider"] == deposit and not deposit.feedback_at(hit["position"], int(hit["shape"])).is_empty():
 			return true

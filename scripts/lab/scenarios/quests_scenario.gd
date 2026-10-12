@@ -225,7 +225,11 @@ func _drill_input(game: ArenaGame) -> void:
 	lab.check(await lab.aim_deposit(deposit, 2.2), "camera and real physics ray acquire a guaranteed wall machine latch")
 	var before := deposit.yield_emitted
 	Input.action_press(&"mine")
-	await lab.wait(0.9)
+	var tool := game.player.mining_tool
+	for frame in ceili(Engine.physics_ticks_per_second * (deposit.health / tool.mining_per_second + tool.resonance_seconds + tool.tick_interval)):
+		await lab.get_tree().physics_frame
+		if deposit.yield_emitted > before:
+			break
 	Input.action_release(&"mine")
 	lab.check(deposit.yield_emitted > before and game.quests.quests[0].progress == deposit.yield_emitted, "actual held F breaks a compartment and advances salvage by exactly conserved emitted units")
 	await lab.capture("prying_progress")

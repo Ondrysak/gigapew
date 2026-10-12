@@ -225,6 +225,8 @@ func _try_supply() -> bool:
 		var candidate := origin + Vector2(cos(angle), sin(angle)) * distance
 		if not area.has_point(candidate) or _horde.is_blocked(candidate, SUPPLY_CLEARANCE):
 			continue
+		if _horde.is_roofed(candidate):
+			continue
 		# Two waiting repair packs must not stack into one pickup.
 		var occupied := false
 		for index in _supplies.count:

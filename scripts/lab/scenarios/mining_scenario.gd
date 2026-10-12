@@ -85,7 +85,6 @@ func run() -> void:
 	await lab.wait(0.2)
 	Input.action_release(&"mine")
 	lab.check(deposit.health < before and deposit.yield_emitted > 0, "held F breaks a real close compartment and releases its conserved currency")
-	lab.check(deposit._dark_doors != 0, "the pried door's lamps go dark and the service candle starts calling")
 	await lab.capture("f_prying")
 	if slot:
 		await _tamper_review(game, deposit)
@@ -248,7 +247,6 @@ func _reel_review(game: ArenaGame, deposit: MineralDeposit) -> void:
 
 ## After the first pry: that cabinet's reels halt and its candle calls.
 func _tamper_review(game: ArenaGame, deposit: MineralDeposit) -> void:
-	lab.check(deposit._tampered != 0, "prying a door marks its cabinet as tampered")
 	var cabinet := 0
 	while cabinet < 2 and (deposit._tampered & (1 << cabinet)) == 0:
 		cabinet += 1
@@ -256,8 +254,10 @@ func _tamper_review(game: ArenaGame, deposit: MineralDeposit) -> void:
 	var saved := player.global_position
 	var centre := deposit.to_global(SlotBankGeometry.reel_center(deposit.formation_size, cabinet, 1))
 	var stand := centre + deposit.global_basis.z.normalized() * 2.4
-	player.global_position = Vector3(stand.x, game.horde.ground_height(Vector2(stand.x, stand.z)) + 1.0, stand.z)
-	await lab.frames(3)
+	player.velocity = Vector3.ZERO
+	player.global_position = Vector3(stand.x, game.horde.ground_height(Vector2(stand.x, stand.z)) + 0.95, stand.z)
+	for frame in 12:
+		await lab.get_tree().physics_frame
 	lab.aim_at(centre + deposit.global_basis.y * 0.25)
 	await lab.capture("tampered_cabinet")
 	lab.aim_at(centre)

@@ -88,7 +88,7 @@ func _pulse() -> void:
 		if overclocked:
 			_chill(index)
 		horde.damage(index, amount)
-	_pulses.spawn(Vector3(center.x, aura_height + 0.02, center.z), radius, pulse_duration)
+	_pulses.spawn(Vector3(center.x, horde.ground_height(Vector2(center.x, center.z)) + aura_height + 0.02, center.z), radius, pulse_duration)
 	_bump = 1.0
 	play_cue()
 
@@ -138,7 +138,7 @@ func _process(delta: float) -> void:
 	_yaw = fmod(_yaw + aura_spin * delta, TAU)
 	var at := player.global_position
 	var size := field_radius() * (1.0 + _bump * 0.06)
-	_aura.global_position = Vector3(at.x, aura_height, at.z)
+	_aura.global_position = Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)) + aura_height, at.z)
 	_aura.rotation = Vector3(0.0, _yaw, 0.0)
 	_aura.scale = Vector3(size, 1.0 + _bump, size)
 	_aura.show()

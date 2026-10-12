@@ -220,38 +220,28 @@ func _quest_guard_count() -> int:
 	return 4 + mini(_stage_index, 2)
 
 func _build_sites() -> void:
-	# Read only the already generated layout/footprints. The BFS checks real horde
-	# navigation too, so carved-but-blocked cells cannot produce isolated rewards.
-	var width := _world.layout_width
-	var height := _world.layout_height
-	var visited := PackedByteArray()
-	visited.resize(width * height)
+	# Reuse the horde's connected navigation layer: street, stairs and underground.
+	# Carved cells alone are not proof that a reward is reachable through fixtures.
 	var spawn := _world.get_node("PlayerSpawn") as Node3D
-	var local_spawn := _world.to_local(spawn.global_position)
-	var start := Vector2i(floori((local_spawn.x - _world.layout_origin.x) / ProceduralWorld.CELL_SIZE), floori((local_spawn.z - _world.layout_origin.y) / ProceduralWorld.CELL_SIZE))
-	var queue: Array[Vector2i] = [start]
-	visited[start.y * width + start.x] = 1
-	var cursor := 0
-	while cursor < queue.size():
-		var cell := queue[cursor]
-		cursor += 1
-		var point := _cell_position(cell)
-		if _floor_clear(point, SITE_RADIUS) and point.distance_to(spawn.global_position) >= SPAWN_CLEARANCE:
-			_floor_points.append(point)
-		for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			var next := cell + step
-			if next.x < 0 or next.y < 0 or next.x >= width or next.y >= height:
+	var walkable := _world.layout_walkable if not _world.layout_walkable.is_empty() else _world.layout_open
+	for z in _world.layout_height:
+		for x in _world.layout_width:
+			var key := z * _world.layout_width + x
+			if walkable[key] != 1:
 				continue
-			var key := next.y * width + next.x
-			if visited[key] != 0 or _world.layout_open[key] != 1:
-				continue
-			visited[key] = 1
-			var at := _cell_position(next)
-			if _horde.is_blocked(Vector2(at.x, at.z), WALK_RADIUS):
-				continue
-			queue.append(next)
+			var point := _cell_position(Vector2i(x, z))
+			if _horde.is_reachable(Vector2(point.x, point.z)) \
+					and _floor_clear(point, SITE_RADIUS) and point.distance_to(spawn.global_position) >= SPAWN_CLEARANCE:
+				_floor_points.append(point)
 	assert(_floor_points.size() >= 4, "Generated sector must have four reachable clear loot sites.")
 	_shuffle_points()
+	# Keep four sources, but give the new floor a stash whenever a safe site fits.
+	for index in _floor_points.size():
+		if _floor_points[index].y < _world.global_position.y - 2.0:
+			var underground := _floor_points[index]
+			_floor_points[index] = _floor_points[0]
+			_floor_points[0] = underground
+			break
 	var chosen: Array[Vector3] = []
 	for spacing: float in [10.0, 6.0, 2.4, 1.8]:
 		for point in _floor_points:
@@ -287,16 +277,20 @@ func _build_sites() -> void:
 
 func _cell_position(cell: Vector2i) -> Vector3:
 	var at := _world.layout_origin + (Vector2(cell) + Vector2.ONE * 0.5) * ProceduralWorld.CELL_SIZE
-	return _world.to_global(Vector3(at.x, 0.0, at.y))
+	var point := _world.to_global(Vector3(at.x, 0.0, at.y))
+	point.y = _horde.ground_height(Vector2(point.x, point.z))
+	return point
 
 func _floor_clear(point: Vector3, radius: float) -> bool:
 	var xz := Vector2(point.x, point.z)
-	if _horde.is_blocked(xz, radius) or absf(_horde.ground_height(xz) - _world.global_position.y) > 0.08:
+	var ground := _horde.ground_height(xz)
+	if _horde.is_blocked(xz, radius) or not is_finite(ground) or absf(point.y - ground) > 0.08:
 		return false
 	var local := _world.to_local(point)
-	# This existing predicate is pure: it reads carved floor and all exact claimed
-	# set-piece/spawn footprints; it neither reserves space nor consumes world RNG.
-	if not _world._area_clear(Rect2(Vector2(local.x, local.z) - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), 0.0):
+	# Outdoor set-piece reservations stay intact. Indoor sites are reserved by the
+	# building kit itself, so use actual clearance rather than the street predicate.
+	if not _horde.is_roofed(xz) and ground >= _world.global_position.y - 0.08 \
+			and not _world._area_clear(Rect2(Vector2(local.x, local.z) - Vector2.ONE * radius, Vector2.ONE * radius * 2.0), 0.0):
 		return false
 	_clearance_shape.size = Vector3(radius * 2.0, 2.2, radius * 2.0)
 	_clearance_query.transform = Transform3D(Basis(), point + Vector3.UP * 1.2)
@@ -332,7 +326,8 @@ func _add_encounter(at: Vector3, count: int, stash: GearStash, elite: bool) -> v
 		var definition := elite_definition if elite and index == 0 else _regular_definitions[_rng.randi_range(0, _regular_definitions.size() - 1)]
 		var point := at
 		for candidate in points:
-			if candidate.distance_to(at) >= 1.8 and not _horde.is_blocked(Vector2(candidate.x, candidate.z), definition.radius):
+			if candidate.distance_to(at) >= 1.8 and absf(candidate.y - at.y) <= Horde.LEVEL_GAP \
+					and not _horde.is_blocked(Vector2(candidate.x, candidate.z), definition.radius):
 				point = candidate
 				points.erase(candidate)
 				break

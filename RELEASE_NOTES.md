@@ -1,3 +1,60 @@
+# Kakaboomboom 0.6.0
+
+- Every generated sector now has a roofed underground hall at −4.5 m, a
+  connecting passage, a public WC and two usable stair entrances. Players and
+  enemies descend the same continuous ramps; pitched ceilings no longer block
+  the horde through an overly broad vertical obstacle bound.
+- Prague station dressing follows Jiřího z Poděbrad (A), Palmovka (B) and
+  Hlavní nádraží (C): coloured wall panels, terrazzo, station/exit signs,
+  fluorescent tubes, ticket machines, validators and benches.
+- Corrected rotated kit transforms: local dimensions now rotate with both
+  visuals and colliders. Portal-cut metro/WC lining also has physical walls
+  between adjoining underground floors, not only around the terrain perimeter.
+- Public WCs now have hollow oval bowls, seats, cisterns with dual flush buttons,
+  plumbing and paper holders, plus accessible stalls, urinals, twin basins,
+  mirrors, soap/towels, drains and an attendant's coin table. Sector-specific
+  partitions and seeded wear vary the interiors. Portable cabins remain outdoors.
+- Station bays add notices, maps, bins and utility fittings. Seeded hospoda,
+  herna, večerka and nonstop layouts add detailed bars, taps, goods, shelving,
+  cashier desks and seating while preserving the circulation aisle.
+- Kenney's CC0 Furniture Kit radio and potted-plant models dress pub/nonstop
+  counters. Imported geometry and original materials are shared in mesh batches;
+  selected files and their license are under `assets/third_party/kenney_furniture/`.
+- Real furniture colliders preserve all carved doorway widths and machine
+  standing approaches. Geometry and sign art use shared batches; kit lights
+  and labels are bounded.
+- Every sector has two herny, two hospody and two nonstops: separate 12×18 m
+  interiors with signed 4 m entrances, connected porches and seeded furnishing.
+  Palmovka retains its večerka and uses a 120×88 m footprint. Outdoor plazas,
+  landings and combat halls stay separate from venue and stair approaches.
+  Public WC remains accessible through the underground passages and stairs.
+- Mineable automaty occupy supported, resource-specific venue bays: fruit
+  banks in herna/hospoda, the rare bank in herna, cigarette machines in
+  hospoda/večerka/nonstop. Initial stock covers the contract; procedural
+  respawns stay in compatible venues, never on arbitrary terrain or islands.
+  Furniture reserves access to every compartment, and fruit-bank plinths
+  sit on the actual floor. Obsolete fake pub/herna facade doors are removed.
+- Each indoor venue starts with a compatible machine before additional quest
+  stock is filled; further placement favours less-populated compatible rooms.
+- Hlášky boards draw complete random lines from `hlasky.txt`: hanging indoor
+  notices, entrance signs, station/WC notices and park/construction boards.
+  Source is cached, text wraps and fits, choices are seeded independently of
+  furnishing/gameplay RNG, and exports explicitly include the text file.
+- Negative floor heights propagate through enemy navigation, pickup grounding,
+  radar and floor effects. Timed supplies, extraction and player/boss mortar
+  targets reject covered floors. Mineable machines occupy street-level venues.
+- This is not stacked playable terrain: each XZ cell has one traversable
+  height, with the underground reserved beneath nonwalkable building mass.
+- The `levels` visual lab captures indoor/outdoor fixtures, toilet and counter
+  details, and verifies physical stair descent, enemy following, held-W wall
+  blocking and entry into every repeated venue, real held-F herna prying,
+  every initial compartment's clearance/reach, room population, sufficient
+  contract stock, whole-source fitted quote text, seeded connectivity and
+  fixture budgets across all three sectors.
+- Release verification: the final `levels` run produced 202 captures with
+  zero failures. Mining, venue, quest, gear and encounter scenarios also
+  passed; the quest scenario exercised the full three-sector extraction path.
+
 # Kakaboomboom 0.5.0
 
 Realistic spinning fruit machines, recursive hallucinations with feedback-loop vision,

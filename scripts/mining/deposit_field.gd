@@ -83,6 +83,10 @@ var _placed: Dictionary = {}
 # Authored encounter formations do not consume random caps or respawn budgets.
 var _reserved_centers := PackedVector3Array()
 var _reserved_radii := PackedFloat32Array()
+# A depleted venue machine keeps its bay; respawns must use a different support site.
+var _occupied_sites: Dictionary = {}
+# Conserved placements per room, including depleted machines, balance new stock.
+var _venue_population: Dictionary = {}
 
 # Obstacle footprints (world X/Z), read like Horde does.
 var _obstacle_body: Array[StaticBody3D] = []
@@ -115,8 +119,8 @@ var _break_voice: AudioStreamPlayer3D
 var _collect_voice: AudioStreamPlayer
 var _collect_cooldown := 0.0
 
-## Configure campaign objectives before setup. Authored lab worlds retain their
-## existing random/authored placement API when they have no procedural anchors.
+## Configure campaign objectives before setup. Non-procedural authored worlds
+## retain their existing random/authored placement API.
 func configure_quests(quests: LevelQuests, seed: int) -> void:
 	_quests = quests
 	_level_seed = seed
@@ -251,6 +255,11 @@ func _step_pickups(delta: float) -> void:
 				_collect_voice.pitch_scale = _rng.randf_range(0.92, 1.12)
 				_collect_voice.play()
 
+func pickup_floor_height(xz: Vector2) -> float:
+	if is_instance_valid(_player) and is_instance_valid(_player.horde):
+		return _player.horde.ground_height(xz)
+	return 0.0
+
 func _set_for(definition: ResourceDefinition) -> ResourcePickupSet:
 	var pickups: ResourcePickupSet = _sets.get(definition)
 	if pickups != null:
@@ -298,17 +307,27 @@ func _spill(definition: ResourceDefinition, amount: int, at: Vector3, normal: Ve
 func _populate() -> void:
 	var spawn := _world.get_node_or_null("PlayerSpawn") as Node3D
 	_spawn_point = spawn.global_position if spawn != null else Vector3(_area.get_center().x, 0.0, _area.get_center().y)
-	_read_obstacles(_world.get_node_or_null("Obstacles"))
+	if not _world is ProceduralWorld:
+		_read_obstacles(_world.get_node_or_null("Obstacles"))
+	# Reserve the rare guaranteed bank before quest stock can fill its herna.
+	for definition in deposit_types:
+		if definition == null or definition.resource == null:
+			continue
+		for _index in definition.guaranteed:
+			if not _try_place(definition, 160, false, true) and _world is ProceduralWorld:
+				_quest_population_failed("Seed %d: no compatible clear venue bay for guaranteed %s." % [_level_seed, definition.resource.display_name])
+				set_physics_process(false)
+				return
+	if _world is ProceduralWorld:
+		if not _populate_venue_deposits():
+			set_physics_process(false)
+			return
+		_cap = maxi(_cap, _alive.size())
 	if _quests != null and _world is ProceduralWorld:
 		if not _populate_quest_deposits():
 			set_physics_process(false)
 			return
 		_cap = maxi(_cap, _alive.size())
-	for definition in deposit_types:
-		if definition == null or definition.resource == null:
-			continue
-		for _index in definition.guaranteed:
-			_try_place(definition, 160, false, true)
 	var attempts := _cap * 3
 	while _alive.size() < _cap and attempts > 0:
 		attempts -= 1
@@ -317,36 +336,40 @@ func _populate() -> void:
 			break
 		_try_place(definition, 24, false)
 
+## Every playable room starts with a real compatible machine, before weighted
+## density picks can consume all of one resource's useful bays.
+func _populate_venue_deposits() -> bool:
+	for site in (_world as ProceduralWorld).kit_sites:
+		var kind: StringName = site.kind
+		if kind not in [&"herna", &"hospoda", &"nonstop", &"vecerka"]:
+			continue
+		var venue_id := int(site.venue_id)
+		if int(_venue_population.get(venue_id, 0)) > 0:
+			continue
+		var preferred_resource: StringName = &"gold" if kind in [&"herna", &"hospoda"] else &"crystal"
+		var placed := false
+		for preferred in [true, false]:
+			for definition in deposit_types:
+				if definition == null or definition.resource == null:
+					continue
+				if (definition.resource.id == preferred_resource) != preferred:
+					continue
+				if _try_venue_place(definition, false, true, venue_id) != null:
+					placed = true
+					break
+			if placed:
+				break
+		if not placed:
+			return _quest_population_failed("Seed %d: no compatible clear machine for %s room %d." % [_level_seed, kind, venue_id])
+	return true
+
 ## Prove the initial extraction budget on real, reachable collider faces before
 ## any random placement can consume their space. No respawn or rare roll is needed.
 func _populate_quest_deposits() -> bool:
-	var sites := (_world as ProceduralWorld).mining_sites
-	var order: Array[int] = []
-	for index in sites.size():
-		order.append(index)
-	for index in order.size():
-		var pick := _rng.randi_range(index, order.size() - 1)
-		var swap := order[index]
-		order[index] = order[pick]
-		order[pick] = swap
-	# Interior outcrops first: contract ore should pull the player into the
-	# arena, with perimeter walls as the dependable remainder.
-	var interior_order: Array[int] = []
-	var wall_order: Array[int] = []
-	for index in order:
-		if bool(sites[index].get("interior", false)):
-			interior_order.append(index)
-		else:
-			wall_order.append(index)
-	interior_order.append_array(wall_order)
-	order = interior_order
-	var used: Dictionary = {}
-	var space := get_world_3d().direct_space_state
 	var requirements := _quests.requirements()
-	# Each resource gets a fair share of the interior faces.
-	var interior_share := ceili(float(interior_order.size()) / float(maxi(1, requirements.size())))
+	var definitions: Dictionary = {}
+	var available: Dictionary = {}
 	for resource: ResourceDefinition in requirements:
-		var interior_used := 0
 		var definition: DepositDefinition
 		for candidate in deposit_types:
 			if candidate != null and candidate.resource == resource and candidate.yield_min > 0:
@@ -354,42 +377,24 @@ func _populate_quest_deposits() -> bool:
 				break
 		if definition == null:
 			return _quest_population_failed("No mineable deposit definition for %s." % resource.display_name)
-		var target := int(requirements[resource])
-		var desired := maxi(ceili(target * 1.2), target + definition.yield_min)
-		var available := 0
-		for index in order:
-			if available >= desired or not _can_place_more(definition):
-				break
-			if used.has(index):
-				continue
-			var interior := bool(sites[index].get("interior", false))
-			if interior and interior_used >= interior_share:
-				continue
-			var site: Dictionary = sites[index]
-			var support := site.get("support") as StaticBody3D
-			if not is_instance_valid(support):
-				continue
-			var point: Vector3 = site.get("position", Vector3.ZERO)
-			var normal: Vector3 = site.get("normal", Vector3.ZERO)
-			normal.y = 0.0
-			if normal.length_squared() < 0.5:
-				continue
-			normal = normal.normalized()
-			var bounds := definition.formation_size
-			point.y = maxf(point.y, maxf(definition.min_height, bounds.y * 0.5 + 0.15))
-			if not _is_clear(point, bounds, false):
-				continue
-			if not _formation_clear(space, point, normal, bounds, support):
-				continue
-			var deposit := _spawn_deposit(definition, point, normal, 1.0)
-			available += deposit.total_yield
-			used[index] = true
-			if interior:
-				interior_used += 1
-			var radius := Vector2(bounds.x * 0.5, bounds.z).length()
-			reserve_authored_space(point, maxf(min_spacing * 0.5, radius))
-		if available < target:
-			return _quest_population_failed("Seed %d: only %d/%d %s can be mined on the generated safe sites." % [_level_seed, available, target, resource.display_name])
+		definitions[resource] = definition
+		available[resource] = 0
+		for deposit in _alive:
+			if deposit.definition.resource == resource:
+				available[resource] = int(available[resource]) + deposit.total_yield
+	# Satisfy every objective before optional spare stock consumes shared bays.
+	for spare_stock in [false, true]:
+		for resource: ResourceDefinition in requirements:
+			var definition: DepositDefinition = definitions[resource]
+			var target := int(requirements[resource])
+			var desired := maxi(ceili(target * 1.2), target + definition.yield_min) if spare_stock else target
+			while int(available[resource]) < desired:
+				var deposit := _try_venue_place(definition, false, true)
+				if deposit == null:
+					break
+				available[resource] = int(available[resource]) + deposit.total_yield
+			if int(available[resource]) < target:
+				return _quest_population_failed("Seed %d: only %d/%d %s can be mined in compatible clear venues." % [_level_seed, available[resource], target, resource.display_name])
 	return true
 
 func _quest_population_failed(message: String) -> bool:
@@ -454,9 +459,75 @@ func _can_place_more(definition: DepositDefinition) -> bool:
 		return false
 	return definition.max_per_stage <= 0 or int(_placed[definition]) < definition.max_per_stage
 
+## All procedural population uses the same compatible venue and physical proof.
+## Quest budgets can expand the density cap, never the conserved per-stage stock.
+func _try_venue_place(definition: DepositDefinition, respawn: bool, quest_budget: bool = false, venue_id: int = -1) -> MineralDeposit:
+	if not _can_place_more(definition) or (not quest_budget and _alive.size() >= _cap):
+		return null
+	var sites := (_world as ProceduralWorld).mining_sites
+	var preferred: Array[int] = []
+	var remainder: Array[int] = []
+	for index in sites.size():
+		if _occupied_sites.has(index):
+			continue
+		var site: Dictionary = sites[index]
+		if venue_id >= 0 and int(site["venue_id"]) != venue_id:
+			continue
+		var resources: Array = site.get("resources", [])
+		var kind: StringName = site.get("venue_kind", &"")
+		if not resources.has(definition.resource.id):
+			continue
+		if definition.resource.id == &"shard" and kind != &"herna":
+			continue
+		var preferred_kind := (definition.resource.id == &"gold" and kind == &"herna") or (definition.resource.id == &"crystal" and kind in [&"hospoda", &"vecerka", &"nonstop"])
+		if preferred_kind:
+			preferred.append(index)
+		else:
+			remainder.append(index)
+	for order in [preferred, remainder]:
+		for index in order.size():
+			var pick := _rng.randi_range(index, order.size() - 1)
+			var swap: int = order[index]
+			order[index] = order[pick]
+			order[pick] = swap
+	preferred.append_array(remainder)
+	# Randomize equal-priority bays, but send additional stock to the least
+	# populated compatible rooms rather than filling one lucky wall first.
+	preferred.sort_custom(func(a: int, b: int) -> bool:
+		return int(_venue_population.get(int(sites[a]["venue_id"]), 0)) < int(_venue_population.get(int(sites[b]["venue_id"]), 0)))
+	var space := get_world_3d().direct_space_state
+	# Venue bays are authored for the actual machine bounds, not random scaling.
+	var bounds := definition.formation_size
+	for index in preferred:
+		var site: Dictionary = sites[index]
+		var support := site.get("support") as StaticBody3D
+		if not is_instance_valid(support):
+			continue
+		var point: Vector3 = site.get("position", Vector3.ZERO)
+		var normal: Vector3 = site.get("normal", Vector3.ZERO)
+		var floor_y := float(site.get("floor_y", INF))
+		normal.y = 0.0
+		if normal.length_squared() < 0.5 or not is_finite(floor_y):
+			continue
+		normal = normal.normalized()
+		if not _is_clear(point, bounds, respawn):
+			continue
+		if not _formation_clear(space, point, normal, bounds, support, floor_y):
+			continue
+		var deposit := _spawn_deposit(definition, point, normal, 1.0)
+		deposit.set_meta("venue_id", int(site["venue_id"]))
+		deposit.set_meta("venue_kind", StringName(site["venue_kind"]))
+		_occupied_sites[index] = true
+		var owner := int(site["venue_id"])
+		_venue_population[owner] = int(_venue_population.get(owner, 0)) + 1
+		return deposit
+	return null
+
 func _try_place(definition: DepositDefinition, attempts: int, respawn: bool, wall_only: bool = false) -> bool:
 	if not _can_place_more(definition) or _alive.size() >= _cap:
 		return false
+	if _world is ProceduralWorld:
+		return _try_venue_place(definition, respawn) != null
 	var space := get_world_3d().direct_space_state
 	for _attempt in attempts:
 		var size_scale := _rng.randf_range(0.95, 1.08)
@@ -464,7 +535,7 @@ func _try_place(definition: DepositDefinition, attempts: int, respawn: bool, wal
 		var on_wall := wall_only or _obstacle_body.is_empty() or _rng.randf() < wall_share
 		if not (_wall_probe(definition, bounds) if on_wall else _obstacle_probe(definition, bounds)):
 			continue
-		if _is_inside_obstacle(Vector2(_probe_from.x, _probe_from.z)):
+		if _is_inside_obstacle(Vector2(_probe_from.x, _probe_from.z), _probe_from.y):
 			continue
 		_query.from = _probe_from
 		_query.to = _probe_to
@@ -482,6 +553,12 @@ func _try_place(definition: DepositDefinition, attempts: int, respawn: bool, wal
 			continue
 		normal = normal.normalized()
 		var point: Vector3 = hit["position"]
+		# Preserve the authored world's street-height random placement contract.
+		if is_instance_valid(_player) and is_instance_valid(_player.horde):
+			var standing := point + normal * (bounds.z + 1.0)
+			var floor_y := _player.horde.ground_height(Vector2(standing.x, standing.z))
+			if not is_finite(floor_y) or absf(floor_y - _world.global_position.y) > 0.3:
+				continue
 		if not _is_clear(point, bounds, respawn):
 			continue
 		if not _formation_clear(space, point, normal, bounds, collider as StaticBody3D):
@@ -547,10 +624,12 @@ func _obstacle_probe(definition: DepositDefinition, bounds: Vector3) -> bool:
 	_probe_body = _obstacle_body[index]
 	return true
 
-func _is_inside_obstacle(xz: Vector2) -> bool:
+func _is_inside_obstacle(xz: Vector2, y: float) -> bool:
 	if not _area.grow(-0.2).has_point(xz):
 		return true
 	for index in _obstacle_center.size():
+		if y < _obstacle_bottom[index] or y > _obstacle_top[index]:
+			continue
 		var delta := xz - _obstacle_center[index]
 		var half := _obstacle_half[index]
 		if _obstacle_circle[index] == 1:
@@ -582,7 +661,7 @@ func _is_clear(point: Vector3, bounds: Vector3, respawn: bool) -> bool:
 			return false
 	return true
 
-func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: Vector3, bounds: Vector3, support: StaticBody3D) -> bool:
+func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: Vector3, bounds: Vector3, support: StaticBody3D, floor_y: float = INF) -> bool:
 	var right := Vector3.UP.cross(normal)
 	# The entire width and height must sit against the same broad wall face.
 	for x in [-0.48, 0.0, 0.48]:
@@ -608,6 +687,22 @@ func _formation_clear(space: PhysicsDirectSpaceState3D, point: Vector3, normal: 
 		var floor_point: Vector3 = floor_hit["position"]
 		if floor_point.y > bottom.y - 0.06:
 			return false
+		var floor_normal: Vector3 = floor_hit["normal"]
+		if is_finite(floor_y) and (absf(floor_point.y - floor_y) > 0.2 or floor_normal.y < 0.95):
+			return false
+	# Venue sites must have the declared floor under the actual walk-up area too.
+	if is_finite(floor_y):
+		for x in [-0.45, 0.0, 0.45]:
+			var standing: Vector3 = point + right * bounds.x * x + normal * (bounds.z + 1.0)
+			_query.from = Vector3(standing.x, floor_y + 0.5, standing.z)
+			_query.to = Vector3(standing.x, floor_y - 0.5, standing.z)
+			var floor_hit := space.intersect_ray(_query)
+			if floor_hit.is_empty():
+				return false
+			var floor_point: Vector3 = floor_hit["position"]
+			var floor_normal: Vector3 = floor_hit["normal"]
+			if absf(floor_point.y - floor_y) > 0.2 or floor_normal.y < 0.95:
+				return false
 	# Reserve real walkable room beyond the whole deposit, not just its origin.
 	_clearance_box.size = Vector3(bounds.x + 0.3, bounds.y - 0.12, bounds.z + 1.25)
 	_clearance_query.transform = Transform3D(Basis(right, Vector3.UP, normal), point + normal * (0.18 + _clearance_box.size.z * 0.5))

@@ -86,7 +86,7 @@ func _pulse(strength: float) -> void:
 	var center := player.global_position
 	var radius := pulse_radius()
 	horde.damage_radius(center, radius, damage_amount() * strength, knockback * strength)
-	_rings.spawn(Vector3(center.x, ring_height, center.z), radius, ring_duration)
+	_rings.spawn(Vector3(center.x, horde.ground_height(Vector2(center.x, center.z)) + ring_height, center.z), radius, ring_duration)
 
 func _implode() -> void:
 	var center := player.global_position
@@ -103,7 +103,7 @@ func _implode() -> void:
 			# Farther enemies are yanked harder so the crowd bunches up.
 			pull = -offset / distance * pull_strength * clampf(distance / radius, 0.35, 1.0)
 		horde.damage(index, amount, pull)
-	_implodes.spawn(Vector3(center.x, ring_height, center.z), radius, implode_duration)
+	_implodes.spawn(Vector3(center.x, horde.ground_height(Vector2(center.x, center.z)) + ring_height, center.z), radius, implode_duration)
 	play_cue()
 
 func _process(delta: float) -> void:
@@ -119,6 +119,6 @@ func _process(delta: float) -> void:
 	var progress := clampf(1.0 - _timer / charge_time, 0.0, 1.0)
 	var size := pulse_radius() * lerpf(1.0, 0.3, progress * progress)
 	var at := player.global_position
-	_charge.global_position = Vector3(at.x, ring_height, at.z)
+	_charge.global_position = Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)) + ring_height, at.z)
 	_charge.scale = Vector3(size, 0.4 + progress * 0.6, size)
 	_charge.show()

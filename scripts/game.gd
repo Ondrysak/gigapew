@@ -260,7 +260,8 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.ability_scenes = run_state.ability_scenes
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
-	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"))
+	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"), world.get_node_or_null("Ground"))
+	horde.set_layout(world as ProceduralWorld)
 	hud.radar.set_layout(world as ProceduralWorld)
 	damage_numbers = DamageNumbers.new()
 	_round.add_child(damage_numbers)

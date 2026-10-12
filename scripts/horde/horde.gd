@@ -3,7 +3,7 @@ extends Node3D
 
 ## Data-oriented crowd of up to CAPACITY enemies. No per-enemy nodes or physics
 ## bodies: positions live in packed arrays on the XZ plane with a feet height
-## from a heightfield (the world's Elevation decks and ramps), crowding uses a
+## from the world's Ground floors and Elevation decks/ramps, crowding uses a
 ## uniform grid, and each enemy type draws as one MultiMesh. Enemies walk up
 ## ramps, drop off ledges and cannot climb cliffs. Weapons query enemies
 ## through raycast/query_radius/nearest and damage them by index.
@@ -205,6 +205,12 @@ var _cell_items := PackedInt32Array()
 var _obstacle_center := PackedVector2Array()
 var _obstacle_half := PackedVector2Array()
 var _obstacle_circle := PackedByteArray()
+var _obstacle_bottom := PackedFloat32Array()
+var _obstacle_top := PackedFloat32Array()
+## Local vertical interval of a pitched box follows its top/bottom planes.
+## Flat obstacles use zero slope; do not stretch a stair roof's lowest corner
+## across its whole footprint and accidentally close the upper stair run.
+var _obstacle_height_slope := PackedVector2Array()
 var _cell_obstacle_start := PackedInt32Array()
 var _cell_obstacle_items := PackedInt32Array()
 
@@ -215,7 +221,7 @@ var _flow_timer := 0.0
 const FLOW_INTERVAL := 0.2
 ## Within this distance enemies ignore the flow field and close in directly.
 const DIRECT_RANGE := 5.0
-## Heightfield sample spacing (m), built from the world's `Elevation` boxes.
+## Heightfield sample spacing (m), built from Ground and Elevation box top faces.
 const HEIGHT_STEP := 0.5
 ## Tallest step enemies walk up; higher steps are cliffs they can only drop off.
 const CLIMB := 0.3
@@ -238,6 +244,11 @@ var _vy := PackedFloat32Array()
 # Ground height of the last _walkable result (avoids a second lookup).
 var _step_ground := 0.0
 var _cell_center := PackedVector2Array()
+var _layout_roofed := PackedByteArray()
+var _layout_origin := Vector2.ZERO
+var _layout_width := 0
+var _layout_height := 0
+var _layout_cell_size := ProceduralWorld.CELL_SIZE
 
 var _shot_pos := PackedVector3Array()
 var _shot_vel := PackedVector3Array()
@@ -257,9 +268,9 @@ var _chain_index := PackedInt32Array()
 var _radius_generations: Array[PackedInt64Array] = []
 var _chain_distance := PackedFloat32Array()
 
-## `elevation` (optional) holds StaticBody3D decks and ramps, each with one
-## BoxShape3D; their top faces become walkable ground for the horde.
-func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer, elevation: Node = null) -> void:
+## Ground supplies explicit floors; arenas without it retain the authored y=0 floor.
+## Elevation adds deck and ramp top faces to that heightfield.
+func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer, elevation: Node = null, ground: Node = null) -> void:
 	target = player
 	_area = area
 	_rng.randomize()
@@ -353,12 +364,12 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 		_radius_generations.append(generations)
 	_chain_index.resize(SHOCK_TARGETS)
 	_chain_distance.resize(SHOCK_TARGETS)
-	var bounds := AABB(Vector3(_area.position.x - 4.0, -2.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 12.0, _area.size.y + 8.0))
+	var bounds := AABB(Vector3(_area.position.x - 4.0, -8.0, _area.position.y - 4.0), Vector3(_area.size.x + 8.0, 18.0, _area.size.y + 8.0))
 	_setup_rendering()
 	for definition in definitions:
 		_register(definition, bounds)
+	_read_elevation(elevation, ground)
 	_read_obstacles(obstacles)
-	_read_elevation(elevation)
 	_cell_center.resize(_cells)
 	var cell_heights := PackedFloat32Array()
 	cell_heights.resize(_cells)
@@ -366,6 +377,7 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 		_cell_center[cell] = _area.position + (Vector2(cell % _grid_w, cell / _grid_w) + Vector2(0.5, 0.5)) * CELL
 		cell_heights[cell] = ground_height(_cell_center[cell])
 	_flow.setup(_grid_w, _grid_h, _area.position, CELL, _rect_blocked, cell_heights)
+	_flow.update(Vector2(player.global_position.x, player.global_position.z), player.global_position.y - 0.9)
 	_shot_pos.resize(MAX_PROJECTILES)
 	_shot_vel.resize(MAX_PROJECTILES)
 	_shot_life.resize(MAX_PROJECTILES)
@@ -529,8 +541,14 @@ func _read_obstacles(root: Node) -> void:
 					continue
 				var world := (body as Node3D).global_transform * collider.transform
 				var center := Vector2(world.origin.x, world.origin.z)
+				var bottom := 0.0
+				var top := 0.0
+				var height_slope := Vector2.ZERO
 				if collider.shape is CylinderShape3D:
 					var radius := (collider.shape as CylinderShape3D).radius * world.basis.get_scale().x
+					var vertical := (collider.shape as CylinderShape3D).height * 0.5 * absf(world.basis.y.y)
+					bottom = world.origin.y - vertical
+					top = world.origin.y + vertical
 					_obstacle_center.append(center)
 					_obstacle_half.append(Vector2(radius, radius))
 					_obstacle_circle.append(1)
@@ -538,10 +556,23 @@ func _read_obstacles(root: Node) -> void:
 					# Yaw is a multiple of 90 degrees: project the box extents onto X/Z.
 					var half := (collider.shape as BoxShape3D).size * 0.5
 					var x_axis := world.basis.x * half.x
+					var y_axis := world.basis.y * half.y
 					var z_axis := world.basis.z * half.z
+					var normal := world.basis.y.normalized()
+					var vertical := absf(x_axis.y) + absf(y_axis.y) + absf(z_axis.y)
+					if absf(normal.y) > 0.5:
+						height_slope = -Vector2(normal.x, normal.z) / normal.y
+						vertical = y_axis.length() / absf(normal.y)
+					bottom = world.origin.y - vertical
+					top = world.origin.y + vertical
 					_obstacle_center.append(center)
-					_obstacle_half.append(Vector2(absf(x_axis.x) + absf(z_axis.x), absf(x_axis.z) + absf(z_axis.z)))
+					_obstacle_half.append(Vector2(absf(x_axis.x) + absf(y_axis.x) + absf(z_axis.x), absf(x_axis.z) + absf(y_axis.z) + absf(z_axis.z)))
 					_obstacle_circle.append(0)
+				else:
+					continue
+				_obstacle_bottom.append(bottom)
+				_obstacle_top.append(top)
+				_obstacle_height_slope.append(height_slope)
 	# Bucket obstacles into every cell their footprint (plus largest enemy) touches.
 	var buckets: Array[PackedInt32Array] = []
 	buckets.resize(_cells)
@@ -560,23 +591,23 @@ func _read_obstacles(root: Node) -> void:
 		_cell_obstacle_items.append_array(buckets[cell])
 	_cell_obstacle_start[_cells] = total
 
-# Heightfield from the top faces of the Elevation boxes (a vertical ray against
-# each oriented box), then marks horde cells that are plain floor.
-func _read_elevation(root: Node) -> void:
+# Top faces of Ground and Elevation boxes. Missing samples remain impassable.
+func _read_elevation(root: Node, ground: Node) -> void:
 	_heights_w = maxi(2, ceili(_area.size.x / HEIGHT_STEP))
 	_heights_h = maxi(2, ceili(_area.size.y / HEIGHT_STEP))
 	_heights.resize(_heights_w * _heights_h)
-	_heights.fill(0.0)
-	if root != null:
-		for body in root.get_children():
+	_heights.fill(-INF if ground != null else 0.0)
+	for source: Node in [ground, root]:
+		if source == null:
+			continue
+		for body in source.get_children():
 			if not body is StaticBody3D:
 				continue
 			for child in body.get_children():
 				var collider := child as CollisionShape3D
 				if collider != null and collider.shape is BoxShape3D:
 					_rasterise_box(collider.global_transform, (collider.shape as BoxShape3D).size * 0.5)
-	# A flat cell has no raised sample within one sample of it, so lookups there
-	# can skip interpolation entirely.
+	# The common y=0 floor keeps its allocation-free lookup fast path.
 	var per := roundi(CELL / HEIGHT_STEP)
 	_cell_flat.resize(_cells)
 	for cell in _cells:
@@ -636,7 +667,8 @@ func ground_height(xz: Vector2) -> float:
 	var b := _heights[k + 1]
 	var c := _heights[k + _heights_w]
 	var d := _heights[k + _heights_w + 1]
-	if maxf(maxf(a, b), maxf(c, d)) - minf(minf(a, b), minf(c, d)) > CLIMB:
+	if not is_finite(a) or not is_finite(b) or not is_finite(c) or not is_finite(d) \
+			or maxf(maxf(a, b), maxf(c, d)) - minf(minf(a, b), minf(c, d)) > CLIMB:
 		if tz >= 0.5:
 			return d if tx >= 0.5 else c
 		return b if tx >= 0.5 else a
@@ -652,12 +684,18 @@ func _rect_rough(rect: Rect2) -> bool:
 		for sx in range(x0, x1 + 1):
 			var k := sz * _heights_w + sx
 			var h := _heights[k]
-			if (sx > 0 and absf(_heights[k - 1] - h) > CLIMB) \
-					or (sx < _heights_w - 1 and absf(_heights[k + 1] - h) > CLIMB) \
-					or (sz > 0 and absf(_heights[k - _heights_w] - h) > CLIMB) \
-					or (sz < _heights_h - 1 and absf(_heights[k + _heights_w] - h) > CLIMB):
+			if not is_finite(h):
+				return true
+			if (sx > 0 and _height_jump(_heights[k - 1], h)) \
+					or (sx < _heights_w - 1 and _height_jump(_heights[k + 1], h)) \
+					or (sz > 0 and _height_jump(_heights[k - _heights_w], h)) \
+					or (sz < _heights_h - 1 and _height_jump(_heights[k + _heights_w], h)):
 				return true
 	return false
+
+func _height_jump(neighbor: float, height: float) -> bool:
+	# Missing floor outside the rectangle is a boundary, not a cliff inside it.
+	return is_finite(neighbor) and absf(neighbor - height) > maxf(CLIMB, HEIGHT_STEP * CLIMB_SLOPE) + 0.001
 
 func _cell_x(x: float) -> int:
 	return clampi(int((x - _area.position.x) / CELL), 0, _grid_w - 1)
@@ -692,6 +730,8 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	return _spawn(definition, xz, health_multiplier, true)
 
 func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: float, ordinary: bool) -> int:
+	if is_blocked(xz, definition.radius):
+		return -1
 	var type: int = _type_of[definition]
 	_free_count -= 1
 	var slot := _free[_free_count]
@@ -777,12 +817,24 @@ func set_boss_recovery(recovering: bool) -> void:
 	_boss_recovering = _boss_controlled and recovering
 
 ## True when a disc at xz would overlap an obstacle or leave the play area.
-func is_blocked(xz: Vector2, radius: float) -> bool:
+func is_blocked(xz: Vector2, radius: float, feet: float = NAN, headroom: float = 2.2) -> bool:
 	if not _area.grow(-radius).has_point(xz):
+		return true
+	var ground := ground_height(xz)
+	if not is_finite(ground):
+		return true
+	if is_nan(feet):
+		feet = ground
+	if radius > 0.0 and (not is_finite(ground_height(xz + Vector2(radius, 0.0))) \
+			or not is_finite(ground_height(xz - Vector2(radius, 0.0))) \
+			or not is_finite(ground_height(xz + Vector2(0.0, radius))) \
+			or not is_finite(ground_height(xz - Vector2(0.0, radius)))):
 		return true
 	var cell := _cell_z(xz.y) * _grid_w + _cell_x(xz.x)
 	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
 		var o := _cell_obstacle_items[k]
+		if not _obstacle_overlaps_height(o, feet, headroom, xz):
+			continue
 		var delta := xz - _obstacle_center[o]
 		var half := _obstacle_half[o]
 		if _obstacle_circle[o] == 1:
@@ -800,6 +852,8 @@ func _rect_blocked(rect: Rect2) -> bool:
 	var cell := _cell_z(center.y) * _grid_w + _cell_x(center.x)
 	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
 		var o := _cell_obstacle_items[k]
+		if not _obstacle_overlaps_height(o, ground_height(center), 2.2, center):
+			continue
 		var c := _obstacle_center[o]
 		var half := _obstacle_half[o]
 		if _obstacle_circle[o] == 1:
@@ -809,6 +863,29 @@ func _rect_blocked(rect: Rect2) -> bool:
 		elif Rect2(c - half, half * 2.0).intersects(rect):
 			return true
 	return false
+
+func _obstacle_overlaps_height(index: int, feet: float, headroom: float, xz: Vector2) -> bool:
+	var rise := _obstacle_height_slope[index].dot(xz - _obstacle_center[index])
+	return _obstacle_top[index] + rise > feet + 0.02 and _obstacle_bottom[index] + rise < feet + headroom
+
+func set_layout(world: ProceduralWorld) -> void:
+	_layout_roofed = PackedByteArray() if world == null else world.layout_roofed
+	_layout_width = 0 if world == null else world.layout_width
+	_layout_height = 0 if world == null else world.layout_height
+	_layout_origin = Vector2.ZERO if world == null else world.layout_origin
+	_layout_cell_size = ProceduralWorld.CELL_SIZE
+
+func is_roofed(xz: Vector2) -> bool:
+	if _layout_roofed.is_empty():
+		return false
+	var cell := Vector2i(floori((xz.x - _layout_origin.x) / _layout_cell_size), floori((xz.y - _layout_origin.y) / _layout_cell_size))
+	if cell.x < 0 or cell.y < 0 or cell.x >= _layout_width or cell.y >= _layout_height:
+		return false
+	return _layout_roofed[cell.y * _layout_width + cell.x] != 0
+
+## Spawn sites must have a route to the player, including covered rooms.
+func is_reachable(xz: Vector2) -> bool:
+	return _flow.is_reachable(_cell_z(xz.y) * _grid_w + _cell_x(xz.x))
 
 ## Removes every enemy without rewards (stage clear).
 func clear() -> void:
@@ -1161,7 +1238,7 @@ func _cylinder_ray_distance(slot: int, type: int, origin: Vector3, direction: Ve
 	return t
 
 ## Positions for radar display, sampled evenly across the living crowd.
-func sample_positions(out: PackedVector2Array, max_count: int) -> int:
+func sample_positions(out: PackedVector2Array, max_count: int, heights: PackedFloat32Array) -> int:
 	var stride := maxi(1, ceili(float(_active_count) / max_count))
 	var count := 0
 	var a := 0
@@ -1170,7 +1247,10 @@ func sample_positions(out: PackedVector2Array, max_count: int) -> int:
 		if _state[slot] == ALIVE:
 			if count >= out.size():
 				out.resize(max_count)
+			if count >= heights.size():
+				heights.resize(max_count)
 			out[count] = _pos[slot]
+			heights[count] = _y[slot]
 			count += 1
 		a += stride
 	return count
@@ -1450,6 +1530,8 @@ func _fusion_path_clear(from: Vector2, to: Vector2, radius: float) -> bool:
 			var cell := cz * _grid_w + cx
 			for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
 				var obstacle := _cell_obstacle_items[k]
+				if not _obstacle_overlaps_height(obstacle, ground, 2.2, (from + to) * 0.5):
+					continue
 				var center := _obstacle_center[obstacle]
 				var half := _obstacle_half[obstacle] + Vector2.ONE * radius
 				if _obstacle_circle[obstacle] != 0:
@@ -1717,7 +1799,7 @@ func _physics_process(delta: float) -> void:
 			move *= _slow[i]
 		p += (move + _knock[i]) * delta + _separation(i, p, radius)
 		_knock[i] -= _knock[i] * knock_decay
-		var clamped := _constrain(p, radius)
+		var clamped := _constrain(p, radius, _y[i])
 		var feet := _y[i]
 		var landing := clampi(int((clamped.y - origin.y) * inverse_cell), 0, last_z) * _grid_w \
 				+ clampi(int((clamped.x - origin.x) * inverse_cell), 0, last_x)
@@ -1751,15 +1833,15 @@ func _physics_process(delta: float) -> void:
 func _walkable(i: int, from: Vector2, to: Vector2) -> Vector2:
 	var limit := _y[i] + CLIMB + from.distance_to(to) * CLIMB_SLOPE
 	_step_ground = ground_height(to)
-	if _step_ground <= limit:
+	if is_finite(_step_ground) and _step_ground <= limit:
 		return to
 	var slide := Vector2(to.x, from.y)
 	_step_ground = ground_height(slide)
-	if _step_ground <= limit:
+	if is_finite(_step_ground) and _step_ground <= limit:
 		return slide
 	slide = Vector2(from.x, to.y)
 	_step_ground = ground_height(slide)
-	if _step_ground <= limit:
+	if is_finite(_step_ground) and _step_ground <= limit:
 		return slide
 	_step_ground = ground_height(from)
 	return from
@@ -1845,12 +1927,16 @@ func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 						return (push * SEPARATION).limit_length(0.25)
 	return (push * SEPARATION).limit_length(0.25)
 
-func _constrain(p: Vector2, radius: float) -> Vector2:
+func _constrain(p: Vector2, radius: float, feet: float = NAN) -> Vector2:
 	p.x = clampf(p.x, _area.position.x + radius, _area.end.x - radius)
 	p.y = clampf(p.y, _area.position.y + radius, _area.end.y - radius)
 	var cell := _cell_z(p.y) * _grid_w + _cell_x(p.x)
+	if is_nan(feet):
+		feet = ground_height(p)
 	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
 		var o := _cell_obstacle_items[k]
+		if not _obstacle_overlaps_height(o, feet, 2.2, p):
+			continue
 		var center := _obstacle_center[o]
 		var half := _obstacle_half[o]
 		var delta := p - center
@@ -1936,7 +2022,7 @@ func _update_projectiles(delta: float) -> void:
 		if p.distance_squared_to(closest) < hit_reach * hit_reach:
 			target.take_damage(ceili(_shot_damage[s]))
 			continue
-		if life <= 0.0 or p.y < ground_height(Vector2(p.x, p.z)) or is_blocked(Vector2(p.x, p.z), 0.0):
+		if life <= 0.0 or p.y < ground_height(Vector2(p.x, p.z)) or is_blocked(Vector2(p.x, p.z), 0.0, p.y - projectile_radius, projectile_radius * 2.0):
 			continue
 		_shot_pos[n] = p
 		_shot_vel[n] = _shot_vel[s]

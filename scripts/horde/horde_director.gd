@@ -86,7 +86,8 @@ func _spawn_group(definition: HordeEnemyDefinition, count: int, health_multiplie
 	for n in count:
 		var offset := Vector2.from_angle(_rng.randf() * TAU) * _rng.randf() * spread
 		var point := center + offset
-		if _horde.is_blocked(point, definition.radius):
+		if _horde.is_blocked(point, definition.radius) or not _horde.is_reachable(point) \
+				or absf(_horde.ground_height(point) - _horde.ground_height(center)) > Horde.LEVEL_GAP:
 			continue
 		if _horde.spawn(definition, point, health_multiplier) >= 0:
 			spawned = true
@@ -100,17 +101,32 @@ func _pick_point(radius: float) -> Vector2:
 	var maximum := _horde_area_max(radius)
 	if minimum.x > maximum.x or minimum.y > maximum.y:
 		return Vector2.INF
-	for attempt in 24:
+	var feet := _player.global_position.y - 0.9
+	var fallback := Vector2.INF
+	var underground := feet < -2.0
+	for attempt in (48 if underground else 24):
 		var angle := _rng.randf() * TAU
 		if _rng.randf() < behind_bias:
 			angle = facing + PI + _rng.randf_range(-1.9, 1.9)
 		var distance := _rng.randf_range(_schedule.spawn_distance_min, _schedule.spawn_distance_max)
+		var minimum_distance := _schedule.spawn_distance_min * 0.6
+		if underground and attempt >= 24:
+			# A metro hall need not fit the street-sized ring. Keep a safe approach
+			# distance and the same behind-player bias on its own floor.
+			minimum_distance = maxf(6.0, radius + Horde.PLAYER_RADIUS + 2.0)
+			distance = _rng.randf_range(minimum_distance, maxf(minimum_distance, minf(12.0, _schedule.spawn_distance_min)))
 		var point := player + Vector2.from_angle(angle) * distance
 		# Near a wall the ring leaves the arena: pull the point back inside.
 		point = point.clamp(minimum, maximum)
-		if point.distance_to(player) >= _schedule.spawn_distance_min * 0.6 and not _horde.is_blocked(point, radius):
+		if point.distance_to(player) < minimum_distance \
+				or _horde.is_blocked(point, radius) or not _horde.is_reachable(point):
+			continue
+		# Prefer the player's actual level, particularly inside the underground.
+		if absf(_horde.ground_height(point) - feet) <= Horde.LEVEL_GAP:
 			return point
-	return Vector2.INF
+		if not fallback.is_finite():
+			fallback = point
+	return fallback
 
 func _horde_area_min(radius: float) -> Vector2:
 	return _horde.play_area.position + Vector2.ONE * (radius + 1.0)

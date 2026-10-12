@@ -108,8 +108,9 @@ func step(delta: float, target: Vector3, attract_radius_squared: float, can_coll
 			var velocity := velocities[index]
 			velocity.y -= field.pickup_gravity * delta
 			position += velocity * delta
-			if position.y <= field.pickup_rest_height:
-				position.y = field.pickup_rest_height
+			var floor_y := field.pickup_floor_height(Vector2(position.x, position.z)) + field.pickup_rest_height
+			if is_finite(floor_y) and position.y <= floor_y:
+				position.y = floor_y
 				velocity.y = -velocity.y * 0.35 if velocity.y < -1.5 else 0.0
 				var friction := maxf(0.0, 1.0 - 5.0 * delta)
 				velocity.x *= friction

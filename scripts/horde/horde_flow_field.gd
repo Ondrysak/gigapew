@@ -35,6 +35,7 @@ func setup(width: int, height: int, origin: Vector2, cell_size: float, is_blocke
 	_passable.resize(cells)
 	_distance.resize(cells)
 	_direction.resize(cells)
+	_distance.fill(-1)
 	_queue.resize(cells)
 	var inset := Vector2(0.15, 0.15)
 	for cell in cells:
@@ -44,6 +45,9 @@ func setup(width: int, height: int, origin: Vector2, cell_size: float, is_blocke
 
 func is_passable(cell: int) -> bool:
 	return cell >= 0 and cell < _passable.size() and _passable[cell] == 1
+
+func is_reachable(cell: int) -> bool:
+	return is_passable(cell) and _distance[cell] >= 0
 
 ## Unit direction toward the target from `cell` for a body with feet at `y`;
 ## zero at the target cell or where it is unreachable (callers then steer
@@ -60,6 +64,7 @@ func update(target: Vector2, target_y: float) -> void:
 	var start := _nearest_passable(_cell_of(target), target_y)
 	if start < 0:
 		_direction.fill(Vector2.ZERO)
+		_distance.fill(-1)
 		return
 	_target_cell = start
 	_distance.fill(-1)

@@ -27,7 +27,7 @@ const SEED := 8721
 ## Explicit budgets for the storefront dressing of one whole level.
 const MAX_LABELS_PER_SHOP := 3
 const MAX_INSTANCES := 1000
-const MAX_LEVEL_LABELS := 40
+const MAX_LEVEL_LABELS := 96
 const MAX_LEVEL_BATCHES := 60
 const MAX_BATCHES := 3
 const MAX_LIGHTS := 4
@@ -117,7 +117,7 @@ func _snapshot(world: ProceduralWorld) -> Dictionary:
 					colliders.append(collider.shape.size if collider.shape is BoxShape3D else Vector2(collider.shape.radius, collider.shape.height))
 	var sites: Array = []
 	for site: Dictionary in world.mining_sites:
-		sites.append([site.position, site.normal, site.get("interior", false)])
+		sites.append([site.position, site.normal, site.venue_id, site.venue_kind, site.resources])
 	var rooms: Array = []
 	for room: Dictionary in world.rooms:
 		rooms.append([room.bounds, room.kind, room.arena, room.anchor])

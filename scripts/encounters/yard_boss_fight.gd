@@ -255,6 +255,11 @@ func _lock_mortar() -> void:
 	for n in 3:
 		var offset := side * (float(n - 1) * mortar_radius * 1.55)
 		var point := Vector2(target.x, target.z) + offset
+		if _horde.is_roofed(point) or _horde.is_blocked(point, 0.0) or not _horde.is_reachable(point):
+			_mortar_points[n] = Vector3.INF
+			_mortar_footprints[n] = PackedVector3Array()
+			_circles[n].hide()
+			continue
 		_mortar_points[n] = Vector3(point.x, _horde.ground_height(point), point.y)
 		_mortar_footprints[n] = _build_circle(_circles[n].mesh as ArrayMesh, _mortar_points[n])
 		_circles[n].show()
@@ -305,6 +310,8 @@ func _impact(index: int) -> void:
 	_impact_count = index + 1
 	var center := _mortar_points[index]
 	_circles[index].hide()
+	if not center.is_finite() or _horde.is_roofed(Vector2(center.x, center.z)):
+		return
 	# Reuse the exact warned footprint, a low floor shock (not a camera sphere).
 	_shocks[index].show()
 	_shock_age[index] = 0.0
@@ -341,9 +348,14 @@ func _build_lane() -> void:
 			_quad(vertices, colors, _floor(a + edge), _floor(a + edge - side * 0.09 * sign_value), _floor(b + edge - side * 0.09 * sign_value), _floor(b + edge), Color(1, 0.12, 0.02, 0.95))
 	for n in range(1, ceili(_ram_length / 3.0)):
 		var arrow := start + _ram_direction * (n * 3.0)
-		vertices.append(_floor(arrow - side * 0.65))
-		vertices.append(_floor(arrow + side * 0.65))
-		vertices.append(_floor(arrow + _ram_direction * 0.75))
+		var a := _floor(arrow - side * 0.65)
+		var b := _floor(arrow + side * 0.65)
+		var c := _floor(arrow + _ram_direction * 0.75)
+		if not a.is_finite() or not b.is_finite() or not c.is_finite():
+			continue
+		vertices.append(a)
+		vertices.append(b)
+		vertices.append(c)
 		for vertex in 3:
 			colors.append(Color(1.0, 0.68, 0.12, 0.95))
 	_write_mesh(_lane.mesh as ArrayMesh, vertices, colors)
@@ -380,7 +392,10 @@ func _build_circle(mesh: ArrayMesh, center: Vector3) -> PackedVector3Array:
 	return vertices
 
 func _marked_point(center: Vector3, point: Vector3) -> bool:
-	return absf(point.y - MARK_HEIGHT - center.y) <= blast_height_tolerance and _clear_cover(center + Vector3.UP * 0.9, point + Vector3.UP * (0.9 - MARK_HEIGHT))
+	var xz := Vector2(point.x, point.z)
+	return point.is_finite() and not _horde.is_roofed(xz) and not _horde.is_blocked(xz, 0.0) \
+			and absf(point.y - MARK_HEIGHT - center.y) <= blast_height_tolerance \
+			and _clear_cover(center + Vector3.UP * 0.9, point + Vector3.UP * (0.9 - MARK_HEIGHT))
 
 func _inside_footprint(index: int, point: Vector2) -> bool:
 	var vertices := _mortar_footprints[index]
@@ -401,6 +416,8 @@ func _floor(point: Vector2) -> Vector3:
 	return Vector3(point.x, _horde.ground_height(point) + MARK_HEIGHT, point.y)
 
 func _quad(vertices: PackedVector3Array, colors: PackedColorArray, a: Vector3, b: Vector3, c: Vector3, d: Vector3, color: Color) -> void:
+	if not a.is_finite() or not b.is_finite() or not c.is_finite() or not d.is_finite():
+		return
 	vertices.append(a)
 	vertices.append(b)
 	vertices.append(c)

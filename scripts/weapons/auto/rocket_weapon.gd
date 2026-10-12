@@ -185,7 +185,7 @@ func _explode(index: int) -> void:
 	_trails[index].hide()
 	var radius := blast_radius() * (split_radius_scale if split else 1.0)
 	horde.damage_radius(at, radius, damage_amount() * (split_damage_scale if split else 1.0), knockback)
-	_shocks.spawn(Vector3(at.x, 0.05, at.z), radius, 0.3)
+	_shocks.spawn(Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)) + 0.05, at.z), radius, 0.3)
 	if not crowds_view(at, radius):
 		_blasts.spawn(at, radius, blast_duration * (0.7 if split else 1.0))
 	if split:

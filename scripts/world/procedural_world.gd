@@ -2,11 +2,11 @@ class_name ProceduralWorld
 extends Node3D
 
 ## Built synchronously in _ready, before the game configures horde navigation.
-## A CELL_SIZE grid, identical to the horde grid, starts as solid rock. A themed
-## plan carves irregular rooms; corridors of varying width (a spanning tree plus
-## extra loops) join them and dead-end alcoves break their outlines. Unreachable
-## pockets are refilled, and the remaining rock merges into exact axis-aligned
-## blocks that physics, the horde and ore placement all read.
+## The CELL_SIZE grid reserves a covered Prague passage before carving street
+## rooms and looping corridors around its mass. Two stairs connect the layers;
+## connectivity/pruning uses their union. Ground has exact floor rectangles
+## with real stair holes, while Elevation owns smooth walkable stair ramps.
+## Physics, horde navigation, ore placement and radar share this layout.
 const CELL_SIZE := 2.0
 const WALL_THICKNESS := 0.8
 ## Open floor kept around set pieces, cover islands and pillars (metres).
@@ -53,12 +53,28 @@ const STORE_CONCRETE := Color(0.34, 0.33, 0.3)
 const STORE_STONE := Color(0.6, 0.57, 0.5)
 
 var level_seed: int
+## Resource-compatible venue bays with real support, floor, ownership and inward normal.
 var mining_sites: Array[Dictionary] = []
 ## {center (deck top), size, height, foot, direction} per generated overlook.
 var overlooks: Array[Dictionary] = []
 var outcrops: Array[StaticBody3D] = []
-## Walkable cells (1) on the CELL_SIZE grid from `layout_origin`; read by the radar.
+## Street carve only. Underground/stair XZ remains zero even when traversable.
 var layout_open := PackedByteArray()
+## Per union cell: street 0, underground/stairs -1; stairs carry continuous Y.
+var layout_level := PackedInt32Array()
+var layout_roofed := PackedByteArray()
+## Union of carved street, reserved underground and the two stair footprints.
+var layout_walkable := PackedByteArray()
+var kit_sites: Array[Dictionary] = []
+var stairs: Array[Dictionary] = []
+var _layers := PragueLayout.new()
+var _interior_rooms: Array[int] = []
+var _outdoor_room := -1
+var _landing_room := -1
+var _extraction_room := -1
+var _ground: Node3D
+var _kit_lights := 0
+var _kit_labels := 0
 var layout_width := 0
 var layout_height := 0
 var layout_origin := Vector2.ZERO
@@ -106,7 +122,7 @@ var venue_sites: Array[Dictionary] = []
 var _store_batches: Dictionary = {}
 var _venue_fills := 0
 var _store_frames := 0
-## Herna/Pivo face centres of the yard, kept apart from storefronts.
+## Playable venue entrances, kept apart from decorative storefronts.
 var _sign_points: Array[Vector3] = []
 var _site: Dictionary = {}
 ## +1/-1: which end of the shopfront carries the door.
@@ -141,10 +157,12 @@ func _ready() -> void:
 	_decoration.name = "Architecture"
 	add_child(_decoration)
 	_configure_theme()
+	_generate_layout()
 	_build_floor()
 	_build_perimeter()
-	_generate_layout()
+	_build_underground()
 	_build_spawn()
+	_build_outdoor_sites()
 	_build_solids()
 	# The reactor core claims its floor before anything else is placed near it.
 	for room in rooms:
@@ -152,6 +170,7 @@ func _ready() -> void:
 			_build_reactor_core(room)
 	_build_set_pieces()
 	_build_room_features()
+	_build_kit_sites()
 	if _theme == &"yard":
 		_build_zizkov_street()
 	_build_lighting()
@@ -255,8 +274,18 @@ func _build_floor() -> void:
 	if _theme == &"foundry":
 		material.set_shader_parameter("plate_origin", _area.position)
 		material.set_shader_parameter("heat_edge_z", _area.position.y)
-	var center := _area.get_center()
-	_box_body(self, "Floor", Vector3(center.x, -0.5, center.y), Vector3(_area.size.x + 2.0, 1.0, _area.size.y + 2.0), material)
+	_ground = Node3D.new()
+	_ground.name = "Ground"
+	add_child(_ground)
+	for rect in _layers.rectangles(layout_open):
+		var floor_rect := _grid_rect(rect)
+		var center := floor_rect.get_center()
+		_box_body(_ground, "StreetFloor", Vector3(center.x, -0.3, center.y), Vector3(floor_rect.size.x, 0.6, floor_rect.size.y), material)
+	var below := _material(Color(0.36, 0.34, 0.28), 0.85, 0.0)
+	for rect in _layers.rectangles(_layers.underground):
+		var floor_rect := _grid_rect(rect)
+		var center := floor_rect.get_center()
+		_box_body(_ground, "PassageFloor", Vector3(center.x, -4.8, center.y), Vector3(floor_rect.size.x, 0.6, floor_rect.size.y), below)
 
 ## Outer bounds only; the generated rock mass forms every visible inner wall.
 func _build_perimeter() -> void:
@@ -275,6 +304,8 @@ func _generate_layout() -> void:
 	layout_height = roundi(_area.size.y / CELL_SIZE)
 	layout_open.resize(layout_width * layout_height)
 	layout_open.fill(0)
+	_layers.plan(layout_width, layout_height, _theme)
+	_plan_interiors()
 	match _theme:
 		&"foundry": _plan_foundry()
 		&"reactor": _plan_reactor()
@@ -285,55 +316,42 @@ func _generate_layout() -> void:
 		var core: Rect2i = room.core
 		if core.has_area():
 			_set_cells(core, 0)
-	_spawn_room = _pick_spawn_room()
+	_spawn_room = _landing_room
+	# Make both stair approaches part of the street before repairing components.
+	for stair in _layers.stairs:
+		var top: Vector2i = stair.top_cell
+		_set_cells(Rect2i(top - Vector2i(1, 2), Vector2i(3, 5)), 1)
+	_layers.connect_street(layout_open, rooms[_spawn_room].anchor)
 	_prune_unreachable(rooms[_spawn_room].anchor)
+	_publish_layers()
+	_pick_extraction_room()
 
 ## Žižkov (yard): a compound of mixed-shape rooms with looping corridors.
 func _plan_compound() -> void:
-	for _index in maxi(1, _stage.overlook_count):
+	_add_room(Rect2i(10, 16, 18, 15), &"hall", true)
+	for _index in maxi(0, _stage.overlook_count - 1):
 		_try_room(Vector2i(15, 11), Vector2i(18, 13), [&"hall"], true)
 	for _index in 10 + _rng.randi_range(0, 2):
 		_try_room(Vector2i(6, 6), Vector2i(13, 12), [&"l_shape", &"t_shape", &"cross", &"chamfer", &"ring", &"pillars", &"hall", &"disc"], false)
 	_connect_rooms(0.4)
 
-## Foundry: long stacked furnace halls, transfer passages and side chambers.
+## Foundry: two long furnace halls around the indoor street and outdoor plaza.
 func _plan_foundry() -> void:
-	var heights: Array[int] = []
-	for index in 3:
-		heights.append(10 if index < _stage.overlook_count else 6)
-	_shuffle(heights)
-	var used := 0
-	for height in heights:
-		used += height
-	var gap := maxi(2, (layout_height - 4 - used) / 2)
-	var z := 2
-	var halls: Array[int] = []
-	for height in heights:
-		var length := _rng.randi_range(roundi(layout_width * 0.55), layout_width - 6)
-		var x := _rng.randi_range(2, layout_width - 2 - length)
-		var arena := height >= 10
-		halls.append(_add_room(Rect2i(x, z, length, height), &"hall" if arena else &"pillars", arena))
-		z += height + gap
-	for _index in 4:
+	# The western hall runs lengthwise; the eastern hall ends before the plaza.
+	# Neither can carve over a venue, its porch, the landing or the metro stairs.
+	_add_room(Rect2i(10, 21, layout_width / 2 - 11, layout_height - 23), &"hall", true)
+	_add_room(Rect2i(layout_width / 2 + 1, 18, layout_width / 2 - 11, 11), &"hall", true)
+	for _index in 5:
 		_try_room(Vector2i(6, 6), Vector2i(9, 8), [&"chamfer", &"l_shape", &"hall", &"disc"], false)
 	_connect_rooms(0.3)
-	# Several short vertical transfer passages between neighbouring halls.
-	for index in halls.size() - 1:
-		var upper: Rect2i = rooms[halls[index]].bounds
-		var lower: Rect2i = rooms[halls[index + 1]].bounds
-		var from := maxi(upper.position.x, lower.position.x) + 2
-		var to := mini(upper.end.x, lower.end.x) - 3
-		if to <= from:
-			continue
-		for _passage in _rng.randi_range(2, 3):
-			var x := _rng.randi_range(from, to)
-			_carve_path([Vector2i(x, upper.get_center().y), Vector2i(x, lower.get_center().y)], _corridor_width())
 
 ## Reactor: a round hub around the core, narrow spokes in and a ring of chords out.
 func _plan_reactor() -> void:
-	var center := Vector2i(layout_width / 2, layout_height / 2)
+	var center := Vector2i(layout_width / 2 + 3, layout_height / 2 + 5)
 	var hub := _add_room(Rect2i(center - Vector2i(8, 8), Vector2i(16, 16)), &"hub", false)
-	for _index in maxi(1, _stage.overlook_count):
+	_add_room(Rect2i(9, 10, 11, 15), &"hall", true)
+	_add_room(Rect2i(9, layout_height - 13, 15, 11), &"hall", true)
+	for _index in maxi(0, _stage.overlook_count - 2):
 		_try_room(Vector2i(15, 11), Vector2i(17, 12), [&"hall"], true)
 	for _index in 6:
 		_try_room(Vector2i(7, 7), Vector2i(11, 10), [&"l_shape", &"chamfer", &"ring", &"pillars", &"disc", &"cross"], false)
@@ -365,6 +383,8 @@ func _try_room(min_size: Vector2i, max_size: Vector2i, kinds: Array[StringName],
 		if size.x > region.size.x or size.y > region.size.y:
 			continue
 		var bounds := Rect2i(Vector2i(_rng.randi_range(region.position.x, region.end.x - size.x), _rng.randi_range(region.position.y, region.end.y - size.y)), size)
+		if _layers.intersects(bounds.grow(1)):
+			continue
 		var free := true
 		for room in rooms:
 			if (room.bounds as Rect2i).grow(2).intersects(bounds):
@@ -528,17 +548,6 @@ func _add_alcoves() -> void:
 			2: _set_cells(Rect2i(bounds.position.x - depth, along_z, depth, length), 1)
 			_: _set_cells(Rect2i(bounds.end.x, along_z, depth, length), 1)
 
-func _pick_spawn_room() -> int:
-	var candidates: Array[int] = []
-	for index in rooms.size():
-		if not rooms[index].arena and rooms[index].kind != &"hub" and _open_at(rooms[index].anchor):
-			candidates.append(index)
-	if candidates.is_empty():
-		for index in rooms.size():
-			if _open_at(rooms[index].anchor):
-				candidates.append(index)
-	return candidates[_rng.randi() % candidates.size()] if not candidates.is_empty() else 0
-
 func _prune_unreachable(start: Vector2i) -> void:
 	var visited := PackedByteArray()
 	visited.resize(layout_open.size())
@@ -552,25 +561,30 @@ func _prune_unreachable(start: Vector2i) -> void:
 		var z := cell / layout_width
 		for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 			var next := Vector2i(x, z) + step
-			if not _open_at(next):
+			if not _walkable_at(next):
 				continue
 			var index := next.y * layout_width + next.x
+			# Shared XZ neighbours do not imply a street-to-cellar doorway.
+			if layout_open[cell] != layout_open[index] and _layers.stair_cells[cell] == 0 and _layers.stair_cells[index] == 0:
+				continue
 			if visited[index] == 0:
 				visited[index] = 1
 				queue.append(index)
 	for index in layout_open.size():
 		if visited[index] == 0:
 			layout_open[index] = 0
+		assert(visited[index] != 0 or (_layers.underground[index] == 0 and _layers.stair_cells[index] == 0), "Underground must be connected through both stair approaches")
 
 ## One cell of rock is always kept around the grid edge.
 func _set_cell(cell: Vector2i, value: int) -> void:
 	if cell.x >= 1 and cell.y >= 1 and cell.x < layout_width - 1 and cell.y < layout_height - 1:
-		layout_open[cell.y * layout_width + cell.x] = value
+		if value == 0 or not _layers.is_reserved(cell):
+			layout_open[cell.y * layout_width + cell.x] = value
 
 func _set_cells(rect: Rect2i, value: int) -> void:
 	for z in range(maxi(rect.position.y, 1), mini(rect.end.y, layout_height - 1)):
 		for x in range(maxi(rect.position.x, 1), mini(rect.end.x, layout_width - 1)):
-			layout_open[z * layout_width + x] = value
+			_set_cell(Vector2i(x, z), value)
 
 func _open_at(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < layout_width and cell.y < layout_height and layout_open[cell.y * layout_width + cell.x] == 1
@@ -587,9 +601,12 @@ func _room_rect(room: Dictionary) -> Rect2:
 func extraction_point(from: Vector3) -> Vector3:
 	var best: Vector3 = get_node("PlayerSpawn").position
 	var best_distance := -1.0
-	for room in rooms:
+	for room_index in rooms.size():
+		if room_index in _interior_rooms:
+			continue
+		var room: Dictionary = rooms[room_index]
 		for cell: Vector2i in [room.anchor, (room.bounds as Rect2i).get_center()]:
-			if not _open_at(cell):
+			if not _open_at(cell) or layout_roofed[cell.y * layout_width + cell.x] != 0:
 				continue
 			var at := _cell_world(Vector2(cell) + Vector2(0.5, 0.5))
 			if not _area_clear(Rect2(at - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), 1.0):
@@ -628,7 +645,7 @@ func _build_spawn() -> void:
 	var at := _cell_world(Vector2(anchor) + Vector2(0.5, 0.5))
 	var spawn := Marker3D.new()
 	spawn.name = "PlayerSpawn"
-	spawn.position = Vector3(at.x, 0.05, at.y)
+	spawn.position = Vector3(at.x, 0.95, at.y)
 	# Face the level's centre of mass rather than the nearest wall.
 	var toward := _area.get_center() - at
 	if toward.length_squared() < 1.0:
@@ -653,17 +670,17 @@ func _build_solids() -> void:
 	for z in layout_height:
 		for x in layout_width:
 			var cell := z * layout_width + x
-			if layout_open[cell] == 1 or used[cell] == 1:
+			if layout_open[cell] == 1 or _layers.stair_cells[cell] == 1 or used[cell] == 1:
 				continue
 			var width := 1
-			while x + width < layout_width and layout_open[cell + width] == 0 and used[cell + width] == 0:
+			while x + width < layout_width and layout_open[cell + width] == 0 and _layers.stair_cells[cell + width] == 0 and used[cell + width] == 0:
 				width += 1
 			var depth := 1
 			while z + depth < layout_height:
 				var row_free := true
 				for dx in width:
 					var other := (z + depth) * layout_width + x + dx
-					if layout_open[other] == 1 or used[other] == 1:
+					if layout_open[other] == 1 or _layers.stair_cells[other] == 1 or used[other] == 1:
 						row_free = false
 						break
 				if not row_free:
@@ -693,7 +710,7 @@ func _build_block(rect: Rect2i, index: int) -> void:
 			if open and start < 0:
 				start = step
 			elif not open and start >= 0:
-				_dress_face(rect, face, start, step - start, body, height)
+				_dress_face(rect, face, start, step - start, height)
 				start = -1
 
 func _face_cell(rect: Rect2i, face: int, step: int, depth: int) -> Vector2i:
@@ -713,35 +730,17 @@ func _face_point(rect: Rect2i, face: int, along: float) -> Vector3:
 		_: point = _cell_world(Vector2(rect.end.x, rect.position.y + along))
 	return Vector3(point.x, 0.0, point.y)
 
-func _dress_face(rect: Rect2i, face: int, start: int, count: int, body: StaticBody3D, height: float) -> void:
+func _dress_face(rect: Rect2i, face: int, start: int, count: int, height: float) -> void:
 	var normal := FACE_NORMALS[face]
 	var mid := _face_point(rect, face, start + count * 0.5)
 	var length := count * CELL_SIZE
 	var along_x := face < 2
-	var run_sites := mining_sites.size()
-	# Tenement dressing waits until every machine site and set piece exists.
+	# Tenement dressing waits until the playable venue bays and set pieces exist.
 	_facade_runs.append({"mid": mid, "normal": normal, "length": length, "height": height, "along_x": along_x, "key": hash([rect.position, face, start])})
 	if _theme != &"yard":
-		# Flush on the face: only a dark mid band above the machine mounting height.
+		# Flush cladding band above the player's head.
 		if count >= 3:
 			_visual(_box, _dark, mid + normal * 0.015 + Vector3.UP * minf(height - 1.3, 3.6), Vector3(length - 1.0, 1.1, 0.03) if along_x else Vector3(0.03, 1.1, length - 1.0))
-	# Contract machine sites need a broad face with two open cells of standing room.
-	var deep_start := -1
-	for step in range(start, start + count + 1):
-		var deep := step < start + count and _open_at(_face_cell(rect, face, step, 2))
-		if deep and deep_start < 0:
-			deep_start = step
-		elif not deep and deep_start >= 0:
-			var run := step - deep_start
-			if run >= 3:
-				var sites := 1 + (run - 3) / 4
-				var spacing := float(run) / float(sites)
-				for site in sites:
-					var point := _face_point(rect, face, deep_start + spacing * (site + 0.5))
-					point.y = 1.5
-					mining_sites.append({"position": point, "normal": normal, "support": body})
-			deep_start = -1
-	_facade_runs[-1]["sites"] = mining_sites.size() - run_sites
 
 ## Overlooks favour arena rooms; outcrops spread over the others first.
 func _build_set_pieces() -> void:
@@ -837,7 +836,7 @@ func _build_overlook(deck: Rect2, height: float, direction: Vector2, run: float)
 	overlooks.append({"center": top, "size": deck.size, "height": height, "foot": foot, "direction": outward})
 
 func _try_outcrop(region: Rect2) -> bool:
-	# Long faces must still exceed a full machine bank (about 4.8 m).
+	# Substantial cover with enough room to move around its long faces.
 	var length := _rng.randf_range(5.6, 7.0)
 	var depth := _rng.randf_range(2.6, 3.4)
 	var height := _rng.randf_range(3.4, 4.4)
@@ -848,8 +847,7 @@ func _try_outcrop(region: Rect2) -> bool:
 			for _attempt in 40:
 				var corner := Vector2(_rng.randf_range(region.position.x, region.end.x - extent.x), _rng.randf_range(region.position.y, region.end.y - extent.y))
 				var footprint := Rect2(corner, extent)
-				# Room for a wall machine and a player in front, and never inside a
-				# wall site's standing spot (2.5 m out plus body radius).
+				# Keep room to move around the whole cover block.
 				if not _area_clear(footprint, 3.6):
 					continue
 				_occupied.append(footprint)
@@ -858,16 +856,12 @@ func _try_outcrop(region: Rect2) -> bool:
 		along_x = not along_x
 	return false
 
-## Both long faces are real, broad supports for contract ore mid-room.
+## Solid mid-room cover; machines belong to the playable indoor venues.
 func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
 	var center := footprint.get_center()
 	var position := Vector3(center.x, height * 0.5, center.y)
 	var body := _box_body(_obstacles, "OreOutcrop%d" % outcrops.size(), position, Vector3(footprint.size.x, height, footprint.size.y), _rock)
 	outcrops.append(body)
-	var half_depth := (footprint.size.y if along_x else footprint.size.x) * 0.5
-	for sign_value in [-1.0, 1.0]:
-		var normal := Vector3(0.0, 0.0, sign_value) if along_x else Vector3(sign_value, 0.0, 0.0)
-		mining_sites.append({"position": Vector3(center.x, 1.5, center.y) + normal * half_depth, "normal": normal, "support": body, "interior": true})
 	_visual(_box, _dark, position + Vector3.UP * (height * 0.5), Vector3(footprint.size.x * 0.96, 0.012, footprint.size.y * 0.96))
 	var end_offset := Vector3(footprint.size.x * 0.5, 0.0, 0.0) if along_x else Vector3(0.0, 0.0, footprint.size.y * 0.5)
 	if _theme == &"yard":
@@ -1091,27 +1085,14 @@ func _far_from(point: Vector3, taken: Array[Vector3], distance: float) -> bool:
 func _build_zizkov_street() -> void:
 	var order: Array[Dictionary] = _facade_runs.duplicate()
 	order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.key) < int(b.key))
-	var signs: Array[Vector3] = []
 	var lamps: Array[Vector3] = []
 	var bins: Array[Vector3] = []
 	var ore: Array[Vector3] = []
 	for site: Dictionary in mining_sites:
 		ore.append(site.position)
-	var herna := 0
-	var pivo := 0
 	for run in order:
 		var mid: Vector3 = run.mid
 		var length: float = run.length
-		run.feature = &""
-		# Signs sit above the ore band; broad mining faces must remain eligible.
-		if run.height >= 5.0 and length >= 8.0 and herna < 2 and _far_from(mid, signs, 28.0):
-			run.feature = &"herna"
-			herna += 1
-			signs.append(mid)
-		elif length >= 6.0 and pivo < 2 and _far_from(mid, signs, 22.0):
-			run.feature = &"pivo"
-			pivo += 1
-			signs.append(mid)
 		run.lamp = length >= 4.0 and lamps.size() < 16 and _far_from(mid, lamps, 12.0)
 		if run.lamp:
 			lamps.append(mid)
@@ -1119,7 +1100,6 @@ func _build_zizkov_street() -> void:
 		run.bins = length >= 4.0 and bins.size() < 14 and _far_from(corner, bins, 9.0) and _far_from(corner, ore, 3.4)
 		if run.bins:
 			bins.append(corner)
-	_sign_points = signs
 	for run in _facade_runs:
 		_dress_tenement(run)
 
@@ -1127,30 +1107,25 @@ func _dress_tenement(run: Dictionary) -> void:
 	var length: float = run.length
 	var height: float = run.height
 	var key: int = run.key
-	var feature: StringName = run.feature
 	_facade_box(run, _props[&"cornice"], 0.0, height - 0.3, 0.08, Vector3(length, 0.22, 0.16))
 	_facade_box(run, _props[&"cornice"], 0.0, height - 0.5, 0.04, Vector3(length, 0.08, 0.08))
-	var pavlac := feature == &"" and height >= 6.25 and length >= 6.0 and _vary(key, 1) < 0.7
-	if height >= 5.6 and feature == &"" and not pavlac:
+	var pavlac := height >= 6.25 and length >= 6.0 and _vary(key, 1) < 0.7
+	if height >= 5.6 and not pavlac:
 		_facade_box(run, _props[&"cornice"], 0.0, 4.1, 0.04, Vector3(length, 0.12, 0.08))
 	var windows := floori((length - 0.6) / 2.6)
 	if windows > 0:
 		var spacing := length / windows
 		for index in windows:
 			var along := -length * 0.5 + spacing * (index + 0.5)
-			if not (feature == &"pivo" and absf(along) < 1.7):
-				_add_window(run, along, 3.1, hash([key, index]))
+			_add_window(run, along, 3.1, hash([key, index]))
 			if height >= 6.25:
 				_add_window(run, along, 5.25, hash([key, index, 2]))
 	if pavlac:
 		_add_pavlac(run)
 	if _vary(key, 2) < 0.45:
 		_facade_box(run, _props[&"pipe"], -length * 0.5 + 0.3, (height - 0.35) * 0.5, 0.1, Vector3(0.11, height - 0.35, 0.11))
-	if feature == &"" and length >= 4.0 and _vary(key, 3) < 0.5:
+	if length >= 4.0 and _vary(key, 3) < 0.5:
 		_add_graffiti(run, key)
-	match feature:
-		&"herna": _add_herna(run)
-		&"pivo": _add_pivo(run)
 	if run.lamp:
 		_add_wall_lamp(run, length * 0.5 - 0.55, minf(4.0, height - 0.85))
 	if run.bins:
@@ -1218,53 +1193,6 @@ func _add_graffiti(run: Dictionary, key: int) -> void:
 	for index in letters:
 		var offset := along + (index - (letters - 1) * 0.5) * width / letters
 		_facade_box(run, letter, offset, y + (_vary(key, 30 + index) - 0.5) * 0.12, 0.02, Vector3(width / letters * 0.62, tall * 0.62, 0.012), Basis(normal, tilt + (_vary(key, 40 + index) - 0.5) * 0.5))
-
-## Herna NONSTOP: neon board under the cornice, blade sign, blacked-out shop.
-func _add_herna(run: Dictionary) -> void:
-	var normal: Vector3 = run.normal
-	var tangent := _run_tangent(run)
-	var length: float = run.length
-	var red: Material = _props[&"neon_red"]
-	var yellow: Material = _props[&"neon_yellow"]
-	_facade_box(run, _props[&"sign"], 0.0, 4.25, 0.06, Vector3(3.8, 0.78, 0.12))
-	for sign_value: float in [-1.0, 1.0]:
-		_facade_box(run, yellow, 0.0, 4.25 + sign_value * 0.41, 0.13, Vector3(3.9, 0.05, 0.05))
-		_facade_box(run, yellow, sign_value * 1.95, 4.25, 0.13, Vector3(0.05, 0.87, 0.05))
-	_label("HERNA NONSTOP", _facade_point(run, 0.0, 4.25, 0.135), normal, 78, Color(1.0, 0.16, 0.1), Color(0.45, 0.0, 0.0))
-	# Keep mining faces clear at ground level; only empty faces get a shopfront.
-	if run.sites == 0:
-		_facade_box(run, _props[&"glass"], 0.6, 1.45, 0.03, Vector3(2.2, 1.3, 0.06))
-		for sign_value: float in [-1.0, 1.0]:
-			_facade_box(run, red, 0.6, 1.45 + sign_value * 0.68, 0.07, Vector3(2.3, 0.04, 0.04))
-			_facade_box(run, red, 0.6 + sign_value * 1.13, 1.45, 0.07, Vector3(0.04, 1.4, 0.04))
-		_label("VÝHERNÍ AUTOMATY", _facade_point(run, 0.6, 1.62, 0.07), normal, 34, Color(1.0, 0.82, 0.25), Color(0.3, 0.1, 0.0))
-		_label("777", _facade_point(run, 0.6, 1.2, 0.07), normal, 64, Color(1.0, 0.2, 0.12), Color(0.3, 0.0, 0.0))
-		_facade_box(run, _props[&"frame"], -1.3, 1.1, 0.02, Vector3(1.2, 2.2, 0.04))
-		_facade_box(run, _props[&"sign"], -1.3, 1.05, 0.04, Vector3(1.0, 2.1, 0.04))
-	# Blade sign sticking out over the pavement.
-	var blade := minf(length * 0.5 - 0.8, 2.6)
-	_facade_box(run, _props[&"sign"], blade, 3.25, 0.52, Vector3(0.12, 1.7, 0.8))
-	_facade_box(run, red, blade, 3.25, 0.93, Vector3(0.14, 1.74, 0.04))
-	for side_value: float in [-1.0, 1.0]:
-		_label("H\nE\nR\nN\nA", _facade_point(run, blade + side_value * 0.065, 3.25, 0.52), tangent * side_value, 52, Color(1.0, 0.82, 0.22), Color(0.45, 0.15, 0.0))
-	_add_fill(_facade_point(run, 0.0, 3.9, 1.2), _secondary_color, 1.6, 8.0)
-
-## Hostinec: wooden door, board over it and a lit PIVO blade sign.
-func _add_pivo(run: Dictionary) -> void:
-	var normal: Vector3 = run.normal
-	var tangent := _run_tangent(run)
-	if run.sites == 0:
-		_facade_box(run, _props[&"frame"], 0.0, 1.15, 0.02, Vector3(1.3, 2.3, 0.04))
-		_facade_box(run, _props[&"wood"], 0.0, 1.1, 0.04, Vector3(1.1, 2.2, 0.04))
-		_facade_box(run, _props[&"glass_lit"], 0.0, 1.75, 0.065, Vector3(0.7, 0.5, 0.02))
-	_facade_box(run, _props[&"sign"], 0.0, 2.75, 0.05, Vector3(2.4, 0.5, 0.1))
-	_label("HOSTINEC", _facade_point(run, 0.0, 2.75, 0.105), normal, 56, Color(0.95, 0.85, 0.6), Color(0.15, 0.08, 0.02))
-	_facade_box(run, _props[&"iron"], 1.0, 3.62, 0.4, Vector3(0.05, 0.05, 0.8))
-	_facade_box(run, _props[&"sign"], 1.0, 3.3, 0.55, Vector3(0.1, 0.62, 0.84))
-	for sign_value: float in [-1.0, 1.0]:
-		_facade_box(run, _props[&"neon_yellow"], 1.0, 3.3 + sign_value * 0.33, 0.55, Vector3(0.12, 0.04, 0.88))
-	for side_value: float in [-1.0, 1.0]:
-		_label("PIVO", _facade_point(run, 1.0 + side_value * 0.056, 3.3, 0.55), tangent * side_value, 60, Color(1.0, 0.86, 0.35), Color(0.4, 0.2, 0.0))
 
 func _add_wall_lamp(run: Dictionary, along: float, y: float) -> void:
 	var iron: Material = _props[&"iron"]
@@ -2052,3 +1980,336 @@ func _add_fill(position: Vector3, color: Color, energy: float, radius: float) ->
 	light.light_energy = energy
 	light.omni_range = radius
 	add_child(light)
+
+func _grid_rect(cells: Rect2i) -> Rect2:
+	return Rect2(_cell_world(Vector2(cells.position)), Vector2(cells.size) * CELL_SIZE)
+
+func _plan_interiors() -> void:
+	var kinds: Array[StringName] = [&"herna", &"herna", &"hospoda", &"hospoda", &"nonstop", &"nonstop"]
+	_shuffle(kinds)
+	for index in kinds.size():
+		var x := 1 if index % 2 == 0 else layout_width - 7
+		_plan_venue(Rect2i(x, 3 + (index / 2) * 12, 6, 9), kinds[index])
+	if _theme == &"foundry":
+		_plan_venue(Rect2i(10, 10, 6, 9), &"vecerka")
+	# Separate uncovered landing and plaza leave the side-door porches open.
+	var landing := Vector2i(9, layout_height - 8)
+	if _theme == &"foundry":
+		landing = Vector2i(layout_width - 21, 10)
+	elif _theme == &"reactor":
+		landing = Vector2i(9, 28)
+	_landing_room = _add_room(Rect2i(landing, Vector2i(6, 6)), &"hall", false)
+	_outdoor_room = _add_room(Rect2i(layout_width / 2 + 1, layout_height - 13, 11, 11), &"hall", false)
+
+func _plan_venue(bounds: Rect2i, kind: StringName) -> void:
+	assert(not _layers.intersects(bounds.grow(1)), "Playable venues must not overlap underground reservations")
+	var room_index := _add_room(bounds, kind, false)
+	_interior_rooms.append(room_index)
+	# A real wall ring with one four-metre entrance. Street connectors aim
+	# at the porch, not through arbitrary walls toward the room centre.
+	for z in range(bounds.position.y - 1, bounds.end.y + 1):
+		for column in range(bounds.position.x - 1, bounds.end.x + 1):
+			var cell := Vector2i(column, z)
+			if not bounds.has_point(cell):
+				_layers.reserved[z * layout_width + column] = 1
+	var door_cell := Vector2i(bounds.get_center().x, bounds.end.y)
+	for column in range(door_cell.x - 1, door_cell.x + 1):
+		_layers.reserved[door_cell.y * layout_width + column] = 0
+	rooms[room_index]["door_cell"] = door_cell
+	rooms[room_index]["anchor"] = door_cell + Vector2i.DOWN
+	_set_cells(Rect2i(door_cell - Vector2i(1, 1), Vector2i(2, 3)), 1)
+
+func _publish_layers() -> void:
+	layout_walkable = layout_open.duplicate()
+	layout_level.resize(layout_open.size())
+	layout_roofed.resize(layout_open.size())
+	for index in layout_open.size():
+		if _layers.underground[index] != 0 or _layers.stair_cells[index] != 0:
+			layout_walkable[index] = 1
+			layout_level[index] = -1
+			layout_roofed[index] = 1
+	for room_index in _interior_rooms:
+		var bounds: Rect2i = rooms[room_index].bounds
+		_layers.mark(layout_roofed, bounds)
+		_occupied.append(_grid_rect(bounds))
+		var door_cell: Vector2i = rooms[room_index].door_cell
+		_occupied.append(_grid_rect(Rect2i(door_cell - Vector2i(1, 0), Vector2i(2, 3))))
+	for stair in _layers.stairs:
+		_occupied.append(_grid_rect(stair.cells).grow(1.0))
+
+func _pick_extraction_room() -> void:
+	var spawn := _cell_world(Vector2(rooms[_spawn_room].anchor))
+	var distance := -1.0
+	for index in rooms.size():
+		if index in _interior_rooms or not _open_at(rooms[index].anchor):
+			continue
+		var at := _cell_world(Vector2(rooms[index].anchor))
+		if at.distance_squared_to(spawn) > distance:
+			distance = at.distance_squared_to(spawn)
+			_extraction_room = index
+
+func _build_underground() -> void:
+	var concrete := _material(Color(0.44, 0.43, 0.39), 0.9, 0.0)
+	for cells in _layers.rectangles(_layers.underground):
+		var rect := _grid_rect(cells)
+		var center := rect.get_center()
+		var roof := _box_body(_obstacles, "PassageCeiling", Vector3(center.x, -0.3, center.y), Vector3(rect.size.x, 0.6, rect.size.y), concrete)
+		roof.set_meta("roof", true)
+	# Edge walls enclose the sunken floor; omit the two ramp mouths.
+	for z in layout_height:
+		for x in layout_width:
+			var index := z * layout_width + x
+			if _layers.underground[index] == 0:
+				continue
+			for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var next := Vector2i(x, z) + step
+				var other := next.y * layout_width + next.x
+				if _layers.underground[other] != 0 or _layers.stair_cells[other] != 0:
+					continue
+				var at := _cell_world(Vector2(x + 0.5, z + 0.5) + Vector2(step) * 0.5)
+				var size := Vector3(0.3, 4.5, CELL_SIZE) if step.x != 0 else Vector3(CELL_SIZE, 4.5, 0.3)
+				_box_body(_obstacles, "PassageWall", Vector3(at.x, -2.25, at.y), size, concrete)
+	for stair in _layers.stairs:
+		_build_stair(stair, concrete)
+	for room_index in _interior_rooms:
+		var rect := _room_rect(rooms[room_index])
+		var center := rect.get_center()
+		var roof := _box_body(_obstacles, "InteriorCeiling", Vector3(center.x, 3.4, center.y), Vector3(rect.size.x, 0.4, rect.size.y), concrete)
+		roof.set_meta("roof", true)
+
+func _build_stair(plan: Dictionary, material: Material) -> void:
+	var rect := _grid_rect(plan.cells)
+	var direction: Vector2 = plan.direction
+	var inward := Vector3(direction.x, 0.0, direction.y)
+	var center := rect.get_center()
+	var top := Vector3(center.x, 0.0, center.y) - inward * rect.size.x * 0.5
+	var foot := top + inward * rect.size.x + Vector3.DOWN * 4.5
+	var slope := (foot - top).normalized()
+	var across := Vector3.BACK
+	var normal := slope.cross(across).normalized()
+	if normal.y < 0.0:
+		across = -across
+		normal = slope.cross(across).normalized()
+	var basis := Basis(across, normal, slope)
+	var midpoint := (top + foot) * 0.5
+	var length := top.distance_to(foot)
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(6.0, 0.35, length)
+	var ramp := _body(_elevation, "UndergroundStair%d" % stairs.size(), midpoint - normal * 0.175, shape)
+	ramp.basis = basis
+	ramp.set_meta("stair", true)
+	_visual(_box, material, ramp.position, shape.size, basis)
+	# Flat treads are visual only; their nosings meet a smooth collision ramp.
+	for tread in 30:
+		var t := (float(tread) + 0.5) / 30.0
+		var at := top.lerp(foot, t)
+		_visual(_box, material, at - Vector3.UP * 0.075, Vector3(rect.size.x / 30.0, 0.15, 5.65))
+		_visual(_box, _steel, at + Vector3.UP * 0.008, Vector3(0.045, 0.016, 5.65))
+	# Side parapets follow the entire descent; no accidental lateral entrance.
+	for side in [-1.0, 1.0]:
+		var rail_shape := BoxShape3D.new()
+		rail_shape.size = Vector3(0.3, 1.15, length)
+		var rail := _body(_obstacles, "StairParapet", midpoint + across * side * 2.85 + Vector3.UP * 0.6, rail_shape)
+		rail.basis = basis
+		_visual(_box, material, rail.position, rail_shape.size, basis)
+		_visual(_box, _steel, midpoint + across * side * 2.85 + Vector3.UP * 1.25, Vector3(0.12, 0.12, length), basis)
+	# A sloping covered stairwell retains full headroom at both ends.
+	var roof_shape := BoxShape3D.new()
+	roof_shape.size = Vector3(6.0, 0.25, length)
+	var roof := _body(_obstacles, "StairCeiling", midpoint + Vector3.UP * 3.5, roof_shape)
+	roof.basis = basis
+	roof.set_meta("roof", true)
+	_visual(_box, material, roof.position, roof_shape.size, basis)
+	stairs.append({"top": top, "foot": foot, "direction": inward, "rect": rect, "position": top, "top_cell": plan.top_cell, "foot_cell": plan.foot_cell})
+
+func _site_for(kind: StringName, rect: Rect2, floor_y: float, ceiling_y: float, door: Vector3, facing: Vector2, openings: Array[Vector3]) -> Dictionary:
+	return {"kind": kind, "rect": rect, "floor_y": floor_y, "ceiling_y": ceiling_y, "door": door, "facing": facing, "seed": hash([level_seed, kind, rect]), "theme": _theme, "openings": openings}
+
+func _build_kit_sites() -> void:
+	var hall := _grid_rect(_layers.hall)
+	var hall_door := stairs[0].foot as Vector3
+	var hall_openings: Array[Vector3] = [stairs[0].foot, stairs[1].foot]
+	var passage := _grid_rect(_layers.passage)
+	hall_openings.append(Vector3(passage.get_center().x, -4.5, hall.end.y))
+	var metro := _site_for(&"metro", hall, -4.5, -0.6, hall_door, Vector2.LEFT, hall_openings)
+	metro["entrances"] = stairs.duplicate()
+	metro["opening_widths"] = [6.0, 6.0, passage.size.x]
+	kit_sites.append(metro)
+	var wc_rect := _grid_rect(_layers.wc)
+	var wc_door := Vector3(wc_rect.position.x, -4.5, wc_rect.position.y + 2.0)
+	_build_room_shell(wc_rect, -4.5, 3.9, [wc_door])
+	var wc_site := _site_for(&"wc", wc_rect, -4.5, -0.6, wc_door, Vector2.LEFT, [wc_door])
+	wc_site["opening_widths"] = [4.0]
+	kit_sites.append(wc_site)
+	for room_index in _interior_rooms:
+		var room: Dictionary = rooms[room_index]
+		var rect := _room_rect(room)
+		var door_cell: Vector2i = room.door_cell
+		var door_at := _cell_world(Vector2(door_cell))
+		var door := Vector3(door_at.x, 0.0, door_at.y)
+		var openings: Array[Vector3] = [door]
+		var opening_widths: Array[float] = [4.0]
+		var walls := _build_room_shell(rect, 0.0, 3.2, openings, opening_widths)
+		var site := _site_for(room.kind, rect, 0.0, 3.2, door, Vector2.DOWN, openings)
+		site["venue_id"] = room_index
+		site["opening_widths"] = opening_widths
+		site["machine_zones"] = [] as Array[Rect2]
+		_build_venue_sites(site, walls)
+		kit_sites.append(site)
+		_sign_points.append(door)
+	var target := KitTarget.new()
+	target.solid = _kit_solid
+	target.visual = _kit_visual
+	target.label = _kit_label
+	target.light = _kit_light
+	for site in kit_sites:
+		var standing_points: Array[Vector3] = []
+		var bounds := (site.rect as Rect2).grow(2.0)
+		var floor_y := float(site.floor_y)
+		for mining_site in mining_sites:
+			var stand: Vector3 = mining_site.position + mining_site.normal * 2.5
+			if absf(float(mining_site.floor_y) - floor_y) >= 0.1:
+				continue
+			if bounds.has_point(Vector2(stand.x, stand.z)):
+				standing_points.append(Vector3(stand.x, floor_y, stand.z))
+			# The shared two-metre route grid samples the containing cell's
+			# centre, not the exact machine approach. Reserve both: a prop can
+			# miss the approach but still obstruct its navigable support cell.
+			var cell := Vector2i(floori((stand.x - layout_origin.x) / CELL_SIZE), floori((stand.z - layout_origin.y) / CELL_SIZE))
+			var cell_center := _cell_world(Vector2(cell) + Vector2(0.5, 0.5))
+			if bounds.has_point(cell_center) and cell_center.distance_squared_to(Vector2(stand.x, stand.z)) > 0.001:
+				standing_points.append(Vector3(cell_center.x, floor_y, cell_center.y))
+		site["standing_points"] = standing_points
+		var before := target.solids_added
+		PragueKits.build(target, site)
+		site["colliders"] = target.solids_added - before
+	target.flush(_decoration)
+
+## Deliberate resource-specific wall bays, not random terrain faces.
+func _build_venue_sites(site: Dictionary, walls: Array[StaticBody3D]) -> void:
+	var rect: Rect2 = site.rect
+	var center := rect.get_center()
+	var kind: StringName = site.kind
+	for wall in walls:
+		var shape := (wall.get_node("Collision") as CollisionShape3D).shape as BoxShape3D
+		var along_x := shape.size.x > shape.size.z
+		var normal := Vector3(0, 0, signf(center.y - wall.position.z)) if along_x else Vector3(signf(center.x - wall.position.x), 0, 0)
+		var offsets: Array[float] = []
+		var resources: Array[StringName] = []
+		if along_x:
+			if normal.z < 0.0:
+				continue # Keep the main entrance and its porch free.
+			offsets.assign([0.0])
+			resources.assign([&"shard"] if kind == &"herna" else [&"crystal"])
+		elif kind == &"herna":
+			offsets.assign([-6.0, 0.0, 6.0])
+			resources.assign([&"gold"])
+		elif kind == &"hospoda":
+			if normal.x > 0.0:
+				continue # Leave one long wall for the bar and seating.
+			offsets.assign([-5.0, 5.0])
+			resources.assign([&"gold"])
+		else:
+			offsets.assign([-6.0, 0.0, 6.0] if normal.x < 0.0 else [-6.0, 6.0])
+			resources.assign([&"crystal"])
+		# The fruit-bank housing has a 0.6 m plinth below its nominal
+		# -1.3 m cabinet base; mount that actual bottom on the room floor.
+		var mount_height := 1.9 if resources[0] in [&"gold", &"shard"] else 1.5
+		for offset in offsets:
+			var point := Vector3(center.x + offset, mount_height, wall.position.z) if along_x else Vector3(wall.position.x, mount_height, center.y + offset)
+			point += normal * 0.125
+			mining_sites.append({"position": point, "normal": normal, "support": wall, "floor_y": 0.0, "venue_id": site.venue_id, "venue_kind": kind, "resources": resources})
+			var inward := Vector2(normal.x, normal.z)
+			# Keep the whole cabinet frontage plus a 0.6 m approach disc clear.
+			var size := Vector2(absf(normal.z), absf(normal.x)) * 6.0 + inward.abs() * 3.2
+			var middle := Vector2(point.x, point.z) + inward * 1.6
+			(site.machine_zones as Array[Rect2]).append(Rect2(middle - size * 0.5, size))
+
+func _build_outdoor_sites() -> void:
+	# Reserve the entire guaranteed plaza before set pieces and cover are
+	# placed. Its perimeter is the machine approach route, not spare prop space.
+	var plaza := _room_rect(rooms[_outdoor_room])
+	_occupied.append(plaza)
+	var kinds: Array[StringName] = [&"construction", &"park"]
+	for index in kinds.size():
+		var site_rect := Rect2(plaza.position + Vector2(4.5 + index * 7.0, 4.5), Vector2(6.0, 6.0))
+		var door := Vector3(site_rect.get_center().x, 0.0, site_rect.end.y)
+		kit_sites.append(_site_for(kinds[index], site_rect, 0.0, 10.0, door, Vector2.DOWN, [door]))
+	# Both promised two-cabin clusters lie beyond the perimeter machines'
+	# standing-point reservation belt. Four-metre depth leaves room to move a
+	# whole colliding cabin without sacrificing the centre aisle or front door.
+	for x in [5.25, 11.55]:
+		var site_rect := Rect2(plaza.position + Vector2(x, 12.0), Vector2(5.2, 4.0))
+		var door := Vector3(site_rect.get_center().x, 0.0, site_rect.end.y)
+		kit_sites.append(_site_for(&"toitoi", site_rect, 0.0, 2.5, door, Vector2.DOWN, [door]))
+
+func _kit_solid(center: Vector3, size: Vector3, yaw: float, material: Material) -> void:
+	var shape := BoxShape3D.new()
+	shape.size = size
+	var body := _body(_obstacles, "KitSolid", center, shape)
+	body.rotation.y = yaw
+	if material != null:
+		_visual(_box, material, center, size, Basis(Vector3.UP, yaw))
+
+func _kit_visual(kind: StringName, xform: Transform3D, material: Material) -> void:
+	# The world cylinder has radius one; the sphere already uses radius 0.5.
+	var mesh: Mesh = _box
+	var unit_scale := Vector3.ONE
+	if kind == &"cylinder":
+		mesh = _cylinder
+		unit_scale = Vector3(0.5, 1.0, 0.5)
+	elif kind == &"sphere":
+		mesh = _sphere
+	_visual(mesh, material, xform.origin, unit_scale, xform.basis)
+
+func _kit_label(text: String, xform: Transform3D, font_size: int, color: Color) -> void:
+	if _kit_labels >= 64:
+		return
+	_kit_labels += 1
+	_label(text, xform.origin, xform.basis.z.normalized(), font_size, color, Color(0.015, 0.015, 0.015))
+
+func _kit_light(position: Vector3, color: Color, energy: float, radius: float) -> bool:
+	if _kit_lights >= 4:
+		return false
+	_kit_lights += 1
+	_add_fill(position, color, energy, radius)
+	return true
+
+func _build_room_shell(rect: Rect2, floor_y: float, height: float, openings: Array[Vector3], widths: Array[float] = []) -> Array[StaticBody3D]:
+	var walls: Array[StaticBody3D] = []
+	for face in 4:
+		var along_x := face < 2
+		var edge := (rect.position.y if face == 0 else rect.end.y) if along_x else (rect.position.x if face == 2 else rect.end.x)
+		var begin := rect.position.x if along_x else rect.position.y
+		var end := rect.end.x if along_x else rect.end.y
+		var doors: Array[Vector2] = []
+		for index in openings.size():
+			var point := openings[index]
+			if absf((point.z if along_x else point.x) - edge) < 0.1:
+				var along := point.x if along_x else point.z
+				var half_width := widths[index] * 0.5 if index < widths.size() else 2.0
+				doors.append(Vector2(maxf(begin, along - half_width), minf(end, along + half_width)))
+		doors.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x)
+		var cursor := begin
+		for door in doors:
+			var wall := _room_wall_segment(along_x, edge, cursor, door.x, floor_y, height)
+			if wall != null:
+				walls.append(wall)
+			cursor = maxf(cursor, door.y)
+		var wall := _room_wall_segment(along_x, edge, cursor, end, floor_y, height)
+		if wall != null:
+			walls.append(wall)
+	return walls
+
+func _room_wall_segment(along_x: bool, edge: float, begin: float, end: float, floor_y: float, height: float) -> StaticBody3D:
+	if end - begin < 0.05:
+		return null
+	var at := Vector3((begin + end) * 0.5, floor_y + height * 0.5, edge) if along_x else Vector3(edge, floor_y + height * 0.5, (begin + end) * 0.5)
+	var size := Vector3(end - begin, height, 0.25) if along_x else Vector3(0.25, height, end - begin)
+	return _box_body(_obstacles, "RoomWall", at, size, _steel)
+
+func _walkable_at(cell: Vector2i) -> bool:
+	if cell.x < 0 or cell.y < 0 or cell.x >= layout_width or cell.y >= layout_height:
+		return false
+	var index := cell.y * layout_width + cell.x
+	return layout_open[index] != 0 or _layers.underground[index] != 0 or _layers.stair_cells[index] != 0

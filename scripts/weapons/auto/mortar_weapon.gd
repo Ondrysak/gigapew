@@ -118,6 +118,9 @@ func _arc_point(index: int, t: float) -> Vector3:
 
 func _fire_salvo() -> bool:
 	var found := horde.query_radius(player.global_position, target_range, _hits)
+	# Sky-fired shells cannot originate inside a room or underground ceiling.
+	if horde.is_roofed(Vector2(player.global_position.x, player.global_position.z)):
+		return false
 	if found <= 0:
 		return false
 	var origin := player.global_position + Vector3.UP * launch_height
@@ -129,6 +132,9 @@ func _fire_salvo() -> bool:
 			continue
 		var target := _hits[_rng.randi_range(0, found - 1)]
 		var land := horde.enemy_position(target)
+		var xz := Vector2(land.x, land.z)
+		if horde.is_roofed(xz) or horde.is_blocked(xz, 0.0) or not horde.is_reachable(xz):
+			continue
 		land.y = horde.ground_height(Vector2(land.x, land.z))
 		_launch(index, 1, origin, land, flight_time, arc_height, -salvo_interval * queued)
 		queued += 1
@@ -167,6 +173,10 @@ func _scatter_bomblets(at: Vector3) -> void:
 		var angle := turn + TAU * float(left) / float(bomblets)
 		var distance := _rng.randf_range(bomblet_spread.x, bomblet_spread.y) * area_scale()
 		var to := at + Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
+		var xz := Vector2(to.x, to.z)
+		if horde.is_roofed(xz) or horde.is_blocked(xz, 0.0) or not horde.is_reachable(xz):
+			continue
+		to.y = horde.ground_height(xz)
 		_launch(index, 2, at + Vector3.UP * 0.3, to, bomblet_flight_time * _rng.randf_range(0.85, 1.15), bomblet_arc_height, 0.0)
 		left -= 1
 
