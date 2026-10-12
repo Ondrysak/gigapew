@@ -412,7 +412,7 @@ func _validate_layers(game: ArenaGame, world: ProceduralWorld) -> void:
 	if game.campaign[game.stage_index].layout_theme == &"foundry":
 		lab.check(int(venue_counts.get(&"vecerka", 0)) >= 1, "Palmovka retains its playable vecerka")
 	lab.check(&"construction" in kinds and &"park" in kinds, "construction and park dressing occupy reserved outdoor sites")
-	lab.check(budgets and world._kit_lights <= 4 and world._kit_labels <= 64, "kit colliders, local lights and labels stay inside their budgets")
+	lab.check(budgets and world._kit_lights <= 10 and world._kit_labels <= 64, "kit colliders, local lights and labels stay inside their budgets")
 	var metadata := world.layout_walkable.size() == world.layout_open.size() and world.layout_level.size() == world.layout_open.size() and world.layout_roofed.size() == world.layout_open.size()
 	var underground_count := 0
 	for index in world.layout_level.size():

@@ -65,6 +65,8 @@ var _rng := RandomNumberGenerator.new()
 var _banked_ids: Array[StringName] = []
 var _nearby := PackedInt32Array()
 var _music_timer := 0.0
+var _music_kill_heat := 0.0
+var _music_damage_heat := 0.0
 var _run_recorded := false
 ## Luďas reacts with his own recorded voice; survives stage loads.
 var voice: LudasVoice
@@ -89,6 +91,7 @@ func _ready() -> void:
 	voice = LudasVoice.new()
 	voice.name = "LudasVoice"
 	add_child(voice)
+	Music.follow_voice(voice)
 	pause_menu.resume_requested.connect(_on_resume)
 	pause_menu.abandon_requested.connect(_on_abandon)
 	hud.setup_resources(resources)
@@ -167,12 +170,17 @@ func _process(delta: float) -> void:
 		_burst_left -= delta
 		if _burst_left <= 0.0:
 			_burst_kills = 0
+		_music_kill_heat = move_toward(_music_kill_heat, 0.0, delta * 0.28)
+		_music_damage_heat = move_toward(_music_damage_heat, 0.0, delta * 0.5)
 		_music_timer -= delta
 		if _music_timer <= 0.0:
 			_music_timer = 0.25
 			Music.set_intensity(_crowd_intensity())
+			var tool := player.mining_tool
+			var contact := tool.resonance if tool != null and player.drilling() and is_instance_valid(tool.target_deposit) else 0.0
+			Music.set_mining(contact)
 
-## Blend of the crowd pressing on the player and the stage-wide crowd size.
+## Crowd pressure, actual kill momentum, health loss and low-health danger.
 func _crowd_intensity() -> float:
 	var near := horde.query_radius(player.global_position, music_radius, _nearby)
 	var represented := 0
@@ -180,7 +188,9 @@ func _crowd_intensity() -> float:
 		represented += horde.fusion_members(_nearby[n])
 	var local := clampf(float(represented) / music_crowd_reference, 0.0, 1.0)
 	var global := clampf(float(horde.population_count) / maxf(1.0, campaign[stage_index].schedule.max_alive), 0.0, 1.0)
-	return clampf(0.12 + local * 0.6 + global * 0.3, 0.0, 1.0)
+	var health_ratio := float(player.health) / maxi(player.max_health, 1)
+	var danger := 1.0 - smoothstep(0.15, 0.5, health_ratio)
+	return clampf(0.12 + local * 0.6 + global * 0.3 + danger * 0.18 + _music_kill_heat * 0.2 + _music_damage_heat * 0.15, 0.0, 1.0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo():
@@ -276,6 +286,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	_round.add_child(deposits)
 	deposits.setup(world, stage.play_area, player, run_state)
 	deposits.compartment_opened.connect(player.gear_effects.grant_salvage_shield)
+	deposits.compartment_opened.connect(_on_salvage_music)
 	pickups = pickup_scene.instantiate() as PickupField
 	_round.add_child(pickups)
 	pickups.setup(horde, player, run_state)
@@ -307,6 +318,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.combo_changed.connect(hud.show_combo)
 	player.ability_combo.connect(hud.show_ability_combo)
 	player.ability_combo.connect(func(_id: StringName): voice.say(&"combo"))
+	player.ability_combo.connect(func(_id: StringName): Music.accent(&"combo"))
 	horde.enemy_killed.connect(_on_enemy_killed)
 	horde.boss_spawned.connect(_on_boss_spawned)
 	horde.boss_health_changed.connect(hud.set_boss_health)
@@ -333,6 +345,9 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	Music.play(&"stage")
 	Music.set_boss(false)
 	Music.set_intensity(0.12)
+	Music.set_mining(0.0)
+	_music_kill_heat = 0.0
+	_music_damage_heat = 0.0
 	round_state = RoundState.PLAYING
 	# Level-ups banked while a stage was ending are offered on arrival.
 	if run_state.pending_level_ups > 0:
@@ -363,6 +378,10 @@ func _offer_skill_tip(skill: ActiveAbility) -> void:
 
 ## Low health prompts the repair tip and Luďas's growl; healing gets a gulp.
 func _on_health_for_tips(current: int, maximum: int) -> void:
+	if current < _last_health and current > 0:
+		_music_damage_heat = 1.0
+		if current < maximum * 0.4:
+			Music.accent(&"danger")
 	if current > 0 and current < maximum * 0.4:
 		hud.tutor.offer(&"repair")
 		if current < _last_health:
@@ -384,6 +403,7 @@ func _on_enemy_killed(definition: HordeEnemyDefinition, _position: Vector3) -> v
 	if round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
 		return
 	kills += 1
+	_music_kill_heat = minf(1.0, _music_kill_heat + 0.16)
 	hud.set_kills(kills)
 	quests.record_kill(definition)
 	_burst_kills += 1
@@ -391,6 +411,11 @@ func _on_enemy_killed(definition: HordeEnemyDefinition, _position: Vector3) -> v
 	if _burst_kills >= BURST_KILLS:
 		_burst_kills = 0
 		voice.say(&"multikill")
+		Music.accent(&"combo")
+
+func _on_salvage_music() -> void:
+	if round_state == RoundState.PLAYING:
+		Music.accent(&"salvage")
 
 func _on_boss_spawned(definition: HordeEnemyDefinition) -> void:
 	hud.show_boss(definition)
@@ -586,6 +611,7 @@ func _on_quests_completed(source_id: int) -> void:
 	voice.say(&"extraction")
 	hud.show_extraction_warning()
 	Music.set_boss(true)
+	Music.accent(&"extraction")
 	hud.tutor.offer(&"extraction")
 
 ## The farthest clear room of a generated level; authored arenas use the spawn.
@@ -624,6 +650,7 @@ func _finish_stage_clear() -> void:
 	voice.say(&"clear")
 	var final_stage := stage_index == campaign.size() - 1
 	Music.set_boss(false)
+	Music.set_intensity(0.0)
 	Music.stinger(&"run_complete" if final_stage else &"stage_clear")
 	if final_stage:
 		_record_run(true)
@@ -644,6 +671,8 @@ func _on_player_died() -> void:
 	player.sound.play_cue(&"death")
 	voice.say(&"death")
 	Music.set_boss(false)
+	Music.set_intensity(0.0)
+	Music.set_mining(0.0)
 	Music.stinger(&"death")
 	hud.finish_run(run_state.level, kills, run_time, stages_cleared, banked)
 

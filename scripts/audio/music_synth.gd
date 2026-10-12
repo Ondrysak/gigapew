@@ -25,8 +25,11 @@ var square: Array[PackedFloat32Array] = []
 var noise := PackedFloat32Array()
 ## Read position in the noise table; moves on after every noisy voice.
 var noise_cursor := 0
+## Main-thread-loaded samples; renderers only read this shared bank and never duplicate a hit.
+var _bank: Dictionary = {}
 
-func _init(seed_value := 1337) -> void:
+func _init(seed_value := 1337, bank: Dictionary = {}) -> void:
+	_bank = bank
 	sine.resize(TABLE_SIZE)
 	for i in TABLE_SIZE:
 		sine[i] = sin(TAU * i / TABLE_SIZE)
@@ -347,6 +350,49 @@ func bell(buf: PackedFloat32Array, start: int, length: int, midi: float, gain: f
 		if j == n:
 			j = 0
 
+# --- Sample voices -----------------------------------------------------------------------------
+
+## Linearly interpolated mono sample, with destination tails wrapping through the loop seam.
+## `source_start` is in source samples; `length` is in destination samples (0 = remaining source).
+## Source wrapping is for tempo-locked break chops, not one-shots. Edges fade in/out independently
+## of either loop boundary, so cut vocals and chopped drums cannot introduce discontinuities.
+func sample_hit(buf: PackedFloat32Array, start: int, key: StringName, gain: float, rate := 1.0, source_start := 0, length := 0, loop_source := false, edge := 66) -> void:
+	var n := buf.size()
+	if cancelled or n == 0 or rate <= 0.0:
+		return
+	var source: PackedFloat32Array = _bank[key]
+	var source_size := source.size()
+	if source_size < 2:
+		return
+	var position := float(posmod(source_start, source_size)) if loop_source else float(maxi(source_start, 0))
+	var available := maxi(0, ceili((source_size - position) / rate))
+	var total := length if length > 0 else available
+	if not loop_source:
+		total = mini(total, available)
+	total = mini(total, n)
+	if total <= 0:
+		return
+	var fade := mini(maxi(edge, 1), maxi(total / 2, 1))
+	var fade_inv := 1.0 / fade
+	var j := posmod(start, n)
+	for i in total:
+		var index := int(position)
+		var following := index + 1
+		if following == source_size:
+			following = 0 if loop_source else index
+		var value := lerpf(source[index], source[following], position - index)
+		var envelope := minf(1.0, minf(i, total - 1 - i) * fade_inv)
+		buf[j] += value * gain * envelope
+		position += rate
+		if position >= source_size:
+			if loop_source:
+				position = fmod(position, source_size)
+			else:
+				break
+		j += 1
+		if j == n:
+			j = 0
+
 # --- Drums -------------------------------------------------------------------------------------
 
 ## Sine kick sweeping down to `low_hz` with a noise click; `punch` scales sweep and click.
@@ -659,14 +705,14 @@ func mix(dst: PackedFloat32Array, src: PackedFloat32Array, gain: float) -> void:
 	for i in mini(dst.size(), src.size()):
 		dst[i] += src[i] * gain
 
-## Scales the buffer so its loudest sample is `peak`.
-func normalize(buf: PackedFloat32Array, peak: float) -> void:
+## Keeps the loudest sample at `peak`; disable amplification to preserve stage mixing headroom.
+func normalize(buf: PackedFloat32Array, peak: float, amplify := true) -> void:
 	var top := 0.0
-	for value in buf:
-		top = maxf(top, absf(value))
-	if top <= 0.0:
+	for i in buf.size():
+		top = maxf(top, absf(buf[i]))
+	if top <= 0.0 or (not amplify and top <= peak):
 		return
-	var scale := peak / top
+	var scale := peak / top if amplify else minf(1.0, peak / top)
 	for i in buf.size():
 		buf[i] *= scale
 

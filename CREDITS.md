@@ -1,17 +1,21 @@
 # Credits and third-party assets
 
-All third-party art is released under **CC0 1.0 (public domain)**: free for personal and commercial use, no attribution required. It is listed here for provenance. Everything else (code, procedural audio, primitive models, shaders) is original to this project.
+The third-party **art listed below** is released under **CC0 1.0 (public domain)**: free for personal and commercial use, no attribution required. Code, synthesized instruments, primitive models and shaders are original to this project. Sampled audio has separate terms below.
 
 | Asset | Author | Source | License | Used as |
 | --- | --- | --- | --- | --- |
 | Modular Sci-Fi MegaKit (Standard) | Quaternius | https://quaternius.com/packs/modularscifimegakit.html | CC0 | Level modules and props (`assets/third_party/quaternius_megakit/`), retained in the later-sector and authored lab environments |
 | Sci-Fi Essentials Kit (Standard) | Quaternius | https://quaternius.com/packs/scifiessentialskit.html | CC0 | Hazard and dressing props (`assets/third_party/quaternius_scifi_essentials/`) |
 | Ultimate Animated Character Pack | Quaternius | https://quaternius.com/packs/ultimatedanimatedcharacter.html | CC0 | The six Žižkov/Palmovka hallucinations (Bezdomovec, Feťák, Alkoholik, Vekslák, Vyhazovač, Pan Herna), recoloured and baked into `assets/monsters/robot_*` |
-| Furniture Kit (2.0), `radio.glb` and `plantSmall3.glb` | Kenney | https://kenney.nl/assets/furniture-kit | CC0 | Pub/nonstop countertop props, with original materials shared in mesh batches (`assets/third_party/kenney_furniture/License.txt`) |
+| Furniture Kit (2.0), `radio.glb` and `plantSmall3.glb` | Kenney | https://kenney.nl/assets/furniture-kit | CC0 | Retained source models from the 0.6.0 counter-prop pass; current venue fixtures use project primitives (`assets/third_party/kenney_furniture/License.txt`) |
 
 The environment packs include their original `LICENSE.txt` in `assets/third_party/`. `assets/monsters/LICENSES.txt` records the CC0 people pack and the project's original procedural delirium creatures. All five `alien_*` slots now use original mouse, cockroach, rum-bottle and slot-machine meshes, rigs and actions from `tools/vat/build_delirium.py`; no old alien or mech monster textures remain. Raw source downloads are not stored in the repository. `tools/vat/README.md` documents generation and baking.
 
 **Voice:** `assets/voice/ludas/*.wav` are short clips from the project owner's private recordings (archive `#ludas_vox`), mono 22 kHz and loudness-normalised (EBU R128, −16 LUFS). They are not CC0 and are included with the owner's permission for this project only.
+
+**Soundtrack samples:** `assets/audio/protokseed/*.wav` are five selected conversions from the locally supplied **PROTOKSEED SAMPLE PACK**: KICK D 01 / D 02, DRUM LOOP 01, a short 303 01 texture and FX 01. `tools/music_samples.py` records source names, SHA256 checksums, the measured eight-beat 170 BPM source grid and mono 22 kHz conversion. Original Luďas recording bytes are unchanged; six voice imports retain uncompressed PCM for shared sample-bank access.
+
+The supplied PROTOKSEED folder contained no licence/readme. **Redistribution permission is unverified; these samples are not CC0 or claimed royalty-free.** Confirm the pack's terms before publishing the new sample-backed source/assets or release binaries. The pushed `v0.6.0` precedes this soundtrack integration.
 
 ## Engine and bundled libraries
 
@@ -54,6 +58,6 @@ no font file is shipped. Station names and public-wayfinding terms refer to
 Prague; Žižkovská 12°, TOJ TOJ, Šťastná čísla and the developer banner are
 invented identities, not reproductions of commercial logos. Metro cladding
 evokes line A's pressed aluminium cups, line B's glass panels and line C's
-ceramic tiles. The toilet fixtures and other kit furniture are built from the
-project's own primitives; the radio and potted-plant models listed above are
-the Kenney exceptions.
+ceramic tiles. Current toilet fixtures and other kit furniture are built from
+the project's own primitives; the retained Kenney source models are not instanced
+in the current venue design.

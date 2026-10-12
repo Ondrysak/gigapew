@@ -1,10 +1,9 @@
 extends Node
 ## Adaptive procedural soundtrack, registered as the `Music` autoload.
-## Loop stems and stingers are synthesized on background threads (MusicScore + MusicSynth), so
-## nothing heavy runs on the main thread. A track starts once all of its stems exist, with every
-## stem started on the same audio mix so they stay sample-locked; gameplay then only moves
-## volumes. set_intensity() fades stage layers in and out, set_boss() swaps to the boss layers
-## on the next bar line, stinger() plays one-shots over the ducked music.
+## Sample-backed hardtek stems and original stingers render on worker threads.
+## Stems start under the audio lock; gameplay changes gains, not sample buffers.
+## Boss/extraction changes and short vocal accents land on musical boundaries.
+## Spoken Luďas reactions take precedence over the chopped vocal layer.
 
 const BUS := &"Music"
 ## Seconds for a full track crossfade.
@@ -25,6 +24,14 @@ const STINGER_DUCK := {
 const DUCK_RECOVER := 1.2
 const STINGER_VOLUME_DB := -1.0
 const SILENT_DB := -80.0
+
+## Priority, original recording, playback rate. Events queue at most one accent.
+const ACCENTS := {
+	&"salvage": [1, preload("res://assets/voice/ludas/chleba.wav"), 1.0],
+	&"combo": [2, preload("res://assets/voice/ludas/ijee_haa.wav"), 1.08],
+	&"danger": [3, preload("res://assets/voice/ludas/hrrr.wav"), 0.92],
+	&"extraction": [4, preload("res://assets/voice/ludas/plna_rychlost.wav"), 1.04],
+}
 
 class Track:
 	var id: StringName
@@ -57,10 +64,26 @@ var _render_usec := 0
 var _jobs: Array = []
 var _mutex := Mutex.new()
 var _threads: Array[Thread] = []
+var _sample_bank: Dictionary = {}
+var _composition_seed := 0
+var _mining := 0.0
+var _mining_target := 0.0
+var _voice_source: WeakRef
+var _voice_mix := 0.0
+var _accent_player: AudioStreamPlayer
+var _pending_accent: StringName = &""
+var _accent_at := 0.0
+var _accent_expires := 0.0
+var _accent_cooldown := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	MusicSynth.cancelled = false
+	_sample_bank = MusicSamples.load_bank()
+	# Musical variation is session-private, independent of the game's RNG.
+	_composition_seed = Time.get_ticks_usec()
+	_accent_player = _make_player("GameplayVocal")
+	_accent_player.volume_db = -4.0
 	for track: StringName in MusicScore.TRACK_STEMS:
 		var state := Track.new()
 		state.id = track
@@ -110,6 +133,24 @@ func play(track: StringName) -> void:
 func set_intensity(value: float) -> void:
 	_target_intensity = clampf(value, 0.0, 1.0)
 
+## Actual held-F contact/resonance, not merely proximity to a cabinet.
+func set_mining(value: float) -> void:
+	_mining_target = clampf(value, 0.0, 1.0)
+
+## A weak reference survives scene changes without retaining a departed game.
+func follow_voice(source: LudasVoice) -> void:
+	_voice_source = weakref(source)
+
+## Cooldown and priority bound chatter during fused kills or rapid salvage.
+func accent(kind: StringName) -> void:
+	if _current != &"stage" or not ACCENTS.has(kind):
+		return
+	if _pending_accent != &"" and int(ACCENTS[kind][0]) < int(ACCENTS[_pending_accent][0]):
+		return
+	_pending_accent = kind
+	_accent_at = _clock + _time_to_next_beat()
+	_accent_expires = _clock + MusicScore.bar_seconds(&"stage") * 4.0
+
 ## Swaps the stage to its boss layers (and boss harmony), landing on the next bar line.
 func set_boss(active: bool) -> void:
 	if active == _boss:
@@ -124,6 +165,11 @@ func stinger(stinger_name: StringName) -> void:
 	if player == null:
 		push_warning("Music: unknown stinger '%s'" % stinger_name)
 		return
+	if stinger_name in [&"stage_clear", &"death", &"run_complete"]:
+		_pending_accent = &""
+		_accent_player.stop()
+		_mining = 0.0
+		_mining_target = 0.0
 	if player.stream == null:
 		return
 	player.play()
@@ -135,6 +181,10 @@ func stinger(stinger_name: StringName) -> void:
 func stop(fade := 1.0) -> void:
 	_current = &""
 	_target_intensity = 0.0
+	_mining = 0.0
+	_mining_target = 0.0
+	_pending_accent = &""
+	_accent_player.stop()
 	if fade <= 0.0:
 		for state: Track in _tracks.values():
 			_halt(state)
@@ -148,6 +198,7 @@ func _process(_delta: float) -> void:
 	_last_ticks = ticks
 	_clock += dt
 	var smoothing := INTENSITY_ATTACK if _target_intensity > _intensity else INTENSITY_RELEASE
+	_mining = move_toward(_mining, _mining_target, dt * 4.0)
 	_intensity += (_target_intensity - _intensity) * (1.0 - exp(-dt / smoothing))
 	if _clock >= _boss_switch_at:
 		_boss_mix = move_toward(_boss_mix, 1.0 if _boss else 0.0, dt / BOSS_FADE)
@@ -157,7 +208,12 @@ func _process(_delta: float) -> void:
 	else:
 		_duck_floor = 1.0
 		_duck = move_toward(_duck, 1.0, dt / DUCK_RECOVER)
-	for state: Track in _tracks.values():
+	var source: LudasVoice = _voice_source.get_ref() as LudasVoice if _voice_source != null else null
+	var speaking := source != null and source.speaking != &""
+	_voice_mix = move_toward(_voice_mix, 1.0 if speaking else 0.0, dt * 8.0)
+	_update_accent(speaking)
+	for track: StringName in _tracks:
+		var state: Track = _tracks[track]
 		if not state.playing:
 			continue
 		state.fade = move_toward(state.fade, state.fade_target, dt * state.fade_rate)
@@ -175,27 +231,39 @@ func _stem_gain(track: StringName, stem: StringName) -> float:
 	var calm := 1.0 - boss
 	match stem:
 		&"pad":
-			return calm * (1.0 - 0.25 * smoothstep(0.5, 0.9, level))
+			return calm * lerpf(0.5, 0.25, level)
 		&"pulse":
-			return calm * (1.0 - 0.5 * smoothstep(0.45, 0.65, level))
+			return calm * (1.0 - 0.6 * smoothstep(0.25, 0.65, level))
 		&"drums":
-			return maxf(smoothstep(0.18, 0.36, level), boss)
+			return maxf(0.45 + 0.55 * smoothstep(0.12, 0.55, level), maxf(boss, _mining * 0.8))
 		&"drive":
-			return calm * smoothstep(0.45, 0.62, level)
+			return calm * maxf(smoothstep(0.2, 0.65, level), _mining * 0.75)
 		&"arp":
-			return calm * smoothstep(0.5, 0.68, level)
+			return calm * smoothstep(0.38, 0.75, level) * 0.75
 		&"lead":
-			return calm * smoothstep(0.74, 0.9, level)
+			return calm * smoothstep(0.72, 0.92, level) * 0.75
 		&"perc":
-			return maxf(smoothstep(0.7, 0.86, level), boss)
+			return maxf(smoothstep(0.3, 0.72, level), boss * 0.85)
 		&"tension":
-			return maxf(smoothstep(0.78, 0.95, level), 0.85 * boss)
-		&"boss_pad", &"boss_drive":
+			return maxf(smoothstep(0.8, 0.98, level), 0.6 * boss)
+		&"boss_pad":
+			return boss * 0.65
+		&"boss_drive":
 			return boss
+		&"breaks":
+			return maxf(smoothstep(0.45, 0.88, level), boss) * 0.65
+		&"rave":
+			return maxf(smoothstep(0.58, 0.9, level), boss * 0.9) * 0.7
+		&"vocals":
+			return maxf(maxf(smoothstep(0.25, 0.65, level), _mining * 0.75), boss * 0.75) * (1.0 - _voice_mix)
 	return 1.0
 
 func _apply_volumes(state: Track) -> void:
 	var level := smoothstep(0.0, 1.0, state.fade) * _duck
+	if state.id == &"stage":
+		level *= 0.8 * lerpf(1.0, 0.58, _voice_mix)
+		if get_tree().paused:
+			level *= 0.28
 	for i in state.players.size():
 		var gain := level * _stem_gain(state.id, state.stems[i])
 		state.players[i].volume_db = linear_to_db(gain) if gain > 0.0001 else SILENT_DB
@@ -235,6 +303,44 @@ func _time_to_next_bar() -> float:
 	var position := state.players[0].get_playback_position() + AudioServer.get_time_since_last_mix()
 	return bar - fmod(position, bar)
 
+
+func _time_to_next_beat() -> float:
+	var state: Track = _tracks.get(_current)
+	if state == null or not state.playing:
+		return 0.0
+	var beat := MusicScore.bar_seconds(state.id) * 0.25
+	var position := state.players[0].get_playback_position() + AudioServer.get_time_since_last_mix()
+	return beat - fmod(position, beat)
+
+func _update_accent(speaking: bool) -> void:
+	if get_tree().paused:
+		_pending_accent = &""
+		if _accent_player.playing:
+			_accent_player.stop()
+		return
+	if _pending_accent == &"":
+		return
+	if _clock > _accent_expires or _current != &"stage":
+		_pending_accent = &""
+		return
+	var state: Track = _tracks[&"stage"]
+	if not state.playing or speaking or _accent_player.playing or _clock < _accent_cooldown:
+		return
+	if _clock < _accent_at:
+		return
+	# Requantize after speech/cooldown instead of firing halfway through a beat.
+	if _clock - _accent_at > 0.08:
+		_accent_at = _clock + _time_to_next_beat()
+		return
+	var definition: Array = ACCENTS[_pending_accent]
+	_accent_player.stream = definition[1]
+	_accent_player.pitch_scale = float(definition[2])
+	_accent_player.play()
+	_accent_cooldown = _clock + MusicScore.bar_seconds(&"stage") * 2.0
+	_pending_accent = &""
+	_duck_floor = minf(_duck_floor, 0.65)
+	_duck_hold = maxf(_duck_hold, 0.7)
+
 func _make_player(player_name: String) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.name = player_name
@@ -258,7 +364,7 @@ func _prioritize(track: StringName) -> void:
 
 # Runs on a worker thread: renders queued stems until the queue is empty or the game quits.
 func _render_worker() -> void:
-	var synth := MusicSynth.new()
+	var synth := MusicSynth.new(1337, _sample_bank)
 	while not MusicSynth.cancelled:
 		_mutex.lock()
 		var job: Array = [] if _jobs.is_empty() else _jobs.pop_front()
@@ -266,7 +372,7 @@ func _render_worker() -> void:
 		if job.is_empty():
 			return
 		var begin := Time.get_ticks_usec()
-		var stream := MusicScore.render(synth, job[0], job[1])
+		var stream := MusicScore.render(synth, job[0], job[1], _composition_seed)
 		if stream == null:
 			return
 		_on_stem_rendered.call_deferred(job[0], job[1], stream, Time.get_ticks_usec() - begin)

@@ -11,6 +11,8 @@ const CELL_SIZE := 2.0
 const WALL_THICKNESS := 0.8
 ## Open floor kept around set pieces, cover islands and pillars (metres).
 const PIECE_MARGIN := 4.0
+## Two station fills, the public WC and one per venue, including the večerka.
+const KIT_LIGHT_LIMIT := 10
 ## Ramp pitch matches the authored Yard ramps; walkable for player and horde.
 const RAMP_ANGLE := 0.29
 const RAMP_WIDTH := 4.2
@@ -2202,7 +2204,8 @@ func _build_venue_sites(site: Dictionary, walls: Array[StaticBody3D]) -> void:
 			offsets.assign([0.0])
 			resources.assign([&"shard"] if kind == &"herna" else [&"crystal"])
 		elif kind == &"herna":
-			offsets.assign([-6.0, 0.0, 6.0])
+			# Keep the right-hand entrance corner for the staffed cash desk.
+			offsets.assign([-6.0, 0.0] if normal.x < 0.0 else [-6.0, 0.0, 6.0])
 			resources.assign([&"gold"])
 		elif kind == &"hospoda":
 			if normal.x > 0.0:
@@ -2269,7 +2272,7 @@ func _kit_label(text: String, xform: Transform3D, font_size: int, color: Color) 
 	_label(text, xform.origin, xform.basis.z.normalized(), font_size, color, Color(0.015, 0.015, 0.015))
 
 func _kit_light(position: Vector3, color: Color, energy: float, radius: float) -> bool:
-	if _kit_lights >= 4:
+	if _kit_lights >= KIT_LIGHT_LIMIT:
 		return false
 	_kit_lights += 1
 	_add_fill(position, color, energy, radius)

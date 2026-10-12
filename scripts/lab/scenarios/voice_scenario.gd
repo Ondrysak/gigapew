@@ -18,13 +18,14 @@ func run() -> void:
 	# Kill burst: a real quick string of kills.
 	voice.stop()
 	voice.history.clear()
-	var slots := lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(6.0), game.BURST_KILLS, 2.0)
+	# Use the protected spawn floor; the street ahead may contain a building.
+	var slots := lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(0.0), game.BURST_KILLS, 0.0)
 	for slot in slots:
 		game.horde.damage_direct(slot, 1.0e6, Vector3.ZERO, Vector3.ZERO)
 	await lab.wait(0.1)
 	lab.check(voice.history.has(&"ijee_1") or voice.history.has(&"ijee_2"), "a burst of %d kills triggers a multikill Ijéé" % game.BURST_KILLS)
 	var count := voice.history.size()
-	for slot in lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(6.0), game.BURST_KILLS, 2.0):
+	for slot in lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(0.0), game.BURST_KILLS, 0.0):
 		game.horde.damage_direct(slot, 1.0e6, Vector3.ZERO, Vector3.ZERO)
 	await lab.wait(0.1)
 	lab.check(voice.history.size() == count, "a second burst inside the cooldown stays quiet")

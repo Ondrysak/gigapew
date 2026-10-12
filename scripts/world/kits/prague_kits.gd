@@ -5,14 +5,13 @@ extends RefCounted
 const METRO = preload("res://shaders/kits/metro_wall.gdshader")
 const TERRAZZO = preload("res://shaders/kits/terrazzo.gdshader")
 const TILE = preload("res://shaders/kits/wc_tile.gdshader")
-const RADIO = preload("res://assets/third_party/kenney_furniture/radio.glb")
-const PLANT = preload("res://assets/third_party/kenney_furniture/plantSmall3.glb")
 const WHITE := Color(0.82, 0.83, 0.77)
 const STEEL := Color(0.52, 0.56, 0.58)
 const WOOD := Color(0.29, 0.16, 0.075)
 const BLUE := Color(0.08, 0.28, 0.62)
 const DARK := Color(0.06, 0.075, 0.08)
 static var _surfaces: Dictionary = {}
+static var _cash_glass: StandardMaterial3D
 const QUOTE_SALT := 0x514F5445
 const QUOTE_PIXEL_SIZE := 0.005
 const QUOTE_OUTLINE_PIXELS := 20.0
@@ -419,7 +418,7 @@ func _wall_strip(side_axis: bool, edge: float, start: float, end: float, materia
 
 
 func _tubes() -> void:
-	# Four paired fittings; only metro spends two of the four world kit lights.
+	# Four paired fittings; only metro requests two local fill lights.
 	for z in [-half.y * 0.5, half.y * 0.5]:
 		for x in [-half.x * 0.5, half.x * 0.5]:
 			_box(Vector3(x, height - 0.10, z), Vector3(0.25, 0.07, 1.42), STEEL, false, KitTarget.Finish.METAL)
@@ -740,87 +739,157 @@ func _pub(snack: bool) -> void:
 	var variant := rng.randi_range(0, 2)
 	var side := -1.0 if variant == 1 else 1.0
 	var turn := -side * PI * 0.5
-	_room_shell(Color(0.76, 0.72, 0.58) if not snack else Color(0.81, 0.82, 0.75), WOOD if not snack else Color(0.2, 0.32, 0.33))
-	_tubes()
-	target.add_light(_point(Vector3(0, height - 0.4, 0)), Color(0.8, 0.88, 1.0), 0.7, maxf(5.0, half.length()))
+	var venue_kind := 2 if snack else 0
+	var plaster: Color = [Color(0.76, 0.72, 0.58), Color(0.70, 0.73, 0.62), Color(0.78, 0.68, 0.56)][variant]
+	var dado: Color = WOOD.lightened(float(variant) * 0.045)
+	if snack:
+		plaster = Color(0.81, 0.82, 0.75)
+		dado = Color(0.16, 0.30 + float(variant) * 0.035, 0.32)
+	_room_shell(plaster, dado, venue_kind, variant)
+	_room_lights(venue_kind, variant)
+	target.add_light(_point(Vector3(0, height - 0.4, 0)), Color(0.83, 0.94, 1.0) if snack else Color(1.0, 0.79, 0.53), 1.15, 7.0)
 	var length := minf(3.4, half.y * 1.1)
-	var bar := _room_assembly(Vector3(side * (half.x - 1.0), 1.1, -half.y * 0.22), Vector3(length, 2.2, 1.75), turn)
+	var depth := clampf(half.x - AISLE_HALF - 0.16, 2.20, 2.50)
+	var bar := Vector3(INF, INF, INF)
+	if count + 2 <= 40:
+		bar = _room_assembly(Vector3(side * (half.x - depth * 0.5 - 0.1), 1.18, -half.y * 0.22), Vector3(length, 2.36, depth), turn, false)
 	if bar.is_finite():
 		side = signf(bar.x)
 		turn = -side * PI * 0.5
-		_room_piece(bar, Vector3(0, -0.56, 0.28), Vector3(length - 0.1, 1.08, 0.85), WOOD if not snack else WHITE, turn)
-		_room_piece(bar, Vector3(0, 0.04, 0.28), Vector3(length, 0.12, 1.02), DARK, turn, KitTarget.Finish.SATIN)
-		_room_piece(bar, Vector3(0, -0.9, 0.79), Vector3(length - 0.2, 0.05, 0.05), STEEL, turn, KitTarget.Finish.METAL)
+		var counter_z := depth * 0.5 - 0.46
+		var back_z := -depth * 0.5 + 0.25
+		# The reserved envelope includes a real 0.82–1.12 m staff passage.
+		# Only the customer counter and backbar collide; the passage stays open.
+		_room_solid(bar, Vector3(0, -0.56, counter_z), Vector3(length, 1.20, 0.90), turn)
+		_room_solid(bar, Vector3(0, -0.03, back_z), Vector3(length - 0.12, 2.28, 0.44), turn)
+		_room_piece(bar, Vector3(0, -0.60, counter_z), Vector3(length - 0.06, 1.12, 0.88), WHITE if snack else dado, turn, KitTarget.Finish.SATIN)
+		_room_piece(bar, Vector3(0, 0, counter_z), Vector3(length, 0.08, 0.90), STEEL if snack else DARK, turn, KitTarget.Finish.SATIN)
+		_room_piece(bar, Vector3(0, -1.08, counter_z + 0.435), Vector3(length - 0.12, 0.12, 0.018), DARK, turn)
 		for n in 6:
-			_room_piece(bar, Vector3(-length * 0.42 + n * length * 0.168, -0.48, 0.72), Vector3(0.045, 0.85, 0.025), Color(0.44, 0.27, 0.13), turn)
-		_room_piece(bar, Vector3(0, 0.32, -0.71), Vector3(length - 0.12, 1.42, 0.08), DARK, turn)
-		for row in 3:
-			_room_piece(bar, Vector3(0, -0.16 + row * 0.46, -0.49), Vector3(length - 0.16, 0.055, 0.4), WOOD if not snack else STEEL, turn)
-			for n in 7:
-				var offset := Vector3(-length * 0.38 + n * length * 0.125, row * 0.46, -0.47)
-				_room_bottle(bar, offset, turn, Color(0.13, 0.33, 0.16) if (n + row) % 2 == 0 else Color(0.42, 0.23, 0.08), 0.24)
+			var x := -length * 0.40 + n * length * 0.16
+			_room_piece(bar, Vector3(x, -0.58, counter_z + 0.447), Vector3(0.034, 0.93, 0.012), STEEL if snack else dado.darkened(0.25), turn)
+		_room_piece(bar, Vector3(0, -0.03, back_z - 0.18), Vector3(length - 0.12, 2.28, 0.04), DARK if snack else dado.darkened(0.20), turn)
+		_room_piece(bar, Vector3(0, -1.08 if snack else -0.77, back_z), Vector3(length - 0.12, 0.18 if snack else 0.80, 0.44), WHITE if snack else dado, turn, KitTarget.Finish.SATIN)
 		if snack:
-			# Nonstop: hot-food display, espresso machine and refrigerated base.
-			_room_piece(bar, Vector3(-0.65, 0.31, 0.32), Vector3(0.9, 0.45, 0.68), STEEL, turn, KitTarget.Finish.METAL)
-			_room_piece(bar, Vector3(-0.65, 0.35, 0.67), Vector3(0.78, 0.26, 0.018), Color(0.17, 0.28, 0.3), turn, KitTarget.Finish.GLOSS)
-			for n in 4:
-				_room_piece(bar, Vector3(-0.94 + n * 0.19, 0.31, 0.69), Vector3(0.16, 0.06, 0.06), Color(0.77, 0.49, 0.18), turn)
-			_room_piece(bar, Vector3(0.58, 0.3, 0.23), Vector3(0.65, 0.42, 0.46), DARK, turn, KitTarget.Finish.METAL)
-			_room_piece(bar, Vector3(0.58, 0.34, 0.47), Vector3(0.49, 0.13, 0.04), STEEL, turn)
-			_room_piece(bar, Vector3(0.58, 0.57, 0.23), Vector3(0.25, 0.12, 0.25), Color(0.25, 0.12, 0.055), turn)
-			_room_sign(23, bar, Vector3(0, 0.88, -0.42), Vector2(1.4, 0.3), turn, 0.5)
+			# Cold-drinks cabinet, retail shelf, and a separate hot-food display.
+			var cold_width := length * 0.55
+			var cold_x := -length * 0.20
+			for frame_y in [-0.93, 0.90]:
+				_room_piece(bar, Vector3(cold_x, frame_y, back_z + 0.205), Vector3(cold_width + 0.035, 0.055, 0.035), WHITE, turn)
+			for n in 3:
+				_room_piece(bar, Vector3(cold_x, -1.13 + n * 0.045, back_z + 0.225), Vector3(cold_width * 0.78, 0.012, 0.012), DARK, turn)
+			_room_piece(bar, Vector3(cold_x, -0.01, back_z + 0.055), Vector3(cold_width, 1.75, 0.018), Color(0.10, 0.20, 0.23), turn, KitTarget.Finish.GLOSS)
+			for row in 3:
+				var shelf_y := -0.65 + row * 0.46
+				_room_piece(bar, Vector3(cold_x, shelf_y, back_z), Vector3(cold_width - 0.06, 0.035, 0.40), STEEL, turn)
+				for n in 5:
+					var bottle_x := cold_x - cold_width * 0.37 + n * cold_width * 0.185
+					_room_bottle(bar, Vector3(bottle_x, shelf_y + 0.105, back_z + 0.10), turn, Color(0.14, 0.40, 0.19) if row % 2 == 0 else Color(0.56, 0.28, 0.07), 0.24)
+			for dx in [-cold_width * 0.5, cold_width * 0.5]:
+				_room_piece(bar, Vector3(cold_x + dx, -0.01, back_z + 0.205), Vector3(0.035, 1.82, 0.035), WHITE, turn, KitTarget.Finish.GLOSS, 0.45)
+			_room_piece(bar, Vector3(cold_x + cold_width * 0.39, -0.05, back_z + 0.19), Vector3(0.025, 0.58, 0.035), STEEL, turn, KitTarget.Finish.METAL)
+			_room_sign(30, bar, Vector3(cold_x, 0.98, back_z + 0.28), Vector2(cold_width - 0.04, 0.18), turn, 0.3)
+			for row in 2:
+				_room_piece(bar, Vector3(length * 0.31, -0.50 + row * 0.44, back_z + 0.01), Vector3(length * 0.28, 0.045, 0.36), WHITE, turn)
+				for n in 3:
+					_room_piece(bar, Vector3(length * 0.22 + n * length * 0.085, -0.36 + row * 0.44, back_z + 0.035), Vector3(0.18, 0.24, 0.16), Color(0.68, 0.30 + float(n) * 0.12, 0.09), turn)
+			var display_x := -length * 0.28
+			var display_width := minf(1.02, length * 0.38)
+			_room_piece(bar, Vector3(display_x, 0.10, counter_z), Vector3(display_width, 0.12, 0.60), STEEL, turn, KitTarget.Finish.METAL)
+			_room_piece(bar, Vector3(display_x, 0.43, counter_z), Vector3(display_width, 0.045, 0.60), STEEL, turn, KitTarget.Finish.METAL)
+			_room_piece(bar, Vector3(display_x, 0.27, counter_z - 0.285), Vector3(display_width - 0.06, 0.29, 0.018), Color(0.22, 0.32, 0.33), turn, KitTarget.Finish.GLOSS)
+			for dx in [-display_width * 0.47, display_width * 0.47]:
+				_room_piece(bar, Vector3(display_x + dx, 0.27, counter_z + 0.27), Vector3(0.025, 0.32, 0.025), STEEL, turn)
+			for n in 3:
+				_room_piece(bar, Vector3(display_x - display_width * 0.30 + n * display_width * 0.30, 0.20, counter_z + 0.12), Vector3(0.19, 0.075, 0.22), Color(0.80, 0.53, 0.23), turn)
+			_room_piece(bar, Vector3(0.12, 0.25, counter_z - 0.08), Vector3(0.46, 0.42, 0.43), DARK, turn, KitTarget.Finish.METAL)
+			_room_piece(bar, Vector3(0.12, 0.29, counter_z + 0.145), Vector3(0.35, 0.09, 0.035), STEEL, turn)
+			_room_piece(bar, Vector3(0.12, 0.07, counter_z + 0.19), Vector3(0.36, 0.035, 0.25), STEEL, turn)
+			_room_register(bar, Vector3(length * 0.33, 0.045, counter_z), turn)
+			_room_menu(bar, Vector3(length * 0.30, 0.72, back_z + 0.24), Vector2(length * 0.30, 0.64), turn, true)
 		else:
-			# Hospoda: two chrome beer taps with wooden handles, drip tray, mugs.
-			for dx in [-0.26, 0.26]:
-				_shape(&"cylinder", bar + Basis(Vector3.UP, turn) * Vector3(dx, 0.3, 0.22), Vector3(0.065, 0.43, 0.065), STEEL, false, KitTarget.Finish.METAL)
-				_room_piece(bar, Vector3(dx, 0.47, 0.37), Vector3(0.05, 0.04, 0.3), STEEL, turn)
-				_room_piece(bar, Vector3(dx, 0.57, 0.33), Vector3(0.04, 0.19, 0.04), WOOD, turn)
-			_room_piece(bar, Vector3(0, 0.11, 0.47), Vector3(0.9, 0.025, 0.32), STEEL, turn, KitTarget.Finish.METAL)
-			for dx in [-0.65, 0.66]:
-				var mug := bar + Basis(Vector3.UP, turn) * Vector3(dx, 0.22, 0.52)
+			# Timber backbar, beer taps, drip tray and properly seated mugs.
+			for row in 2:
+				_room_piece(bar, Vector3(0, -0.28 + row * 0.43, back_z), Vector3(length - 0.16, 0.055, 0.40), dado, turn)
+				for n in 6:
+					var offset := Vector3(-length * 0.40 + n * length * 0.16, -0.165 + row * 0.43, back_z + 0.10)
+					_room_bottle(bar, offset, turn, Color(0.13, 0.33, 0.16) if (n + row) % 2 == 0 else Color(0.42, 0.23, 0.08), 0.24)
+			_room_piece(bar, Vector3(0, -0.90, depth * 0.5 - 0.035), Vector3(length - 0.18, 0.045, 0.045), STEEL, turn, KitTarget.Finish.METAL)
+			for dx in [-length * 0.32, length * 0.32]:
+				_room_piece(bar, Vector3(dx, -0.99, depth * 0.5 - 0.11), Vector3(0.035, 0.19, 0.16), STEEL, turn, KitTarget.Finish.METAL)
+			for dx in [-0.20, 0.20]:
+				_shape(&"cylinder", bar + Basis(Vector3.UP, turn) * Vector3(dx, 0.25, counter_z - 0.17), Vector3(0.065, 0.40, 0.065), STEEL, false, KitTarget.Finish.METAL)
+				_room_piece(bar, Vector3(dx, 0.43, counter_z - 0.04), Vector3(0.05, 0.04, 0.26), STEEL, turn, KitTarget.Finish.METAL)
+				_room_piece(bar, Vector3(dx, 0.51, counter_z - 0.06), Vector3(0.04, 0.17, 0.04), dado, turn)
+			_room_piece(bar, Vector3(0, 0.055, counter_z + 0.08), Vector3(0.75, 0.025, 0.32), STEEL, turn, KitTarget.Finish.METAL)
+			for dx in [length * 0.24, length * 0.36]:
+				var mug := bar + Basis(Vector3.UP, turn) * Vector3(dx, 0.145, counter_z + 0.12)
 				_glass(mug.x, mug.z, mug.y)
-			_room_sign(29, bar, Vector3(0, 0.88, -0.42), Vector2(1.2, 0.3), turn)
-		# Countertop props sit within the already reserved bar envelope.
-		var radio := bar + Basis(Vector3.UP, turn) * Vector3(-length * 0.41, 0.105, -0.21)
-		target.add_model(RADIO, _transform(radio, Vector3.ONE * 1.35, turn))
-		var plant := bar + Basis(Vector3.UP, turn) * Vector3(length * 0.38, 0.105, 0.12)
-		target.add_model(PLANT, _transform(plant, Vector3.ONE * 2.1, turn))
-		site["countertop_point"] = _point(bar + Basis(Vector3.UP, turn) * Vector3(0, 0.105, 0.05))
+			_room_register(bar, Vector3(-length * 0.33, 0.045, counter_z), turn)
+			_room_sign(29, bar, Vector3(-length * 0.22, 0.86, back_z + 0.24), Vector2(length * 0.42, 0.28), turn)
+			_room_menu(bar, Vector3(length * 0.29, 0.78, back_z + 0.24), Vector2(length * 0.30, 0.54), turn, false)
+		site["countertop_point"] = _point(bar + Basis(Vector3.UP, turn) * Vector3(length * 0.14 if snack else 0.0, 0.045, counter_z + 0.30))
 		site["countertop_facing"] = Basis(Vector3.UP, yaw + turn) * Vector3.BACK
-	var table_count := 2 if snack else 3
-	for n in table_count:
+	for n in (2 if snack else 3):
 		_room_table(Vector3(-side * (half.x - 1.05), 0.55, -half.y + 1.55 + n * 2.8), variant, snack)
 	_sign(23 if snack else 15, Vector3(0, minf(2.35, height - 0.35), -half.y + 0.09), Vector2(2.1, 0.6), 0, 0.7)
-	_room_notice(-side, half.y * 0.25, 17, WOOD, variant)
-	_room_notice(side, half.y * 0.45, 30 if snack else 16, Color(0.51, 0.24, 0.09), variant)
+	_room_notice(-side, half.y * 0.25, 17, dado, variant)
+	_room_notice(side, half.y * 0.45, 30 if snack else 16, Color(0.51, 0.24, 0.09), (variant % 2) + 1)
 	if not snack:
 		var dart := Vector3(-side * (half.x - 0.09), 1.7, 0)
 		if _clear(dart, Vector3(0.12, 0.65, 0.65)):
 			_box(dart, Vector3(0.05, 0.62, 0.62), Color(0.6, 0.15, 0.1))
 			_box(dart + Vector3(side * 0.035, 0, 0), Vector3(0.02, 0.4, 0.4), DARK)
 			_box(dart + Vector3(side * 0.05, 0, 0), Vector3(0.02, 0.08, 0.08), Color(0.2, 0.5, 0.2))
-	for lx in [-half.x * 0.5, half.x * 0.5]:
-		_box(Vector3(lx, height - 0.18, 0), Vector3(0.035, 0.3, 0.035), DARK)
-		_shape(&"sphere", Vector3(lx, height - 0.35, 0), Vector3(0.45, 0.25, 0.45), Color(0.85, 0.62, 0.25), false, KitTarget.Finish.GLOSS, 1.5)
 
 
 func _herna() -> void:
 	_entrance_sign(18)
 	var variant := rng.randi_range(0, 2)
 	var accent: Color = [Color(0.4, 0.08, 0.24), Color(0.08, 0.25, 0.38), Color(0.38, 0.24, 0.08)][variant]
-	_room_shell(Color(0.25, 0.23, 0.26), accent)
-	_tubes()
-	target.add_light(_point(Vector3(0, height - 0.4, 0)), Color(0.78, 0.85, 1.0), 0.65, maxf(5.0, half.length()))
+	_room_shell(Color(0.25, 0.23, 0.26), accent, 1, variant)
+	_room_lights(1, variant)
+	target.add_light(_point(Vector3(0, height - 0.4, half.y * 0.35)), Color(0.80, 0.85, 1.0), 1.15, 9.0)
 	_sign(18, Vector3(0, minf(2.3, height - 0.4), -half.y + 0.12), Vector2(2.5, 0.7), 0, 0.8)
-	var desk := _room_assembly(Vector3(half.x - 1.0, 1.0, half.y - 1.3), Vector3(1.6, 2.0, 0.95), -PI * 0.5)
+	var turn := -PI * 0.5
+	var desk := Vector3(INF, INF, INF)
+	if count + 5 <= 40:
+		desk = _room_assembly(Vector3(half.x - 1.045, 1.1, half.y - 1.3), Vector3(1.8, 2.2, 1.85), turn, false)
 	if desk.is_finite():
-		_room_piece(desk, Vector3(0, -0.46, 0), Vector3(1.55, 1.08, 0.85), accent, -PI * 0.5)
-		_room_piece(desk, Vector3(0, 0.15, 0), Vector3(1.6, 0.12, 0.95), DARK, -PI * 0.5)
-		_room_piece(desk, Vector3(0, 0.53, 0.15), Vector3(1.5, 0.66, 0.035), Color(0.19, 0.26, 0.29), -PI * 0.5, KitTarget.Finish.GLOSS)
-		for dx in [-0.7, 0.7]:
-			_room_piece(desk, Vector3(dx, 0.54, 0.19), Vector3(0.04, 0.72, 0.04), STEEL, -PI * 0.5)
-		_room_sign(19, desk, Vector3(0, 0.88, 0.22), Vector2(1.3, 0.22), -PI * 0.5)
-	_room_notice(-1.0, half.y * 0.55, 21, accent, variant)
+		turn = -signf(desk.x) * PI * 0.5
+		# Staff chair behind the cash desk, rather than a solid empty booth.
+		_room_solid(desk, Vector3(0, -0.54, 0.53), Vector3(1.8, 1.12, 0.74), turn)
+		_room_solid(desk, Vector3(-0.12, -0.56, -0.58), Vector3(0.48, 1.08, 0.55), turn)
+		_room_piece(desk, Vector3(0, -0.58, 0.53), Vector3(1.74, 1.04, 0.70), accent, turn, KitTarget.Finish.SATIN)
+		_room_piece(desk, Vector3(0, -0.02, 0.53), Vector3(1.8, 0.08, 0.74), DARK, turn)
+		_room_piece(desk, Vector3(0, -0.96, 0.89), Vector3(1.72, 0.17, 0.02), STEEL, turn)
+		# Two security panes leave a recognizable central cash-transfer slot.
+		for dx in [-0.54, 0.54]:
+			_room_glass(desk, Vector3(dx, 0.39, 0.76), Vector3(0.65, 0.72, 0.025), turn)
+			_room_solid(desk, Vector3(dx, 0.39, 0.76), Vector3(0.65, 0.72, 0.025), turn)
+			_room_piece(desk, Vector3(dx * 1.59, 0.39, 0.79), Vector3(0.035, 0.76, 0.035), STEEL, turn, KitTarget.Finish.METAL)
+		_room_glass(desk, Vector3(0, 0.60, 0.76), Vector3(0.43, 0.30, 0.025), turn)
+		_room_solid(desk, Vector3(0, 0.60, 0.76), Vector3(0.43, 0.30, 0.025), turn)
+		_room_piece(desk, Vector3(0, 0.05, 0.78), Vector3(0.35, 0.025, 0.21), STEEL, turn, KitTarget.Finish.METAL)
+		_room_sign(19, desk, Vector3(0, 0.90, 0.79), Vector2(1.30, 0.22), turn)
+		_room_register(desk, Vector3(0.49, 0.03, 0.42), turn)
+		_room_piece(desk, Vector3(-0.48, 0.15, 0.40), Vector3(0.035, 0.25, 0.035), STEEL, turn)
+		_room_piece(desk, Vector3(-0.48, 0.31, 0.40), Vector3(0.40, 0.28, 0.045), DARK, turn)
+		_room_piece(desk, Vector3(-0.48, 0.31, 0.426), Vector3(0.35, 0.22, 0.008), Color(0.14, 0.24, 0.20), turn, KitTarget.Finish.GLOSS, 0.2)
+		for dx in [-0.57, -0.39]:
+			for dy in [0.26, 0.36]:
+				_room_piece(desk, Vector3(dx, dy, 0.432), Vector3(0.14, 0.07, 0.006), Color(0.23, 0.34, 0.30), turn)
+		_room_piece(desk, Vector3(-0.12, -0.64, -0.58), Vector3(0.46, 0.10, 0.46), DARK, turn)
+		_room_piece(desk, Vector3(-0.12, -0.30, -0.80), Vector3(0.46, 0.55, 0.055), DARK, turn)
+		_room_piece(desk, Vector3(-0.12, -0.89, -0.58), Vector3(0.06, 0.44, 0.06), STEEL, turn)
+		_room_piece(desk, Vector3(-0.12, -1.065, -0.58), Vector3(0.45, 0.035, 0.45), STEEL, turn)
+		_room_piece(desk, Vector3(0, 0.53, -0.86), Vector3(1.76, 0.90, 0.035), accent.darkened(0.32), turn)
+		_room_menu(desk, Vector3(0.47, 0.48, -0.833), Vector2(0.52, 0.58), turn, true)
+		_room_clock(desk, Vector3(-0.39, 0.72, -0.82), turn, variant)
+		_room_camera(desk, Vector3(-0.72, 0.97, -0.61), turn)
+		site["countertop_point"] = _point(desk + Basis(Vector3.UP, turn) * Vector3(0, 0.025, 0.65))
+		site["countertop_facing"] = Basis(Vector3.UP, yaw + turn) * Vector3.BACK
+	_room_notice(-1.0, half.y * 0.55, 21, accent, (variant % 2) + 1)
 	_room_notice(1.0, half.y * 0.1, 18, accent, (variant + 1) % 3)
 
 
@@ -828,14 +897,28 @@ func _shop() -> void:
 	_entrance_sign(20)
 	var variant := rng.randi_range(0, 2)
 	var side := -1.0 if variant == 1 else 1.0
-	_room_shell(Color(0.8, 0.81, 0.71), Color(0.33, 0.46, 0.29))
-	_tubes()
-	target.add_light(_point(Vector3(0, height - 0.35, 0)), Color(0.85, 0.94, 1.0), 0.75, maxf(5.0, half.length()))
+	_room_shell(Color(0.8, 0.81, 0.71), Color(0.33, 0.46, 0.29), 3, variant)
+	_room_lights(3, variant)
+	target.add_light(_point(Vector3(0, height - 0.35, 0)), Color(0.85, 0.94, 1.0), 1.1, 7.0)
 	_sign(20, Vector3(0, minf(2.35, height - 0.35), -half.y + 0.07), Vector2(2.3, 0.6))
+	var till := _room_assembly(Vector3(side * (half.x - 0.67), 0.8, half.y - 1.3), Vector3(1.75, 1.6, 1.1), -side * PI * 0.5)
+	if till.is_finite():
+		var turn := -signf(till.x) * PI * 0.5
+		_room_piece(till, Vector3(0, -0.3, 0), Vector3(1.65, 1.0, 0.92), WOOD, turn)
+		_room_piece(till, Vector3(0, 0.25, 0), Vector3(1.75, 0.1, 1.03), DARK, turn)
+		_room_register(till, Vector3(0.35, 0.305, -0.05), turn)
+		_room_piece(till, Vector3(-0.35, 0.315, -0.15), Vector3(0.42, 0.025, 0.30), STEEL, turn)
+		_room_piece(till, Vector3(-0.35, 0.331, -0.15), Vector3(0.28, 0.007, 0.21), DARK, turn, KitTarget.Finish.GLOSS)
+		_room_sign(19, till, Vector3(-0.38, 0.53, 0.15), Vector2(0.65, 0.23), turn)
+		for n in 4:
+			_room_piece(till, Vector3(-0.57 + n * 0.22, 0.4, 0.43), Vector3(0.17, 0.19, 0.12), Color(0.73, 0.21 + n * 0.1, 0.1), turn)
+		site["countertop_point"] = _point(till + Basis(Vector3.UP, turn) * Vector3(0, 0.305, 0.23))
+		site["countertop_facing"] = Basis(Vector3.UP, yaw + turn) * Vector3.BACK
 	for n in (3 if variant == 2 else 2):
 		var turn := side * PI * 0.5
 		var p := _room_assembly(Vector3(-side * (half.x - 0.52), 1.0, -half.y + 1.3 + n * 2.25), Vector3(1.9, 2.0, 0.72), turn)
 		if not p.is_finite(): continue
+		turn = -signf(p.x) * PI * 0.5
 		_room_piece(p, Vector3(0, 0, -0.28), Vector3(1.88, 1.95, 0.06), Color(0.46, 0.51, 0.41), turn)
 		for dx in [-0.9, 0.9]:
 			_room_piece(p, Vector3(dx, 0, 0), Vector3(0.05, 2.0, 0.63), STEEL, turn)
@@ -848,6 +931,7 @@ func _shop() -> void:
 	var turn := -side * PI * 0.5
 	var fridge := _room_assembly(Vector3(side * (half.x - 0.62), 1.1, -half.y + 1.2), Vector3(1.15, 2.2, 1.05), turn)
 	if fridge.is_finite():
+		turn = -signf(fridge.x) * PI * 0.5
 		_room_piece(fridge, Vector3.ZERO, Vector3(1.1, 2.16, 0.8), WHITE, turn)
 		_room_piece(fridge, Vector3(0, -0.03, 0.41), Vector3(0.94, 1.67, 0.03), Color(0.09, 0.18, 0.21), turn, KitTarget.Finish.GLOSS)
 		for row in 3:
@@ -856,38 +940,48 @@ func _shop() -> void:
 				_room_bottle(fridge, Vector3(-0.36 + n * 0.18, -0.51 + row * 0.5, 0.43), turn, Color(0.17, 0.43, 0.2) if row % 2 == 0 else Color(0.53, 0.27, 0.08), 0.27)
 		_room_piece(fridge, Vector3(0.43, -0.03, 0.46), Vector3(0.035, 1.6, 0.035), WHITE, turn, KitTarget.Finish.GLOSS, 0.7)
 		_room_sign(30, fridge, Vector3(0, 0.92, 0.43), Vector2(0.92, 0.2), turn, 0.3)
-	var till := _room_assembly(Vector3(side * (half.x - 0.85), 0.8, half.y - 1.3), Vector3(1.75, 1.6, 1.1), turn)
-	if till.is_finite():
-		_room_piece(till, Vector3(0, -0.3, 0), Vector3(1.65, 1.0, 0.92), WOOD, turn)
-		_room_piece(till, Vector3(0, 0.25, 0), Vector3(1.75, 0.1, 1.03), DARK, turn)
-		_room_piece(till, Vector3(0.35, 0.4, 0.07), Vector3(0.38, 0.22, 0.34), STEEL, turn)
-		_room_piece(till, Vector3(0.35, 0.58, -0.05), Vector3(0.33, 0.22, 0.055), Color(0.14, 0.28, 0.23), turn, KitTarget.Finish.GLOSS, 0.3)
-		_room_sign(19, till, Vector3(-0.38, 0.53, 0.15), Vector2(0.65, 0.23), turn)
-		for n in 4:
-			_room_piece(till, Vector3(-0.57 + n * 0.22, 0.4, 0.43), Vector3(0.17, 0.19, 0.12), Color(0.73, 0.21 + n * 0.1, 0.1), turn)
 	_room_notice(side, half.y * 0.1, 22, Color(0.33, 0.46, 0.29), variant)
 	_room_notice(-side, half.y * 0.48, 21, Color(0.8, 0.62, 0.16), variant)
-	var crates := _room_assembly(Vector3(-side * (half.x - 0.7), 0.48, half.y - 1.0), Vector3(1.1, 0.96, 0.95), side * PI * 0.5)
+	var crate_turn := side * PI * 0.5
+	var crates := _room_assembly(Vector3(-side * (half.x - 0.60), 0.48, half.y - 1.0), Vector3(1.1, 0.96, 0.95), crate_turn)
 	if crates.is_finite():
+		crate_turn = -signf(crates.x) * PI * 0.5
 		for row in 2:
-			_room_piece(crates, Vector3(0, -0.24 + row * 0.44, 0), Vector3(1.05, 0.4, 0.8), Color(0.19, 0.35, 0.17), side * PI * 0.5)
+			_room_piece(crates, Vector3(0, -0.24 + row * 0.44, 0), Vector3(1.05, 0.4, 0.8), Color(0.19, 0.35, 0.17), crate_turn)
 			for n in 5:
-				_room_piece(crates, Vector3(-0.4 + n * 0.2, -0.21 + row * 0.44, 0.41), Vector3(0.11, 0.21, 0.015), DARK, side * PI * 0.5)
+				_room_piece(crates, Vector3(-0.4 + n * 0.2, -0.21 + row * 0.44, 0.41), Vector3(0.11, 0.21, 0.015), DARK, crate_turn)
 
 
-func _room_assembly(preferred: Vector3, size: Vector3, turn: float = 0.0) -> Vector3:
-	# One collider and one reserved envelope per detailed furniture assembly.
-	# Do not emit the visible parts when the whole assembly cannot be placed.
+func _room_assembly(preferred: Vector3, size: Vector3, turn: float = 0.0, envelope_collision: bool = true) -> Vector3:
+	# Claim the complete assembly, including its seated/staff service space.
+	# Open service assemblies instead collide only their real furniture pieces.
 	if count >= 40: return Vector3(INF, INF, INF)
 	var p := _furniture_spot(preferred, size, turn)
 	if not p.is_finite(): return p
-	target.add_solid(_point(p), size, yaw + turn, null)
-	count += 1
+	if envelope_collision:
+		target.add_solid(_point(p), size, yaw + turn, null)
+		count += 1
 	return p
+
+
+func _room_solid(p: Vector3, offset: Vector3, size: Vector3, turn: float) -> void:
+	# Call only for furniture inside an already claimed whole assembly.
+	target.add_solid(_point(p + Basis(Vector3.UP, turn) * offset), size, yaw + turn, null)
+	count += 1
 
 
 func _room_piece(p: Vector3, offset: Vector3, size: Vector3, color: Color, turn: float = 0.0, finish: int = KitTarget.Finish.MATTE, glow: float = 0.0) -> void:
 	_box(p + Basis(Vector3.UP, turn) * offset, size, color, false, finish, glow, turn)
+
+
+func _room_glass(p: Vector3, offset: Vector3, size: Vector3, turn: float) -> void:
+	if _cash_glass == null:
+		_cash_glass = StandardMaterial3D.new()
+		_cash_glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_cash_glass.albedo_color = Color(0.56, 0.70, 0.76, 0.16)
+		_cash_glass.roughness = 0.18
+		_cash_glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	target.add_visual(&"box", _transform(p + Basis(Vector3.UP, turn) * offset, size, turn), _cash_glass)
 
 
 func _room_sign(cell: int, p: Vector3, offset: Vector3, size: Vector2, turn: float = 0.0, glow: float = 0.0) -> void:
@@ -897,14 +991,38 @@ func _room_sign(cell: int, p: Vector3, offset: Vector3, size: Vector2, turn: flo
 		target.add_sign(_transform(position, scale, turn), cell, 1, glow)
 
 
-func _room_shell(plaster: Color, dado: Color) -> void:
-	# Reuse the shared terrazzo batch; plaster/wainscot use the world palette.
-	# Wall spans come from the same portal cuts as the station and WC lining.
-	target.add_visual(&"box", _transform(Vector3(0, 0.012, 0), Vector3(half.x * 2 - 0.08, 0.018, half.y * 2 - 0.08)), _surface(TERRAZZO, "terrazzo", {}))
-	_wall_segments(_room_wall_segment.bind(plaster, dado))
+func _room_shell(plaster: Color, dado: Color, venue_kind: int, variant: int) -> void:
+	# Finish and palette are per-instance data, retaining room variation in
+	# one shared floor batch regardless of the number of venue kinds.
+	target.add_floor(_transform(Vector3(0, 0.012, 0), Vector3(half.x * 2 - 0.08, 0.018, half.y * 2 - 0.08)), venue_kind, variant)
+	# A 6 mm visual inset separates the finish from the concrete roof face;
+	# its existing collider and gameplay headroom are unchanged.
+	# Stair voids stay open rather than acquiring a false suspended ceiling.
+	var panels: Array[Rect2] = [Rect2(-half + Vector2.ONE * 0.04, half * 2.0 - Vector2.ONE * 0.08)]
+	for stair: Rect2 in stair_bounds:
+		var remaining: Array[Rect2] = []
+		for panel: Rect2 in panels:
+			if not panel.intersects(stair):
+				remaining.append(panel)
+				continue
+			var cut := panel.intersection(stair)
+			if cut.position.x > panel.position.x:
+				remaining.append(Rect2(panel.position, Vector2(cut.position.x - panel.position.x, panel.size.y)))
+			if cut.end.x < panel.end.x:
+				remaining.append(Rect2(Vector2(cut.end.x, panel.position.y), Vector2(panel.end.x - cut.end.x, panel.size.y)))
+			if cut.position.y > panel.position.y:
+				remaining.append(Rect2(Vector2(cut.position.x, panel.position.y), Vector2(cut.size.x, cut.position.y - panel.position.y)))
+			if cut.end.y < panel.end.y:
+				remaining.append(Rect2(Vector2(cut.position.x, cut.end.y), Vector2(cut.size.x, panel.end.y - cut.end.y)))
+		panels = remaining
+	for panel: Rect2 in panels:
+		var middle := panel.get_center()
+		_box(Vector3(middle.x, height + 0.009, middle.y), Vector3(panel.size.x, 0.03, panel.size.y), Color(0.76, 0.76, 0.72))
+	# Keep the original full door/stair cuts and their physical wall strips.
+	_wall_segments(_room_wall_segment.bind(plaster, dado, venue_kind, variant))
 
 
-func _room_wall_segment(side_axis: bool, edge: float, start: float, end: float, plaster: Color, dado: Color) -> void:
+func _room_wall_segment(side_axis: bool, edge: float, start: float, end: float, plaster: Color, dado: Color, venue_kind: int, variant: int) -> void:
 	if end - start < 0.04: return
 	var middle := (start + end) * 0.5
 	var inset := edge - signf(edge) * 0.025
@@ -925,6 +1043,118 @@ func _room_wall_segment(side_axis: bool, edge: float, start: float, end: float, 
 		var along := start + 0.3 + n * 0.6
 		var seam_p := Vector3(inner - signf(edge) * 0.016, 0.57, along) if side_axis else Vector3(along, 0.57, inner - signf(edge) * 0.016)
 		_box(seam_p, Vector3(0.009, 0.97, 0.012) if side_axis else Vector3(0.012, 0.97, 0.009), dado.darkened(0.25))
+	if venue_kind >= 2:
+		for y in [0.36, 0.72, 1.08]:
+			var joint := Vector3(inner - signf(edge) * 0.016, y, middle) if side_axis else Vector3(middle, y, inner - signf(edge) * 0.016)
+			_box(joint, Vector3(0.009, 0.012, end - start) if side_axis else Vector3(end - start, 0.012, 0.009), dado.darkened(0.25))
+	elif venue_kind == 1:
+		var neon := Vector3(inner - signf(edge) * 0.016, height - 0.18, middle) if side_axis else Vector3(middle, height - 0.18, inner - signf(edge) * 0.016)
+		_box(neon, Vector3(0.016, 0.025, end - start) if side_axis else Vector3(end - start, 0.025, 0.016), dado.lightened(0.28), false, KitTarget.Finish.GLOSS, 0.45)
+	_room_utility_segment(side_axis, edge, start, end, venue_kind, variant)
+
+
+func _room_lights(venue_kind: int, variant: int) -> void:
+	# Visible hardware shares paint batches; the caller requests just one light.
+	for z in [-half.y * 0.45, half.y * 0.45]:
+		for x in [-half.x * 0.48, half.x * 0.48]:
+			var p := Vector3(x, height - 0.07, z)
+			var over_stair := false
+			for stair: Rect2 in stair_bounds:
+				if stair.intersects(_footprint(p, Vector3(0.6, 0.1, 1.2))):
+					over_stair = true
+					break
+			if over_stair: continue
+			if venue_kind == 0 and height > 2.65:
+				_box(p + Vector3(0, -0.025, 0), Vector3(0.035, 0.18, 0.035), DARK)
+				_shape(&"sphere", p + Vector3(0, -0.19, 0), Vector3(0.43, 0.22, 0.43), WOOD.lightened(0.18 + float(variant) * 0.025), false, KitTarget.Finish.SATIN)
+				_shape(&"sphere", p + Vector3(0, -0.24, 0), Vector3(0.31, 0.11, 0.31), Color(1.0, 0.82, 0.51), false, KitTarget.Finish.GLOSS, 1.7)
+			elif venue_kind == 1:
+				_box(p, Vector3(0.58, 0.06, 0.58), DARK)
+				_box(p + Vector3(0, -0.04, 0), Vector3(0.44, 0.018, 0.44), Color(0.78, 0.84, 0.94), false, KitTarget.Finish.GLOSS, 1.4)
+			else:
+				_box(p, Vector3(0.32, 0.07, 1.18), WHITE)
+				_box(p + Vector3(0, -0.043, 0), Vector3(0.26, 0.018, 1.06), Color(0.88, 0.94, 1.0), false, KitTarget.Finish.GLOSS, 1.8)
+				for dx in [-0.135, 0.135]:
+					_box(p + Vector3(dx, -0.02, 0), Vector3(0.018, 0.04, 1.12), STEEL)
+
+
+func _room_utility_segment(side_axis: bool, edge: float, start: float, end: float, venue_kind: int, variant: int) -> void:
+	# At most one service/safety cluster and one clock/camera per room, on
+	# intact side-wall spans. Existing machine and entrance masks still win.
+	if not side_axis: return
+	var along := half.y * (-0.62 if edge < 0.0 else 0.62)
+	if along < start + 0.4 or along > end - 0.4: return
+	var turn := -signf(edge) * PI * 0.5
+	var p := Vector3(edge - signf(edge) * 0.17, 1.64 if edge < 0.0 else minf(2.44, height - 0.33), along)
+	if not _clear(p, Vector3(0.58, 1.0, 0.32), turn): return
+	if edge > 0.0:
+		if venue_kind == 1:
+			_room_camera(p, Vector3.ZERO, turn)
+		else:
+			_room_clock(p, Vector3(0, 0, -0.07), turn, variant)
+		return
+	_room_piece(p, Vector3(0, 0, -0.08), Vector3(0.36, 0.45, 0.12), STEEL, turn, KitTarget.Finish.METAL)
+	_room_piece(p, Vector3(0, 0, -0.013), Vector3(0.29, 0.36, 0.018), WHITE, turn)
+	for n in 3:
+		_room_piece(p, Vector3(-0.075 + n * 0.075, 0.01, 0.003), Vector3(0.035, 0.12, 0.016), DARK, turn)
+	_room_piece(p, Vector3(0.10, -0.12, 0.006), Vector3(0.024, 0.024, 0.012), Color(0.65, 0.16, 0.10), turn)
+	var conduit_height := maxf(0.02, height - 1.925)
+	_room_piece(p, Vector3(0, 0.225 + conduit_height * 0.5, -0.09), Vector3(0.022, conduit_height, 0.022), STEEL, turn)
+	_room_piece(p, Vector3(0, -0.67, -0.10), Vector3(0.21, 0.49, 0.04), DARK, turn)
+	var extinguisher := p + Basis(Vector3.UP, turn) * Vector3(0, -0.67, 0.015)
+	_shape(&"cylinder", extinguisher, Vector3(0.15, 0.43, 0.15), Color(0.64, 0.075, 0.04), false, KitTarget.Finish.SATIN)
+	_shape(&"cylinder", extinguisher, Vector3(0.152, 0.09, 0.152), WHITE)
+	_shape(&"cylinder", extinguisher + Vector3(0, 0.24, 0), Vector3(0.07, 0.055, 0.07), STEEL, false, KitTarget.Finish.METAL)
+	_room_piece(p, Vector3(0.07, -0.44, 0.015), Vector3(0.12, 0.035, 0.055), DARK, turn)
+	_room_piece(p, Vector3(0.09, -0.66, 0.02), Vector3(0.024, 0.34, 0.035), DARK, turn)
+
+
+func _room_register(p: Vector3, offset: Vector3, turn: float) -> void:
+	_room_piece(p, offset + Vector3(0, 0.055, 0), Vector3(0.40, 0.11, 0.30), STEEL, turn, KitTarget.Finish.METAL)
+	_room_piece(p, offset + Vector3(0, 0.045, 0.158), Vector3(0.20, 0.015, 0.016), DARK, turn)
+	_room_piece(p, offset + Vector3(0, 0.127, 0.025), Vector3(0.34, 0.035, 0.19), DARK, turn)
+	for row in 2:
+		for n in 4:
+			_room_piece(p, offset + Vector3(-0.065 + n * 0.052, 0.148, 0.005 + row * 0.056), Vector3(0.034, 0.008, 0.032), WHITE, turn)
+	_room_piece(p, offset + Vector3(0.04, 0.235, -0.10), Vector3(0.035, 0.23, 0.035), DARK, turn)
+	_room_piece(p, offset + Vector3(0.04, 0.32, -0.10), Vector3(0.30, 0.20, 0.045), DARK, turn)
+	_room_piece(p, offset + Vector3(0.04, 0.32, -0.074), Vector3(0.25, 0.145, 0.007), Color(0.15, 0.32, 0.25), turn, KitTarget.Finish.GLOSS, 0.18)
+	_room_piece(p, offset + Vector3(-0.14, 0.16, 0.015), Vector3(0.07, 0.095, 0.08), WHITE, turn)
+	_room_piece(p, offset + Vector3(-0.14, 0.12, 0.07), Vector3(0.062, 0.012, 0.13), WHITE, turn)
+
+
+func _room_menu(p: Vector3, offset: Vector3, size: Vector2, turn: float, paper: bool) -> void:
+	_room_piece(p, offset, Vector3(size.x, size.y, 0.035), STEEL if paper else WOOD, turn)
+	_room_piece(p, offset + Vector3(0, 0, 0.022), Vector3(size.x - 0.06, size.y - 0.06, 0.012), WHITE if paper else DARK, turn)
+	var ink: Color = DARK if paper else Color(0.84, 0.82, 0.68)
+	_room_piece(p, offset + Vector3(0, size.y * 0.31, 0.033), Vector3(size.x * 0.67, size.y * 0.065, 0.007), ink, turn)
+	for row in 4:
+		var line_y := size.y * (0.11 - row * 0.14)
+		_room_piece(p, offset + Vector3(-size.x * 0.09, line_y, 0.033), Vector3(size.x * (0.48 - float(row % 2) * 0.08), 0.014, 0.007), ink, turn)
+		_room_piece(p, offset + Vector3(size.x * 0.32, line_y, 0.033), Vector3(size.x * 0.12, 0.014, 0.007), ink, turn)
+
+
+func _room_clock(p: Vector3, offset: Vector3, turn: float, variant: int) -> void:
+	var rotation := Basis(Vector3.UP, turn)
+	_shape(&"sphere", p + rotation * offset, Vector3(0.38, 0.38, 0.06), DARK, false, KitTarget.Finish.SATIN, 0, turn)
+	_shape(&"sphere", p + rotation * (offset + Vector3(0, 0, 0.024)), Vector3(0.34, 0.34, 0.024), WHITE, false, KitTarget.Finish.GLOSS, 0, turn)
+	for tick in 12:
+		var angle := float(tick) * TAU / 12.0
+		_room_piece(p, offset + Vector3(sin(angle) * 0.143, cos(angle) * 0.143, 0.040), Vector3(0.014, 0.014, 0.007), DARK, turn)
+	_room_piece(p, offset + Vector3(0, 0.052, 0.042), Vector3(0.014, 0.115, 0.008), DARK, turn)
+	if variant < 2:
+		_room_piece(p, offset + Vector3(0.04 if variant == 0 else -0.04, 0, 0.044), Vector3(0.095, 0.014, 0.008), DARK, turn)
+	else:
+		_room_piece(p, offset + Vector3(0, -0.035, 0.044), Vector3(0.014, 0.085, 0.008), DARK, turn)
+
+
+func _room_camera(p: Vector3, offset: Vector3, turn: float) -> void:
+	_room_piece(p, offset + Vector3(0, -0.045, -0.135), Vector3(0.09, 0.12, 0.022), STEEL, turn)
+	_room_piece(p, offset + Vector3(0, -0.045, -0.095), Vector3(0.035, 0.035, 0.11), STEEL, turn)
+	_room_piece(p, offset + Vector3(0, 0, 0.01), Vector3(0.23, 0.13, 0.24), WHITE, turn)
+	_room_piece(p, offset + Vector3(0, -0.01, 0.138), Vector3(0.11, 0.095, 0.020), DARK, turn)
+	_shape(&"sphere", p + Basis(Vector3.UP, turn) * (offset + Vector3(0, -0.01, 0.153)), Vector3(0.065, 0.065, 0.023), Color(0.08, 0.12, 0.15), false, KitTarget.Finish.GLOSS, 0, turn)
+	_room_piece(p, offset + Vector3(0.083, -0.033, 0.136), Vector3(0.014, 0.014, 0.010), Color(0.65, 0.04, 0.025), turn, KitTarget.Finish.GLOSS, 0.25)
 
 
 func _room_notice(side: float, z: float, cell: int, accent: Color, variant: int) -> void:
@@ -959,23 +1189,40 @@ func _room_bottle(p: Vector3, offset: Vector3, turn: float, color: Color, h: flo
 
 
 func _room_table(preferred: Vector3, variant: int, snack: bool) -> void:
-	var p := _room_assembly(preferred, Vector3(1.65, 1.1, 2.35))
+	var size := Vector3(1.25, 1.1, 2.10) if snack else Vector3(1.65, 1.1, 2.35)
+	preferred.x = signf(preferred.x) * (half.x - size.x * 0.5 - 0.10)
+	var p := _room_assembly(preferred, size)
 	if not p.is_finite(): return
-	_box(p + Vector3(0, 0.21, 0), Vector3(1.5, 0.11, 0.8), WOOD if not snack else WHITE)
-	for dx in [-0.55, 0.55]:
-		_box(p + Vector3(dx, -0.14, 0), Vector3(0.09, 0.72, 0.59), DARK)
-	for side in [-1.0, 1.0]:
-		_box(p + Vector3(0, -0.09, side * 0.84), Vector3(1.45, 0.11, 0.47), WOOD if variant != 1 else Color(0.42, 0.1, 0.09))
-		_box(p + Vector3(0, 0.19, side * 1.09), Vector3(1.45, 0.55, 0.075), WOOD)
-		for dx in [-0.53, 0.53]:
-			_box(p + Vector3(dx, -0.33, side * 0.84), Vector3(0.07, 0.42, 0.43), DARK)
-	if not snack:
+	if snack:
+		# Wipe-clean cafe table and separate moulded chairs, not pub booths.
+		var seat: Color = [Color(0.19, 0.36, 0.37), Color(0.65, 0.22, 0.12), Color(0.49, 0.50, 0.24)][variant]
+		_box(p + Vector3(0, 0.21, 0), Vector3(0.92, 0.10, 0.72), WHITE, false, KitTarget.Finish.SATIN)
+		_box(p + Vector3(0, -0.13, 0), Vector3(0.09, 0.69, 0.09), STEEL, false, KitTarget.Finish.METAL)
+		_box(p + Vector3(0, -0.51, 0), Vector3(0.54, 0.06, 0.52), DARK)
+		for side in [-1.0, 1.0]:
+			_box(p + Vector3(0, -0.06, side * 0.75), Vector3(0.46, 0.07, 0.42), seat, false, KitTarget.Finish.SATIN)
+			_box(p + Vector3(0, 0.19, side * 0.96), Vector3(0.46, 0.47, 0.055), seat, false, KitTarget.Finish.SATIN)
+			for dx in [-0.18, 0.18]:
+				for dz in [-0.15, 0.15]:
+					_box(p + Vector3(dx, -0.32, side * 0.75 + dz), Vector3(0.028, 0.46, 0.028), STEEL, false, KitTarget.Finish.METAL)
+		_shape(&"cylinder", p + Vector3(0.15, 0.277, 0.03), Vector3(0.29, 0.028, 0.29), WHITE, false, KitTarget.Finish.GLOSS)
+		_box(p + Vector3(0.15, 0.314, 0.03), Vector3(0.18, 0.05, 0.14), Color(0.80, 0.52, 0.20))
+		_box(p + Vector3(-0.24, 0.335, -0.12), Vector3(0.09, 0.15, 0.09), Color(0.68, 0.12, 0.06))
+		_box(p + Vector3(-0.24, 0.423, -0.12), Vector3(0.065, 0.025, 0.065), WHITE)
+	else:
+		var timber := WOOD.lightened(float(variant) * 0.04)
+		_box(p + Vector3(0, 0.21, 0), Vector3(1.5, 0.11, 0.8), timber, false, KitTarget.Finish.SATIN)
+		for dx in [-0.55, 0.55]:
+			_box(p + Vector3(dx, -0.14, 0), Vector3(0.09, 0.72, 0.59), DARK)
+		for side in [-1.0, 1.0]:
+			_box(p + Vector3(0, -0.09, side * 0.84), Vector3(1.45, 0.11, 0.47), timber if variant != 1 else Color(0.42, 0.1, 0.09), false, KitTarget.Finish.SATIN)
+			_box(p + Vector3(0, 0.19, side * 1.09), Vector3(1.45, 0.55, 0.075), timber)
+			for dx in [-0.53, 0.53]:
+				_box(p + Vector3(dx, -0.33, side * 0.84), Vector3(0.07, 0.42, 0.43), DARK)
 		_glass(p.x - 0.3, p.z, p.y + 0.36)
 		_glass(p.x + 0.3, p.z + 0.12, p.y + 0.36)
-	else:
-		_box(p + Vector3(0.2, 0.34, 0.1), Vector3(0.22, 0.15, 0.16), Color(0.8, 0.2, 0.07))
-	_box(p + Vector3(-0.48, 0.34, -0.16), Vector3(0.16, 0.16, 0.08), WHITE)
-	_box(p + Vector3(-0.48, 0.43, -0.16), Vector3(0.11, 0.025, 0.09), WHITE)
+		_box(p + Vector3(-0.48, 0.34, -0.16), Vector3(0.16, 0.16, 0.08), WHITE)
+		_box(p + Vector3(-0.48, 0.43, -0.16), Vector3(0.11, 0.025, 0.09), WHITE)
 
 
 func _shop_goods(p: Vector3, y: float, turn: float, kind: int) -> void:

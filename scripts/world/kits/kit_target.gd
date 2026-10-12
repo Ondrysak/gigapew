@@ -15,7 +15,7 @@ extends RefCounted
 ##   Visual-only primitive; `kind` is `&"box"`, `&"cylinder"` or `&"sphere"`.
 ##   Unit meshes (box 1×1×1, cylinder radius 0.5 height 1, sphere radius 0.5);
 ##   `xform` carries the scale. Batched by mesh+material. Kits only send their
-##   few theme surface materials (metro walls, terrazzo, WC tiles) here.
+##   few theme surfaces (metro walls, terrazzo, WC tiles and cashier glass) here.
 ## - `label(text: String, xform: Transform3D, font_size: int, color: Color) -> void`
 ##   Fixed (non-billboard) Label3D facing the basis +Z axis.
 ## - `light(position: Vector3, color: Color, energy: float, range: float) -> bool`
@@ -24,9 +24,11 @@ extends RefCounted
 ## Everything else (furniture, fixtures, goods, signs) is collected here as
 ## palette instances and drawn by `flush` in at most five MultiMesh batches
 ## (palette box/cylinder/sphere/hollow ring + the sign atlas), whatever the colours.
+## Venue floors add one shared batch, with finish/variant in instance channels.
 
 const PAINT_SHADER = preload("res://shaders/kits/kit_paint.gdshader")
 const SIGN_SHADER = preload("res://shaders/kits/kit_sign.gdshader")
+const FLOOR_SHADER = preload("res://shaders/kits/venue_floor.gdshader")
 const SIGN_ATLAS = preload("res://assets/kits/sign_atlas.png")
 ## Sign atlas grid (cells per row and per column).
 const SIGN_GRID := Vector2i(8, 8)
@@ -47,14 +49,14 @@ var lights_added := 0
 static var _meshes: Dictionary = {}
 static var _paint_material: ShaderMaterial
 static var _sign_material: ShaderMaterial
-static var _model_parts: Dictionary = {}
+static var _floor_material: ShaderMaterial
 
 ## kind -> {"xforms": Array[Transform3D], "custom": PackedColorArray}
 var _paint: Dictionary = {}
 var _signs: Array[Transform3D] = []
 var _sign_cells: PackedColorArray = []
-## Imported mesh -> placements, retaining the model's original materials.
-var _models: Dictionary = {}
+var _floors: Array[Transform3D] = []
+var _floor_styles := PackedColorArray()
 
 
 func add_solid(center: Vector3, size: Vector3, yaw: float, material: Material) -> void:
@@ -106,31 +108,14 @@ func add_sign(xform: Transform3D, cell: int, span: int = 1, glow: float = 0.0) -
 	_sign_cells.append(Color(float(column) / SIGN_GRID.x, float(row) / SIGN_GRID.y, clampf(glow, 0.0, 1.0), float(span) / SIGN_GRID.x))
 
 
-## Cache imported geometry once; instances share one batch per original mesh.
-func add_model(scene: PackedScene, xform: Transform3D) -> void:
-	if not _model_parts.has(scene):
-		var root := scene.instantiate() as Node3D
-		var parts: Array[Dictionary] = []
-		var nodes := root.find_children("*", "MeshInstance3D", true, false)
-		if root is MeshInstance3D:
-			nodes.append(root)
-		for node: MeshInstance3D in nodes:
-			var local := node.transform
-			var ancestor := node.get_parent() as Node3D
-			while ancestor != null:
-				local = ancestor.transform * local
-				ancestor = ancestor.get_parent() as Node3D
-			parts.append({"mesh": node.mesh, "transform": local})
-		_model_parts[scene] = parts
-		root.free()
-	for part: Dictionary in _model_parts[scene]:
-		var mesh: Mesh = part.mesh
-		if not _models.has(mesh):
-			_models[mesh] = [] as Array[Transform3D]
-		(_models[mesh] as Array[Transform3D]).append(xform * (part.transform as Transform3D))
+## Normalized style channels survive both float and 8-bit instance storage.
+## Every venue finish/variant shares one floor draw batch.
+func add_floor(xform: Transform3D, venue_kind: int, variant: int) -> void:
+	_floors.append(xform)
+	_floor_styles.append(Color(float(venue_kind) / 3.0, float(variant) / 2.0, 0.0, 0.0))
 
 
-## Adds palette, sign and imported-model batches; returns the batch count.
+## Adds palette, sign and venue-floor batches; returns the batch count.
 func flush(parent: Node3D) -> int:
 	var added := 0
 	for kind: StringName in _paint:
@@ -140,10 +125,11 @@ func flush(parent: Node3D) -> int:
 	if not _signs.is_empty():
 		parent.add_child(_batch(_mesh(&"box"), _sign_shared(), _signs, _sign_cells))
 		added += 1
-	for mesh: Mesh in _models:
-		parent.add_child(_batch(mesh, null, _models[mesh], PackedColorArray()))
+	if not _floors.is_empty():
+		parent.add_child(_batch(_mesh(&"box"), _floor_shared(), _floors, _floor_styles))
 		added += 1
-	_models.clear()
+	_floors.clear()
+	_floor_styles = PackedColorArray()
 	_paint.clear()
 	_signs = []
 	_sign_cells = PackedColorArray()
@@ -214,3 +200,10 @@ static func _sign_shared() -> ShaderMaterial:
 		_sign_material.set_shader_parameter("atlas", SIGN_ATLAS)
 		_sign_material.set_shader_parameter("grid", Vector2(SIGN_GRID))
 	return _sign_material
+
+
+static func _floor_shared() -> ShaderMaterial:
+	if _floor_material == null:
+		_floor_material = ShaderMaterial.new()
+		_floor_material.shader = FLOOR_SHADER
+	return _floor_material

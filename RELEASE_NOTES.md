@@ -1,3 +1,44 @@
+# Unreleased
+
+- Generated 186 BPM hardtek replaces the 126 BPM stage score: real PROTOKSEED
+  D kicks, tempo-locked break chops and acid/FX textures combine with synthesized
+  rolling bass, percussion and the owner's recorded vocal chops.
+- Thirteen worker-rendered stems share a sample-locked 16-bar phrase. Private
+  seeded fills vary the arrangement; musical boundaries use the rounded PCM
+  grid, not nominal tempo, and source samples decode once into a shared bank.
+- Actual crowd pressure, kill momentum, health loss, low-health danger and
+  held-F contact/resonance drive the mix. Boss/extraction peaks change on bars;
+  recorded kill/salvage/danger/departure accents use beat timing and bounded
+  priority/cooldowns. Spoken reactions duck the backing and silence remix
+  vocals; pause softens the mix and cancels queued gameplay accents.
+- Native gameplay audio captures verified pressure, kill bursts, critical
+  health, prying, boss entry/recovery, speech precedence and pause. A packed-only
+  runtime decoded all eleven sample-bank entries and produced real mixer
+  frames from the generated score, without access to the source tree.
+- Existing vocal-burst fixtures now use the protected spawn floor rather than
+  assuming the street ahead contains space for every requested enemy.
+- PROTOKSEED redistribution terms were not supplied; these audio assets are
+  not covered by the CC0 art licences. See `CREDITS.md` before publishing.
+- Venue interiors now have metre-scale worn timber, patterned carpet, checker
+  vinyl and commercial tile floors. Three room-seeded palettes per finish use
+  normalized instance data, sharing one floor material and draw batch.
+- Hospoda service counters and backbars leave a real staff passage, with
+  separate furniture colliders, taps, mugs, registers and menus. Nonstops use
+  cold-drinks cabinets, hot-food displays, espresso equipment and cafe seating.
+- Herna cash desks have transparent physical security panes, a transfer slot,
+  registers, security monitors, clocks and CCTV. A front machine bay is kept
+  clear for the cashier; the remaining supported stock still covers contracts.
+- Neutral ceiling finishes, venue-specific light fittings, portal-cut trims
+  and wall electrical/safety details make the rooms distinct. Each venue gets
+  a real local fill; the world kit-light budget is ten, labels remain capped
+  at 64, and the existing 60-batch natural-level budget is retained.
+- Večerka allocates its till before shelving so retail stock cannot displace
+  the checkout. Interior details still respect entrances and cabinet approaches.
+- Final native `levels quests voice venues` run: 272 captures, zero failures.
+  Held-W entry/wall collision, held-F salvage, reachable initial stock and all
+  three objective-driven extractions passed. Twelve floor finishes/palettes
+  rendered in one shared Compatibility batch; natural Žižkov used 59 batches.
+
 # Kakaboomboom 0.6.0
 
 - Every generated sector now has a roofed underground hall at −4.5 m, a

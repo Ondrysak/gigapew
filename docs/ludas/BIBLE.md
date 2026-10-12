@@ -71,9 +71,23 @@ Všechno označené **[NÁVRH]** je výchozí volba k připomínkování.
   ale nechává průchody a přístup k automatům; úzké slepé mezery nevznikají.
   Otočené stěny metra i WC mají shodný viditelný a fyzický půdorys,
   včetně stěn mezi sousedními podzemními místnostmi.
+- Hospody mají opotřebená prkna, dřevěné sezení a výčep se skutečnou mezerou
+  pro obsluhu mezi pultem a zadními policemi. Nonstopy mají šachovnicové lino,
+  chlazené nápoje, jídlo, kávovar a omyvatelné stolky se samostatnými židlemi.
+  Herny mají vzorovaný koberec a pokladnu u vstupu: průhledné kolizní sklo,
+  podávací otvor, kasu, bezpečnostní monitor a kameru. Vedle pokladny nestojí
+  další bank automatů. Večerka rezervuje místo na kasu před regály.
+  Stropy, světelné armatury, menu, hodiny a elektro/požární vybavení odlišují
+  podniky. Podlahy mají podle seedu místnosti tři palety; všechny povrchy
+  sdílí jediný instancovaný materiál. Nábytek a hlášky mají dál vlastní seed.
 - Hlášky z `hlasky.txt` jsou na závěsných cedulích uvnitř podniků, nad vstupy,
   v metru a WC i na venkovních nástěnkách parku a staveniště. Celé řádky se
   zalamují podle prostoru; výběr je náhodný podle seedu a nemění herní RNG.
+- Hudba je generovaný hardtek kolem 186 BPM: tvrdé kopáky a breaky ze
+  zadaného PROTOKSEED packu, syntetická basa/acid a Luďasovy hlasové střihy.
+  Hustota davu, série skutečných zabití, ztráta zdraví a kontakt páčidla
+  mění vrstvy. Boss a odvoz přepínají na silnější rytmus po taktech;
+  mluvené reakce mají přednost před remixovým hlasem a pauza hudbu ztiší.
 - Podzemí zabírá rezervovaný půdorys pod neprůchozí hmotou domu:
   v jednom XZ bodě není zároveň hratelná ulice i spodní patro.
   Hráč a horda používají stejné rampy; radar rozlišuje patro,
@@ -294,5 +308,4 @@ Kontrakt počítá skutečně vypáčené jednotky, ne sebrané či uložené pe
 
 - ~~Konec A, nebo B?~~ → B (smyčka v septiku).
 - Miminka na vysílači: jsou až z roku 2000. Halucinace navíc pro finále?
-- Dobová hudba: punk, raný techno, dechovka z hospody?
 - Které Luďasovy hlášky chceš povinně ve hře?
