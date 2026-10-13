@@ -20,16 +20,17 @@ const VOCAL_KEYS: Array[StringName] = [
 ]
 
 var seed: int = 0
+var genre: StringName = &"hardtek"
+## Fixed, harmonically matched sample set; no mutable sample data in a score.
+var techno_clips: Dictionary = {}
+var loop_offsets: Dictionary = {}
 var bpm: int = 186
 var bars: int = 32
 var step: int = 0
 var key: int = 36
 var roots: Array[int] = []
 var pads: Array = []
-var arps: Array = []
 var acid_pattern: PackedInt32Array = PackedInt32Array()
-# One-bar motif: [sixteenth offset, duration in sixteenths, MIDI pitch].
-var motif: Array = []
 var hat_accents: PackedFloat32Array = PackedFloat32Array()
 var sections: PackedInt32Array = PackedInt32Array()
 # One fixed sound set per run; the full catalog is a selection pool, not a playlist.
@@ -38,10 +39,8 @@ var break_clip: StringName = &""
 var acid_clip: StringName = &""
 var fx_clip: StringName = &""
 var ambient_clip: StringName = &""
-var lead_clip: StringName = &""
 var break_beat: float = 0.0
 var acid_beat: float = 0.0
-var lead_beat: float = 0.0
 var ambient_position: float = 0.0
 var fx_position: float = 0.0
 var vocals: Array[StringName] = []
@@ -67,7 +66,7 @@ func is_cancelled() -> bool:
 	return cancelled
 
 
-static func build(seed_value: int) -> MusicComposition:
+static func build_hardtek(seed_value: int) -> MusicComposition:
 	var result: MusicComposition = MusicComposition.new()
 	var random: RandomNumberGenerator = RandomNumberGenerator.new()
 	random.seed = seed_value
@@ -104,10 +103,6 @@ static func build(seed_value: int) -> MusicComposition:
 	result.acid_clip = _pick(pools[&"acid"], random)
 	result.fx_clip = _pick(pools[&"fx"], random)
 	result.ambient_clip = _pick(pools[&"ambient"], random)
-	# A sampled lead replaces the generated melody; never stack two lead lines.
-	if random.randi_range(0, 2) == 0:
-		result.lead_clip = _pick(pools[&"lead"], random)
-		result.lead_beat = random.randi_range(0, int(clips[result.lead_clip].beats / 4) - 1) * 4.0
 	result.break_beat = random.randi_range(0, int(clips[result.break_clip].beats / 8) - 1) * 8.0
 	result.acid_beat = random.randi_range(0, int(clips[result.acid_clip].beats / 8) - 1) * 8.0
 	result.ambient_position = random.randf()
@@ -119,24 +114,16 @@ static func build(seed_value: int) -> MusicComposition:
 		var degree: int = int(progression[phrase])
 		result.roots.append(result.key + MINOR_SCALE[degree])
 		var pad: Array[int] = []
-		var arp: Array[int] = []
 		# Diatonic sevenths and doubled-root triads are both minor-key compatible.
 		var fourth_degree: int = degree + (6 if random.randf() < 0.5 else 7)
 		var chord_degrees: Array[int] = [degree, degree + 2, degree + 4, fourth_degree]
 		for chord_degree: int in chord_degrees:
 			pad.append(result.key + pad_register + _scale_note(chord_degree))
-			arp.append(result.key + 24 + _scale_note(chord_degree))
 		var inversion: int = random.randi_range(0, 2)
 		for voice: int in inversion:
 			pad[voice] += 12
 		pad.sort()
-		# A separate inversion changes motion, not the harmonic pitch collection.
-		var arp_inversion: int = random.randi_range(0, 1)
-		if arp_inversion == 1:
-			arp[0] += 12
-		arp.sort()
 		result.pads.append(pad)
-		result.arps.append(arp)
 
 	# Semitone offsets drawn from the shared tonic's minor scale.
 	var acid_degrees: Array[int] = [0, 0, 0, 2, 4, 4, 6, 7]
@@ -151,20 +138,6 @@ static func build(seed_value: int) -> MusicComposition:
 		elif sixteenth % 4 == 0:
 			accent = random.randf_range(0.48, 0.76)
 		result.hat_accents.append(accent)
-
-	var melody_degree: int = random.randi_range(2, 7)
-	var onset: int = 0
-	while onset < 16:
-		var duration: int = random.randi_range(1, 3)
-		duration = mini(duration, 16 - onset)
-		if onset == 0 or random.randf() > 0.18:
-			melody_degree = clampi(melody_degree + random.randi_range(-2, 2), 0, 9)
-			if onset + duration >= 14:
-				melody_degree = 7 if random.randf() < 0.5 else 4
-			result.motif.append([onset, duration, result.key + 24 + _scale_note(melody_degree)])
-		onset += duration
-		if onset < 15 and random.randf() < 0.25:
-			onset += 1
 
 	# A shaped arrangement: opening, climb, relief and a dense final return.
 	var density_shapes: Array = [
@@ -193,6 +166,61 @@ static func build(seed_value: int) -> MusicComposition:
 			vocal_bar += 2 + spare[slot + 1]
 
 	result.identity = "%06X · %s minor · %d" % [random.randi() & 0xFFFFFF, TONIC_NAMES[result.key - 36], result.bpm]
+	return result
+
+## Techno keeps the sampled phrases in their labelled minor key. Its motion
+## comes from phrase entrances, rests and percussion, not repitched chord loops.
+static func build(seed_value: int) -> MusicComposition:
+	var result := MusicComposition.new()
+	var random := RandomNumberGenerator.new()
+	random.seed = seed_value
+	result.seed = seed_value
+	result.genre = &"techno"
+	result.bpm = 125
+	result.step = MusicScore.step_samples(result.bpm)
+	var clips: Dictionary = MusicSamples.TECHNO.CLIPS
+	var ids: Array = clips.keys()
+	ids.sort()
+	var keys: Array[int] = []
+	for id: StringName in ids:
+		if StringName(clips[id].role) == &"bass" and not keys.has(int(clips[id].root)):
+			keys.append(int(clips[id].root))
+	var matched: Array[int] = []
+	for key_value: int in keys:
+		var roles: Array[StringName] = []
+		for id: StringName in ids:
+			if int(clips[id].root) == key_value:
+				roles.append(StringName(clips[id].role))
+		if roles.has(&"synth") and roles.has(&"arp"):
+			matched.append(key_value)
+	assert(not matched.is_empty(), "Techno needs a matched bass/synth/arp minor-key set")
+	matched.sort()
+	result.key = matched[random.randi_range(0, matched.size() - 1)]
+	for role: StringName in [&"kick", &"clap", &"hat", &"groove", &"bass", &"synth", &"arp", &"ambient"]:
+		var pool: Array[StringName] = []
+		for id: StringName in ids:
+			var clip: Dictionary = clips[id]
+			if StringName(clip.role) != role:
+				continue
+			if role in [&"bass", &"synth", &"arp", &"ambient"] and int(clip.root) != result.key:
+				continue
+			pool.append(id)
+		assert(not pool.is_empty(), "Techno sample role missing: %s" % role)
+		var selected := _pick(pool, random)
+		result.techno_clips[role] = selected
+		var beats := float(clips[selected].beats)
+		result.loop_offsets[role] = random.randi_range(0, maxi(0, floori(beats / 4.0) - 1)) * 4.0
+	var shapes: Array = [
+		[0, 1, 2, 3, 0, 2, 3, 2], [1, 0, 2, 3, 1, 2, 0, 3],
+		[0, 2, 1, 3, 0, 1, 3, 2], [1, 2, 0, 3, 1, 0, 2, 3],
+	]
+	for section: int in shapes[random.randi_range(0, shapes.size() - 1)]:
+		result.sections.append(section)
+	for sixteenth: int in 16:
+		result.hat_accents.append(random.randf_range(0.65, 1.0))
+	result.identity = "%06X · %s minor · %d" % [random.randi() & 0xFFFFFF, TONIC_NAMES[result.key - 36], result.bpm]
+	result.techno_clips.make_read_only()
+	result.loop_offsets.make_read_only()
 	return result
 
 

@@ -21,6 +21,7 @@ size = Vector3(0.012, 0.2, 0.006)
 
 [node name="Scatter" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template")]
 script = ExtResource("1_view")
+flourish = 1
 kinetic_keeps_colors = true
 muzzle = NodePath("Model/scatter/Muzzle")
 impact_material = SubResource("Impact")

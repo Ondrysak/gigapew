@@ -137,7 +137,7 @@ func _redraw() -> void:
 	var stats := StatText.bbcode(_selected, good_color, bad_color)
 	stats_label.text = stats if not stats.is_empty() else "Základní parametry beze změn."
 	if unlocked:
-		action_button.text = "VYRAZIT DO ULIC"
+		action_button.text = "DÁL · KAM A JAK TĚŽCE"
 		action_button.disabled = false
 	else:
 		action_button.text = "PŘIBRAT DO PARTY  ·  %s" % _cost_text(_selected)

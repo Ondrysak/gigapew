@@ -1,5 +1,72 @@
 # Unreleased
 
+- Ordinary gameplay now uses **125 BPM techno** from 56 complete, key-matched
+  TECHNO_ESS conversions. Each run selects a C minor, Eb minor or Gb minor
+  bass/synth/arp/atmosphere set, drums and a no-kick groove; seeded phrase
+  sections introduce rests and variation. Original source hashes and exact
+  grids are retained. The user purchased the pack, but redistribution terms
+  remain unverified; see `CREDITS.md`.
+- Every selectable level now ends with its scheduled **final boss** in the
+  last fight's venue. Actual crowd and damaging-effect cleanup precedes safe,
+  bounded boss admission; blocked geometry retries without a phantom clear.
+  The boss, surviving enemies and remaining damaging effects must be defeated
+  or resolved before the shop opens. Duplicate/stale signals cannot grant
+  another clear; simultaneous player death takes precedence.
+- Known issue: a final fight at **Metro Jiřího z Poděbrad** can stall in
+  `BOSS_PENDING` after crowd cleanup. In the inspected debug run (Yard seed
+  `2038073020`), every configured heavy-lane point was blocked for the boss's
+  1.8 m radius. Boss admission keeps retrying and the shop remains locked;
+  the placement fix is not included in this change.
+- Boss arrival crossfades from techno to the run's **180/186/192/198 BPM
+  hardtek** score on a bar boundary; death returns to the same techno mix.
+  Both scores persist across rounds, while new runs cancel stale renders and
+  select fresh arrangements. DROP timing and the live PCM HUD follow the active
+  score's genre, stems and tempo. Speech gates only hardtek vocal chops; weapon
+  effects, cues and pause never duck backing gain. Debug labs remain silent
+  through the Dummy audio driver.
+- Pre-push verification: 14 silent rendered lab scenarios produced **161
+  captures and zero check failures or script/engine errors**; precision and
+  nested-blast combat regressions also reported zero failures. These seeded
+  scenarios do not resolve the known metro placement stall above, and an
+  ObjectDB cleanup warning remains at shutdown.
+- Removed the fixed Žižkov → Palmovka → Hlavák sequence. After class select, a
+  new **run setup** screen picks the level and tunes fights, density, crowd cap,
+  enemy health, incoming damage, spawn pace, specialists and a 0–10 difficulty
+  tier (+15% health, +10% damage, +8% density and +25% clear rewards per tier).
+  Five presets: Pohodička, Klasika, Rychlovka, Horda and Hardtek peklo. Any
+  slider edit becomes Vlastní; the setup is saved in the profile.
+- **Shop purchases are now permanent**: weapon mods, suit ranks and per-class
+  skill ranks are saved and re-applied at every run start within their caps.
+  The level-clear shop starts another round on any level at the same or one
+  tier higher difficulty, carrying the build, or ends the run at home.
+  Records add the last run's level and difficulty.
+- Added gun flourishes in five families (Shake, Twirl, Rack, Heave, Snap).
+  Every appearance plays a draw; standing still for 6 s starts an inspect; a
+  DROP shot adds a showpiece. Light guns toss a barrel roll or end-over-end
+  flip while the gloved hand waits to catch. Heavy guns haul up, heft and
+  slam. The rail sights down its barrel, and the beer bottle gets shaken.
+  Airborne float dips the gun on the rise and lifts it in the fall. Firing
+  finishes a draw early and cancels an inspect; aim, timing and pause are
+  unchanged.
+- Added three specialist enemies with venue-specific casts. Masta Blasta (herna,
+  nonstop) arms visibly, then rushes a locked lane and self-detonates; a backpack
+  shot, kick or execution turns the wall-clipped blast on the crowd. Tarzan ze
+  stropu (hospoda, metro) hangs only from real roofs, marks a fixed landing ring
+  and can be shot loose or kicked midair. Absintovej Polejvač lobs finite green
+  fuel that is harmless until fire ignites it. Delayed blasts credit each kill
+  once; automatic or ambient fire never earns manual STYLE.
+- Enemy warnings play positional Kára lines (*Děléj!*, *Nemáte voheň…*, *Do
+  prdele co se děje?!*, *Je čas klidu.*) with HUD quotes, line-of-sight, range
+  and cooldown gates and no soundtrack ducking. First sightings open tutor tips.
+  All 33 available jirikara.cz MP3s are stored unmodified with hashes; three
+  indexed clips returned 404. Redistribution terms remain unverified.
+- Specialist verification: ten native combat/route/music/level scenarios ran
+  with 297 captures and zero failures. The callout check measured real SFX-bus
+  PCM from the downloaded `ohen` MP3 30 ms after the warning. The pressure lab
+  now counts phase budgets when each phase opens, so a short PEAK no longer
+  reads as over-admission. Backpack, ignition and ceiling-warning captures were
+  inspected visually. Subjective listening and long-session balance are not
+  measured.
 - Fixed gun/crowbar overlap for automaty and cigarette salvage. Raised idle
   crowbar and impact recovery exclusively replace the firearm; leaving restores it.
 - Reworked kick/parry poses with fast extension, contact hold and weighted return.

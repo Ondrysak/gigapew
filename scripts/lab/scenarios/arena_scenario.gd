@@ -1,10 +1,10 @@
 extends LabScenario
 
 func title() -> String:
-	return "Scored arena campaign"
+	return "Scored arena rounds"
 
 func summary() -> String:
-	return "Real primary-kill score, optional loot, finite cleanup, stage rewards, carried score and three-arena victory"
+	return "Real primary-kill score, optional loot, final crowd then same-venue boss, finite cleanup, level rewards, a harder chosen next round with carried score, and the recorded run"
 
 func run() -> void:
 	var game := await lab.start_game(&"scout", 0, true, 5501)
@@ -14,10 +14,11 @@ func run() -> void:
 	await lab.capture("arrival")
 	await _primary_kill_scores(game)
 	var carried := 0
-	for stage in game.campaign.size():
+	for round_index in 2:
 		var director := game.director
 		var old_id := director.get_instance_id()
 		var stage_start := game.arena_score
+		var level := game.campaign[game.stage_index].id
 		var unopened := _unopened_cabinets(game)
 		for frame in 30:
 			if not unopened.is_empty():
@@ -26,25 +27,34 @@ func run() -> void:
 			unopened = _unopened_cabinets(game)
 		var cleared := game.stages_cleared
 		await _clear_arena(game)
-		lab.check(game.round_state == ArenaGame.RoundState.SHOP and game.round_shop.visible and game.stages_cleared == cleared + 1, "stage %d opens its shop after the final real survivor is defeated" % stage)
-		lab.check(not unopened.is_empty() and _all_unopened(unopened), "stage %d clears without opening any original optional venue cabinet" % stage)
-		lab.check(game.arena_score >= stage_start, "stage %d arena score never resets during its finite combat" % stage)
-		await lab.capture("%s_shop" % game.campaign[stage].id)
+		lab.check(game.round_state == ArenaGame.RoundState.SHOP and game.round_shop.visible and game.stages_cleared == cleared + 1, "%s opens its shop after the final real survivor is defeated" % level)
+		lab.check(not unopened.is_empty() and _all_unopened(unopened), "%s clears without opening any original optional venue cabinet" % level)
+		lab.check(game.arena_score >= stage_start, "%s arena score never resets during its finite combat" % level)
+		await lab.capture("%s_shop" % level)
 		game._on_arena_completed(old_id)
-		lab.check(game.stages_cleared == cleared + 1, "duplicate arena completion cannot bank or clear a stage twice")
+		lab.check(game.stages_cleared == cleared + 1, "duplicate arena completion cannot bank or clear a level twice")
 		carried = game.arena_score
-		if stage + 1 < game.campaign.size():
-			game._on_shop_continue()
-			for frame in 80:
-				await lab.frames(1)
-				if game.round_state == ArenaGame.RoundState.PLAYING and game.stage_index == stage + 1:
-					break
-			game.director.set_physics_process(false)
-			game.player.grant_invulnerability(1.0e9)
-			lab.check(game.stage_index == stage + 1 and game.arena_score == carried and game.director.encounter_index == 0 and not game.director.finished, "shop continues into a fresh arena while carrying run score")
-			game._on_arena_completed(old_id)
-			lab.check(game.round_state == ArenaGame.RoundState.PLAYING and game.stages_cleared == cleared + 1, "a stale previous-arena signal cannot clear the next arena")
-	lab.check(game._run_recorded and game.stages_cleared == game.campaign.size() and int(Profile.records.last_run.score) == carried, "three actual arena clears record a victory with the run score")
+		if round_index > 0:
+			break
+		var tier := game.run_config.difficulty
+		game.round_shop._levels.select(2)
+		game.round_shop._harder.pressed.emit()
+		for frame in 80:
+			await lab.frames(1)
+			if game.round_state == ArenaGame.RoundState.PLAYING and game.stage_index == 2:
+				break
+		game.director.set_physics_process(false)
+		game.player.grant_invulnerability(1.0e9)
+		lab.check(game.stage_index == 2 and game.run_config.difficulty == tier + 1 and game.arena_score == carried and game.director.encounter_index == 0 and not game.director.finished, "the shop's harder next round loads the chosen level one tier up while carrying run score")
+		var authored := game.campaign[2].schedule.waves[0]
+		var tuned := game.active_stage.schedule.waves[0]
+		lab.check(tuned.health_multiplier > authored.health_multiplier and tuned.count >= authored.count, "the harder tier really toughens and thickens the next level's waves")
+		game._on_arena_completed(old_id)
+		lab.check(game.round_state == ArenaGame.RoundState.PLAYING and game.stages_cleared == cleared + 1, "a stale previous-arena signal cannot clear the next arena")
+	# Going home records the run; the home button itself leaves the lab scene.
+	game._record_run(true)
+	var last: Dictionary = Profile.records.last_run
+	lab.check(game.stages_cleared == 2 and int(last.score) == carried and bool(last.victory) and int(last.stages_cleared) == 2 and String(last.level_id) == String(game.campaign[2].id) and int(last.difficulty) == game.run_config.difficulty, "two cleared rounds record a victory with score, level and difficulty")
 	lab.check(int(Profile.records.best_score) == maxi(best_before, carried), "the score attack record keeps the higher actual run score")
 
 func _primary_kill_scores(game: ArenaGame) -> void:
@@ -80,6 +90,8 @@ func _clear_arena(game: ArenaGame) -> void:
 	director.grace = 0.0
 	var held := false
 	var visited: Array[StringName] = []
+	var saw_boss := false
+	var final_venue: StringName = &""
 	for tick in 5000:
 		if game.round_state in [ArenaGame.RoundState.LEVEL_UP, ArenaGame.RoundState.GEAR, ArenaGame.RoundState.ENCOUNTER_REWARD]:
 			await _choose_reward(game)
@@ -91,10 +103,13 @@ func _clear_arena(game: ArenaGame) -> void:
 				break
 			var choice: Dictionary = director.route_choices[0]
 			lab.check(not visited.has(choice.id), "stage %d offers an unvisited venue for its next fight" % game.stage_index)
-			visited.append(choice.id)
 			await lab.wait(0.26)
 			game.route_screen.choice_buttons[0].pressed.emit()
 			await lab.frames(1)
+			# A reward modal opening on the same frame can swallow the click;
+			# only a committed choice counts as visited.
+			if director.phase_name != "ROUTE":
+				visited.append(choice.id)
 		if director.phase_name == "TRAVEL":
 			game.player.global_position = director.current_venue().arrival + Vector3.UP * 0.95
 			game.player.velocity = Vector3.ZERO
@@ -104,6 +119,14 @@ func _clear_arena(game: ArenaGame) -> void:
 			await lab.frames(2)
 			held = director.phase_name == "CLEANUP" and game.round_state == ArenaGame.RoundState.PLAYING
 			lab.check(held, "stage %d stays in combat while real survivors remain" % game.stage_index)
+		if director.phase_name == "BOSS_PENDING":
+			final_venue = director.current_venue_id
+			lab.check(final_venue != &"" and not director.completed_venues.has(final_venue) and not director.finished and not game.round_shop.visible, "stage %d retains the final venue while its boss awaits safe admission" % game.stage_index)
+		if director.phase_name == "BOSS" and not saw_boss:
+			saw_boss = true
+			lab.check(game.horde.is_alive(game.horde.boss_index) and director.current_venue_id == final_venue and not director.completed_venues.has(final_venue), "stage %d admits its live boss in the uncleared final venue" % game.stage_index)
+			director._physics_process(600.0)
+			lab.check(director.phase_name == "BOSS" and not director.finished and not game.round_shop.visible, "stage %d cannot time out its live final boss into a shop" % game.stage_index)
 		if held or director.phase_name != "PEAK" or director._outstanding() > 0:
 			_defeat_all(game.horde)
 		director._physics_process(0.5)
@@ -113,6 +136,7 @@ func _clear_arena(game: ArenaGame) -> void:
 		await lab.frames(1)
 		if game.round_state == ArenaGame.RoundState.SHOP:
 			lab.check(visited.size() == director.encounter_count, "stage %d completes its required distinct venue fights" % game.stage_index)
+			lab.check(saw_boss and director.boss_defeated, "stage %d reaches the shop only after a real final boss defeat" % game.stage_index)
 			return
 		if game.round_state in [ArenaGame.RoundState.LEVEL_UP, ArenaGame.RoundState.GEAR, ArenaGame.RoundState.ENCOUNTER_REWARD]:
 			await _choose_reward(game)

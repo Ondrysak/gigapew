@@ -76,11 +76,14 @@ func _stage_pressure() -> void:
 		var frozen_checked := false
 		var interrupted := stage != 0
 		var venue: Dictionary = {}
-		var expected := 0
-		for encounter in range(1, definition.arena_encounters + 1):
-			for wave in schedule.waves:
-				if encounter >= wave.encounter_start and encounter <= wave.encounter_end:
-					expected += wave.count + wave.count_growth * (encounter - wave.encounter_start)
+		# Count every allocation as it opens; a short PEAK can open and drain
+		# between two observation ticks and must still join the expected budget.
+		var expected := [0]
+		director.phase_changed.connect(func() -> void:
+			if director.phase_name in ["BUILD", "PEAK"]:
+				expected[0] += director._phase_budget
+			elif director.phase_name == "BOSS":
+				expected[0] += 1)
 		for tick in 6000:
 			if director.phase_name == "ROUTE":
 				var ids := _choice_ids(director)
@@ -139,7 +142,7 @@ func _stage_pressure() -> void:
 					continue
 				var enemy: HordeEnemyDefinition = horde._defs[horde._type[slot]]
 				species[enemy] = true
-				var in_schedule := false
+				var in_schedule := enemy == schedule.boss
 				for wave in schedule.waves:
 					in_schedule = in_schedule or wave.enemy == enemy
 				authored = authored and in_schedule
@@ -170,10 +173,10 @@ func _stage_pressure() -> void:
 		lab.check(choices_ok and travel_held and arrivals_ok, "stage %d choices commit even while paused, TRAVEL holds until physical arrival, arrival starts BUILD" % stage)
 		lab.check(visited.size() == definition.arena_encounters and not revisited and director.completed_venues == visited and kinds.size() >= 3, "stage %d completes %d distinct venues %s of %d kinds and never re-offers one" % [stage, visited.size(), visited, kinds.size()])
 		lab.check(cleanup_held and recoveries.size() == definition.arena_encounters - 1, "stage %d keeps live cleanup separate from each empty recovery" % stage)
-		lab.check(director.finished and director.encounter_index == definition.arena_encounters and seen.size() == expected and completions[0] == 1, "stage %d completes its entire %d-body finite budget only through actual defeats" % [stage, expected])
+		lab.check(director.finished and director.encounter_index == definition.arena_encounters and seen.size() == expected[0] and completions[0] == 1, "stage %d completes its entire %d-body finite budget only through actual defeats" % [stage, expected[0]])
 		director._physics_process(1000.0)
 		lab.check(completions[0] == 1 and horde.alive_count == 0 and director.route_choices.is_empty(), "completed arena emits once and never restarts admissions or choices")
-		lab.log_line("arena stage=%d encounters=%d venues=%s admitted=%d expected=%d species=%d cap=%d" % [stage, director.encounter_index, visited, seen.size(), expected, species.size(), schedule.max_alive])
+		lab.log_line("arena stage=%d encounters=%d venues=%s admitted=%d expected=%d species=%d cap=%d" % [stage, director.encounter_index, visited, seen.size(), expected[0], species.size(), schedule.max_alive])
 		if not director.finished:
 			_log_stalled(director, horde, game.player)
 

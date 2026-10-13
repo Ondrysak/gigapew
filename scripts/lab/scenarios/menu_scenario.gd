@@ -6,7 +6,7 @@ func title() -> String:
 	return "Menus"
 
 func summary() -> String:
-	return "Intro, main menu, all operators, records/settings, workshop tabs and in-run pause screens"
+	return "Intro, main menu, all operators, run setup with presets, records/settings, workshop tabs and in-run pause screens"
 
 func run() -> void:
 	Profile.add_currency(&"gold", 124)
@@ -25,6 +25,7 @@ func run() -> void:
 	await lab.wait(1.0)
 	await lab.capture("home")
 	await _class_select(menu)
+	await _run_setup(menu)
 	menu._show_home()
 	await _workshop(menu)
 	await _utility_pages(menu)
@@ -48,6 +49,42 @@ func _class_select(menu: Node) -> void:
 			lab.check(card.lock_icon.visible, "locked %s card shows the lock icon" % card.definition.id)
 		await lab.capture("class_select_%s" % card.definition.id)
 		await _class_details(screen)
+
+## Operator select continues into run setup; every control saves the config.
+func _run_setup(menu: Node) -> void:
+	var screen: ClassSelectScreen = menu.class_select
+	screen.card_row.get_child(0).grab_focus()
+	await lab.wait(0.2)
+	screen.action_button.pressed.emit()
+	await lab.wait(0.4)
+	var setup: RunSetupScreen = menu.run_setup
+	lab.check(setup.visible and not screen.visible, "operator select continues into run setup instead of launching immediately")
+	await lab.capture("run_setup")
+	setup._level_buttons[1].pressed.emit()
+	setup._preset_buttons[&"horda"].pressed.emit()
+	await lab.wait(0.2)
+	var saved := Profile.load_run_config()
+	var foundry := setup._levels[1]
+	lab.check(saved.level == foundry.id and saved.preset == &"horda" and saved.fights == foundry.arena_encounters and is_equal_approx(saved.density, 2.5), "level and preset buttons save Palmovka with the Horda tuning")
+	await lab.capture("run_setup_horda")
+	var density: Range = setup._sliders["density"].slider
+	density.value = 1.0
+	var tier: Range = setup._sliders["difficulty"].slider
+	tier.value = 3
+	await lab.wait(0.2)
+	saved = Profile.load_run_config()
+	lab.check(saved.preset == RunConfig.CUSTOM and is_equal_approx(saved.density, 1.0) and saved.difficulty == 3 and setup._blurb.text.begins_with("Vlastní"), "moving a tuning slider turns the preset custom and saves it; difficulty saves alongside")
+	lab.check(setup._summary.text.contains("OBTÍŽNOST 3") and setup._summary.text.contains("%d těl" % saved.estimated_enemies(foundry)), "the summary states the real admitted-body estimate and the tier")
+	setup._specialists.toggled.emit(false)
+	await lab.wait(0.1)
+	lab.check(not Profile.load_run_config().specialists, "the specialists switch saves")
+	await lab.capture("run_setup_custom")
+	setup.back_requested.emit()
+	await lab.wait(0.3)
+	lab.check(screen.visible and not setup.visible, "back from run setup returns to operator select")
+	# Restore the default experience for the remaining in-run pages.
+	var reset := RunConfig.new()
+	Profile.set_run_config(reset)
 
 func _class_details(screen: ClassSelectScreen) -> void:
 	var scroll := screen.get_node("Margin") as ScrollContainer
@@ -92,12 +129,14 @@ func _intro() -> void:
 func _utility_pages(menu: Node) -> void:
 	Profile.record_run({
 		"class_id": &"scout", "kills": 125, "time": 91.0, "level": 7,
-		"stages_cleared": 2, "victory": false,
+		"stages_cleared": 2, "victory": true, "level_id": &"foundry", "difficulty": 3,
 		"banked": {&"gold": 12, &"crystal": 8, &"shard": 1},
 	})
 	menu._open(menu.records, menu.records_button)
 	await lab.wait(0.3)
 	await lab.capture("records")
+	var last := (menu.records as Node).get("last_run_label") as Label
+	lab.check(last.text.contains("PALMOVKA · OBTÍŽNOST 3") and last.text.contains("2 KOL VYČIŠTĚNO"), "records name the last run's level, tier and cleared rounds")
 	menu._open(menu.settings, menu.settings_button)
 	await lab.wait(0.3)
 	await lab.capture("settings")

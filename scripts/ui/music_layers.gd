@@ -7,20 +7,18 @@ const DIM := Color(0.65, 0.60, 0.49)
 const KICK := Color(0.91, 0.52, 0.29)
 const SYNTH := Color(0.77, 0.68, 0.40)
 const VOICE := Color(0.48, 0.72, 0.65)
-const PARTS := [
-	[&"drums", "KICK / SNARE", KICK],
-	[&"pulse", "SUB PULSE", KICK],
-	[&"drive", "ROLLING ACID", KICK],
-	[&"perc", "HATS / PERC", KICK],
-	[&"breaks", "BREAK CHOPS", KICK],
-	[&"rave", "303 / FX", KICK],
-	[&"vocals", "VOCAL CHOPS", VOICE],
-	[&"pad", "PAD / AMBT", SYNTH],
-	[&"arp", "ARP", SYNTH],
-	[&"lead", "LEAD / SAMPLE", SYNTH],
-	[&"tension", "TENSION", SYNTH],
-	[&"boss_pad", "BOSS PAD", SYNTH],
-	[&"boss_drive", "BOSS ACID", SYNTH],
+const TECHNO_PARTS := [
+	[&"kick", "TECHNO KICK", KICK], [&"clap", "CLAP", KICK],
+	[&"hat", "HATS", KICK], [&"groove", "NO-KICK GROOVE", KICK],
+	[&"bass", "BASS LOOP", KICK], [&"synth", "SYNTH PHRASE", SYNTH],
+	[&"arp", "ARP PHRASE", SYNTH], [&"ambient", "ATMOSPHERE", SYNTH],
+	[&"accent", "LIVE ACCENT", VOICE],
+]
+const HARDTEK_PARTS := [
+	[&"drums", "KICK / SNARE", KICK], [&"boss_drive", "ROLLING ACID", KICK],
+	[&"boss_pad", "BOSS PAD", SYNTH], [&"perc", "HATS / PERC", KICK],
+	[&"breaks", "BREAK CHOPS", KICK], [&"rave", "303 / FX", KICK],
+	[&"tension", "TENSION", SYNTH], [&"vocals", "VOCAL CHOPS", VOICE],
 	[&"accent", "LIVE ACCENT", VOICE],
 ]
 const ACCENT_LABELS := {&"salvage": "SALVAGE", &"combo": "COMBO", &"danger": "DANGER", &"drop": "DROP"}
@@ -28,6 +26,8 @@ const STINGER_LABELS := {&"level_up": "LEVEL UP", &"stage_clear": "CLEAR", &"dea
 
 var _meter = Music.MixMeter.new()
 var _indexes: Array[int] = []
+var _parts: Array = TECHNO_PARTS
+var _track: StringName = &""
 var _bars: Array[float] = []
 var _font: Font
 var _panel := StyleBoxFlat.new()
@@ -48,9 +48,9 @@ func _ready() -> void:
 	_panel.set_border_width_all(1)
 	_panel.border_width_left = 3
 	_panel.set_corner_radius_all(3)
-	for part: Array in PARTS:
+	_bars.resize(_parts.size())
+	for part: Array in _parts:
 		_indexes.append(MusicScore.TRACK_STEMS[&"stage"].find(part[0]))
-	_bars.resize(PARTS.size())
 	_bars.fill(0.0)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
@@ -70,7 +70,15 @@ func _process(_delta: float) -> void:
 	_last_ticks = now
 	_next_poll = now + 50000
 	Music.sample_mix(_meter)
-	for i in PARTS.size():
+	if _track != _meter.track:
+		_track = _meter.track
+		_parts = HARDTEK_PARTS if _meter.genre == &"hardtek" else TECHNO_PARTS
+		_indexes.clear()
+		for part: Array in _parts:
+			_indexes.append(_meter.stems.find(part[0]))
+		_bars.resize(_parts.size())
+		_bars.fill(0.0)
+	for i in _parts.size():
 		var rms: float = _meter.rms[_indexes[i]] if _indexes[i] >= 0 else _meter.accent_rms
 		var target := clampf((linear_to_db(rms) + 60.0) / 60.0, 0.0, 1.0) if rms > 0.001 else 0.0
 		_bars[i] = 0.0 if _meter.muted else maxf(target, _bars[i] - elapsed * 3.0)
@@ -84,7 +92,7 @@ func _process(_delta: float) -> void:
 	elif get_tree().paused:
 		_status = "PAUSE · MUSIC LIVE"
 	elif _meter.voice != &"":
-		_status = "VOICE · VOX OFF"
+		_status = "VOICE · VOX OFF" if _meter.genre == &"hardtek" else "VOICE · MUSIC LIVE"
 	_timing = "%s minor · %d BPM · %02d/%02d" % [_meter.tonic, _meter.bpm, floori(_meter.position / _meter.bar_seconds) + 1, _meter.bars] if _meter.playing else ("NEW MIX · %d BPM" % _meter.bpm if _meter.bpm > 0 else "WAITING FOR NEW MIX")
 	_cue = ""
 	if _meter.accent != &"" and not _meter.muted:
@@ -99,7 +107,8 @@ func _draw() -> void:
 		return
 	draw_style_box(_panel, Rect2(Vector2.ZERO, size))
 	var heading_y := 16.0 if _compact else 20.0
-	draw_string(_font, Vector2(10, heading_y), "HARDTEK #" + _meter.identity if not _meter.identity.is_empty() else "HARDTEK / LAYERS", HORIZONTAL_ALIGNMENT_LEFT, 142, 12, TEXT)
+	var genre := String(_meter.genre).to_upper()
+	draw_string(_font, Vector2(10, heading_y), genre + " #" + _meter.identity if not _meter.identity.is_empty() else genre + " / LAYERS", HORIZONTAL_ALIGNMENT_LEFT, 142, 12, TEXT)
 	draw_string(_font, Vector2(152, heading_y), _status, HORIZONTAL_ALIGNMENT_RIGHT, 138, 10, VOICE if _status == "LIVE" else DIM)
 	var clock_y := 29.0 if _compact else 37.0
 	draw_string(_font, Vector2(10, clock_y), _timing, HORIZONTAL_ALIGNMENT_LEFT, 198, 10, DIM)
@@ -113,14 +122,15 @@ func _draw() -> void:
 		draw_rect(Rect2(247 + i * 11, clock_y - 7, 7, 5), color)
 	var first_y := 43.0 if _compact else 55.0
 	var row_height := 16.0 if _compact else 20.0
-	for i in PARTS.size():
-		var x := 10.0 if i < 7 else 158.0
-		var y := first_y + (i % 7) * row_height
+	var rows := ceili(_parts.size() / 2.0)
+	for i in _parts.size():
+		var x := 10.0 if i < rows else 158.0
+		var y := first_y + (i % rows) * row_height
 		var gain: float = _meter.gains[_indexes[i]] if _indexes[i] >= 0 else _meter.accent_gain
 		var enabled := gain > 0.0001
-		var color: Color = PARTS[i][2]
+		var color: Color = _parts[i][2]
 		draw_circle(Vector2(x + 2, y - 4), 2, color if enabled else DIM.darkened(0.65))
-		draw_string(_font, Vector2(x + 8, y), PARTS[i][1], HORIZONTAL_ALIGNMENT_LEFT, 88, 10, TEXT if enabled else DIM.darkened(0.2))
+		draw_string(_font, Vector2(x + 8, y), _parts[i][1], HORIZONTAL_ALIGNMENT_LEFT, 88, 10, TEXT if enabled else DIM.darkened(0.2))
 		draw_rect(Rect2(x + 99, y - 9, 31, 7), Color(0.17, 0.15, 0.11))
 		if _bars[i] > 0.0:
 			draw_rect(Rect2(x + 99, y - 9, 31 * _bars[i], 7), color)

@@ -5,6 +5,7 @@ extends Node
 ## after `setup`: ARRIVAL -> ROUTE (waits for `choose_route`) -> TRAVEL (waits
 ## for the player to physically reach the chosen venue) -> BUILD -> PEAK ->
 ## CLEANUP (every real survivor) -> RECOVERY (minimum empty breather) -> ROUTE.
+## The final cleanup retains its venue for BOSS_PENDING -> BOSS -> final cleanup.
 ## Each routed fight admits bodies only on its venue's authored lanes; completed
 ## venues are never offered again. Without routes the sets run automatically
 ## over the whole play area. ARRIVAL/ROUTE/TRAVEL/RECOVERY freeze STYLE.
@@ -28,8 +29,21 @@ const ARRIVAL_RADIUS := 3.0
 ## Phases without combat; `recovering` (STYLE freeze) holds during all of them.
 const BREAK_PHASES: Array[String] = ["ARRIVAL", "ROUTE", "TRAVEL", "RECOVERY"]
 
+## Local casts rather than every specialist in every room. Street fixtures keep
+## their ordinary allocations; the ceiling role needs an authored covered lane.
+const VENUE_CAST := {
+	HordeEnemyDefinition.Behavior.BOMBER: [&"herna", &"nonstop"],
+	HordeEnemyDefinition.Behavior.AMBUSHER: [&"hospoda", &"metro"],
+	HordeEnemyDefinition.Behavior.SPRAYER: [&"hospoda", &"nonstop", &"metro"],
+	HordeEnemyDefinition.Behavior.THROWER: [&"hospoda", &"nonstop"],
+	HordeEnemyDefinition.Behavior.BOUNCER: [&"hospoda", &"nonstop"],
+	HordeEnemyDefinition.Behavior.HYPE: [&"herna", &"nonstop"],
+	HordeEnemyDefinition.Behavior.RANGED: [&"herna", &"metro"],
+}
+
 var elapsed := 0.0
 var boss_phase := false
+var boss_defeated := false
 ## Arrival calm, independent of the music clock.
 var grace := 0.0
 var encounter_index := 0
@@ -63,14 +77,30 @@ var _venue: Dictionary = {}
 var _route_seed := 0
 var _travel_distance := 0.0
 var _lane_cursor := 0
+var _boss_slot := -1
+var _boss_generation := -1
+var _boss_lethal_hit := false
+var _releasing_boss := false
 
 func setup(horde: Horde, schedule: SpawnSchedule, player: ArenaPlayer, seed: int = -1, encounters: int = 4) -> void:
+	if is_instance_valid(_horde):
+		_horde.boss_spawned.disconnect(_on_boss_spawned)
+		_horde.boss_health_changed.disconnect(_on_boss_health_changed)
+		_horde.boss_killed.disconnect(_on_boss_killed)
 	_horde = horde
 	_schedule = schedule
 	_player = player
+	_horde.boss_spawned.connect(_on_boss_spawned)
+	_horde.boss_health_changed.connect(_on_boss_health_changed)
+	_horde.boss_killed.connect(_on_boss_killed)
 	elapsed = 0.0
 	grace = 0.0
 	boss_phase = false
+	boss_defeated = false
+	_boss_slot = -1
+	_boss_generation = -1
+	_boss_lethal_hit = false
+	_releasing_boss = false
 	encounter_index = 0
 	encounter_count = maxi(1, encounters)
 	phase_name = "ARRIVAL"
@@ -148,15 +178,48 @@ func route_distance() -> float:
 
 ## Authored fixtures may release a boss explicitly. Unsafe placement remains retryable.
 func release_boss() -> bool:
-	if boss_phase or _schedule == null or _schedule.boss == null:
+	if finished or boss_phase or _releasing_boss or _schedule == null or _schedule.boss == null:
 		return false
-	if not is_instance_valid(_player) or not _player.active or not is_instance_valid(_horde):
+	if not is_instance_valid(_player) or not _player.active or not is_instance_valid(_horde) \
+			or _horde.is_alive(_horde.boss_index):
 		return false
-	if _spawn_group(_schedule.boss, 1, _schedule.boss_health_multiplier) != 1:
-		return false
+	# Lock before spawn emits synchronous callbacks; failure alone unlocks retry.
+	_releasing_boss = true
 	boss_phase = true
+	var admitted := _spawn_group(_schedule.boss, 1, _schedule.boss_health_multiplier)
+	_releasing_boss = false
+	if admitted != 1:
+		boss_phase = false
+		return false
 	boss_phase_started.emit(_schedule.boss)
 	return true
+
+func _on_boss_spawned(_definition: HordeEnemyDefinition) -> void:
+	if not _releasing_boss:
+		return
+	_boss_slot = _horde.boss_index
+	_boss_generation = _horde.enemy_generation(_boss_slot)
+	_boss_lethal_hit = false
+
+func _on_boss_health_changed(current: float, _maximum: float) -> void:
+	if boss_phase and _boss_slot >= 0 and _horde.enemy_generation(_boss_slot) == _boss_generation \
+			and current <= 0.0 and not _horde.is_alive(_boss_slot):
+		_boss_lethal_hit = true
+
+func _on_boss_killed() -> void:
+	if boss_phase and _boss_lethal_hit and _boss_slot >= 0 \
+			and _horde.enemy_generation(_boss_slot) == _boss_generation and not _horde.is_alive(_boss_slot):
+		boss_defeated = true
+
+func _combat_empty(final: bool = false) -> bool:
+	return _horde.alive_count == 0 and _horde.population_count == 0 \
+		and not _horde.specialist_actions_pending() \
+		and (not final or not _horde.combat_hazards_pending())
+
+func _complete_venue() -> void:
+	if not _venue.is_empty():
+		completed_venues.append(current_venue_id)
+		_clear_route()
 
 func _physics_process(delta: float) -> void:
 	if get_tree().paused or finished or _schedule == null or not is_instance_valid(_horde) or not is_instance_valid(_player) or not _player.active:
@@ -171,7 +234,7 @@ func _physics_process(delta: float) -> void:
 	match phase_name:
 		"ROUTE":
 			# An external enemy reopens cleanup; the same choices return after it.
-			if _horde.alive_count > 0 or _horde.population_count > 0:
+			if _horde.alive_count > 0 or _horde.population_count > 0 or _horde.specialist_actions_pending():
 				route_choices.clear()
 				_set_phase("CLEANUP")
 				route_choices_changed.emit()
@@ -195,20 +258,42 @@ func _physics_process(delta: float) -> void:
 					_set_phase("CLEANUP")
 		"CLEANUP":
 			# Neither elapsed time nor depleted allocations erase actual survivors.
-			if _horde.alive_count == 0 and _horde.population_count == 0:
-				if not _venue.is_empty():
-					completed_venues.append(current_venue_id)
-					_clear_route()
-				if encounter_index == encounter_count:
-					finished = true
-					_set_phase("CLEAR")
-					phase_fraction = 1.0
-					arena_completed.emit()
-				else:
-					_set_phase("RECOVERY")
+			var final := encounter_index == encounter_count
+			if not _combat_empty(final):
+				return
+			if final and _schedule.boss != null:
+				if not boss_phase:
+					_admission_cooldown = 0.0
+					_set_phase("BOSS_PENDING")
+					return
+				if not boss_defeated:
+					_set_phase("BOSS")
+					return
+			_complete_venue()
+			if final:
+				finished = true
+				_set_phase("CLEAR")
+				phase_fraction = 1.0
+				arena_completed.emit()
+			else:
+				_set_phase("RECOVERY")
+		"BOSS_PENDING":
+			# Each search is bounded; blocked geometry keeps this venue, never
+			# consumes the boss or grants a free clear. Retry at a modest cadence.
+			if not _combat_empty(true):
+				return
+			_admission_cooldown = maxf(0.0, _admission_cooldown - delta)
+			if _admission_cooldown <= 0.0:
+				_admission_cooldown = 0.5
+				if release_boss():
+					_set_phase("BOSS")
+		"BOSS":
+			phase_fraction = 1.0 - _horde.enemy_health_fraction(_boss_slot)
+			if boss_defeated:
+				_set_phase("CLEANUP")
 		"RECOVERY":
 			# An explicitly authored external enemy also prevents a free next wave.
-			if _horde.alive_count > 0 or _horde.population_count > 0:
+			if _horde.alive_count > 0 or _horde.population_count > 0 or _horde.specialist_actions_pending():
 				_set_phase("CLEANUP")
 				return
 			phase_fraction = clampf(_phase_elapsed / maxf(0.001, _schedule.recovery_duration), 0.0, 1.0)
@@ -303,11 +388,19 @@ func _begin_admissions(peak: bool) -> void:
 			continue
 		if encounter_index < wave.encounter_start or encounter_index > wave.encounter_end:
 			continue
+		if not _venue_allows(wave.enemy):
+			continue
 		var count := maxi(0, wave.count + wave.count_growth * (encounter_index - wave.encounter_start))
 		_remaining[index] = count
 		_phase_budget += count
 	_admission_cooldown = 0.0
 	_set_phase("PEAK" if peak else "BUILD")
+
+func _venue_allows(definition: HordeEnemyDefinition) -> bool:
+	if _venue.is_empty():
+		return definition.behavior != HordeEnemyDefinition.Behavior.AMBUSHER
+	var kinds: Array = VENUE_CAST.get(definition.behavior, [])
+	return kinds.is_empty() or kinds.has(_venue.kind)
 
 func _set_phase(next: String) -> void:
 	phase_name = next
@@ -359,6 +452,8 @@ func _smaller_enemy(original: HordeEnemyDefinition) -> HordeEnemyDefinition:
 			continue
 		if encounter_index < wave.encounter_start or encounter_index > wave.encounter_end:
 			continue
+		if not _venue_allows(wave.enemy) or wave.enemy.behavior == HordeEnemyDefinition.Behavior.AMBUSHER:
+			continue
 		if wave.enemy.radius >= original.radius:
 			continue
 		if smallest == null or wave.enemy.radius < smallest.radius:
@@ -387,6 +482,12 @@ func _spawn_group(definition: HordeEnemyDefinition, count: int, health_multiplie
 ## Venue lane role of an enemy: crowd, fast, heavy, ranged or support.
 static func lane_role(definition: HordeEnemyDefinition) -> StringName:
 	match definition.behavior:
+		HordeEnemyDefinition.Behavior.AMBUSHER:
+			return &"ceiling"
+		HordeEnemyDefinition.Behavior.SPRAYER:
+			return &"ranged"
+		HordeEnemyDefinition.Behavior.BOMBER:
+			return &"fast"
 		HordeEnemyDefinition.Behavior.RANGED, HordeEnemyDefinition.Behavior.THROWER:
 			return &"ranged"
 		HordeEnemyDefinition.Behavior.HYPE:
@@ -407,6 +508,8 @@ func _pick_lane_point(role: StringName, radius: float) -> Vector2:
 		if (lanes[index].roles as Array).has(role):
 			accepted.append(index)
 	if accepted.is_empty():
+		if role == &"ceiling":
+			return Vector2.INF
 		for index in lanes.size():
 			accepted.append(index)
 	var player := Vector2(_player.global_position.x, _player.global_position.z)
@@ -418,6 +521,8 @@ func _pick_lane_point(role: StringName, radius: float) -> Vector2:
 		for offset in accepted.size():
 			var slot := (_lane_cursor + offset) % accepted.size()
 			var points: PackedVector3Array = lanes[accepted[slot]].points
+			if points.is_empty():
+				continue
 			var start := _rng.randi() % points.size()
 			for step in points.size():
 				var point := points[(start + step) % points.size()]

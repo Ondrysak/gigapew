@@ -43,6 +43,10 @@ func run() -> void:
 	game.horde.clear()
 	_check_offers(game, false)
 	# The round shop shows locked skills by their unlock level.
+	# Isolate locked-card presentation from final-boss combat (covered by boss).
+	game.director.boss_defeated = true
+	game.director.finished = true
+	game._stage_clear_pending = true
 	game._finish_stage_clear()
 	await lab.wait(0.5)
 	var card: Dictionary = game.round_shop._abilities[2]

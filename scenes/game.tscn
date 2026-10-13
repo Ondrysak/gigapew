@@ -6,10 +6,6 @@
 [ext_resource type="PackedScene" path="res://scenes/pickups/pickup_field.tscn" id="4_pickups"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/level_up.tscn" id="6_level_up"]
-[ext_resource type="Script" path="res://scripts/data/stage_definition.gd" id="7_stage"]
-[ext_resource type="Resource" path="res://data/stages/yard.tres" id="8_yard"]
-[ext_resource type="Resource" path="res://data/stages/foundry.tres" id="9_foundry"]
-[ext_resource type="Resource" path="res://data/stages/reactor.tres" id="10_reactor"]
 [ext_resource type="Resource" path="res://data/upgrades/pool.tres" id="11_pool"]
 [ext_resource type="PackedScene" path="res://scenes/mining/mining_tool.tscn" id="12_tool"]
 [ext_resource type="PackedScene" path="res://scenes/mining/deposit_field.tscn" id="13_deposits"]
@@ -27,7 +23,6 @@ shader = ExtResource("20_vision_shader")
 [node name="Game" type="Node3D"]
 process_mode = 1
 script = ExtResource("1_game")
-campaign = Array[ExtResource("7_stage")]([ExtResource("8_yard"), ExtResource("9_foundry"), ExtResource("10_reactor")])
 player_scene = ExtResource("2_player")
 horde_scene = ExtResource("3_horde")
 pickup_scene = ExtResource("4_pickups")

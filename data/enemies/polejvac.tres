@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/specialists/polejvac.tscn" id="2_model"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Absintovej Polejvač"
+behavior = 10
+max_health = 220.0
+speed = 2.7
+radius = 0.5
+height = 1.8
+mass = 1.2
+contact_damage = 1.0
+xp_value = 8
+weak_spot_offset = Vector3(0, 1.55, -0.06)
+weak_spot_radius = 0.22
+preferred_range = 9.0
+attack_range = 15.0
+attack_cooldown = 4.5
+telegraph_duration = 1.15
+projectile_speed = 10.0
+projectile_damage = 6.0
+recovery_duration = 1.2
+faction = 1
+fx_color = Color(0.32, 0.9, 0.26, 1)
+model_scene = ExtResource("2_model")
+bob_amplitude = 0.03
+bob_speed = 5.0
+sway_amplitude = 0.03
+telegraph_color = Color(0.48, 1, 0.12, 1)
+rim_color = Color(0.3, 0.95, 0.24, 0.3)
+grime = 0.3

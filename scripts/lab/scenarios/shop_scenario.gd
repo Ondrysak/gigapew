@@ -12,7 +12,10 @@ func run() -> void:
 	Profile.add_currency(&"gold", 240)
 	Profile.add_currency(&"crystal", 100)
 	Profile.add_currency(&"shard", 12)
-	# The arena scenario exercises actual finite-combat completion separately.
+	# Isolated earned-clear fixture; arena/boss scenarios exercise actual combat.
+	game.director.boss_defeated = true
+	game.director.finished = true
+	game._stage_clear_pending = true
 	game._finish_stage_clear()
 	await lab.wait(0.5)
 	var screen := game.round_shop
@@ -106,11 +109,19 @@ func run() -> void:
 	screen._unhandled_input(_escape())
 	lab.check(screen.visible, "Esc cannot silently skip the arena-clear shop")
 	var levels := state.primary.upgrade_levels.duplicate()
-	screen._continue.pressed.emit()
+	var tier := game.run_config.difficulty
+	screen._levels.select(1)
+	screen._harder.pressed.emit()
 	await lab.wait(0.5)
-	lab.check(game.run_state == state and state.primary.source == spare[1] and state.secondary_primary_source == spare[0] and state.primary.upgrade_levels == levels and game.player.weapon == state.primary.definition, "the next sector keeps both shop-picked guns and every shared rank on the live player")
+	lab.check(game.stage_index == 1 and game.run_config.difficulty == tier + 1 and game.run_state == state and state.primary.source == spare[1] and state.secondary_primary_source == spare[0] and state.primary.upgrade_levels == levels and game.player.weapon == state.primary.definition, "a harder next round on a chosen level keeps both shop-picked guns and every shared rank on the live player")
 	game.player.quick_swap()
 	lab.check(state.primary.source == spare[0] and state.secondary_primary_source == spare[1] and state.primary.upgrade_levels == levels, "the carried partner is one quick toggle away with the same ranks")
+	# Purchases are permanent: a brand-new run starts with the bought rank. Ranks
+	# granted directly by this fixture's draft were never bought, so they don't carry.
+	var saved := int(Profile._shop_mods.get(String(id), 0))
+	game.free()
+	var fresh := await lab.start_game(&"driller")
+	lab.check(saved >= 1 and fresh.run_state.primary.rank(id) >= saved, "a new run re-applies the permanent %s rank bought in an earlier shop (saved %d, new run %d)" % [id, saved, fresh.run_state.primary.rank(id)])
 
 func _pick(screen: RoundShopScreen, index: int) -> void:
 	screen._selector.select(index)

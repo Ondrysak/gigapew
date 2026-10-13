@@ -68,6 +68,13 @@ var settings: Dictionary = {}
 var _seen_tips: Dictionary = {}
 ## Persistent discoveries unlock regular drops, never equipped run slots.
 var _discovered_gear: Dictionary = {}
+## Last configured run as RunConfig.to_dict(); read through load_run_config().
+var run_config: Dictionary = {}
+## Round-shop purchases are permanent: weapon mods in purchase order (the latest
+## element conversion last), suit ranks and per-class skill ranks.
+var _shop_mods: Dictionary = {}
+var _shop_suit: Dictionary = {}
+var _shop_skills: Dictionary = {}
 
 var _currencies: Dictionary = {}
 var _unlocked_classes: Dictionary = {}
@@ -415,9 +422,62 @@ func record_run(summary: Dictionary) -> void:
 		"level": level,
 		"stages_cleared": stages,
 		"victory": victory,
+		"level_id": String(summary.get("level_id", "")),
+		"difficulty": maxi(0, int(summary.get("difficulty", 0))),
 		"banked": banked,
 	}
 	_mutated()
+
+# --- run setup --------------------------------------------------------------
+
+func load_run_config() -> RunConfig:
+	return RunConfig.from_dict(run_config)
+
+func set_run_config(config: RunConfig) -> void:
+	run_config = config.to_dict()
+	_mutated()
+
+# --- permanent shop ---------------------------------------------------------
+
+func add_shop_mod(kind: StringName) -> void:
+	var rank := int(_shop_mods.get(String(kind), 0)) + 1
+	# Re-inserted so the latest element conversion is applied last.
+	_shop_mods.erase(String(kind))
+	_shop_mods[String(kind)] = rank
+	_mutated()
+
+func add_shop_suit(id: StringName) -> void:
+	_shop_suit[String(id)] = int(_shop_suit.get(String(id), 0)) + 1
+	_mutated()
+
+func add_shop_skill(class_id: StringName, slot: int) -> void:
+	var ranks: Array = _shop_skills.get(String(class_id), [0, 0, 0, 0, 0])
+	if slot < 0 or slot >= ranks.size():
+		return
+	ranks[slot] = mini(int(ranks[slot]) + 1, RunState.MAX_ABILITY_RANK)
+	_shop_skills[String(class_id)] = ranks
+	_mutated()
+
+func shop_build_ranks() -> int:
+	var total := 0
+	for source: Dictionary in [_shop_mods, _shop_suit]:
+		for key in source:
+			total += int(source[key])
+	for ranks: Array in _shop_skills.values():
+		for rank in ranks:
+			total += int(rank)
+	return total
+
+## Re-applies every permanent shop purchase to a fresh run, within each cap.
+func apply_shop_build(state: RunState, class_id: StringName) -> void:
+	for kind: String in _shop_mods:
+		for n in int(_shop_mods[kind]):
+			if not state.primary.upgrade(StringName(kind)):
+				break
+	for id: String in _shop_suit:
+		for n in int(_shop_suit[id]):
+			state.buy_shop_stat(StringName(id))
+	state.grant_ability_ranks(_shop_skills.get(String(class_id), []))
 
 # --- settings ---------------------------------------------------------------
 
@@ -480,6 +540,8 @@ func save() -> void:
 		"settings": settings,
 		"seen_tips": _seen_tips.keys(),
 		"discovered_gear": _discovered_gear.keys(),
+		"run_config": run_config,
+		"shop_build": {"mods": _shop_mods, "suit": _shop_suit, "skills": _shop_skills},
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -568,6 +630,41 @@ func _apply_data(data: Dictionary) -> void:
 			var id := StringName(value)
 			if GearCatalog.find(id) != null:
 				_discovered_gear[String(id)] = true
+	var saved_config: Variant = data.get("run_config", {})
+	if saved_config is Dictionary:
+		run_config = RunConfig.from_dict(saved_config).to_dict()
+	var build: Variant = data.get("shop_build", {})
+	if build is Dictionary:
+		_load_shop_build(build)
+
+## Unknown ids are dropped; ranks clamp to the shop's own caps.
+func _load_shop_build(build: Dictionary) -> void:
+	var mods: Variant = build.get("mods", {})
+	if mods is Dictionary:
+		for key in mods:
+			var id := StringName(str(key))
+			if RoundShop.is_weapon_mod(id):
+				var rank := clampi(int(_number(mods[key])), 0, RoundShop.max_rank(id))
+				if rank > 0:
+					_shop_mods[String(id)] = rank
+	var suit: Variant = build.get("suit", {})
+	if suit is Dictionary:
+		for key in suit:
+			var id := StringName(str(key))
+			if RoundShop.CATALOG.has(id) and not RoundShop.is_weapon_mod(id):
+				var rank := clampi(int(_number(suit[key])), 0, RoundShop.max_rank(id))
+				if rank > 0:
+					_shop_suit[String(id)] = rank
+	var skills: Variant = build.get("skills", {})
+	if skills is Dictionary:
+		for key in skills:
+			var ranks: Variant = skills[key]
+			if not ranks is Array or (ranks as Array).size() != 5:
+				continue
+			var clean: Array = []
+			for rank in ranks:
+				clean.append(clampi(int(_number(rank)), 0, RunState.MAX_ABILITY_RANK))
+			_shop_skills[str(key)] = clean
 
 func _reset() -> void:
 	selected_class_id = &""
@@ -582,6 +679,10 @@ func _reset() -> void:
 	settings = DEFAULT_SETTINGS.duplicate()
 	_seen_tips.clear()
 	_discovered_gear.clear()
+	run_config = {}
+	_shop_mods.clear()
+	_shop_suit.clear()
+	_shop_skills.clear()
 
 ## Legacy saves stored three slots; take the first surviving crafted entry.
 ## Removed melee recipes are absent from the catalog and skipped safely.

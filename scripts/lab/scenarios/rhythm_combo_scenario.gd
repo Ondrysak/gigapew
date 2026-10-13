@@ -7,6 +7,18 @@ func summary() -> String:
 	return "Real kills bank one charge; manual perfect heavy spends x10; tank hits, rapid fire, silence and held fire cannot farm/spend it"
 
 func run() -> void:
+	var master := AudioServer.get_bus_index(&"Master")
+	var music := AudioServer.get_bus_index(Music.BUS)
+	var master_mute := AudioServer.is_bus_mute(master)
+	var music_mute := AudioServer.is_bus_mute(music)
+	# Dummy audio stays silent, but real routed beat timing must be available.
+	AudioServer.set_bus_mute(master, false)
+	AudioServer.set_bus_mute(music, false)
+	await _run_checks()
+	AudioServer.set_bus_mute(master, master_mute)
+	AudioServer.set_bus_mute(music, music_mute)
+
+func _run_checks() -> void:
 	var game := await lab.start_game()
 	game.director.set_physics_process(false)
 	game.horde.set_physics_process(false)

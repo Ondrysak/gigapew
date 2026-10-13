@@ -1,10 +1,13 @@
 class_name RoundShopScreen
 extends Control
 
-## Two-gun exchange: both equipped slots with a free per-slot replacement,
-## five skill upgrades, and scrollable mod/suit stock. All transactions
-## belong to RoundShop; gun pairs commit through RunState.equip_pair.
-signal continue_requested()
+## Level-clear shop: two-gun exchange with a free per-slot replacement, five
+## skill upgrades, and scrollable mod/suit stock. Purchases are permanent (see
+## RoundShop). The footer starts another round on any level, optionally one
+## difficulty tier harder, or ends the run. Gun pairs commit through
+## RunState.equip_pair.
+signal next_round_requested(level: int, harder: bool)
+signal home_requested()
 
 const MENU_THEME := preload("res://scenes/ui/menu/menu_theme.tres")
 const MINERALS: Array[ResourceDefinition] = [preload("res://data/resources/gold.tres"), preload("res://data/resources/crystal.tres"), preload("res://data/resources/shard.tres")]
@@ -32,7 +35,10 @@ var _abilities: Array[Dictionary] = []
 var _offers: Array[Dictionary] = []
 var _reroll: Button
 var _status: Label
-var _continue: Button
+var _levels: OptionButton
+var _next: Button
+var _harder: Button
+var _home: Button
 var _candidate := 0
 
 func _ready() -> void:
@@ -107,8 +113,19 @@ func _ready() -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footer.add_child(_status)
-	_continue = _button("POKRAČOVAT", _on_continue)
-	footer.add_child(_continue)
+	var round_row := _row()
+	rows.add_child(round_row)
+	round_row.add_child(_label("DALŠÍ KOLO", 14, AMBER))
+	_levels = OptionButton.new()
+	_levels.add_theme_font_size_override(&"font_size", 14)
+	_levels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	round_row.add_child(_levels)
+	_next = _button("STEJNĚ TĚŽKÉ", _on_next.bind(false))
+	round_row.add_child(_next)
+	_harder = _button("TĚŽŠÍ", _on_next.bind(true))
+	round_row.add_child(_harder)
+	_home = _button("DOMŮ DO BAZARU", _on_home)
+	round_row.add_child(_home)
 	Profile.currency_changed.connect(_on_wallet_changed)
 	StreetWear.apply_tree(self)
 	hide()
@@ -211,16 +228,22 @@ func _build_offer(parent: Container, index: int) -> Dictionary:
 	return {"panel": panel, "icon": icon, "title": title, "rank": rank, "effect": effect, "comparison": comparison, "buy": buy}
 
 ## `venue` only names the shop (header and tagline); it never changes stock or prices.
-func open(state: RunState, stage: int, final_stage: bool, summary: String, shop_venue: ShopVenue = null) -> void:
+func open(state: RunState, cleared_before: int, class_id: StringName, summary: String, shop_venue: ShopVenue, levels: Array[StageDefinition], current: int, config: RunConfig) -> void:
 	_state = state
 	_shop = RoundShop.new()
-	_shop.setup(state, stage, randi())
+	_shop.setup(state, cleared_before, randi(), class_id)
 	venue = shop_venue
-	_title.text = "SEKTOR %d HOTOVÝ · %s" % [stage + 1, venue.display_name.to_upper() if venue != null else "BAZAR"]
+	_title.text = "HOTOVO · %s · %s" % [levels[current].display_name.to_upper(), venue.display_name.to_upper() if venue != null else "BAZAR"]
 	_venue_line.text = venue.tagline if venue != null else ""
 	_venue_line.visible = venue != null
 	_summary.text = summary.replace("\n", "   ")
-	_continue.text = "ZPÁTKY DO BAZARU" if final_stage else "DO SEKTORU %d" % (stage + 2)
+	_levels.clear()
+	for level in levels:
+		_levels.add_item(level.display_name)
+	_levels.select(current)
+	_harder.text = "TĚŽŠÍ · OBTÍŽNOST %d" % (config.difficulty + 1)
+	_harder.disabled = config.difficulty >= RunConfig.MAX_DIFFICULTY
+	_next.text = "STEJNĚ · OBTÍŽNOST %d" % config.difficulty
 	_selector.clear()
 	_candidate = -1
 	for index in state.available_weapons.size():
@@ -230,10 +253,10 @@ func open(state: RunState, stage: int, final_stage: bool, summary: String, shop_
 			_candidate = index
 	_candidate = maxi(_candidate, 0)
 	_selector.select(_candidate)
-	_status.text = "Výměna kterékoli zbraně zdarma, úpravy zůstávají. Vylepši dovednosti, zbraně nebo hadry."
+	_status.text = "Všechno, co tu koupíš, ti zůstane natrvalo. Výměna zbraní je zdarma."
 	show()
 	_refresh()
-	_continue.grab_focus.call_deferred()
+	_next.grab_focus.call_deferred()
 
 func _refresh() -> void:
 	if _shop == null:
@@ -290,7 +313,7 @@ func _refresh() -> void:
 	_reroll.disabled = not _shop.can_reroll()
 	var focused := get_viewport().gui_get_focus_owner() as Button
 	if focused != null and focused.disabled and is_ancestor_of(focused):
-		_continue.grab_focus.call_deferred()
+		_next.grab_focus.call_deferred()
 
 func _weapon_text(definition: WeaponDefinition) -> String:
 	var stats := RoundShop.weapon_stats(definition, _state.projectile_bonus)
@@ -347,11 +370,19 @@ func _on_reroll() -> void:
 	_status.text = "Neprodaná nabídka vyměněna." if _shop.reroll() else "Nabídku nelze vyměnit. Peněženka beze změny."
 	_refresh()
 
-func _on_continue() -> void:
+func _release_skills() -> void:
 	for slot in range(5):
 		Input.action_release(StringName("ability_%d" % (slot + 1)))
+
+func _on_next(harder: bool) -> void:
+	_release_skills()
 	hide()
-	continue_requested.emit()
+	next_round_requested.emit(_levels.selected, harder)
+
+func _on_home() -> void:
+	_release_skills()
+	hide()
+	home_requested.emit()
 
 func _on_wallet_changed(_id: StringName, _amount: int) -> void:
 	if is_visible_in_tree():
@@ -360,7 +391,7 @@ func _on_wallet_changed(_id: StringName, _amount: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if is_visible_in_tree() and event.is_action_pressed(&"ui_cancel"):
 		get_viewport().set_input_as_handled()
-		_continue.grab_focus()
+		_next.grab_focus()
 
 func _price(cost: Dictionary) -> String:
 	var parts := PackedStringArray()

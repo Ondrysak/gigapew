@@ -14,6 +14,9 @@ const TIPS := {
 	&"drop": ["TEĎ PŘIJDE DROP", "Zabití nabíjí jeden DROP; přesná, rytmická, vzdušná a slide zabití jej urychlí. Až je připravený, novým stiskem LMB vystřel pomalou zbraní na beat pro ×10 a speciální efekt. Mimo beat normálně střílíš a náboj zůstává."],
 	&"pinball": ["NEPŘÍTEL JE PROJEKTIL", "Zamraz tvarohem a kopni do davu. Hořícího doraz brokovnicí. Vyhozeného sejmi railem. Zelektrizovaný dav odpal výbuchem. Slide kop vyhazuje, kop ze vzduchu sráží dolů."],
 	&"finisher": ["KOP DO KSICHTU", "Zesláblý nepřítel zlatě pulzuje jen krátce. Zamiř až na 8 metrů a jednou stiskni F: skočíš k němu a jeden ze čtyř střídajících se kopů doplní zdraví. Zeď, strop nebo ztracený cíl skok přeruší. Nejsi nesmrtelný; pro další kop pusť F. Bossové se takhle dorazit nedají."],
+	&"masta_blasta": ["ODPOČET DO AUTODESTRUKCE", "Masta Blasta nejdřív nabíjí batoh a pak se rozběhne. Zasáhni svítící jádro, nebo ho kopni do davu: obrácený výbuch už tebe nezraní. F dorazí zesláblého a pošle jeho tělo dopředu jako bombu. Zeď výbuch zastaví."],
+	&"tarzan": ["TARZAN ZE STROPU", "Žlutý údržbář visí pod skutečným stropem. Kruh označí místo jeho dopadu; uhnout můžeš i dvojskokem. Střela ho shodí, RMB ve vzduchu jej odpálí a rail z něj udělá AIR MAIL. Po dopadu má chvíli na zotavení."],
+	&"polejvac": ["NEMÁTE VOHEŇ?", "Polejvač míří na místo, kde právě stojíš, a rozlévá zelený absint. Přeskoč louži nebo ji zapal ohnivou zbraní, když do ní vejde dav. Zapálení spustí výbuch a krátké hoření; mokrá louže i plameny zase zmizí."],
 	&"combos": ["TRIKY DOHROMADY", "Výbušné triky uvnitř Ban zóny spustí POWNED za +60 %. Valhalla poblíž zóny spustí PERMABAN. Úprk pod štítem spustí LAST TIME KRATOS."],
 }
 const MIN_SECONDS := 5.0

@@ -32,8 +32,10 @@ func _describe_last_run(run: Dictionary) -> String:
 		return "Zatím žádná výprava. Vyraz do ulic a nech tu první účet."
 	var definition := Profile.roster.find(StringName(str(run.get("class_id", ""))))
 	var operator := definition.display_name.to_upper() if definition != null else "NĚKDO Z PARTY"
-	var outcome := "TARTARUS UZAVŘEN" if bool(run.get("victory", false)) \
-			else "PÁD PO %d HOTOVÝCH SEKTOR(ECH)" % int(run.get("stages_cleared", 0))
+	var cleared := int(run.get("stages_cleared", 0))
+	var outcome := "%d KOL VYČIŠTĚNO" % cleared if bool(run.get("victory", false)) \
+			else "PÁD PO %d VYČIŠTĚNÝCH KOLECH" % cleared
+	var level := _level_name(StringName(str(run.get("level_id", ""))))
 	var parts := PackedStringArray([
 		operator,
 		outcome,
@@ -42,9 +44,17 @@ func _describe_last_run(run: Dictionary) -> String:
 		format_time(float(run.get("time", 0.0))),
 		"ÚR. %d" % int(run.get("level", 0)),
 	])
+	if not level.is_empty():
+		parts.insert(2, "%s · OBTÍŽNOST %d" % [level, int(run.get("difficulty", 0))])
 	var banked: Variant = run.get("banked", {})
 	if banked is Dictionary:
 		for id in banked:
 			if int(banked[id]) > 0:
 				parts.append("+%d %s" % [int(banked[id]), currency_bar.label_for(StringName(str(id)))])
 	return "  ·  ".join(parts)
+
+func _level_name(id: StringName) -> String:
+	for stage in RunConfig.levels():
+		if stage.id == id:
+			return stage.display_name.to_upper()
+	return ""

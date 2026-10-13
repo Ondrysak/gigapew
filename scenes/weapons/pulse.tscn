@@ -21,6 +21,7 @@ size = Vector3(0.06, 0.2, 0.008)
 
 [node name="BeerBottles" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template")]
 script = ExtResource("1_view")
+flourish = 4
 muzzle = NodePath("Model/pulse/Muzzle")
 impact_material = SubResource("Mat_foam")
 target_impact_material = SubResource("Mat_hit")

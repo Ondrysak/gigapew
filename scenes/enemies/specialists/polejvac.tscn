@@ -1,0 +1,519 @@
+[gd_scene load_steps=56 format=3]
+
+[sub_resource type="StandardMaterial3D" id="ApronAndFrost"]
+albedo_color = Color(0.83, 0.87, 0.75, 1)
+roughness = 0.83
+metallic = 0.02
+
+[sub_resource type="StandardMaterial3D" id="WineShirt"]
+albedo_color = Color(0.3, 0.095, 0.125, 1)
+roughness = 0.94
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="Skin"]
+albedo_color = Color(0.66, 0.44, 0.29, 1)
+roughness = 0.93
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="Hardware"]
+albedo_color = Color(0.075, 0.095, 0.087, 1)
+roughness = 0.48
+metallic = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Absinthe"]
+albedo_color = Color(0.2, 0.72, 0.055, 1)
+roughness = 0.24
+metallic = 0.1
+emission_enabled = true
+emission = Color(0.11, 0.65, 0.025, 1)
+emission_energy_multiplier = 0.7
+
+[sub_resource type="BoxMesh" id="Geometry_1"]
+size = Vector3(0.19, 0.13, 0.3)
+
+[sub_resource type="BoxMesh" id="Geometry_2"]
+size = Vector3(0.17, 0.640156, 0.185)
+
+[sub_resource type="BoxMesh" id="Geometry_3"]
+size = Vector3(0.045, 0.11, 0.029)
+
+[sub_resource type="BoxMesh" id="Geometry_4"]
+size = Vector3(0.032, 0.326878, 0.019)
+
+[sub_resource type="BoxMesh" id="Geometry_5"]
+size = Vector3(0.4, 0.21, 0.3)
+
+[sub_resource type="BoxMesh" id="Geometry_6"]
+size = Vector3(0.435, 0.52, 0.055)
+
+[sub_resource type="BoxMesh" id="Geometry_7"]
+size = Vector3(0.456, 0.06, 0.075)
+
+[sub_resource type="BoxMesh" id="Geometry_8"]
+size = Vector3(0.36, 0.35, 0.035)
+
+[sub_resource type="BoxMesh" id="Geometry_9"]
+size = Vector3(0.45, 0.52, 0.32)
+
+[sub_resource type="BoxMesh" id="Geometry_10"]
+size = Vector3(0.22, 0.13, 0.028)
+
+[sub_resource type="BoxMesh" id="Geometry_11"]
+size = Vector3(0.027, 0.11, 0.008)
+
+[sub_resource type="BoxMesh" id="Geometry_12"]
+size = Vector3(0.099, 0.099, 0.018)
+
+[sub_resource type="BoxMesh" id="Geometry_13"]
+size = Vector3(0.021, 0.081, 0.01)
+
+[sub_resource type="BoxMesh" id="Geometry_14"]
+size = Vector3(0.17, 0.2, 0.22)
+
+[sub_resource type="BoxMesh" id="Geometry_15"]
+size = Vector3(0.11, 0.240728, 0.12)
+
+[sub_resource type="BoxMesh" id="Geometry_16"]
+size = Vector3(0.12, 0.12, 0.11)
+
+[sub_resource type="BoxMesh" id="Geometry_17"]
+size = Vector3(0.17, 0.224388, 0.18)
+
+[sub_resource type="BoxMesh" id="Geometry_18"]
+size = Vector3(0.18, 0.078416, 0.17)
+
+[sub_resource type="BoxMesh" id="Geometry_19"]
+size = Vector3(0.1, 0.222374, 0.115)
+
+[sub_resource type="BoxMesh" id="Geometry_20"]
+size = Vector3(0.12, 0.11, 0.12)
+
+[sub_resource type="CylinderMesh" id="Geometry_21"]
+top_radius = 0.095
+bottom_radius = 0.095
+height = 0.16
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="Geometry_22"]
+radius = 0.19
+height = 0.38
+radial_segments = 10
+rings = 5
+
+[sub_resource type="BoxMesh" id="Geometry_23"]
+size = Vector3(0.066, 0.085, 0.076)
+
+[sub_resource type="BoxMesh" id="Geometry_24"]
+size = Vector3(0.091, 0.022, 0.019)
+
+[sub_resource type="BoxMesh" id="Geometry_25"]
+size = Vector3(0.047, 0.025, 0.013)
+
+[sub_resource type="BoxMesh" id="Geometry_26"]
+size = Vector3(0.016, 0.02, 0.009)
+
+[sub_resource type="BoxMesh" id="Geometry_27"]
+size = Vector3(0.17, 0.095, 0.044)
+
+[sub_resource type="BoxMesh" id="Geometry_28"]
+size = Vector3(0.142, 0.027, 0.035)
+
+[sub_resource type="CylinderMesh" id="Geometry_29"]
+top_radius = 0.13
+bottom_radius = 0.172
+height = 0.075
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Geometry_30"]
+size = Vector3(0.069, 0.045, 0.079)
+
+[sub_resource type="BoxMesh" id="Geometry_31"]
+size = Vector3(0.046, 0.081, 0.06)
+
+[sub_resource type="CylinderMesh" id="Geometry_32"]
+top_radius = 0.125
+bottom_radius = 0.145
+height = 0.61
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Geometry_33"]
+top_radius = 0.149
+bottom_radius = 0.149
+height = 0.05
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Geometry_34"]
+top_radius = 0.136
+bottom_radius = 0.136
+height = 0.055
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Geometry_35"]
+top_radius = 0.068
+bottom_radius = 0.074
+height = 0.055
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Geometry_36"]
+size = Vector3(0.056, 0.42, 0.031)
+
+[sub_resource type="BoxMesh" id="Geometry_37"]
+size = Vector3(0.04, 0.21, 0.025)
+
+[sub_resource type="BoxMesh" id="Geometry_38"]
+size = Vector3(0.049, 0.29, 0.025)
+
+[sub_resource type="BoxMesh" id="Geometry_39"]
+size = Vector3(0.38, 0.063, 0.035)
+
+[sub_resource type="BoxMesh" id="Geometry_40"]
+size = Vector3(0.092, 0.114, 0.043)
+
+[sub_resource type="BoxMesh" id="Geometry_41"]
+size = Vector3(0.064, 0.079, 0.012)
+
+[sub_resource type="BoxMesh" id="Geometry_42"]
+size = Vector3(0.007, 0.047707, 0.005)
+
+[sub_resource type="BoxMesh" id="Geometry_43"]
+size = Vector3(0.043, 0.28058, 0.043)
+
+[sub_resource type="BoxMesh" id="Geometry_44"]
+size = Vector3(0.043, 0.296816, 0.043)
+
+[sub_resource type="BoxMesh" id="Geometry_45"]
+size = Vector3(0.043, 0.295719, 0.043)
+
+[sub_resource type="BoxMesh" id="Geometry_46"]
+size = Vector3(0.043, 0.20375, 0.043)
+
+[sub_resource type="BoxMesh" id="Geometry_47"]
+size = Vector3(0.064, 0.135, 0.069)
+
+[sub_resource type="CylinderMesh" id="Geometry_48"]
+top_radius = 0.05
+bottom_radius = 0.056
+height = 0.16
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Geometry_49"]
+top_radius = 0.037
+bottom_radius = 0.045
+height = 0.06
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Geometry_50"]
+size = Vector3(0.019, 0.068, 0.052)
+
+[node name="AbsintovejPolejvac" type="Node3D"]
+
+[node name="LeftShoe" type="MeshInstance3D" parent="."]
+position = Vector3(-0.15, 0.065, -0.035)
+mesh = SubResource("Geometry_1")
+material_override = SubResource("Hardware")
+
+[node name="LeftTrouser" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.999878, -0.015623, 0, 0.015621, 0.999756, 0.015621, -0.000244, -0.015619, 0.999878, -0.145, 0.47, 0.02)
+mesh = SubResource("Geometry_2")
+material_override = SubResource("Hardware")
+
+[node name="LeftApronWaistTie" type="MeshInstance3D" parent="."]
+position = Vector3(-0.259, 0.975, 0.015)
+mesh = SubResource("Geometry_3")
+material_override = SubResource("ApronAndFrost")
+
+[node name="LeftNeckApronStrap" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.990202, -0.139644, 0, 0.134607, 0.954486, 0.266155, -0.037167, -0.263547, 0.96393, -0.108, 1.256, -0.1385)
+mesh = SubResource("Geometry_4")
+material_override = SubResource("ApronAndFrost")
+
+[node name="RightShoe" type="MeshInstance3D" parent="."]
+position = Vector3(0.15, 0.065, -0.035)
+mesh = SubResource("Geometry_1")
+material_override = SubResource("Hardware")
+
+[node name="RightTrouser" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.999878, 0.015623, 0, -0.015621, 0.999756, 0.015621, 0.000244, -0.015619, 0.999878, 0.145, 0.47, 0.02)
+mesh = SubResource("Geometry_2")
+material_override = SubResource("Hardware")
+
+[node name="RightApronWaistTie" type="MeshInstance3D" parent="."]
+position = Vector3(0.259, 0.975, 0.015)
+mesh = SubResource("Geometry_3")
+material_override = SubResource("ApronAndFrost")
+
+[node name="RightNeckApronStrap" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.990202, 0.139644, 0, -0.134607, 0.954486, 0.266155, 0.037167, -0.263547, 0.96393, 0.108, 1.256, -0.1385)
+mesh = SubResource("Geometry_4")
+material_override = SubResource("ApronAndFrost")
+
+[node name="Hips" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.805, 0.025)
+mesh = SubResource("Geometry_5")
+material_override = SubResource("WineShirt")
+
+[node name="LongApronSkirt" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.73, -0.153)
+rotation = Vector3(-0.035, 0, 0)
+mesh = SubResource("Geometry_6")
+material_override = SubResource("ApronAndFrost")
+
+[node name="ApronHem" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.478, -0.14)
+mesh = SubResource("Geometry_7")
+material_override = SubResource("ApronAndFrost")
+
+[node name="ApronBib" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.125, -0.185)
+mesh = SubResource("Geometry_8")
+material_override = SubResource("ApronAndFrost")
+
+[node name="Chest" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.17, 0.005)
+mesh = SubResource("Geometry_9")
+material_override = SubResource("WineShirt")
+
+[node name="ApronPocket" type="MeshInstance3D" parent="."]
+position = Vector3(0.052, 0.895, -0.184)
+mesh = SubResource("Geometry_10")
+material_override = SubResource("ApronAndFrost")
+
+[node name="PocketLiquidDrip" type="MeshInstance3D" parent="."]
+position = Vector3(0.126, 0.849, -0.201)
+mesh = SubResource("Geometry_11")
+material_override = SubResource("Absinthe")
+
+[node name="PoisonDiamond" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.145, -0.214)
+rotation = Vector3(0, 0, 0.785398)
+mesh = SubResource("Geometry_12")
+material_override = SubResource("Absinthe")
+
+[node name="BottleMarkSlit" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.153, -0.229)
+mesh = SubResource("Geometry_13")
+material_override = SubResource("Hardware")
+
+[node name="LeftRolledSleeve" type="MeshInstance3D" parent="."]
+position = Vector3(-0.287, 1.29, 0.01)
+rotation = Vector3(0, 0, -0.24)
+mesh = SubResource("Geometry_14")
+material_override = SubResource("WineShirt")
+
+[node name="LeftBareForearm" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.992988, -0.118213, 0, 0.103852, -0.872354, -0.477717, 0.056472, -0.474368, 0.878514, -0.2975, 1.095, -0.0575)
+mesh = SubResource("Geometry_15")
+material_override = SubResource("Skin")
+
+[node name="LeftTankGrip" type="MeshInstance3D" parent="."]
+position = Vector3(-0.285, 0.97, -0.125)
+mesh = SubResource("Geometry_16")
+material_override = SubResource("Skin")
+
+[node name="RightUpperSleeve" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.941742, -0.336336, 0, 0.334242, -0.935879, -0.111414, 0.037473, -0.104923, 0.993774, 0.3075, 1.245, -0.0125)
+mesh = SubResource("Geometry_17")
+material_override = SubResource("WineShirt")
+
+[node name="RightRolledCuff" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.96373, -0.266879, 0, 0.229546, -0.828917, -0.510103, 0.136136, -0.491601, 0.860113, 0.341, 1.1525, -0.04)
+mesh = SubResource("Geometry_18")
+material_override = SubResource("ApronAndFrost")
+
+[node name="RightBareForearm" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.187112, 0.982339, 0, -0.472178, -0.089939, -0.876903, -0.861415, -0.164079, 0.480668, 0.2925, 1.11, -0.1575)
+mesh = SubResource("Geometry_19")
+material_override = SubResource("Skin")
+
+[node name="SprayHand" type="MeshInstance3D" parent="."]
+position = Vector3(0.237, 1.1, -0.26)
+mesh = SubResource("Geometry_20")
+material_override = SubResource("Skin")
+
+[node name="Neck" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.44, -0.035)
+mesh = SubResource("Geometry_21")
+material_override = SubResource("Skin")
+
+[node name="ExposedHead" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.55, -0.06)
+scale = Vector3(0.95, 1, 0.93)
+mesh = SubResource("Geometry_22")
+material_override = SubResource("Skin")
+
+[node name="Nose" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.555, -0.237)
+mesh = SubResource("Geometry_23")
+material_override = SubResource("Skin")
+
+[node name="LeftEyebrow" type="MeshInstance3D" parent="."]
+position = Vector3(-0.067, 1.615, -0.222)
+rotation = Vector3(0, 0, -0.12)
+mesh = SubResource("Geometry_24")
+material_override = SubResource("Hardware")
+
+[node name="RightEyebrow" type="MeshInstance3D" parent="."]
+position = Vector3(0.067, 1.615, -0.222)
+rotation = Vector3(0, 0, 0.12)
+mesh = SubResource("Geometry_24")
+material_override = SubResource("Hardware")
+
+[node name="LeftEyeWhite" type="MeshInstance3D" parent="."]
+position = Vector3(-0.063, 1.59, -0.236)
+mesh = SubResource("Geometry_25")
+material_override = SubResource("ApronAndFrost")
+
+[node name="RightEyeWhite" type="MeshInstance3D" parent="."]
+position = Vector3(0.063, 1.59, -0.236)
+mesh = SubResource("Geometry_25")
+material_override = SubResource("ApronAndFrost")
+
+[node name="LeftPupil" type="MeshInstance3D" parent="."]
+position = Vector3(-0.059, 1.59, -0.248)
+mesh = SubResource("Geometry_26")
+material_override = SubResource("Hardware")
+
+[node name="RightPupil" type="MeshInstance3D" parent="."]
+position = Vector3(0.059, 1.59, -0.248)
+mesh = SubResource("Geometry_26")
+material_override = SubResource("Hardware")
+
+[node name="ForkBeard" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.425, -0.173)
+rotation = Vector3(-0.22, 0, 0)
+mesh = SubResource("Geometry_27")
+material_override = SubResource("Hardware")
+
+[node name="Moustache" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, -0.219)
+mesh = SubResource("Geometry_28")
+material_override = SubResource("Hardware")
+
+[node name="FlatTopHair" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.741, -0.04)
+mesh = SubResource("Geometry_29")
+material_override = SubResource("Hardware")
+
+[node name="HairTuft" type="MeshInstance3D" parent="."]
+position = Vector3(-0.06, 1.7775, -0.08)
+mesh = SubResource("Geometry_30")
+material_override = SubResource("Hardware")
+
+[node name="LeftEar" type="MeshInstance3D" parent="."]
+position = Vector3(-0.183, 1.55, -0.05)
+mesh = SubResource("Geometry_31")
+material_override = SubResource("Skin")
+
+[node name="RightEar" type="MeshInstance3D" parent="."]
+position = Vector3(0.183, 1.55, -0.05)
+mesh = SubResource("Geometry_31")
+material_override = SubResource("Skin")
+
+[node name="GreenAbsintheReservoir" type="MeshInstance3D" parent="."]
+position = Vector3(-0.235, 1.16, 0.135)
+mesh = SubResource("Geometry_32")
+material_override = SubResource("Absinthe")
+
+[node name="TankLowerRim" type="MeshInstance3D" parent="."]
+position = Vector3(-0.235, 0.86, 0.135)
+mesh = SubResource("Geometry_33")
+material_override = SubResource("Hardware")
+
+[node name="TankUpperRim" type="MeshInstance3D" parent="."]
+position = Vector3(-0.235, 1.46, 0.135)
+mesh = SubResource("Geometry_34")
+material_override = SubResource("Hardware")
+
+[node name="PressureCap" type="MeshInstance3D" parent="."]
+position = Vector3(-0.235, 1.51, 0.135)
+mesh = SubResource("Geometry_35")
+material_override = SubResource("Hardware")
+
+[node name="FrostLongFacet" type="MeshInstance3D" parent="."]
+position = Vector3(-0.312, 1.19, 0.249)
+rotation = Vector3(0, 0, -0.055)
+mesh = SubResource("Geometry_36")
+material_override = SubResource("ApronAndFrost")
+
+[node name="FrostShortFacet" type="MeshInstance3D" parent="."]
+position = Vector3(-0.183, 1.05, 0.262)
+rotation = Vector3(0, 0, 0.18)
+mesh = SubResource("Geometry_37")
+material_override = SubResource("ApronAndFrost")
+
+[node name="FrontFrostFacet" type="MeshInstance3D" parent="."]
+position = Vector3(-0.31, 1.2, 0.012)
+rotation = Vector3(0, 0, 0.13)
+mesh = SubResource("Geometry_38")
+material_override = SubResource("ApronAndFrost")
+
+[node name="TankHarness" type="MeshInstance3D" parent="."]
+position = Vector3(-0.1, 1.32, 0.272)
+mesh = SubResource("Geometry_39")
+material_override = SubResource("Hardware")
+
+[node name="TankGaugeBody" type="MeshInstance3D" parent="."]
+position = Vector3(-0.258, 1.39, -0.01)
+mesh = SubResource("Geometry_40")
+material_override = SubResource("Hardware")
+
+[node name="TankGaugeFace" type="MeshInstance3D" parent="."]
+position = Vector3(-0.258, 1.39, -0.04)
+mesh = SubResource("Geometry_41")
+material_override = SubResource("ApronAndFrost")
+
+[node name="GaugeNeedle" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.838444, -0.544988, 0, 0.544988, 0.838444, 0, 0, 0, 1, -0.252, 1.389, -0.05)
+mesh = SubResource("Geometry_42")
+material_override = SubResource("Hardware")
+
+[node name="HoseTankExit" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.220826, -0.975313, 0, 0.944473, -0.213843, 0.249483, -0.243325, 0.055092, 0.968379, -0.1025, 0.88, 0.195)
+mesh = SubResource("Geometry_43")
+material_override = SubResource("Hardware")
+
+[node name="HoseAroundHip" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.141421, -0.989949, 0, 0.943344, 0.134763, -0.303218, 0.30017, 0.042881, 0.952921, 0.17, 0.87, 0.185)
+mesh = SubResource("Geometry_44")
+material_override = SubResource("Hardware")
+
+[node name="HoseRise" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.887217, -0.461353, 0, 0.219803, 0.422698, -0.879212, 0.405627, 0.780051, 0.476431, 0.3425, 0.9525, 0.01)
+mesh = SubResource("Geometry_45")
+material_override = SubResource("Hardware")
+
+[node name="HoseGunConnector" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.439089, 0.898444, 0, -0.652761, 0.319019, -0.687117, -0.617336, 0.301706, 0.726547, 0.3085, 1.0475, -0.19)
+mesh = SubResource("Geometry_46")
+material_override = SubResource("Hardware")
+
+[node name="NozzleHandle" type="MeshInstance3D" parent="."]
+position = Vector3(0.235, 1.055, -0.284)
+rotation = Vector3(-0.2, 0, 0)
+mesh = SubResource("Geometry_47")
+material_override = SubResource("Hardware")
+
+[node name="DispenserBarrel" type="MeshInstance3D" parent="."]
+position = Vector3(0.235, 1.135, -0.34)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Geometry_48")
+material_override = SubResource("Hardware")
+
+[node name="GreenNozzleTip" type="MeshInstance3D" parent="."]
+position = Vector3(0.235, 1.135, -0.444)
+rotation = Vector3(1.570796, 0, 0)
+mesh = SubResource("Geometry_49")
+material_override = SubResource("Absinthe")
+
+[node name="Trigger" type="MeshInstance3D" parent="."]
+position = Vector3(0.276, 1.073, -0.323)
+mesh = SubResource("Geometry_50")
+material_override = SubResource("ApronAndFrost")

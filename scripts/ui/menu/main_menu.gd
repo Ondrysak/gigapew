@@ -1,8 +1,8 @@
 extends Node
 
 ## Title menu over a live stage backdrop. Home buttons open MenuScreen pages;
-## class select's deploy starts res://scenes/game.tscn with
-## Profile.selected_class_id set.
+## class select continues to run setup, whose start launches
+## res://scenes/game.tscn with Profile.selected_class_id and run config set.
 
 @export_file("*.tscn") var game_scene := "res://scenes/game.tscn"
 @export var home: Control
@@ -22,6 +22,7 @@ extends Node
 
 var _return_focus: Control
 var _leaving := false
+var run_setup: RunSetupScreen
 
 func _ready() -> void:
 	# A run abandoned from the pause menu arrives with the tree still paused.
@@ -34,10 +35,16 @@ func _ready() -> void:
 	settings_button.pressed.connect(_open.bind(settings, settings_button))
 	quit_button.pressed.connect(get_tree().quit)
 	quit_button.visible = OS.get_name() != "Web"
+	run_setup = RunSetupScreen.new()
+	run_setup.name = "RunSetup"
+	class_select.add_sibling(run_setup)
 	for screen: MenuScreen in _screens():
 		screen.hide()
-		screen.back_requested.connect(_show_home)
-	class_select.deploy_requested.connect(_deploy)
+		if screen != run_setup:
+			screen.back_requested.connect(_show_home)
+	run_setup.back_requested.connect(_open.bind(class_select, play_button))
+	class_select.deploy_requested.connect(func(_definition: ClassDefinition): _open(run_setup, play_button))
+	run_setup.start_requested.connect(_deploy)
 	_return_focus = play_button
 	_show_home()
 	fade.color.a = 1.0
@@ -48,7 +55,7 @@ func _ready() -> void:
 	StreetWear.apply_tree(self)
 
 func _screens() -> Array[MenuScreen]:
-	return [class_select, base, records, settings]
+	return [class_select, run_setup, base, records, settings]
 
 func _open(screen: MenuScreen, from: Control) -> void:
 	if _leaving:
@@ -81,11 +88,10 @@ func _refresh_operator() -> void:
 		parts.append("REKORD  %d BODŮ" % int(records_data.best_score))
 	operator_label.text = "   ·   ".join(parts)
 
-func _deploy(definition: ClassDefinition) -> void:
+func _deploy() -> void:
 	if _leaving:
 		return
 	_leaving = true
-	Profile.selected_class_id = definition.id
 	fade.mouse_filter = Control.MOUSE_FILTER_STOP
 	var out := create_tween()
 	out.tween_property(fade, ^"color:a", 1.0, 0.5)

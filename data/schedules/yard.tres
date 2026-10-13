@@ -11,6 +11,9 @@
 [ext_resource type="Resource" path="res://data/enemies/bouncer.tres" id="9_bouncer"]
 [ext_resource type="Resource" path="res://data/enemies/bottle_thrower.tres" id="10_thrower"]
 [ext_resource type="Resource" path="res://data/enemies/hype_man.tres" id="11_hype"]
+[ext_resource type="Resource" path="res://data/enemies/masta_blasta.tres" id="12_bomber"]
+[ext_resource type="Resource" path="res://data/enemies/tarzan.tres" id="13_tarzan"]
+[ext_resource type="Resource" path="res://data/enemies/polejvac.tres" id="14_sprayer"]
 
 [sub_resource type="Resource" id="Build_Grunt"]
 script = ExtResource("2_wave")
@@ -82,8 +85,31 @@ count = 1
 count_growth = 0
 group_size = 1
 
+[sub_resource type="Resource" id="Build_Tarzan"]
+script = ExtResource("2_wave")
+enemy = ExtResource("13_tarzan")
+count = 1
+count_growth = 0
+group_size = 1
+
+[sub_resource type="Resource" id="Peak_Bomber"]
+script = ExtResource("2_wave")
+enemy = ExtResource("12_bomber")
+peak = true
+count = 2
+count_growth = 0
+group_size = 1
+
+[sub_resource type="Resource" id="Peak_Sprayer"]
+script = ExtResource("2_wave")
+enemy = ExtResource("14_sprayer")
+peak = true
+count = 1
+count_growth = 0
+group_size = 1
+
 [resource]
 script = ExtResource("1_schedule")
 max_alive = 40
-waves = Array[ExtResource("2_wave")]([SubResource("Build_Grunt"), SubResource("Build_Runner"), SubResource("Build_Bouncer"), SubResource("Peak_Grunt"), SubResource("Peak_Spitter"), SubResource("Peak_Tank"), SubResource("Peak_Bulwark"), SubResource("Peak_Thrower"), SubResource("Peak_Hype")])
+waves = Array[ExtResource("2_wave")]([SubResource("Build_Grunt"), SubResource("Build_Runner"), SubResource("Build_Bouncer"), SubResource("Build_Tarzan"), SubResource("Peak_Grunt"), SubResource("Peak_Spitter"), SubResource("Peak_Tank"), SubResource("Peak_Bulwark"), SubResource("Peak_Thrower"), SubResource("Peak_Hype"), SubResource("Peak_Bomber"), SubResource("Peak_Sprayer")])
 boss = ExtResource("3_dreadnought")

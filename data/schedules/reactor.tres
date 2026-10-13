@@ -13,6 +13,9 @@
 [ext_resource type="Resource" path="res://data/enemies/bouncer.tres" id="11_bouncer"]
 [ext_resource type="Resource" path="res://data/enemies/bottle_thrower.tres" id="12_thrower"]
 [ext_resource type="Resource" path="res://data/enemies/hype_man.tres" id="13_hype"]
+[ext_resource type="Resource" path="res://data/enemies/masta_blasta.tres" id="14_bomber"]
+[ext_resource type="Resource" path="res://data/enemies/tarzan.tres" id="15_tarzan"]
+[ext_resource type="Resource" path="res://data/enemies/polejvac.tres" id="16_sprayer"]
 
 [sub_resource type="Resource" id="Build_Grunt"]
 script = ExtResource("2_wave")
@@ -99,11 +102,37 @@ count_growth = 1
 group_size = 1
 health_multiplier = 1.3
 
+[sub_resource type="Resource" id="Build_Tarzan"]
+script = ExtResource("2_wave")
+enemy = ExtResource("15_tarzan")
+count = 2
+count_growth = 0
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Bomber"]
+script = ExtResource("2_wave")
+enemy = ExtResource("14_bomber")
+peak = true
+count = 3
+count_growth = 0
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Sprayer"]
+script = ExtResource("2_wave")
+enemy = ExtResource("16_sprayer")
+peak = true
+count = 2
+count_growth = 0
+group_size = 1
+health_multiplier = 1.3
+
 [resource]
 script = ExtResource("1_schedule")
 build_duration = 20.0
 peak_duration = 16.0
 max_alive = 56
-waves = Array[ExtResource("2_wave")]([SubResource("Build_Grunt"), SubResource("Build_Street"), SubResource("Build_Runner"), SubResource("Build_Bouncer"), SubResource("Peak_Runner"), SubResource("Peak_Spitter"), SubResource("Peak_Tank"), SubResource("Peak_Street_Spitter"), SubResource("Peak_Thrower"), SubResource("Peak_Hype")])
+waves = Array[ExtResource("2_wave")]([SubResource("Build_Grunt"), SubResource("Build_Street"), SubResource("Build_Runner"), SubResource("Build_Bouncer"), SubResource("Build_Tarzan"), SubResource("Peak_Runner"), SubResource("Peak_Spitter"), SubResource("Peak_Tank"), SubResource("Peak_Street_Spitter"), SubResource("Peak_Thrower"), SubResource("Peak_Hype"), SubResource("Peak_Bomber"), SubResource("Peak_Sprayer")])
 boss = ExtResource("3_dreadnought")
 boss_health_multiplier = 2.4

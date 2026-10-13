@@ -5,6 +5,7 @@ extends RefCounted
 const RATE := 22050
 ## Explicit preloads in the generated catalog also preserve every WAV in exports.
 const PACK := preload("res://assets/audio/protokseed/catalog.gd")
+const TECHNO := preload("res://assets/audio/techno/catalog.gd")
 const VOICES := {
 	&"voice_fast": preload("res://assets/voice/ludas/plna_rychlost.wav"),
 	&"voice_hrrr": preload("res://assets/voice/ludas/hrrr.wav"),
@@ -23,8 +24,9 @@ static func load_bank() -> Dictionary:
 	if not _bank.is_empty():
 		return _bank
 	var decoded: Dictionary = {}
-	for key: StringName in PACK.CLIPS:
-		var samples := _decode(PACK.CLIPS[key].stream, key)
+	for key: StringName in PACK.CLIPS.keys() + TECHNO.CLIPS.keys():
+		var catalog: Dictionary = TECHNO.CLIPS if TECHNO.CLIPS.has(key) else PACK.CLIPS
+		var samples := _decode(catalog[key].stream, key)
 		if samples.is_empty():
 			return {}
 		decoded[key] = samples

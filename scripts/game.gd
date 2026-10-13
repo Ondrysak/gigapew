@@ -1,16 +1,19 @@
 class_name ArenaGame
 extends Node3D
 
-## Three scored Prague arenas share a run build. Finite encounters end only
-## after their real survivors are cleared; optional cabinets and caches never
-## gate progression. Shops bank earned loot and retain the combat build.
+## A run plays one chosen Prague level with its RunConfig tuning. Finite
+## encounters end only after their real survivors are cleared; optional cabinets
+## and caches never gate progression. Clearing opens the shop: purchases are
+## permanent, and the shop starts another round on any level, optionally one
+## difficulty tier harder, or returns home.
 
 enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD, GEAR, DRAFT, ROUTE }
 
 const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 
-@export var campaign: Array[StageDefinition] = []
+## Selectable levels. RunConfig.build_stage tunes a copy; these stay authored.
+var campaign: Array[StageDefinition] = RunConfig.levels()
 @export var player_scene: PackedScene
 @export var horde_scene: PackedScene
 @export var pickup_scene: PackedScene
@@ -21,7 +24,7 @@ const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 @export var resources: Array[ResourceDefinition] = []
 @export var stage_reward: ResourceDefinition
 @export var stage_reward_amount := 1
-## Share of unbanked currency kept when the run ends without clearing a stage.
+## Share of unbanked currency kept when the run ends without clearing a level.
 @export_range(0.0, 1.0) var death_bank_fraction := 0.5
 @export var offers_per_level := 3
 ## Enemies within this radius drive the music's local intensity.
@@ -36,6 +39,9 @@ const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
 var run_state: RunState
 var class_definition: ClassDefinition
 var stage_index := 0
+var run_config: RunConfig
+## The tuned copy of campaign[stage_index] the current round plays.
+var active_stage: StageDefinition
 var round_state := RoundState.LOADING
 var kills := 0
 var arena_score := 0
@@ -59,6 +65,7 @@ var mining_encounter: MiningDefense
 var boss_fight: YardBossFight
 var _pending_encounter_rewards := 0
 var _stage_clear_pending := false
+var _presented_boss := Vector2i(-1, -1)
 var _rng := RandomNumberGenerator.new()
 var _banked_ids: Array[StringName] = []
 var _nearby := PackedInt32Array()
@@ -68,6 +75,8 @@ var _music_damage_heat := 0.0
 var _run_recorded := false
 ## Luďas reacts with his own recorded voice; survives stage loads.
 var voice: LudasVoice
+var kara: KaraCallouts
+var _arena_phase_for_voice := "ARRIVAL"
 ## Kills in the current short burst, for the multikill reaction.
 var _burst_kills := 0
 var _burst_left := 0.0
@@ -104,7 +113,8 @@ func _ready() -> void:
 	round_shop = SHOP_SCENE.instantiate() as RoundShopScreen
 	shop_layer.add_child(round_shop)
 	round_shop.hide()
-	round_shop.continue_requested.connect(_on_shop_continue)
+	round_shop.next_round_requested.connect(_on_shop_next_round)
+	round_shop.home_requested.connect(_on_shop_home)
 	gear_screen = GearScreen.new()
 	add_child(gear_screen)
 	gear_screen.chosen.connect(_on_gear_chosen)
@@ -128,6 +138,7 @@ func _new_run() -> void:
 	Music.new_run()
 	_cancel_gear()
 	class_definition = Profile.roster.find(Profile.selected_class_id)
+	run_config = Profile.load_run_config()
 	run_state = RunState.new()
 	var permanent := Profile.meta_levels()
 	permanent.merge(Profile.crafting_modifiers())
@@ -142,6 +153,7 @@ func _new_run() -> void:
 		run_state.apply_upgrade(upgrade)
 	for upgrade in Profile.starting_craft_upgrades():
 		run_state.apply_upgrade(upgrade)
+	Profile.apply_shop_build(run_state, class_definition.id)
 	run_state.xp_changed.connect(hud.set_xp)
 	run_state.level_up_ready.connect(_on_level_up_ready)
 	run_state.resources_changed.connect(hud.set_resource)
@@ -159,7 +171,7 @@ func _new_run() -> void:
 	for definition in resources:
 		hud.set_resource(definition.id, 0)
 	hud.set_supply(run_state.supply, run_state.supply_required)
-	_load_stage(0)
+	_load_stage(run_config.level_index(campaign))
 
 func _process(delta: float) -> void:
 	if round_state == RoundState.LOADING:
@@ -202,7 +214,7 @@ func _crowd_intensity() -> float:
 	for n in near:
 		represented += horde.fusion_members(_nearby[n])
 	var local := clampf(float(represented) / music_crowd_reference, 0.0, 1.0)
-	var global := clampf(float(horde.population_count) / maxf(1.0, campaign[stage_index].schedule.max_alive), 0.0, 1.0)
+	var global := clampf(float(horde.population_count) / maxf(1.0, active_stage.schedule.max_alive), 0.0, 1.0)
 	var health_ratio := float(player.health) / maxi(player.max_health, 1)
 	var danger := 1.0 - smoothstep(0.15, 0.5, health_ratio)
 	var pressure := clampf(0.12 + local * 0.6 + global * 0.3 + danger * 0.18 + _music_kill_heat * 0.2 + _music_damage_heat * 0.15, 0.0, 1.0)
@@ -250,13 +262,22 @@ func _to_base() -> void:
 	get_tree().set_meta(&"open_base", true)
 	_to_menu()
 
-func _on_shop_continue() -> void:
+func _on_shop_next_round(level: int, harder: bool) -> void:
+	if round_state != RoundState.SHOP or level < 0 or level >= campaign.size():
+		return
+	round_shop.hide()
+	get_tree().paused = false
+	if harder:
+		run_config.set_value("difficulty", run_config.difficulty + 1)
+	_request(_load_stage.bind(level))
+
+func _on_shop_home() -> void:
 	if round_state != RoundState.SHOP:
 		return
 	round_shop.hide()
 	get_tree().paused = false
-	var final_stage := stage_index + 1 >= campaign.size()
-	_request(_to_base if final_stage else _load_stage.bind(stage_index + 1))
+	_record_run(true)
+	_request(_to_base)
 
 func _load_stage(index: int, seed_value: int = -1) -> void:
 	get_tree().paused = false
@@ -268,11 +289,14 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	gear_loot = null
 	_pending_encounter_rewards = 0
 	_stage_clear_pending = false
+	_presented_boss = Vector2i(-1, -1)
 	if is_instance_valid(_round):
 		_round.free()
 	stage_index = index
 	stage_score = 0
-	var stage := campaign[index]
+	run_config.select_level(campaign[index])
+	active_stage = run_config.build_stage(campaign[index])
+	var stage := active_stage
 	level_seed = _rng.randi() if seed_value < 0 else seed_value
 	_round = Node3D.new()
 	_round.name = "Round"
@@ -292,8 +316,14 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.ability_scenes = run_state.ability_scenes
 	player.transform = world.get_node("PlayerSpawn").transform
 	_round.add_child(player)
+	player.incoming_damage_scale = run_config.damage_scale()
 	horde.setup(_stage_enemies(stage.schedule), stage.play_area, world.get_node("Obstacles"), player, world.get_node_or_null("Elevation"), world.get_node_or_null("Ground"))
 	horde.set_layout(world as ProceduralWorld)
+	kara = KaraCallouts.new()
+	kara.name = "KaraCallouts"
+	_round.add_child(kara)
+	kara.setup(horde, player, hud)
+	_arena_phase_for_voice = "ARRIVAL"
 	hud.radar.set_layout(world as ProceduralWorld)
 	damage_numbers = DamageNumbers.new()
 	_round.add_child(damage_numbers)
@@ -335,7 +365,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 		if world.is_ancestor_of(hazard):
 			hazard.setup(horde, player, run_state)
 
-	hud.show_stage(stage, index, campaign.size())
+	hud.show_stage(stage, stages_cleared + 1, run_config.label())
 	hud.setup_arena(level_seed)
 	hud.set_arena_score(arena_score, int(Profile.records.get("best_score", 0)))
 	player.health_changed.connect(hud.set_health)
@@ -351,9 +381,9 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.ability_combo.connect(func(_id: StringName): voice.say(&"combo"))
 	player.ability_combo.connect(func(_id: StringName): Music.accent(&"combo"))
 	horde.enemy_killed.connect(_on_enemy_killed)
-	horde.boss_spawned.connect(_on_boss_spawned)
+	horde.boss_spawned.connect(_on_boss_spawned.bind(horde.get_instance_id()))
 	horde.boss_health_changed.connect(hud.set_boss_health)
-	horde.boss_killed.connect(_on_boss_killed)
+	horde.boss_killed.connect(_on_boss_killed.bind(horde.get_instance_id()))
 	if stage.mining_encounter_scene != null:
 		mining_encounter = stage.mining_encounter_scene.instantiate() as MiningDefense
 		_round.add_child(mining_encounter)
@@ -449,6 +479,10 @@ func _on_enemy_killed(_definition: HordeEnemyDefinition, _position: Vector3) -> 
 func _on_arena_phase_changed(source_id: int) -> void:
 	if is_instance_valid(director) and director.get_instance_id() == source_id and is_instance_valid(player):
 		player.set_arena_recovery(director.recovering)
+		var previous := _arena_phase_for_voice
+		_arena_phase_for_voice = director.phase_name
+		if previous == "CLEANUP" and director.phase_name in ["RECOVERY", "CLEAR"] and is_instance_valid(kara):
+			kara.encounter_cleared()
 
 func _on_route_choices_changed(source_id: int) -> void:
 	if not is_instance_valid(director) or director.get_instance_id() != source_id \
@@ -518,11 +552,21 @@ func _on_salvage_music() -> void:
 	if round_state == RoundState.PLAYING:
 		Music.accent(&"salvage")
 
-func _on_boss_spawned(definition: HordeEnemyDefinition) -> void:
+func _on_boss_spawned(definition: HordeEnemyDefinition, source_id: int) -> void:
+	if not is_instance_valid(horde) or horde.get_instance_id() != source_id \
+			or not horde.is_alive(horde.boss_index) or round_state in [RoundState.SHOP, RoundState.LOST]:
+		return
+	var identity := Vector2i(horde.boss_index, horde.enemy_generation(horde.boss_index))
+	if identity == _presented_boss:
+		return
+	_presented_boss = identity
 	hud.show_boss(definition)
 	Music.set_boss(true)
-	var scene := campaign[stage_index].boss_fight_scene
+	var scene := active_stage.boss_fight_scene
 	if scene != null:
+		if is_instance_valid(boss_fight):
+			boss_fight.cancel()
+			boss_fight.queue_free()
 		boss_fight = scene.instantiate() as YardBossFight
 		_round.add_child(boss_fight)
 		boss_fight.setup(horde, player)
@@ -681,12 +725,15 @@ func _on_abandon() -> void:
 		return
 	pause_menu.close()
 	_bank(death_bank_fraction)
-	_record_run(false)
+	_record_run(stages_cleared > 0)
 	_request(_to_base)
 
 # ---------------------------------------------------------------- run end
 
-func _on_boss_killed() -> void:
+func _on_boss_killed(source_id: int) -> void:
+	if not is_instance_valid(horde) or horde.get_instance_id() != source_id \
+			or horde.is_alive(horde.boss_index):
+		return
 	Music.set_boss(false)
 	hud.boss_panel.hide()
 	hud.arena_round_box.visible = hud.arena_panel.visible and not hud.death.visible
@@ -695,7 +742,9 @@ func _on_boss_killed() -> void:
 ## cannot clear a new round, and simultaneous player death takes precedence.
 func _on_arena_completed(source_id: int) -> void:
 	if not is_instance_valid(director) or source_id != director.get_instance_id() \
-			or not director.finished or _stage_clear_pending:
+			or not director.finished or _stage_clear_pending or player.health <= 0 \
+			or not director._combat_empty(true) \
+			or (active_stage.schedule.boss != null and not director.boss_defeated):
 		return
 	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
 		return
@@ -706,19 +755,23 @@ func _on_arena_completed(source_id: int) -> void:
 		_resume_play()
 
 func _finish_stage_clear() -> void:
+	if not _stage_clear_pending or not is_instance_valid(director) or not director.finished \
+			or player.health <= 0 or round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
+		return
 	_stage_clear_pending = false
 	round_state = RoundState.SHOP
 	_cancel_gear()
 	stages_cleared += 1
 	if stage_reward != null:
 		run_state.add_resource(stage_reward, stage_reward_amount)
+	var bonus := run_config.reward_scale()
 	for definition in resources:
 		var reward := 0
 		match definition.id:
 			&"gold": reward = 10 + stage_index * 6 + mini(30, floori(float(stage_score) / 300.0))
 			&"crystal": reward = 3 + stage_index * 2
 		if reward > 0:
-			run_state.add_resource(definition, reward)
+			run_state.add_resource(definition, roundi(reward * bonus))
 	# Loot still on the floor is swept up with the clear.
 	deposits.collect_all()
 	var banked := _bank(1.0)
@@ -729,16 +782,14 @@ func _finish_stage_clear() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player.sound.play_cue(&"victory")
 	voice.say(&"clear")
-	var final_stage := stage_index == campaign.size() - 1
 	Music.set_boss(false)
 	Music.set_intensity(0.0)
-	Music.stinger(&"run_complete" if final_stage else &"stage_clear")
-	if final_stage:
-		_record_run(true)
+	Music.stinger(&"stage_clear")
 	hud.feedback.reset()
 	damage_numbers.hide()
 	get_tree().paused = true
-	round_shop.open(run_state, stage_index, final_stage, _summary() + "\n" + _banked_text(banked), ShopVenueCatalog.shared().shop_venue(campaign[stage_index].layout_theme, level_seed))
+	round_shop.open(run_state, stages_cleared - 1, class_definition.id, _summary() + "\n" + _banked_text(banked), \
+			ShopVenueCatalog.shared().shop_venue(active_stage.layout_theme, level_seed), campaign, stage_index, run_config)
 
 func _on_player_died() -> void:
 	if round_state != RoundState.PLAYING:
@@ -780,6 +831,8 @@ func _record_run(victory: bool) -> void:
 		"level": run_state.level,
 		"stages_cleared": stages_cleared,
 		"victory": victory,
+		"level_id": String(campaign[stage_index].id),
+		"difficulty": run_config.difficulty,
 		"banked": run_banked.duplicate(),
 	})
 

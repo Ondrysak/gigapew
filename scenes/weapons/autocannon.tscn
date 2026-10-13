@@ -48,6 +48,7 @@ rings = 5
 
 [node name="Autocannon" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template", "blast_template", "pilot_flame")]
 script = ExtResource("1_view")
+flourish = 2
 kinetic_keeps_colors = true
 muzzle = NodePath("Model/autocannon/Muzzle")
 impact_material = SubResource("Mat_impact")

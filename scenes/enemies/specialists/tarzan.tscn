@@ -1,0 +1,425 @@
+[gd_scene load_steps=43 format=3]
+
+[sub_resource type="StandardMaterial3D" id="Workwear"]
+albedo_color = Color(0.77, 0.58, 0.1, 1)
+roughness = 0.96
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="Rubber"]
+albedo_color = Color(0.055, 0.058, 0.047, 1)
+roughness = 0.95
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="DirtySkin"]
+albedo_color = Color(0.52, 0.34, 0.21, 1)
+roughness = 0.98
+metallic = 0
+
+[sub_resource type="StandardMaterial3D" id="Oil"]
+albedo_color = Color(0.22, 0.235, 0.12, 1)
+roughness = 0.89
+metallic = 0.08
+
+[sub_resource type="StandardMaterial3D" id="Canvas"]
+albedo_color = Color(0.78, 0.74, 0.55, 1)
+roughness = 0.92
+metallic = 0
+
+[sub_resource type="BoxMesh" id="Geometry_1"]
+size = Vector3(0.2, 0.12, 0.29)
+
+[sub_resource type="BoxMesh" id="Geometry_2"]
+size = Vector3(0.17, 0.041, 0.074)
+
+[sub_resource type="BoxMesh" id="Geometry_3"]
+size = Vector3(0.145, 0.303233, 0.16)
+
+[sub_resource type="BoxMesh" id="Geometry_4"]
+size = Vector3(0.19, 0.301911, 0.19)
+
+[sub_resource type="BoxMesh" id="Geometry_5"]
+size = Vector3(0.17, 0.13, 0.045)
+
+[sub_resource type="BoxMesh" id="Geometry_6"]
+size = Vector3(0.145, 0.130863, 0.16)
+
+[sub_resource type="BoxMesh" id="Geometry_7"]
+size = Vector3(0.1, 0.192419, 0.105)
+
+[sub_resource type="BoxMesh" id="Geometry_8"]
+size = Vector3(0.126, 0.07, 0.117)
+
+[sub_resource type="BoxMesh" id="Geometry_9"]
+size = Vector3(0.11, 0.1, 0.09)
+
+[sub_resource type="BoxMesh" id="Geometry_10"]
+size = Vector3(0.097, 0.045, 0.095)
+
+[sub_resource type="BoxMesh" id="Geometry_11"]
+size = Vector3(0.097, 0.07, 0.038)
+
+[sub_resource type="BoxMesh" id="Geometry_12"]
+size = Vector3(0.052, 0.322065, 0.024)
+
+[sub_resource type="BoxMesh" id="Geometry_13"]
+size = Vector3(0.06, 0.042, 0.028)
+
+[sub_resource type="BoxMesh" id="Geometry_14"]
+size = Vector3(0.35, 0.21, 0.34)
+
+[sub_resource type="BoxMesh" id="Geometry_15"]
+size = Vector3(0.4, 0.37, 0.29)
+
+[sub_resource type="BoxMesh" id="Geometry_16"]
+size = Vector3(0.29, 0.21, 0.028)
+
+[sub_resource type="BoxMesh" id="Geometry_17"]
+size = Vector3(0.19, 0.11, 0.035)
+
+[sub_resource type="BoxMesh" id="Geometry_18"]
+size = Vector3(0.08, 0.055, 0.014)
+
+[sub_resource type="BoxMesh" id="Geometry_19"]
+size = Vector3(0.23, 0.12, 0.021)
+
+[sub_resource type="CylinderMesh" id="Geometry_20"]
+top_radius = 0.095
+bottom_radius = 0.1
+height = 0.13
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="Geometry_21"]
+radius = 0.183
+height = 0.366
+radial_segments = 10
+rings = 5
+
+[sub_resource type="BoxMesh" id="Geometry_22"]
+size = Vector3(0.26, 0.04, 0.027)
+
+[sub_resource type="BoxMesh" id="Geometry_23"]
+size = Vector3(0.033, 0.019, 0.012)
+
+[sub_resource type="BoxMesh" id="Geometry_24"]
+size = Vector3(0.079, 0.065, 0.069)
+
+[sub_resource type="BoxMesh" id="Geometry_25"]
+size = Vector3(0.137, 0.027, 0.038)
+
+[sub_resource type="BoxMesh" id="Geometry_26"]
+size = Vector3(0.073, 0.018, 0.016)
+
+[sub_resource type="BoxMesh" id="Geometry_27"]
+size = Vector3(0.055, 0.051, 0.023)
+
+[sub_resource type="BoxMesh" id="Geometry_28"]
+size = Vector3(0.055, 0.064, 0.023)
+
+[sub_resource type="CylinderMesh" id="Geometry_29"]
+top_radius = 0.123
+bottom_radius = 0.181
+height = 0.09
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Geometry_30"]
+size = Vector3(0.26, 0.027, 0.12)
+
+[sub_resource type="BoxMesh" id="Geometry_31"]
+size = Vector3(0.046, 0.083, 0.063)
+
+[sub_resource type="BoxMesh" id="Geometry_32"]
+size = Vector3(0.027, 0.17, 0.033)
+
+[sub_resource type="BoxMesh" id="Geometry_33"]
+size = Vector3(0.075, 0.055, 0.04)
+
+[sub_resource type="BoxMesh" id="Geometry_34"]
+size = Vector3(0.086, 0.075, 0.048)
+
+[sub_resource type="BoxMesh" id="Geometry_35"]
+size = Vector3(0.087, 0.023, 0.049)
+
+[sub_resource type="BoxMesh" id="Geometry_36"]
+size = Vector3(0.019, 0.044, 0.051)
+
+[sub_resource type="BoxMesh" id="Geometry_37"]
+size = Vector3(0.015, 0.056, 0.051)
+
+[node name="TarzanZeStropu" type="Node3D"]
+
+[node name="LeftWorkBoot" type="MeshInstance3D" parent="."]
+position = Vector3(-0.19, 0.06, 0.115)
+mesh = SubResource("Geometry_1")
+material_override = SubResource("Rubber")
+
+[node name="LeftToeMud" type="MeshInstance3D" parent="."]
+position = Vector3(-0.19, 0.063, -0.035)
+mesh = SubResource("Geometry_2")
+material_override = SubResource("Oil")
+
+[node name="LeftFoldedShin" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.951445, 0.30782, 0, -0.181379, 0.560626, -0.807961, -0.248707, 0.76873, 0.589236, -0.2175, 0.225, 0.0675)
+mesh = SubResource("Geometry_3")
+material_override = SubResource("Workwear")
+
+[node name="LeftFoldedThigh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.909688, -0.415292, 0, 0.347785, 0.761815, 0.546519, -0.226965, -0.497162, 0.837446, -0.1925, 0.425, 0.0275)
+mesh = SubResource("Geometry_4")
+material_override = SubResource("Workwear")
+
+[node name="LeftKneepad" type="MeshInstance3D" parent="."]
+position = Vector3(-0.245, 0.325, -0.14)
+rotation = Vector3(-0.28, 0, 0)
+mesh = SubResource("Geometry_5")
+material_override = SubResource("Rubber")
+
+[node name="LeftUpperArm" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.725953, 0.687745, 0, -0.687745, 0.725953, 0, 0, 0, 1, -0.265, 0.8275, 0.045)
+mesh = SubResource("Geometry_6")
+material_override = SubResource("Workwear")
+
+[node name="LeftGrippingForearm" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.930751, -0.365652, 0, 0.285835, 0.72758, -0.62364, 0.228035, 0.580454, 0.781712, -0.2825, 0.945, -0.015)
+mesh = SubResource("Geometry_7")
+material_override = SubResource("DirtySkin")
+
+[node name="LeftCuff" type="MeshInstance3D" parent="."]
+position = Vector3(-0.294, 0.91, 0.01)
+rotation = Vector3(-0.45, 0, -0.15)
+mesh = SubResource("Geometry_8")
+material_override = SubResource("Oil")
+
+[node name="LeftGripPalm" type="MeshInstance3D" parent="."]
+position = Vector3(-0.25, 1.045, -0.095)
+mesh = SubResource("Geometry_9")
+material_override = SubResource("DirtySkin")
+
+[node name="LeftHookedFingers" type="MeshInstance3D" parent="."]
+position = Vector3(-0.25, 1.095, -0.13)
+mesh = SubResource("Geometry_10")
+material_override = SubResource("DirtySkin")
+
+[node name="LeftHookedKnuckles" type="MeshInstance3D" parent="."]
+position = Vector3(-0.25, 1.073, -0.167)
+mesh = SubResource("Geometry_11")
+material_override = SubResource("DirtySkin")
+
+[node name="LeftOverallStrap" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.995197, 0.097888, 0, -0.093149, 0.947013, 0.307391, 0.03009, -0.305915, 0.951583, -0.145, 0.7125, -0.0835)
+mesh = SubResource("Geometry_12")
+material_override = SubResource("Workwear")
+
+[node name="LeftStrapClip" type="MeshInstance3D" parent="."]
+position = Vector3(-0.14, 0.73, -0.095)
+mesh = SubResource("Geometry_13")
+material_override = SubResource("Canvas")
+
+[node name="RightWorkBoot" type="MeshInstance3D" parent="."]
+position = Vector3(0.19, 0.06, 0.115)
+mesh = SubResource("Geometry_1")
+material_override = SubResource("Rubber")
+
+[node name="RightToeMud" type="MeshInstance3D" parent="."]
+position = Vector3(0.19, 0.063, -0.035)
+mesh = SubResource("Geometry_2")
+material_override = SubResource("Oil")
+
+[node name="RightFoldedShin" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.951445, -0.30782, 0, 0.181379, 0.560626, -0.807961, 0.248707, 0.76873, 0.589236, 0.2175, 0.225, 0.0675)
+mesh = SubResource("Geometry_3")
+material_override = SubResource("Workwear")
+
+[node name="RightFoldedThigh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.909688, 0.415292, 0, -0.347785, 0.761815, 0.546519, 0.226965, -0.497162, 0.837446, 0.1925, 0.425, 0.0275)
+mesh = SubResource("Geometry_4")
+material_override = SubResource("Workwear")
+
+[node name="RightKneepad" type="MeshInstance3D" parent="."]
+position = Vector3(0.245, 0.325, -0.14)
+rotation = Vector3(-0.28, 0, 0)
+mesh = SubResource("Geometry_5")
+material_override = SubResource("Rubber")
+
+[node name="RightUpperArm" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.725953, -0.687745, 0, 0.687745, 0.725953, 0, 0, 0, 1, 0.265, 0.8275, 0.045)
+mesh = SubResource("Geometry_6")
+material_override = SubResource("Workwear")
+
+[node name="RightGrippingForearm" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.930751, 0.365652, 0, -0.285835, 0.72758, -0.62364, -0.228035, 0.580454, 0.781712, 0.2825, 0.945, -0.015)
+mesh = SubResource("Geometry_7")
+material_override = SubResource("DirtySkin")
+
+[node name="RightCuff" type="MeshInstance3D" parent="."]
+position = Vector3(0.294, 0.91, 0.01)
+rotation = Vector3(-0.45, 0, 0.15)
+mesh = SubResource("Geometry_8")
+material_override = SubResource("Oil")
+
+[node name="RightGripPalm" type="MeshInstance3D" parent="."]
+position = Vector3(0.25, 1.045, -0.095)
+mesh = SubResource("Geometry_9")
+material_override = SubResource("DirtySkin")
+
+[node name="RightHookedFingers" type="MeshInstance3D" parent="."]
+position = Vector3(0.25, 1.095, -0.13)
+mesh = SubResource("Geometry_10")
+material_override = SubResource("DirtySkin")
+
+[node name="RightHookedKnuckles" type="MeshInstance3D" parent="."]
+position = Vector3(0.25, 1.073, -0.167)
+mesh = SubResource("Geometry_11")
+material_override = SubResource("DirtySkin")
+
+[node name="RightOverallStrap" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.995197, -0.097888, 0, 0.093149, 0.947013, 0.307391, -0.03009, -0.305915, 0.951583, 0.145, 0.7125, -0.0835)
+mesh = SubResource("Geometry_12")
+material_override = SubResource("Workwear")
+
+[node name="RightStrapClip" type="MeshInstance3D" parent="."]
+position = Vector3(0.14, 0.73, -0.095)
+mesh = SubResource("Geometry_13")
+material_override = SubResource("Canvas")
+
+[node name="SquattingSeat" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.495, 0.09)
+mesh = SubResource("Geometry_14")
+material_override = SubResource("Workwear")
+
+[node name="HunchedTorso" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.725, 0.06)
+rotation = Vector3(0.24, 0, 0)
+mesh = SubResource("Geometry_15")
+material_override = SubResource("Oil")
+
+[node name="OverallBib" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.655, -0.113)
+rotation = Vector3(0.22, 0, 0)
+mesh = SubResource("Geometry_16")
+material_override = SubResource("Workwear")
+
+[node name="BibPocket" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.635, -0.143)
+rotation = Vector3(0.22, 0, 0)
+mesh = SubResource("Geometry_17")
+material_override = SubResource("Canvas")
+
+[node name="PocketOilStain" type="MeshInstance3D" parent="."]
+position = Vector3(-0.035, 0.62, -0.166)
+rotation = Vector3(0, 0, 0.25)
+mesh = SubResource("Geometry_18")
+material_override = SubResource("Oil")
+
+[node name="BackOilSmear" type="MeshInstance3D" parent="."]
+position = Vector3(0.045, 0.76, 0.223)
+rotation = Vector3(0, 0, 0.22)
+mesh = SubResource("Geometry_19")
+material_override = SubResource("Rubber")
+
+[node name="Neck" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.77, -0.075)
+rotation = Vector3(0.7, 0, 0)
+mesh = SubResource("Geometry_20")
+material_override = SubResource("DirtySkin")
+
+[node name="ExposedHead" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.75, -0.2)
+scale = Vector3(1, 1.02, 0.94)
+mesh = SubResource("Geometry_21")
+material_override = SubResource("DirtySkin")
+
+[node name="HeavyBrow" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.795, -0.349)
+mesh = SubResource("Geometry_22")
+material_override = SubResource("Rubber")
+
+[node name="LeftEye" type="MeshInstance3D" parent="."]
+position = Vector3(-0.065, 0.772, -0.367)
+mesh = SubResource("Geometry_23")
+material_override = SubResource("Canvas")
+
+[node name="RightEye" type="MeshInstance3D" parent="."]
+position = Vector3(0.065, 0.772, -0.367)
+mesh = SubResource("Geometry_23")
+material_override = SubResource("Canvas")
+
+[node name="BroadNose" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.745, -0.373)
+mesh = SubResource("Geometry_24")
+material_override = SubResource("DirtySkin")
+
+[node name="FilthyMoustache" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.705, -0.345)
+mesh = SubResource("Geometry_25")
+material_override = SubResource("Rubber")
+
+[node name="LowerLip" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.68, -0.345)
+mesh = SubResource("Geometry_26")
+material_override = SubResource("Canvas")
+
+[node name="LeftCheekDirt" type="MeshInstance3D" parent="."]
+position = Vector3(-0.126, 0.728, -0.313)
+rotation = Vector3(0, -0.45, 0)
+mesh = SubResource("Geometry_27")
+material_override = SubResource("Oil")
+
+[node name="RightCheekDirt" type="MeshInstance3D" parent="."]
+position = Vector3(0.126, 0.73, -0.313)
+rotation = Vector3(0, 0.45, 0.13)
+mesh = SubResource("Geometry_28")
+material_override = SubResource("Oil")
+
+[node name="GreasyCap" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.922, -0.19)
+mesh = SubResource("Geometry_29")
+material_override = SubResource("Oil")
+
+[node name="CapBrim" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.9, -0.303)
+rotation = Vector3(-0.06, 0, 0)
+mesh = SubResource("Geometry_30")
+material_override = SubResource("Workwear")
+
+[node name="LeftEar" type="MeshInstance3D" parent="."]
+position = Vector3(-0.184, 0.755, -0.19)
+mesh = SubResource("Geometry_31")
+material_override = SubResource("DirtySkin")
+
+[node name="RightEar" type="MeshInstance3D" parent="."]
+position = Vector3(0.184, 0.755, -0.19)
+mesh = SubResource("Geometry_31")
+material_override = SubResource("DirtySkin")
+
+[node name="BrushWoodHandle" type="MeshInstance3D" parent="."]
+position = Vector3(0.332, 0.995, -0.1)
+rotation = Vector3(0, 0, -0.08)
+mesh = SubResource("Geometry_32")
+material_override = SubResource("Oil")
+
+[node name="BrushFerrule" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 1.085, -0.1)
+mesh = SubResource("Geometry_33")
+material_override = SubResource("Canvas")
+
+[node name="PaintbrushBristles" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 1.1125, -0.1)
+mesh = SubResource("Geometry_34")
+material_override = SubResource("Canvas")
+
+[node name="BrushDirtyPaintEdge" type="MeshInstance3D" parent="."]
+position = Vector3(0.34, 1.1385, -0.1)
+mesh = SubResource("Geometry_35")
+material_override = SubResource("Oil")
+
+[node name="PaintLoadedBristleLeft" type="MeshInstance3D" parent="."]
+position = Vector3(0.318, 1.119, -0.1)
+mesh = SubResource("Geometry_36")
+material_override = SubResource("Workwear")
+
+[node name="PaintLoadedBristleRight" type="MeshInstance3D" parent="."]
+position = Vector3(0.362, 1.122, -0.1)
+mesh = SubResource("Geometry_37")
+material_override = SubResource("Workwear")

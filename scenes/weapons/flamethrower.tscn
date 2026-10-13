@@ -29,6 +29,7 @@ rings = 4
 
 [node name="Flamethrower" type="Node3D" node_paths=PackedStringArray("muzzle", "flash", "flash_light", "pilot_flame")]
 script = ExtResource("1_view")
+flourish = 2
 muzzle = NodePath("Model/flamethrower/Muzzle")
 flash = NodePath("MuzzleFlash")
 flash_light = NodePath("MuzzleLight")

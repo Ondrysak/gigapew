@@ -18,6 +18,8 @@ signal enemy_fused(index: int, members: int)
 ## explicit manual combo, prop) that killed at least one life. Ordinary primary
 ## damage, ambient burn/shock ticks, auto guns and external deaths never emit.
 signal action_killed(members: int, position: Vector3, label: String)
+## Specialist transition only; delayed bombs retain their body generation.
+signal enemy_callout(index: int, text: String, clip: StringName)
 
 const CAPACITY := 4096
 const CELL := 2.0
@@ -193,6 +195,7 @@ var _anim_frame := PackedFloat32Array()
 var _anim_speed := PackedFloat32Array()
 var _anim_prev := PackedVector2Array()
 var _fx: HordeFx
+var _specialists := HordeSpecialists.new()
 
 var _state := PackedInt32Array()
 var _type := PackedInt32Array()
@@ -592,6 +595,28 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_shot_renderer.custom_aabb = bounds
 	add_child(_shot_renderer)
 	_shot_buffer.resize(MAX_PROJECTILES * 16)
+	_specialists.setup(self)
+
+## Only delayed blast/action resolution blocks encounter cleanup, never fuel.
+func specialist_actions_pending() -> bool:
+	return _specialists.actions_pending()
+
+## Final stage cleanup also waits for finite projectiles and burning floor fuel.
+## Unlit fuel is inert; it must not extend the ordinary between-venue breather.
+func combat_hazards_pending() -> bool:
+	return _shot_count > 0 or _specialists.hazards_pending()
+
+## Parent clips the ray at the first real world blocker. Empty floor fuel is
+## targetable without finding an enemy; returns newly ignited patches.
+func ignite_fuel_ray(origin: Vector3, direction: Vector3, max_distance: float) -> int:
+	if _state.is_empty() or _action_suspend > 0:
+		return 0
+	return _specialists.ignite_ray(origin, direction, max_distance)
+
+func ignite_fuel_radius(center: Vector3, radius: float) -> int:
+	if _state.is_empty() or _action_suspend > 0:
+		return 0
+	return _specialists.ignite_radius(center, radius)
 
 ## Optional encounter species share the normal batched rendering/simulation.
 func registered_definitions() -> Array[HordeEnemyDefinition]:
@@ -928,13 +953,19 @@ func spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier := 1
 	return _spawn(definition, xz, health_multiplier, true)
 
 func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: float, ordinary: bool) -> int:
-	if is_blocked(xz, definition.radius):
+	var radius := definition.radius
+	var headroom := definition.height if definition.behavior >= HordeEnemyDefinition.Behavior.BOMBER else 2.2
+	if is_blocked(xz, radius, NAN, headroom):
+		return -1
+	xz.x = clampf(xz.x, _area.position.x + radius, _area.end.x - radius)
+	xz.y = clampf(xz.y, _area.position.y + radius, _area.end.y - radius)
+	var spawn_y := _specialists.spawn_height(definition, xz)
+	if not is_finite(spawn_y):
 		return -1
 	var type: int = _type_of[definition]
 	_free_count -= 1
 	var slot := _free[_free_count]
 	_generation[slot] += 1
-	var radius := _t_radius[type]
 	_fusion_allowed[slot] = 1 if ordinary and not definition.is_boss and not definition.front_armored and definition.behavior == HordeEnemyDefinition.Behavior.SWARM else 0
 	_members[slot] = 1
 	_body[slot] = 1.0
@@ -956,7 +987,7 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_type[slot] = type
 	_mode[slot] = Mode.SEEK
 	_pos[slot] = xz
-	_y[slot] = ground_height(xz)
+	_y[slot] = spawn_y
 	_vy[slot] = 0.0
 	_knock[slot] = Vector2.ZERO
 	_hp[slot] = definition.max_health * health_multiplier
@@ -987,6 +1018,7 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	if radius > BIG_RADIUS:
 		_big.append(slot)
 	_reset_animation(slot)
+	_specialists.spawned(slot)
 	if definition.is_boss:
 		_boss_index = slot
 		control_boss(false)
@@ -1093,6 +1125,7 @@ func is_reachable(xz: Vector2) -> bool:
 
 ## Removes every enemy without rewards (stage clear).
 func clear() -> void:
+	_specialists.clear()
 	control_boss(false)
 	_boss_index = -1
 	_reserved_slots = 0
@@ -1122,6 +1155,8 @@ func slow(index: int, factor: float, duration: float) -> void:
 		_slow[index] = 1.0
 	_slow[index] = minf(_slow[index], clampf(factor, 0.0, 1.0))
 	_slow_time[index] = maxf(_slow_time[index], duration)
+	if _t_behavior[_type[index]] == HordeEnemyDefinition.Behavior.AMBUSHER:
+		_specialists.interrupted(index)
 
 ## Tag Burst creates a cross-gun damage window, never a permanent multiplier.
 func expose(index: int, duration: float) -> void:
@@ -1140,6 +1175,7 @@ func stun(index: int, duration: float) -> void:
 			_mode[index] = Mode.SEEK
 			_timer[index] = 0.0
 			_cooldown[index] = _defs[_type[index]].attack_cooldown
+		_specialists.interrupted(index)
 
 ## One bounded non-damage pass: displacement and attack interruption are not hits.
 func blast_react(center: Vector3, radius: float, impulse: float) -> void:
@@ -1185,7 +1221,7 @@ func combo_flags(index: int) -> int:
 		flags |= ELECTRIC
 	# Height alone is not flight: raised floors and static elevated poses must
 	# retain ordinary rail damage. Kick/blast ascent and genuine falling qualify.
-	if _vy[index] > 0.0 or ((_launch_time[index] > 0.0 or _vy[index] < 0.0) and _y[index] - ground_height(_pos[index]) > AIRBORNE_CLEARANCE):
+	if _specialists.is_airborne(index) or _vy[index] > 0.0 or ((_launch_time[index] > 0.0 or _vy[index] < 0.0) and _y[index] - ground_height(_pos[index]) > AIRBORNE_CLEARANCE):
 		flags |= AIRBORNE
 	return flags
 
@@ -1226,12 +1262,14 @@ func _action_open() -> int:
 	return outer
 
 ## Emits once for this scope's own kills; nested scopes already emitted theirs.
-func _action_close(outer: int, fallback: Vector3, label: String) -> int:
+func _action_close(outer: int, fallback: Vector3, label: String, deferred_action: int = -1) -> int:
 	var members := _action_members
 	var at := _action_last_kill if members > 0 else fallback
 	_action_members = outer
 	_action_depth -= 1
-	if members > 0:
+	if deferred_action >= 0:
+		_specialists.credit_action(deferred_action, members, at)
+	elif members > 0:
 		_action_suspend += 1
 		action_killed.emit(members, at, label)
 		_action_suspend -= 1
@@ -1287,6 +1325,7 @@ func kick(origin: Vector3, forward: Vector3, sliding: bool, slam: bool) -> bool:
 	var amount := STOMP_DAMAGE if slam else (SLIDE_KICK_DAMAGE if sliding else KICK_DAMAGE)
 	var touched := false
 	var outer := _action_open()
+	var delayed_action := -1
 	for k in chosen:
 		var slot := _kick_index[k]
 		var generation := _kick_generation[k]
@@ -1302,6 +1341,7 @@ func kick(origin: Vector3, forward: Vector3, sliding: bool, slam: bool) -> bool:
 		var heavy := _is_heavy(slot)
 		var frozen := _kick_flags[k] & FROZEN != 0
 		var at := enemy_position(slot)
+		delayed_action = _specialists.reverse_kick(slot, delayed_action)
 		if damage_combined(slot, amount, origin, 0.0, Vector3.ZERO, DamageType.Kind.KINETIC, false):
 			if frozen:
 				_shatter(at)
@@ -1317,7 +1357,7 @@ func kick(origin: Vector3, forward: Vector3, sliding: bool, slam: bool) -> bool:
 			_vy[slot] = STOMP_LIFT if slam else (KICK_LIFT * 0.7 if sliding else KICK_LIFT)
 			_launch_time[slot] = LAUNCH_TIME
 			_launch_frozen[slot] = 1 if frozen else 0
-	_action_close(outer, center, label)
+	_action_close(outer, center, label, delayed_action)
 	if touched and is_instance_valid(_fx):
 		_fx.burst_kick(center, slam)
 	return touched
@@ -1596,6 +1636,8 @@ func _resolve_impacts() -> void:
 		var amount := IMPACT_DAMAGE + speed * 1.5
 		if alive:
 			_launch_frozen[slot] = 0
+		if alive and _specialists.impact_bomber(slot):
+			continue
 		if frozen and alive:
 			# Ice shatters on contact: the body breaks and bursts once.
 			_shatter(at, slot, generation)
@@ -1750,8 +1792,9 @@ func finish(index: int, generation: int, origin: Vector3, reach: float = 3.2) ->
 		return false
 	var at := enemy_position(index)
 	var outer := _action_open()
+	var delayed_action := _specialists.prepare_finish(index, origin)
 	var killed := _deal_damage(index, _hp[index], direction * 14.0, DamageType.Kind.KINETIC, false)
-	_action_close(outer, at, "FINISHER")
+	_action_close(outer, at, "FINISHER", delayed_action)
 	if killed and is_instance_valid(_fx):
 		_fx.burst_finisher(at, direction)
 	return killed
@@ -1765,6 +1808,7 @@ func _enter_daze(index: int) -> void:
 	_daze_used[index] = 1
 	_daze_time[index] = DAZE_DURATION
 	_dense_count[index] = 0
+	_specialists.interrupted(index)
 	_mode[index] = Mode.SEEK
 	_timer[index] = 0.0
 	_cooldown[index] = _defs[_type[index]].attack_cooldown
@@ -1829,7 +1873,7 @@ func weak_spot_hit(index: int, origin: Vector3, direction: Vector3, max_distance
 		return false
 	# A ray from the front cannot claim a core behind the intervening chassis.
 	# Stun freezes rotation; it never disables the plate or opens this gate.
-	if _t_armored[_type[index]] != 0 and _source_facing_dot(index, origin) > -_t_rear_cos[_type[index]]:
+	if (_t_armored[_type[index]] != 0 or _t_behavior[_type[index]] == HordeEnemyDefinition.Behavior.BOMBER) and _source_facing_dot(index, origin) > -_t_rear_cos[_type[index]]:
 		return false
 	var offset := weak_spot_position(index) - origin
 	var distance := clampf(offset.dot(direction), 0.0, max_distance)
@@ -1997,6 +2041,8 @@ func _ray_test(slot: int, origin: Vector3, direction: Vector3, o: Vector2, h: Ve
 	if _t_armored[type] != 0:
 		t = minf(t, _core_ray_distance(slot, origin, direction, max_distance))
 		t = minf(t, _plate_ray_distance(slot, origin, direction, max_distance))
+	elif _t_behavior[type] == HordeEnemyDefinition.Behavior.BOMBER:
+		t = minf(t, _core_ray_distance(slot, origin, direction, max_distance))
 	if t == INF:
 		return candidates
 	if candidates >= _candidate_t.size():
@@ -2070,7 +2116,8 @@ func _cylinder_ray_distance(slot: int, type: int, origin: Vector3, direction: Ve
 	var y_enter := origin.y + direction.y * t
 	var y_exit := origin.y + direction.y * minf(t_exit, max_distance)
 	var base := _y[slot]
-	var top := base + maxf(_height[slot] + hit_headroom * _body[slot], _t_weak_top[type] * _body[slot])
+	var headroom := 0.0 if _t_behavior[type] == HordeEnemyDefinition.Behavior.AMBUSHER else hit_headroom * _body[slot]
+	var top := base + maxf(_height[slot] + headroom, _t_weak_top[type] * _body[slot])
 	if minf(y_enter, y_exit) > top or maxf(y_enter, y_exit) < base:
 		return INF
 	if y_enter > top and direction.y < 0.0:
@@ -2101,19 +2148,23 @@ func sample_positions(out: PackedVector2Array, max_count: int, heights: PackedFl
 
 ## Direct sources must pass the actual muzzle/blade/contact origin, never the
 ## player's current position. Piercing keeps the original origin for every hit.
-func damage_direct(index: int, amount: float, origin: Vector3, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
-	return damage_combined(index, amount, origin, 0.0, knockback, damage_type, critical)
+func damage_direct(index: int, amount: float, origin: Vector3, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false, precision: bool = false, intentional_fire: bool = false) -> bool:
+	return damage_combined(index, amount, origin, 0.0, knockback, damage_type, critical, precision, intentional_fire)
 
 ## One health/event transaction for aggregated direct damage + splash.
 ## Only direct damage sees the plate; status conduction retains its normal radius.
-func damage_combined(index: int, direct_amount: float, origin: Vector3, area_amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false) -> bool:
+func damage_combined(index: int, direct_amount: float, origin: Vector3, area_amount: float, knockback := Vector3.ZERO, damage_type: int = 0, critical: bool = false, precision: bool = false, intentional_fire: bool = false) -> bool:
 	if not is_alive(index):
 		return false
 	var type := _type[index]
+	# Lucky criticals are not geometric backpack hits. This flag is captured by
+	# the caller's actual world-clipped weak-spot ray before any damage callback.
+	if precision and direct_amount > 0.0:
+		_specialists.precision_hit(index)
 	var effect_amount := direct_amount + area_amount
 	if _t_armored[type] != 0 and _source_facing_dot(index, origin) >= _t_front_cos[type]:
 		direct_amount *= _t_front_scale[type]
-	return _damage_effects(index, direct_amount + area_amount, effect_amount, knockback, damage_type, critical)
+	return _damage_effects(index, direct_amount + area_amount, effect_amount, knockback, damage_type, critical, intentional_fire)
 
 func _source_facing_dot(index: int, origin: Vector3) -> float:
 	var offset := Vector2(origin.x, origin.z) - _pos[index]
@@ -2129,7 +2180,7 @@ func damage(index: int, amount: float, knockback := Vector3.ZERO, damage_type: i
 
 ## Status potency derives from the unplated hit. Fire DOT and secondary shock
 ## conduction bypass front plating; only the original direct HP hit is blocked.
-func _damage_effects(index: int, amount: float, effect_amount: float, knockback: Vector3, damage_type: int, critical: bool) -> bool:
+func _damage_effects(index: int, amount: float, effect_amount: float, knockback: Vector3, damage_type: int, critical: bool, intentional_fire: bool = false) -> bool:
 	if not is_alive(index) or amount <= 0.0:
 		return false
 	var at := enemy_position(index)
@@ -2149,6 +2200,8 @@ func _damage_effects(index: int, amount: float, effect_amount: float, knockback:
 	var killed := _deal_damage(index, amount, knockback, damage_type, critical)
 	if damage_type == DamageType.Kind.SHOCK and _generation[index] == generation:
 		_chain_shock(index, at, effect_amount * 0.4, critical)
+	if damage_type == DamageType.Kind.FIRE and _generation[index] == generation:
+		_specialists.fire_hit(index, intentional_fire or _action_depth > 0)
 	return killed
 
 ## Shared health/reward path, deliberately without secondary type effects.
@@ -2173,6 +2226,8 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 	var maximum := _max_hp[index]
 	_flash[index] = 1.0
 	_knock[index] += Vector2(knockback.x, knockback.z) / _mass[index]
+	if _t_behavior[_type[index]] == HordeEnemyDefinition.Behavior.AMBUSHER:
+		_specialists.interrupted(index)
 	var killed := _hp[index] <= 0.0
 	if not killed and _t_boss[_type[index]] == 0 and _daze_used[index] == 0 \
 			and _hp[index] <= _life_hp[index] * DAZE_HEALTH_FRACTION:
@@ -2357,6 +2412,7 @@ func _begin_death(slot: int) -> void:
 	var at := _big.find(slot)
 	if at >= 0:
 		_big.remove_at(at)
+	_specialists.died(slot)
 
 ## Cached physical dimensions are also the rendered grow-in dimensions.
 func _set_body(slot: int, factor: float) -> void:
@@ -2585,6 +2641,7 @@ func _recycle(slot: int) -> void:
 # ---------------------------------------------------------------- simulation
 
 func _physics_process(delta: float) -> void:
+	_specialists.begin_frame()
 	_update_burns(delta)
 	_rebuild_grid()
 	_update_fusions(delta)
@@ -2673,20 +2730,26 @@ func _physics_process(delta: float) -> void:
 				# would shove bodies off the route into cliffs and stall the climb.
 				var flank := absf(rise) <= LEVEL_GAP and _cell_flat[_cell_of[i]] != 0 and absf(_y[i] - player_y) <= LEVEL_GAP
 				move = _steer(i, type, route, direction, distance, delta, flank) * _buff_speed(i)
+			if not is_alive(i):
+				continue
 			if _mode[i] == Mode.CHARGE or _mode[i] == Mode.WINDUP or _mode[i] == Mode.RECOVER:
 				face = _aim[i]
 			var touching := distance < reach + 0.15 and rise < _height[i] and rise > -1.9
 			if touching and _mode[i] != Mode.RECOVER:
 				contact += _t_contact[type] * _buff_damage(i) * (minf(2.0, 1.0 + float(_members[i] - 1) * 0.15) if _members[i] > 1 else 1.0)
 				if _mode[i] == Mode.CHARGE and not (i == _boss_index and _boss_controlled):
-					target.take_damage(ceili(_t_contact[type] * 2.0))
-					_end_charge(i, type)
+					if not _specialists.contact_bomber(i) and _t_behavior[type] != HordeEnemyDefinition.Behavior.AMBUSHER:
+						target.take_damage(ceili(_t_contact[type] * 2.0))
+						_end_charge(i, type)
 			if distance < reach and _mode[i] != Mode.CHARGE:
 				move = Vector2.ZERO
 		if _slow_time[i] > 0.0:
 			_slow_time[i] -= delta
 			move *= _slow[i]
-		var separation := Vector2.ZERO if dazed else _separation(i, p, radius)
+		var pinned := _specialists.holds_ceiling(i) or (_t_behavior[type] == HordeEnemyDefinition.Behavior.BOMBER and _mode[i] == Mode.WINDUP)
+		var separation := Vector2.ZERO if dazed or pinned else _separation(i, p, radius)
+		if _specialists.holds_ceiling(i):
+			continue
 		p += (move + _knock[i]) * delta + separation
 		var launched := _launch_time[i] > 0.0
 		_knock[i] -= _knock[i] * (minf(1.0, LAUNCH_DECAY * delta) if launched else knock_decay)
@@ -2712,13 +2775,14 @@ func _physics_process(delta: float) -> void:
 						if bottom >= feet + _height[i] - 0.02 and next_y + _height[i] > bottom:
 							next_y = maxf(feet, bottom - _height[i])
 							_vy[i] = 0.0
-				_y[i] = next_y
+				_y[i] = _specialists.constrain_vertical(i, clamped, next_y) if _specialists.is_specialist(i) else next_y
 			else:
 				_y[i] = _step_ground
 				_vy[i] = 0.0
 		if launched:
 			_track_launch(i, p, clamped, delta)
-		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p):
+		_specialists.after_move(i, p, clamped)
+		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p) and not _specialists.is_specialist(i):
 			_end_charge(i, type)
 		_pos[i] = clamped
 		if chasing and _t_behavior[type] == HordeEnemyDefinition.Behavior.BOUNCER:
@@ -2732,6 +2796,7 @@ func _physics_process(delta: float) -> void:
 	_resolve_impacts()
 	_update_dying(delta)
 	_update_projectiles(delta)
+	_specialists.update(delta)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
 	if chasing and contact > 0.0 and _contact_timer <= 0.0:
 		_contact_timer = contact_tick
@@ -2759,6 +2824,8 @@ func _walkable(i: int, from: Vector2, to: Vector2) -> Vector2:
 func _steer(i: int, type: int, route: Vector2, direct: Vector2, distance: float, delta: float, flank: bool = false) -> Vector2:
 	var definition := _defs[type]
 	var behavior := _t_behavior[type]
+	if behavior >= HordeEnemyDefinition.Behavior.BOMBER:
+		return _specialists.steer(i, route, direct, distance, delta)
 	# Hype quickens every committed attack cycle, never health.
 	_cooldown[i] = maxf(0.0, _cooldown[i] - delta * (HYPE_COOLDOWN_SCALE if _buff_time[i] > 0.0 else 1.0))
 	match _mode[i]:
@@ -2882,7 +2949,11 @@ func _sweep_move(i: int, to: Vector2) -> Vector2:
 	var step := (to - from) / float(steps)
 	var p := from
 	for n in steps:
-		p = _walkable(i, p, _constrain(p + step, _radius[i], _y[i]))
+		var headroom := _height[i] if _specialists.is_specialist(i) else 2.2
+		var candidate := _walkable(i, p, _constrain(p + step, _radius[i], _y[i], headroom))
+		if _specialists.is_specialist(i) and not _specialists.body_path_clear(i, p, candidate):
+			break
+		p = candidate
 	return p
 
 func _separation(i: int, p: Vector2, radius: float) -> Vector2:
@@ -2922,7 +2993,7 @@ func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 						return (push * SEPARATION).limit_length(0.25)
 	return (push * SEPARATION).limit_length(0.25)
 
-func _constrain(p: Vector2, radius: float, feet: float = NAN) -> Vector2:
+func _constrain(p: Vector2, radius: float, feet: float = NAN, headroom: float = 2.2) -> Vector2:
 	p.x = clampf(p.x, _area.position.x + radius, _area.end.x - radius)
 	p.y = clampf(p.y, _area.position.y + radius, _area.end.y - radius)
 	var cell := _cell_z(p.y) * _grid_w + _cell_x(p.x)
@@ -2930,7 +3001,7 @@ func _constrain(p: Vector2, radius: float, feet: float = NAN) -> Vector2:
 		feet = ground_height(p)
 	for k in range(_cell_obstacle_start[cell], _cell_obstacle_start[cell + 1]):
 		var o := _cell_obstacle_items[k]
-		if not _obstacle_overlaps_height(o, feet, 2.2, p):
+		if not _obstacle_overlaps_height(o, feet, headroom, p):
 			continue
 		var center := _obstacle_center[o]
 		var half := _obstacle_half[o]
@@ -2981,6 +3052,10 @@ func _update_dying(delta: float) -> void:
 	var n := 0
 	for d in _dying_count:
 		var slot := _dying[d]
+		if _specialists.advance_corpse(slot, delta):
+			_dying[n] = slot
+			n += 1
+			continue
 		_death[slot] -= delta
 		if _death[slot] > 0.0:
 			var motion := _pos[slot] + _knock[slot] * delta
@@ -3178,6 +3253,7 @@ func _process(delta: float) -> void:
 	for type in _defs.size():
 		_draw_type(type, delta, player)
 	_draw_projectiles()
+	_specialists.draw()
 
 func _draw_type(type: int, delta: float, player: Vector2) -> void:
 	var renderer := _renderers[type]
@@ -3216,6 +3292,10 @@ func _draw_type(type: int, delta: float, player: Vector2) -> void:
 	for d in _dying_count:
 		var slot := _dying[d]
 		if _type[slot] != type:
+			continue
+		if _specialists.is_corpse_bomb(slot):
+			var corpse_scale := scale * _body[slot]
+			k = _write_instance(buffer, k, slot, corpse_scale, corpse_scale, 0.4, stride)
 			continue
 		var left := _death[slot] / duration
 		var death_scale := scale * _body[slot]
@@ -3314,7 +3394,7 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	var p := _pos[slot]
 	var telegraph := 0.0
 	if _mode[slot] == Mode.WINDUP and _state[slot] == ALIVE:
-		var duration := _defs[_type[slot]].telegraph_duration
+		var duration := _specialists.telegraph_duration(slot)
 		telegraph = clampf(1.0 - _timer[slot] / maxf(0.001, duration), 0.01, 1.0)
 	elif _mode[slot] == Mode.CHARGE and _state[slot] == ALIVE:
 		telegraph = 1.0

@@ -136,6 +136,8 @@ var _combo_tween: Tween
 var gear_hud: GearHUD
 var _gear_status: Label
 var _gear_prompt: Label
+var _enemy_callout: Label
+var _enemy_callout_left := 0.0
 
 func _build_gear_overlay() -> void:
 	gear_hud = GearHUD.new()
@@ -191,6 +193,7 @@ func _ready() -> void:
 	_build_abilities()
 	_build_combo_callout()
 	_build_gear_overlay()
+	_build_enemy_callout()
 	var music_layers := MusicLayers.new()
 	music_layers.name = "MusicLayers"
 	add_child(music_layers)
@@ -226,6 +229,34 @@ func _layout_combat() -> void:
 func show_action(label: String) -> void:
 	if not feedback.terminal:
 		feedback.show_action(label)
+
+func _build_enemy_callout() -> void:
+	_enemy_callout = _label("", 16, Color(0.93, 0.84, 0.64))
+	_enemy_callout.name = "EnemyCallout"
+	_enemy_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_enemy_callout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_enemy_callout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_enemy_callout.set_anchors_preset(Control.PRESET_CENTER)
+	_enemy_callout.offset_left = -270.0
+	_enemy_callout.offset_right = 270.0
+	_enemy_callout.offset_top = -116.0
+	_enemy_callout.offset_bottom = -52.0
+	_enemy_callout.add_theme_color_override(&"font_outline_color", Color(0.02, 0.025, 0.02))
+	_enemy_callout.add_theme_constant_override(&"outline_size", 4)
+	_enemy_callout.hide()
+	add_child(_enemy_callout)
+
+## Separate threat caption: never replace the score/combo label or aim reticle.
+func show_enemy_callout(enemy_name: String, text: String, quote: String, color: Color) -> void:
+	if feedback.terminal:
+		return
+	var heading := text if enemy_name.is_empty() or enemy_name.to_upper() == text else "%s · %s" % [enemy_name.to_upper(), text]
+	_enemy_callout.text = heading if quote.is_empty() or quote.to_upper() == text else "%s\n%s" % [heading, quote]
+	_enemy_callout.add_theme_color_override(&"font_color", color.lightened(0.25))
+	_enemy_callout_left = 2.8
+	_enemy_callout.modulate.a = 1.0
+	_enemy_callout.show()
+
 func _build_combo_callout() -> void:
 	_combo_callout = Label.new()
 	_combo_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -367,7 +398,8 @@ func _refresh_abilities() -> void:
 		var skills := "1 TRIK" if unlocked_count <= 1 else "1–%d TRIKY" % unlocked_count
 		controls_label.text = "WASD · SPACE 2× SKOK · CTRL SLIDE · LMB ÚTOK · RMB KOP/PARRY · Q SWAP · F ROZBIJ/DORAZIT · %s · TAB ZBRANĚ V PAUZE · G VÝBAVA · ESC" % skills
 
-func show_stage(stage: StageDefinition, index: int, total: int) -> void:
+## `round_number` counts levels played this run; `setup` names preset and tier.
+func show_stage(stage: StageDefinition, round_number: int, setup: String) -> void:
 	death.hide()
 	boss_panel.hide()
 	warning.hide()
@@ -375,12 +407,14 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	boss_cue.hide()
 	arena_round_box.show()
 	_last_health = 0
-	_stage_name = "OKRUH %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
-	sector_label.text = "%02d / %02d   %s" % [index + 1, total, stage.display_name.to_upper()]
-	subtitle_label.text = stage.subtitle
+	_stage_name = "KOLO %d  ·  %s" % [round_number, stage.display_name.to_upper()]
+	sector_label.text = "KOLO %d   %s" % [round_number, stage.display_name.to_upper()]
+	subtitle_label.text = "%s\n%s" % [stage.subtitle, setup]
 	arena_panel.hide()
 	feedback.reset()
 	_reset_notices()
+	_enemy_callout_left = 0.0
+	_enemy_callout.hide()
 
 ## Score attack ledger: build once per arena, refresh only changed text.
 func setup_arena(seed_value: int) -> void:
@@ -438,6 +472,8 @@ func set_arena_progress(director: HordeDirector, operator: ArenaPlayer) -> void:
 		"PEAK": _arena_phase.text = "TRYHARD · ROZPRAŠ JE NA PRACH"
 		"CLEANUP": _arena_phase.text = "DOHRA · DORAZ ŽIVÉ HALUCINACE"
 		"RECOVERY": _arena_phase.text = "NÁDECH · GROOVE ZŮSTÁVÁ"
+		"BOSS_PENDING": _arena_phase.text = "FINÁLE · UDRŽ VOLNÝ NÁSTUP PRO BOSSE"
+		"BOSS": _arena_phase.text = "FINÁLE · PORAZ BOSSE"
 		"CLEAR": _arena_phase.text = "SET HOTOVÝ · ODMĚNA"
 
 ## Guarded cabinets are optional authored combat events, never arena goals.
@@ -647,6 +683,8 @@ func _advance_notices(delta: float) -> void:
 func finish_run(level: int, kills: int, score: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
 	feedback.terminal = true
 	_reset_notices()
+	_enemy_callout_left = 0.0
+	_enemy_callout.hide()
 	boss_panel.hide()
 	warning.hide()
 	arena_round_box.hide()
@@ -658,7 +696,7 @@ func finish_run(level: int, kills: int, score: int, seconds: float, stages_clear
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(score), "SKÓRE · ÚR %d" % level))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"kills"), str(kills), "ROZPRÁŠENO"))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"timer"), "%d:%02d" % [whole / 60, whole % 60], "ČAS NA NOHOU"))
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "HOTOVÉ OKRUHY"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "VYČIŠTĚNÁ KOLA"))
 	for child in death_banked.get_children():
 		child.queue_free()
 	for definition in _definitions:
@@ -686,6 +724,11 @@ func finish_run(level: int, kills: int, score: int, seconds: float, stages_clear
 func _process(delta: float) -> void:
 	_time += delta
 	_advance_notices(delta)
+	if _enemy_callout_left > 0.0 and not get_tree().paused:
+		_enemy_callout_left = maxf(0.0, _enemy_callout_left - delta)
+		_enemy_callout.modulate.a = minf(1.0, _enemy_callout_left / 0.35)
+		if _enemy_callout_left <= 0.0:
+			_enemy_callout.hide()
 	# Low health: the bar, heart and vitals border pulse red.
 	var low := _health_fraction <= LOW_HEALTH_FRACTION and _last_health > 0
 	var pulse := 0.5 + 0.5 * sin(_time * 7.0)

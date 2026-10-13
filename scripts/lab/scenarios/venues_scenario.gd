@@ -351,6 +351,10 @@ func _shops() -> void:
 		game.hud.visible = true
 		Profile.add_currency(&"gold", 120)
 		Profile.add_currency(&"crystal", 40)
+		# Isolated earned-clear fixture for venue presentation.
+		game.director.boss_defeated = true
+		game.director.finished = true
+		game._stage_clear_pending = true
 		game._finish_stage_clear()
 		await lab.wait(0.5)
 		var screen := game.round_shop
@@ -359,13 +363,16 @@ func _shops() -> void:
 		await lab.capture("shop_%s_%s" % [STAGE_IDS[stage], venue.id])
 	# Every venue's header and tagline must fit the shop layout.
 	var last := await _fresh_game(0, SEED)
+	last.director.boss_defeated = true
+	last.director.finished = true
+	last._stage_clear_pending = true
 	last._finish_stage_clear()
 	await lab.wait(0.3)
 	var screen := last.round_shop
 	var all_fit := true
 	var longest := ""
 	for venue in catalog.venues:
-		screen.open(last.run_state, 0, false, "Souhrn", venue)
+		screen.open(last.run_state, 0, &"scout", "Souhrn", venue, last.campaign, 0, last.run_config)
 		await lab.frames(2)
 		var fits := _header_fits(screen)
 		all_fit = all_fit and fits

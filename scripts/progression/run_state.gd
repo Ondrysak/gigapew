@@ -231,6 +231,11 @@ func upgrade_ability(slot: int) -> bool:
 	ability_ranks[slot] += 1
 	return true
 
+## Permanent shop ranks at run start; ignores guided locks, keeps the cap.
+func grant_ability_ranks(ranks: Array) -> void:
+	for slot in mini(ranks.size(), ability_ranks.size()):
+		ability_ranks[slot] = clampi(maxi(ability_ranks[slot], int(ranks[slot])), 0, MAX_ABILITY_RANK)
+
 ## Read scene presentation once without putting an effect in the live tree.
 func ability_metadata(slot: int) -> Dictionary:
 	if slot < 0 or slot >= 5 or slot >= ability_scenes.size() or ability_scenes[slot] == null:
@@ -287,7 +292,7 @@ func ability_upgrade_offer(slot: int) -> UpgradeDefinition:
 	offer.description = "%s\n%s" % [metadata.description, metadata.mastery_effect]
 	return offer
 
-## Round-shop boosts are run-local and survive stage changes.
+## Round-shop boosts; permanent purchases are re-applied at every run start.
 func can_buy_shop_stat(id: StringName) -> bool:
 	return id in [&"armor", &"health", &"power"] and int(shop_levels.get(id, 0)) < 5
 

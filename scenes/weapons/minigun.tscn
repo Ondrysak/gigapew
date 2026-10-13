@@ -21,6 +21,7 @@ size = Vector3(0.05, 0.16, 0.006)
 
 [node name="Minigun" type="Node3D" node_paths=PackedStringArray("muzzle", "spinner", "projectile_template")]
 script = ExtResource("1_view")
+flourish = 2
 kinetic_keeps_colors = true
 muzzle = NodePath("Model/minigun/Muzzle")
 impact_material = SubResource("Mat_splat")

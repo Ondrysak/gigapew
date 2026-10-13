@@ -27,6 +27,29 @@ unchanged. These derivatives inherit the pack's unverified terms below.
 
 The supplied PROTOKSEED folder contained no licence/readme. **Redistribution permission is unverified; these samples are not CC0 or claimed royalty-free.** Confirm the pack's terms before publishing the new sample-backed source/assets or release binaries. The pushed `v0.6.0` precedes this soundtrack integration.
 
+**Techno samples:** `assets/audio/techno/*.wav` contains 56 complete conversions
+from the user's locally purchased **TECHNO_ESS** folder: seven bass loops, five
+synth loops, five arp loops, three atmosphere loops, twelve no-kick drum grooves,
+and eight each of kick, clap and hat hits. The pitched loops form matched C minor,
+Eb minor and Gb minor pools at 125 BPM. `tools/techno_samples.py` converts whole
+stereo PCM24/44100 recordings to antialiased mono PCM16/22050, with DC removal,
+peak ceilings and 1 ms edges. The generated `catalog.gd` preserves source paths,
+SHA256 hashes, roles, labelled roots, exact loop grids and explicit export
+dependencies. The converted bank holds 9,544,656 PCM bytes; originals are
+unchanged. No licence/readme was found in this folder. **Purchase was reported
+by the user, but redistribution permission is unverified; these samples are
+not CC0 or claimed royalty-free.** Confirm the pack's terms before publishing
+source/assets or release binaries containing them.
+
+**Kára callouts:** `assets/audio/kara/*.mp3` are the 33 MP3s indexed on
+https://www.jirikara.cz/ that downloaded successfully, stored as the original HTTP
+response bytes with no trimming, normalisation or transcoding. `tools/kara_samples.py`
+fetched them; `assets/audio/kara/catalog.json` records source URLs, retrieval times,
+SHA256 hashes and the three indexed slugs that returned HTTP 404 (`vychodni_tazeni`,
+`posledni_varovani`, `grc`). The user authorised their reuse, but no
+redistribution licence was found on the inspected pages. **These clips are not
+CC0; confirm rights before publishing.**
+
 ## Engine and bundled libraries
 
 Kakaboomboom runs on **Godot Engine 4.7.2**, distributed under the MIT license.

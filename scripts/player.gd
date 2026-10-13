@@ -106,6 +106,8 @@ var drop_charge := 0.0
 var drop_ready: bool:
 	get:
 		return drop_charge >= 1.0
+## Run-config multiplier on every hit the player takes, applied before armor.
+var incoming_damage_scale := 1.0
 var last_drop_used := false
 var _arena_recovery := false
 var _action_charge_allowed := true
@@ -177,6 +179,9 @@ var _rng := RandomNumberGenerator.new()
 var _view: WeaponView
 var _weapon_id: StringName = &""
 var _directions := PackedVector3Array()
+## Actual clipped FIRE pellet segments, retained until primary kills are captured.
+var _fuel_directions := PackedVector3Array()
+var _fuel_reaches := PackedFloat32Array()
 var _view_scene: PackedScene
 var _query: PhysicsRayQueryParameters3D
 var _hits := PackedInt32Array()
@@ -247,6 +252,8 @@ func _ready() -> void:
 	if horde != null:
 		horde.action_killed.connect(_on_action_killed)
 	_directions.resize(WeaponBuild.MAX_PROJECTILES)
+	_fuel_directions.resize(WeaponBuild.MAX_PROJECTILES)
+	_fuel_reaches.resize(WeaponBuild.MAX_PROJECTILES)
 	refresh_weapon()
 	gear_effects = GearEffects.new()
 	add_child(gear_effects)
@@ -467,7 +474,7 @@ func _process(delta: float) -> void:
 	if _view != null:
 		_view.visible = active and not mining and not is_finishing()
 		_view.set_sliding(is_sliding() and active)
-		_view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), is_on_floor(), active)
+		_view.animate_motion(delta, speed_ratio, velocity.dot(global_basis.x), velocity.y, is_on_floor(), active)
 		_view.set_spin(_spin if active and not mining and not is_finishing() else 0.0)
 	_kick_view.set_sliding(is_sliding() and active and not mining and not is_finishing())
 	_slide_visual = lerpf(_slide_visual, 1.0 if is_sliding() and active else 0.0, 1.0 - exp(-14.0 * delta))
@@ -973,6 +980,8 @@ func _shoot(manual_trigger: bool = true) -> void:
 	var longshot: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_longshot", 0)) > 0
 	var executioner: bool = run_state != null and int(run_state.upgrade_levels.get(&"mod_executioner", 0)) > 0
 	view.begin_shot(sound)
+	if last_drop_used:
+		view.drop_flourish()
 	shot_fired.emit()
 	if definition.screen_shake > 0.0:
 		add_shake(definition.screen_shake)
@@ -991,6 +1000,7 @@ func _shoot(manual_trigger: bool = true) -> void:
 	var space := get_world_3d().direct_space_state
 	var directions := _directions
 	var explosive := definition.explosion_radius > 0.0
+	var fire_fuel := definition.damage_type == DamageType.Kind.FIRE
 	var blast_center := Vector3.INF
 	var critical_at := Vector3.INF
 	var rail := id == &"rail"
@@ -1053,6 +1063,9 @@ func _shoot(manual_trigger: bool = true) -> void:
 		# The trace ends at the last enemy it stopped in, else at the wall.
 		var stopped := hits > pierce
 		var end := origin + direction * (_distances[hits - 1] if stopped else reach)
+		if fire_fuel:
+			_fuel_directions[pellet] = direction
+			_fuel_reaches[pellet] = origin.distance_to(end)
 		if not stopped and not wall.is_empty():
 			var collider: Object = wall["collider"]
 			# Shootable world objects (explosive barrels, switches) take the full shot.
@@ -1089,12 +1102,19 @@ func _shoot(manual_trigger: bool = true) -> void:
 				horde.stun(slot, 0.6)
 		_hit_applied[n] = 1
 		var members := horde.fusion_members(slot)
-		_hit_killed[n] = members if horde.damage_combined(slot, _hit_direct_damage[n], origin, _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0) else 0
+		_hit_killed[n] = members if horde.damage_combined(slot, _hit_direct_damage[n], origin, _hit_damage[n], _hit_push[n], definition.damage_type, _hit_critical[n] != 0, _hit_precision[n] != 0, fire_fuel) else 0
 	if horde != null and blast_center != Vector3.INF:
 		horde.blast_react(blast_center, blast_radius, definition.explosion_knockback * (2.5 if last_drop_used else 1.0))
 	if horde != null and last_drop_used and id == &"scatter":
 		horde.blast_react(origin + forward * 3.0, 3.0, 26.0)
 	var kills := _score_primary_kills(id, perfect, airborne, sliding, rail)
+	if fire_fuel and horde != null:
+		# Bare-floor fuel is a real target even with no enemy hit. Resolve after
+		# primary capture so ignition victims cannot become duplicate gun kills.
+		for pellet in pellet_count:
+			horde.ignite_fuel_ray(origin, _fuel_directions[pellet], _fuel_reaches[pellet])
+		if blast_center != Vector3.INF:
+			horde.ignite_fuel_radius(blast_center, blast_radius)
 	if air_mail:
 		_feedback("AIR MAIL")
 	# Combos read flags captured before this shot's damage and run once per
@@ -1245,7 +1265,8 @@ func take_damage(amount: int) -> void:
 	if not active or amount <= 0 or is_invulnerable():
 		return
 	var armor := run_state.armor if run_state != null else 0.0
-	var incoming := maxi(1, amount - int(armor))
+	var scaled := maxi(1, roundi(amount * incoming_damage_scale))
+	var incoming := maxi(1, scaled - int(armor))
 	if gear_effects != null:
 		incoming = gear_effects.absorb_damage(incoming)
 	if incoming > 0:

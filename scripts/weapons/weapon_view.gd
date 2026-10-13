@@ -1,6 +1,9 @@
 class_name WeaponView
 extends Node3D
 
+## Visual-only flourish families. Firing, aim and timing never wait on them.
+enum Flourish { TWIRL, RACK, HEAVE, SNAP, SHAKE }
+
 # Scene-assigned references keep the actor independent of model hierarchy.
 @export var muzzle: Node3D
 @export var flash: GeometryInstance3D
@@ -105,6 +108,19 @@ extends Node3D
 @export var pilot_flame: Node3D
 @export var pilot_flicker := 0.2
 
+@export_group("Flourish")
+## TWIRL tosses the gun out of the hand and catches it, RACK cants and racks,
+## HEAVE lifts heavy metal with a settling bounce, SNAP swings in and locks to
+## the shoulder, SHAKE fizzes a hand-held bottle.
+@export var flourish := Flourish.TWIRL
+## Draw played whenever the gun appears: swap, round start, after F or salvage.
+@export var draw_duration := 0.5
+## Seconds standing still on the ground before an automatic inspect.
+@export var inspect_delay := 6.0
+@export var inspect_duration := 2.6
+## Showpiece played after a DROP shot's recoil.
+@export var drop_flourish_duration := 0.7
+
 @export_group("Casings")
 ## Spent casings pooled per view; 0 ejects none (e.g. flame weapons).
 @export var casing_pool_size := 6
@@ -187,6 +203,30 @@ var _projectile_duration := PackedFloat32Array()
 var _projectile_next := 0
 var _projectile_wings: Array[Node3D] = []
 var _pilot_time := 0.0
+# Flourish state. Progress values run 0..1; 1 means settled.
+var _pivot := Vector3(0.0, 0.0, -0.25)
+var _shown := false
+var _draw := 1.0
+var _drop := 1.0
+var _idle := 0.0
+var _inspect := 0.0
+var _inspecting := false
+var _inspect_weight := 0.0
+var _air_lift := 0.0
+var _air_pitch := 0.0
+## 0..1 style accent pulse; drives barrel spin and pilot flare extras.
+var _accent := 0.0
+var _flourish_offset := Vector3.ZERO
+var _flourish_angle := Vector3.ZERO
+# Toss: gun-only spin about its middle; the hand chain is counter-moved.
+var _toss_angle := Vector3.ZERO
+var _toss_lift := 0.0
+var _hand_catch := 0.0
+var _hand: Node3D
+var _hand_rest := Transform3D.IDENTITY
+## Hand parent's frame relative to this view, captured at rest.
+var _hand_frame := Transform3D.IDENTITY
+var _hand_tossed := false
 
 func _ready() -> void:
 	_rest = position
@@ -200,6 +240,13 @@ func _ready() -> void:
 	var ejection := find_child("Eject", true, false) as Node3D
 	if ejection != null:
 		casing_port = to_local(ejection.global_position)
+	if muzzle != null:
+		# Tosses spin about the gun's middle so the muzzle never sweeps the lens.
+		_pivot = to_local(muzzle.global_position) * 0.5
+	_hand = find_child("Hand", true, false) as Node3D
+	if _hand != null:
+		_hand_rest = _hand.transform
+		_hand_frame = global_transform.affine_inverse() * (_hand.get_parent() as Node3D).global_transform
 	if flash != null:
 		_flash_basis = flash.basis
 		_flash_shot_basis = _flash_basis
@@ -443,6 +490,16 @@ func land(falling_speed: float) -> void:
 ## The free limb takes the frame: lower and roll the gun out of the way.
 func brace(amount: float) -> void:
 	_brace = maxf(_brace, clampf(amount, 0.0, 1.0))
+	_interrupt_inspect()
+
+## DROP shot showpiece on top of its recoil; purely visual.
+func drop_flourish() -> void:
+	_drop = 0.0
+	_interrupt_inspect()
+
+func _interrupt_inspect() -> void:
+	_inspecting = false
+	_idle = 0.0
 
 ## Called every render frame; repeating the state never restarts the blend.
 func set_sliding(enabled: bool) -> void:
@@ -462,7 +519,7 @@ func set_spin(ratio: float) -> void:
 	if not _spin_audio.playing:
 		_spin_audio.play()
 
-func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool) -> void:
+func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, vertical_speed: float, grounded: bool, active: bool) -> void:
 	if get_tree().paused:
 		return
 	var blend := 1.0 - exp(-18.0 * delta)
@@ -473,13 +530,16 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 	_slide_blend = move_toward(_slide_blend, 1.0 if _sliding else 0.0, delta * 6.0)
 	if active and grounded:
 		_stride += delta * 12.0 * speed_ratio
+	_step_flourish(delta, speed_ratio, vertical_speed, grounded, active)
 	var slide := _slide_blend * _slide_blend * (3.0 - 2.0 * _slide_blend)
 	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio * (1.0 - slide)
 	# A spinning gun hums with a slight shake.
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
 	var duck := _brace * _brace * (3.0 - 2.0 * _brace)
-	position = _rest + bob + buzz + Vector3(-_sway.x + duck * 0.05 + slide * 0.075, _sway.y - _landing_dip - duck * 0.13 - slide * 0.095, duck * 0.04 - slide * 0.035) + _kick_offset
-	rotation = _rest_rotation + Vector3(_kick_angle.x - duck * 0.35 - slide * 0.16, _kick_angle.y + slide * 0.1, _kick_angle.z - lateral_speed * 0.002 - duck * 0.45 - slide * 0.32)
+	position = _rest + bob + buzz + Vector3(-_sway.x + duck * 0.05 + slide * 0.075, _sway.y - _landing_dip - duck * 0.13 - slide * 0.095, duck * 0.04 - slide * 0.035) + _kick_offset + _flourish_offset
+	# Body flourishes turn about the grip (the view origin), like a wrist.
+	rotation = _rest_rotation + Vector3(_kick_angle.x - duck * 0.35 - slide * 0.16, _kick_angle.y + slide * 0.1, _kick_angle.z - lateral_speed * 0.002 - duck * 0.45 - slide * 0.32) + _flourish_angle
+	_apply_toss()
 	if _pump != null:
 		_pump_cycle = maxf(0.0, _pump_cycle - delta)
 		_pump.position = _pump_rest + Vector3.BACK * (sin(_pump_cycle / 0.26 * PI) * 0.07)
@@ -487,6 +547,205 @@ func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grou
 		_casing_root.transform = transform.affine_inverse()
 	if not active:
 		_flash_time = 0.0
+
+## A toss spins the gun about its middle while the hand stays put to catch it.
+func _apply_toss() -> void:
+	if _toss_angle == Vector3.ZERO and _toss_lift == 0.0:
+		if _hand_tossed:
+			_hand.transform = _hand_rest
+			_hand_tossed = false
+		return
+	var spin := Basis.from_euler(_toss_angle)
+	var toss := Transform3D(spin, _pivot - spin * _pivot + Vector3.UP * _toss_lift)
+	transform = transform * toss
+	if _hand != null:
+		# Undo the toss for the hand's own chain; it only dips to make the catch.
+		var catch := Transform3D(Basis.IDENTITY, Vector3.UP * _hand_catch)
+		_hand.transform = _hand_frame.affine_inverse() * catch * toss.affine_inverse() * _hand_frame * _hand_rest
+		_hand_tossed = true
+
+## Draw on every appearance, idle inspect, DROP showpiece and airborne float.
+## All of it is view-space presentation; the shot ray uses the head basis.
+func _step_flourish(delta: float, speed_ratio: float, vertical_speed: float, grounded: bool, active: bool) -> void:
+	if visible and not _shown:
+		_draw = 0.0
+		_interrupt_inspect()
+	elif not visible and _shown:
+		_interrupt_inspect()
+		_drop = 1.0
+		_inspect_weight = 0.0
+	_shown = visible
+	var draw_before := _draw
+	_draw = minf(1.0, _draw + delta / maxf(draw_duration, 0.01))
+	_drop = minf(1.0, _drop + delta / maxf(drop_flourish_duration, 0.01))
+	if flourish == Flourish.RACK and draw_before < 0.55 and _draw >= 0.55:
+		_pump_cycle = 0.26
+	var airborne := active and not grounded
+	var air_blend := 1.0 - exp(-10.0 * delta)
+	# Rising drags the muzzle down; falling lets the gun float up.
+	_air_lift = lerpf(_air_lift, clampf(-vertical_speed * 0.0035, -0.035, 0.045) if airborne else 0.0, air_blend)
+	_air_pitch = lerpf(_air_pitch, clampf(-vertical_speed * 0.012, -0.14, 0.14) if airborne else 0.0, air_blend)
+	var calm := visible and active and grounded and not _sliding and _brace <= 0.0 and _draw >= 1.0 and _drop >= 1.0
+	if _inspecting:
+		var inspect_before := _inspect
+		_inspect += delta / maxf(inspect_duration, 0.01)
+		if flourish == Flourish.RACK and inspect_before < 0.5 and _inspect >= 0.5:
+			_pump_cycle = 0.26
+		if _inspect >= 1.0:
+			_inspecting = false
+			# A finished inspect waits a little longer before repeating.
+			_idle = -inspect_delay
+		elif not calm:
+			_interrupt_inspect()
+	elif calm and speed_ratio < 0.15:
+		_idle += delta
+		if _idle >= inspect_delay:
+			_inspecting = true
+			_inspect = 0.0
+			_inspect_weight = 1.0
+	elif not calm or speed_ratio >= 0.15:
+		_idle = minf(_idle, 0.0)
+	if not _inspecting:
+		_inspect_weight = move_toward(_inspect_weight, 0.0, delta * 7.0)
+	_flourish_offset = Vector3(0.0, _air_lift, 0.0)
+	_flourish_angle = Vector3(_air_pitch, 0.0, 0.0)
+	_toss_angle = Vector3.ZERO
+	_toss_lift = 0.0
+	_hand_catch = 0.0
+	_accent = 0.0
+	if _draw < 1.0:
+		_pose_draw(_draw)
+	if _inspect_weight > 0.0:
+		_pose_inspect(clampf(_inspect, 0.0, 1.0), _inspect_weight)
+	if _drop < 1.0:
+		_pose_drop(_drop)
+
+static func _smooth(x: float) -> float:
+	x = clampf(x, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+## Ease-out with a slight overshoot past 1 before settling.
+static func _back(x: float) -> float:
+	var y := clampf(x, 0.0, 1.0) - 1.0
+	return 1.0 + 2.70158 * y * y * y + 1.70158 * y * y
+
+static func _out(x: float, power: float) -> float:
+	return 1.0 - pow(1.0 - clampf(x, 0.0, 1.0), power)
+
+func _pose_draw(t: float) -> void:
+	match flourish:
+		Flourish.TWIRL:
+			# The hand comes up empty-ish while the gun spins once above it.
+			var low := 1.0 - _back(t * 1.25)
+			_flourish_offset += Vector3(0.04, -0.2, 0.0) * low
+			_flourish_angle += Vector3(-0.4 * low, 0.0, 0.2 * low)
+			_toss_angle.y = TAU * _out(t, 2.2)
+			_toss_lift = 0.09 * sin(t * PI)
+			_hand_catch = -0.02 * sin(t * PI)
+			_accent = maxf(_accent, sin(t * PI))
+		Flourish.RACK:
+			# Comes up canted, then a hard rack snaps it level.
+			var low := 1.0 - _back(t / 0.55)
+			_flourish_offset += Vector3(0.06 * low, -0.2 * low, 0.0)
+			_flourish_angle += Vector3(-0.55 * low, 0.0, 0.6 * low)
+			if t > 0.55:
+				var s := (t - 0.55) / 0.45
+				var jerk := sin(minf(s * 1.8, 1.0) * PI)
+				_flourish_offset.z += 0.05 * jerk
+				_flourish_angle += Vector3(0.12 * jerk, 0.0, 0.4 * sin(s * PI))
+				_accent = maxf(_accent, jerk)
+		Flourish.HEAVE:
+			# Heavy metal hauled up nose-first, landing with a settling bounce.
+			var low := 1.0 - _out(t / 0.7, 3.0)
+			_flourish_offset += Vector3(0.05, -0.26, 0.04) * low
+			_flourish_angle += Vector3(0.3, -0.25, -0.35) * low
+			if t > 0.6:
+				var s := (t - 0.6) / 0.4
+				var settle := sin(s * TAU) * (1.0 - s)
+				_flourish_offset.y -= 0.025 * settle
+				_flourish_angle.x -= 0.08 * settle
+				_accent = maxf(_accent, 1.0 - s)
+		Flourish.SNAP:
+			# Swings in from the right and locks to the shoulder with a hum.
+			var away := 1.0 - _out(t / 0.6, 4.0)
+			_flourish_offset += Vector3(0.22, -0.08, 0.05) * away
+			_flourish_angle += Vector3(0.1, -0.6, -0.5) * away
+			if t > 0.6:
+				var s := (t - 0.6) / 0.4
+				var hum := sin(s * PI * 7.0) * (1.0 - s) * (1.0 - s)
+				_flourish_offset.x += 0.006 * hum
+				_flourish_angle.z += 0.05 * hum
+				_accent = maxf(_accent, 1.0 - s)
+		Flourish.SHAKE:
+			# Bottle cocked back at the hip, swung up, then a quick fizz shake.
+			var low := 1.0 - _back(t / 0.65)
+			_flourish_offset += Vector3(0.03, -0.2, 0.02) * low
+			_flourish_angle += Vector3(-0.7 * low, 0.0, 0.45 * low)
+			if t > 0.6:
+				var s := (t - 0.6) / 0.4
+				var fizz := sin(s * PI * 6.0) * sin(s * PI)
+				_flourish_offset.y += 0.012 * fizz
+				_flourish_angle.z += 0.18 * fizz
+				_accent = maxf(_accent, sin(s * PI))
+
+func _pose_inspect(t: float, weight: float) -> void:
+	# Bring it toward the centre, twist one side up, then roll to the other.
+	var envelope := _smooth(t / 0.18) * _smooth((1.0 - t) / 0.18) * weight
+	var turn := lerpf(1.0, -0.8, _smooth((t - 0.66) / 0.2))
+	var side := Vector3(0.2, 0.42 * turn, 0.7 * turn) * envelope
+	_flourish_offset += Vector3(-0.09, 0.05, 0.02) * envelope
+	_flourish_angle += side
+	var s := (t - 0.36) / 0.24
+	if s <= 0.0 or s >= 1.0:
+		return
+	var pulse := sin(s * PI) * weight
+	_accent = maxf(_accent, pulse)
+	match flourish:
+		Flourish.TWIRL:
+			# Flip it end over end out of the hand and catch it.
+			_toss_angle.x = TAU * _smooth(s) * weight
+			_toss_lift = 0.12 * pulse
+			_hand_catch = -0.025 * pulse
+		Flourish.RACK:
+			_flourish_offset.z += 0.05 * pulse
+			_flourish_angle += Vector3(0.15, 0.0, -0.3) * pulse
+		Flourish.HEAVE:
+			# Weigh it in the hand: dip, heft, dip.
+			_flourish_offset.y -= 0.04 * sin(s * TAU) * weight
+			_flourish_angle.x += 0.15 * sin(s * TAU) * weight
+		Flourish.SNAP:
+			# Sight down the barrel, then lower it again.
+			_flourish_angle -= side * pulse
+			_flourish_offset += Vector3(-0.1, 0.03, 0.05) * pulse
+		Flourish.SHAKE:
+			# Shake the bottle hard, as if to spray it.
+			var fizz := sin(s * PI * 10.0) * pulse
+			_flourish_offset += Vector3(0.008, 0.025, 0.0) * fizz
+			_flourish_angle += Vector3(0.12, 0.0, 0.3) * fizz
+
+func _pose_drop(t: float) -> void:
+	var arc := sin(t * PI)
+	_accent = maxf(_accent, arc)
+	match flourish:
+		Flourish.HEAVE:
+			# Power hoist: muzzle thrown skyward, then slammed down with a bounce.
+			var up := sin(minf(t / 0.3, 1.0) * PI * 0.5)
+			var down := _smooth((t - 0.3) / 0.25)
+			var bounce := sin(maxf(t - 0.55, 0.0) / 0.45 * PI * 3.0) * (1.0 - t)
+			_flourish_angle += Vector3(0.6 * up * (1.0 - down) - 0.12 * bounce, 0.0, 0.2 * arc)
+			_flourish_offset += Vector3(0.0, 0.07 * up * (1.0 - down) - 0.03 * bounce, 0.03 * arc)
+		Flourish.SHAKE:
+			# Victory shake: tipped back, shaken wild, then levelled.
+			var fizz := sin(t * PI * 14.0) * arc
+			_flourish_angle += Vector3(0.45 * arc + 0.1 * fizz, 0.0, 0.35 * fizz)
+			_flourish_offset += Vector3(0.0, 0.05 * arc + 0.015 * fizz, 0.02 * arc)
+		_:
+			# Light guns: a barrel roll tossed clear of the hand and caught.
+			var roll := _smooth(t) if flourish != Flourish.SNAP else _out(t, 2.0)
+			_toss_angle.z = -TAU * roll
+			_toss_lift = 0.08 * arc
+			_hand_catch = -0.02 * arc
+			_flourish_angle.x += 0.15 * arc
 
 ## Damped springs pull the kick back to rest, overshooting slightly.
 func _step_kick(delta: float) -> void:
@@ -557,9 +816,13 @@ func _process(delta: float) -> void:
 	if pilot_flame != null:
 		_pilot_time += delta
 		var flicker := 1.0 + pilot_flicker * (sin(_pilot_time * 43.0) * 0.5 + sin(_pilot_time * 71.0 + 1.3) * 0.5)
-		pilot_flame.scale = Vector3(flicker, 1.0 + (flicker - 1.0) * 2.2, flicker)
-	if spinner != null and _spin > 0.0:
-		spinner.rotation.z = fmod(spinner.rotation.z + spin_speed * _spin * delta, TAU)
+		# Flourish accents flare the pilot light for show.
+		var flare := 1.0 + 1.4 * _accent
+		pilot_flame.scale = Vector3(flicker, 1.0 + (flicker - 1.0) * 2.2, flicker) * flare
+	# Barrels also whirl through flourish accents without spinning up the gun.
+	var whirl := maxf(_spin, _accent * 0.7)
+	if spinner != null and whirl > 0.0:
+		spinner.rotation.z = fmod(spinner.rotation.z + spin_speed * whirl * delta, TAU)
 	for spark in _sparks:
 		if _impact_time == 0.0:
 			spark.hide()
@@ -596,6 +859,9 @@ func _update_traces() -> void:
 func begin_shot(sound: CombatAudio) -> void:
 	_play(_shot_audio, sound, shot_cue)
 	_kick()
+	# Firing never waits on presentation: finish the draw, drop the inspect.
+	_draw = maxf(_draw, 0.85)
+	_interrupt_inspect()
 	_pump_cycle = 0.26
 	_flash_time = flash_duration
 	if flash != null:

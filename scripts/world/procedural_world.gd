@@ -42,10 +42,10 @@ const METRO_NAMES := {&"yard": "Metro Jiřího z Poděbrad", &"foundry": "Metro 
 ## Tactic and authored lane roles per venue kind: crowd, fast, heavy, ranged, support.
 const VENUE_TACTICS := {&"hospoda": &"circular_bar", &"herna": &"machine_lanes", &"nonstop": &"street_counter", &"metro": &"pillar_stairs"}
 const LANE_ROLES := {
-	&"hospoda": {&"front_street": [&"crowd", &"heavy", &"ranged", &"support"], &"side_street": [&"crowd", &"fast", &"heavy"], &"behind_bar": [&"ranged", &"support"]},
+	&"hospoda": {&"front_street": [&"crowd", &"heavy", &"ranged", &"support"], &"side_street": [&"crowd", &"fast", &"heavy"], &"behind_bar": [&"ranged", &"support"], &"ceiling": [&"ceiling"]},
 	&"herna": {&"front_street": [&"crowd", &"heavy", &"ranged", &"support"], &"side_street": [&"crowd", &"heavy"], &"machine_aisle_left": [&"fast", &"ranged", &"crowd"], &"machine_aisle_right": [&"fast", &"ranged", &"crowd"]},
 	&"nonstop": {&"front_street": [&"crowd", &"heavy", &"fast", &"ranged", &"support"], &"side_street": [&"fast", &"crowd"]},
-	&"metro": {&"stair_west": [&"crowd", &"fast", &"ranged", &"support"], &"stair_east": [&"crowd", &"heavy", &"fast", &"ranged", &"support"], &"passage": [&"heavy", &"crowd"]},
+	&"metro": {&"stair_west": [&"crowd", &"fast", &"ranged", &"support"], &"stair_east": [&"crowd", &"heavy", &"fast", &"ranged", &"support"], &"passage": [&"heavy", &"crowd"], &"ceiling": [&"ceiling"]},
 }
 
 ## Storefront kit (visual only), see `_dress_storefront`.
@@ -2331,6 +2331,8 @@ func _room_venue(site: Dictionary, ordinal: int) -> Dictionary:
 	]
 	for lane: Dictionary in site.get("interior_lanes", []):
 		lanes.append({"id": lane.id, "points": lane.points})
+	if kind == &"hospoda":
+		lanes.append(_covered_lane(site))
 	var names: Array = VENUE_NAMES[kind]
 	var entries: Array[Vector3] = [door, escape]
 	var exits: Array[Vector3] = [escape, door]
@@ -2399,11 +2401,26 @@ func _metro_venue(site: Dictionary) -> Dictionary:
 	for offset: float in [-1.5, 0.0, 1.5]:
 		alcove.append(Vector3(passage.get_center().x + offset, float(site.floor_y), passage.get_center().y + 0.5))
 	lanes.append({"id": &"passage", "points": alcove})
+	lanes.append(_covered_lane(site))
 	entries.append(openings[2])
 	var first: Dictionary = stairs[0]
 	var exits: Array[Vector3] = [stairs[0].foot, stairs[1].foot]
 	var arrival: Vector3 = first.foot + (first.direction as Vector3) * 2.0
 	return _venue(site, &"metro", METRO_NAMES.get(_theme, "Metro"), first.top, arrival, entries, exits, approaches, lanes)
+
+## Inside-floor candidates only. Horde admission checks real furniture, route
+## connectivity and overhead physics before a ceiling life consumes budget.
+func _covered_lane(site: Dictionary) -> Dictionary:
+	var rect: Rect2 = (site.rect as Rect2).grow(-1.75)
+	var points := PackedVector3Array()
+	var z := rect.position.y
+	while z <= rect.end.y:
+		var x := rect.position.x
+		while x <= rect.end.x:
+			points.append(Vector3(x, float(site.floor_y), z))
+			x += CELL_SIZE
+		z += CELL_SIZE
+	return {"id": &"ceiling", "points": points}
 
 func _venue(site: Dictionary, id: StringName, title: String, position: Vector3, arrival: Vector3, entries: Array[Vector3], exits: Array[Vector3], approaches: Array[Vector3], lanes: Array[Dictionary]) -> Dictionary:
 	var kind: StringName = site.kind
@@ -2424,7 +2441,7 @@ func _venue(site: Dictionary, id: StringName, title: String, position: Vector3, 
 	return {
 		"id": id, "name": title, "kind": kind, "tactic": VENUE_TACTICS[kind],
 		"position": position, "center": Vector3(rect.get_center().x, floor_y, rect.get_center().y),
-		"bounds": rect, "floor_y": floor_y, "entry": entries[0], "exit": exits[0],
+		"bounds": rect, "floor_y": floor_y, "ceiling_y": float(site.ceiling_y), "entry": entries[0], "exit": exits[0],
 		"entries": entries, "exits": exits, "approaches": approaches, "arrival": arrival,
 		"lanes": authored, "admission_area": area.grow(1.0),
 		"centerpiece": site.get("centerpiece", {}), "pillars": site.get("pillars", []),

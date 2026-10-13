@@ -20,6 +20,7 @@ size = Vector3(0.025, 0.04, 0.018)
 
 [node name="Cihlomet" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template")]
 script = ExtResource("1_view")
+flourish = 1
 kinetic_keeps_colors = true
 muzzle = NodePath("Model/cihlomet/Muzzle")
 impact_material = SubResource("Mat_impact")

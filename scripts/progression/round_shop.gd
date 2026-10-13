@@ -1,11 +1,12 @@
 class_name RoundShop
 extends RefCounted
 
-## Stage-clear stock, paid from banked minerals. CATALOG is the single table of
-## every shop upgrade: WEAPON MODS (FIREPOWER, PAYLOAD, ELEMENT tracks) are
-## applied to the primary by WeaponBuild; SUIT SYSTEMS last the run through
-## RunState. Stock is rolled per section and every purchase validates the full
-## price before anything is applied or charged.
+## Level-clear stock, paid from banked minerals. Every purchase is permanent:
+## Profile records it and re-applies it at each run start. CATALOG is the single
+## table of every shop upgrade: WEAPON MODS (FIREPOWER, PAYLOAD, ELEMENT tracks)
+## are applied to the primary by WeaponBuild; SUIT SYSTEMS live on RunState.
+## Stock is rolled per section and every purchase validates the full price
+## before anything is applied or charged.
 
 enum Track { FIREPOWER, PAYLOAD, ELEMENT, SUIT }
 enum Section { MODS, SUIT }
@@ -13,9 +14,9 @@ enum Section { MODS, SUIT }
 const TRACK_NAMES: Array[String] = ["RÁNA", "NÁLOŽ", "ŽIVEL", "HADRY"]
 const MOD_SLOTS := 4
 const SUIT_SLOTS := 2
-## Every price adds the stage's gold: BASE_GOLD + GOLD_PER_STAGE per cleared
-## stage (stage index capped at GOLD_STAGE_CAP); `price` holds the gold offset
-## and flat crystal/shard amounts.
+## Every price adds the round's gold: BASE_GOLD + GOLD_PER_STAGE per level
+## already cleared this run (capped at GOLD_STAGE_CAP); `price` holds the gold
+## offset and flat crystal/shard amounts.
 const BASE_GOLD := 6
 const GOLD_PER_STAGE := 2
 const GOLD_STAGE_CAP := 5
@@ -39,6 +40,7 @@ const CATALOG := {
 ## {id, section, cost, sold}.
 var offers: Array[Dictionary] = []
 var _state: RunState
+var _class_id: StringName
 var _stage := 0
 var _rerolls := 0
 var _rng := RandomNumberGenerator.new()
@@ -83,9 +85,11 @@ static func number(value: float) -> String:
 
 # ------------------------------------------------------------ stock
 
-func setup(state: RunState, stage: int, seed: int) -> void:
+## `cleared_before` counts levels already cleared this run before this one.
+func setup(state: RunState, cleared_before: int, seed: int, class_id: StringName) -> void:
 	_state = state
-	_stage = maxi(stage, 0)
+	_class_id = class_id
+	_stage = maxi(cleared_before, 0)
 	_rerolls = 0
 	_rng.seed = seed ^ ((_stage + 1) * 104729)
 	offers.clear()
@@ -119,11 +123,18 @@ func buy(index: int) -> bool:
 	var id := StringName(offer.id)
 	# Neither build nor suit mutations emit signals. Pay after the effect,
 	# so currency observers see a complete purchase; validation cannot drift.
-	var applied := _state.primary.upgrade(id) if is_weapon_mod(id) else _state.buy_shop_stat(id)
+	var mod := is_weapon_mod(id)
+	var applied := _state.primary.upgrade(id) if mod else _state.buy_shop_stat(id)
 	if not applied:
 		return false
 	offer.sold = true
-	return Profile.pay(offer.cost)
+	if not Profile.pay(offer.cost):
+		return false
+	if mod:
+		Profile.add_shop_mod(id)
+	else:
+		Profile.add_shop_suit(id)
+	return true
 
 func preview(id: StringName) -> Dictionary:
 	if _state == null or not CATALOG.has(id):
@@ -160,7 +171,10 @@ func buy_ability(slot: int) -> bool:
 	var cost := ability_cost(slot)
 	if not _state.upgrade_ability(slot):
 		return false
-	return Profile.pay(cost)
+	if not Profile.pay(cost):
+		return false
+	Profile.add_shop_skill(_class_id, slot)
+	return true
 
 func ability_preview(slot: int) -> Dictionary:
 	if _state == null:

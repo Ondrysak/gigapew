@@ -42,6 +42,7 @@ def main() -> int:
     parser.add_argument("--clean", action="store_true", help="hide the lab overlay label in captures")
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--verbose", action="store_true", help="print all engine output")
+    parser.add_argument("--sound", action="store_true", help="play audio through the real output device instead of the silent Dummy driver")
     args = parser.parse_args()
 
     known = scenario_names()
@@ -57,7 +58,9 @@ def main() -> int:
     report = out / REPORT
     report.unlink(missing_ok=True)
 
-    command = [args.godot, "--path", str(ROOT), LAB_SCENE, "--", f"--scenario={','.join(args.scenarios)}", f"--out={out}"]
+    # The Dummy driver still mixes, so SFX-bus captures work, but nothing reaches the speakers.
+    audio = [] if args.sound else ["--audio-driver", "Dummy"]
+    command = [args.godot, *audio, "--path", str(ROOT), LAB_SCENE, "--", f"--scenario={','.join(args.scenarios)}", f"--out={out}"]
     if args.clean:
         command.append("--clean")
     if not args.window and shutil.which("gamescope"):

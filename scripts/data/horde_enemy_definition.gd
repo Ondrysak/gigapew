@@ -7,7 +7,9 @@ extends Resource
 ## THROWER lobs a parryable bottle at the spot the player stood; BOUNCER is a
 ## heavy body that physically blocks the player and shoves after a windup;
 ## HYPE hangs back and speeds up allies in its aura until it dies or they leave.
-enum Behavior { SWARM, RANGED, CHARGER, RUNNER, CARRIER, THROWER, BOUNCER, HYPE }
+## BOMBER arms a committed rush and can be reversed; AMBUSHER requires a real
+## ceiling; SPRAYER lobs finite ignitable absinthe onto real walkable floors.
+enum Behavior { SWARM, RANGED, CHARGER, RUNNER, CARRIER, THROWER, BOUNCER, HYPE, BOMBER, AMBUSHER, SPRAYER }
 enum Faction { MACHINE, FLESH }
 
 @export var display_name := "Grunt"

@@ -37,6 +37,7 @@ rings = 4
 
 [node name="Tvarohomet" type="Node3D" node_paths=PackedStringArray("muzzle", "projectile_template", "blast_template")]
 script = ExtResource("1_view")
+flourish = 1
 muzzle = NodePath("Model/tvarohomet/Muzzle")
 impact_material = SubResource("Mat_impact")
 target_impact_material = SubResource("Mat_hit")

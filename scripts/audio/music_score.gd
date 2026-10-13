@@ -8,7 +8,8 @@ const STINGER_TRACK := &"stinger"
 ## Loop stems per track, in render priority order.
 const TRACK_STEMS := {
 	&"menu": [&"pad", &"motif", &"beat"],
-	&"stage": [&"pad", &"pulse", &"drums", &"drive", &"arp", &"lead", &"perc", &"tension", &"boss_pad", &"boss_drive", &"breaks", &"rave", &"vocals"],
+	&"stage": [&"kick", &"clap", &"hat", &"groove", &"bass", &"synth", &"arp", &"ambient"],
+	&"boss": [&"drums", &"boss_drive", &"boss_pad", &"perc", &"breaks", &"rave", &"tension", &"vocals"],
 }
 const STINGERS := [&"level_up", &"stage_clear", &"death", &"run_complete"]
 const MENU_BPM := 90.0
@@ -42,7 +43,7 @@ const DEATH_CHORD := [50, 53, 57, 62]
 
 ## Seconds per bar of a looping track.
 static func bar_seconds(track: StringName, composition: MusicComposition = null) -> float:
-	if track == &"stage":
+	if track in [&"stage", &"boss"]:
 		return composition.step * 16.0 / MusicSynth.RATE if composition != null else 0.0
 	return step_samples(MENU_BPM) * 16.0 / MusicSynth.RATE
 
@@ -61,8 +62,11 @@ static func render(synth: MusicSynth, track: StringName, stem: StringName, compo
 		&"menu":
 			buf = _menu(synth, stem)
 		&"stage":
-			assert(composition != null, "Stage rendering requires a run composition")
-			buf = _stage(synth, stem, random, composition)
+			assert(composition != null, "Techno rendering requires a run composition")
+			buf = _techno(synth, stem, composition)
+		&"boss":
+			assert(composition != null, "Boss rendering requires a run composition")
+			buf = _hardtek(synth, stem, random, composition)
 		STINGER_TRACK:
 			buf = _stinger(synth, stem)
 			loop = false
@@ -70,9 +74,70 @@ static func render(synth: MusicSynth, track: StringName, stem: StringName, compo
 		return null
 	return synth.to_wav(buf, loop)
 
-# --- Stage -------------------------------------------------------------------------------------
 
-static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGenerator, mix: MusicComposition) -> PackedFloat32Array:
+## Sample-only 125 BPM arrangement. Intact labelled phrases remain in one
+## minor key, with musical rests and density changes over eight four-bar sections.
+static func _techno(synth: MusicSynth, stem: StringName, mix: MusicComposition) -> PackedFloat32Array:
+	var step := mix.step
+	var beat := step * 4
+	var bar := step * 16
+	var buf := MusicSynth.buffer(bar * mix.bars)
+	var key: StringName = mix.techno_clips[stem]
+	var clip: Dictionary = MusicSamples.TECHNO.CLIPS[key]
+	for b in mix.bars:
+		if MusicSynth.cancelled or mix.is_cancelled():
+			return PackedFloat32Array()
+		var at := b * bar
+		var density: int = mix.sections[b / 4]
+		match stem:
+			&"kick":
+				for q in 4:
+					synth.sample_hit(buf, at + q * beat, key, 0.65 if q == 0 else 0.6, 1.0, 0, beat - 45, false, 30)
+			&"clap":
+				for q in [1, 3]:
+					synth.sample_hit(buf, at + q * beat, key, 0.16, 1.0, 0, beat, false, 30)
+			&"hat":
+				for s in range(2, 16, 4):
+					synth.sample_hit(buf, at + s * step, key, 0.13 * mix.hat_accents[s], 1.0, 0, step * 2, false, 30)
+				if density >= 2:
+					for s in [3, 7, 11, 15]:
+						synth.sample_hit(buf, at + s * step, key, 0.045 * mix.hat_accents[s], 1.0, 0, step, false, 30)
+			_:
+				if stem == &"groove" and density == 0:
+					continue
+				if stem == &"synth" and (density == 0 or b % 4 == 3):
+					continue
+				if stem == &"arp" and (density < 2 or b % 4 == 0):
+					continue
+				var source_beat: float = float(mix.loop_offsets[stem]) + b * 4.0
+				var source_frames := MusicSynth.RATE * 60.0 / float(clip.bpm)
+				var source_at := roundi(fposmod(source_beat, float(clip.beats)) * source_frames)
+				var rate := float(beat) / source_frames
+				var gain := 0.2
+				match stem:
+					&"groove": gain = 0.12
+					&"bass": gain = 0.35
+					&"synth": gain = 0.17
+					&"arp": gain = 0.14
+					&"ambient": gain = 0.08
+				synth.sample_hit(buf, at, key, gain, 1.0 / rate, source_at, bar, true, 45)
+	var peak := 0.15
+	match stem:
+		&"kick": peak = 0.66
+		&"clap": peak = 0.13
+		&"hat": peak = 0.12
+		&"groove": peak = 0.11
+		&"bass": peak = 0.26
+		&"synth": peak = 0.15
+		&"arp": peak = 0.10
+		&"ambient": peak = 0.07
+	if stem in [&"bass", &"synth", &"arp", &"ambient"]:
+		synth.pump(buf, beat, 0.45, 0.65)
+	synth.normalize(buf, peak, false)
+	return buf
+# --- Boss hardtek ------------------------------------------------------------------------------
+
+static func _hardtek(synth: MusicSynth, stem: StringName, random: RandomNumberGenerator, mix: MusicComposition) -> PackedFloat32Array:
 	var step := mix.step
 	var beat := step * 4
 	var bar := step * 16
@@ -84,17 +149,12 @@ static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGene
 		var root: int = mix.roots[b / 4]
 		var density: int = mix.sections[b / 4]
 		match stem:
-			&"pad", &"boss_pad":
+			&"boss_pad":
 				var chord: Array = mix.pads[b / 4]
 				for note: int in chord:
-					synth.pad_note(buf, at, bar, note - (12 if stem == &"boss_pad" else 0), 0.022, beat, beat * 2, 8.0)
+					synth.pad_note(buf, at, bar, note - 12, 0.022, beat, beat * 2, 8.0)
 				if b % 4 == 0:
 					_grain(synth, buf, at, mix.ambient_clip, 0.018, bar * 2, mix.ambient_position)
-			&"pulse":
-				for q in 4:
-					var onset := at + q * beat + 2 * step
-					synth.sine_note(buf, onset, step, MusicSynth.hz(root - 12), 0.1, 64, step / 2)
-					synth.bass_note(buf, onset, step, root, 0.035, 90.0, 360.0, 24.0, 0.9, 1.7, 0.35)
 			&"drums":
 				for q in 4:
 					synth.sample_hit(buf, at + q * beat, mix.kick_clip, 0.56 if q == 0 else 0.52, 1.0, 0, beat - 80, false, 30)
@@ -105,31 +165,14 @@ static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGene
 					synth.clap(buf, at + s * step, 0.095)
 				for s in [2, 6, 10, 14]:
 					synth.hat(buf, at + s * step, 0.12, 28.0, 0.12)
-			&"drive", &"boss_drive":
-				var boss := stem == &"boss_drive"
+			&"boss_drive":
 				for s in 16:
-					if s % 4 == 0 or (not boss and density == 0 and s % 4 != 2):
+					if s % 4 == 0:
 						continue
-					var offset: int = mix.acid_pattern[(s + (4 if boss else 0)) % 16]
-					var gain := 0.15 if boss else 0.11
-					var cutoff := 1900.0 if boss else 850.0 + density * 320.0
-					synth.bass_note(buf, at + s * step, int(step * 0.76), mix.key + offset, gain, 140.0, cutoff, 25.0, 2.1, 3.0, 0.3)
-				if boss and b % 4 == 3:
+					var offset: int = mix.acid_pattern[(s + 4) % 16]
+					synth.bass_note(buf, at + s * step, int(step * 0.76), mix.key + offset, 0.15, 140.0, 1900.0, 25.0, 2.1, 3.0, 0.3)
+				if b % 4 == 3:
 					synth.lead_note(buf, at + 10 * step, 2 * step, root + 24, 0.035, 1250.0, 10.0, 0.0, 0.4, 1.7)
-			&"arp":
-				var chord: Array = mix.arps[b / 4]
-				for s in range(2, 16, 2):
-					if density == 0 and s in [6, 10, 14]:
-						continue
-					var note: int = chord[(s / 2 + b) % chord.size()]
-					synth.pluck(buf, at + s * step, step * 2, note, 0.065, 24.0, 5.0, 0.2)
-			&"lead":
-				if mix.lead_clip != &"":
-					if b % 4 == 2:
-						_grid_slice(synth, buf, at, mix.lead_clip, 0.045, 4.0, mix.lead_beat, mix)
-				elif b % 4 == 0:
-					for note: Array in mix.motif:
-						synth.lead_note(buf, at + int(note[0]) * step, int(note[1]) * step - 100, int(note[2]), 0.085, 1650.0, 5.0, 0.002, 0.1, 1.2)
 			&"perc":
 				for s in 16:
 					if s % 4 == 0 or (density == 0 and s % 2 == 1):
@@ -172,21 +215,11 @@ static func _stage(synth: MusicSynth, stem: StringName, random: RandomNumberGene
 		return PackedFloat32Array()
 	var peak := 0.16
 	match stem:
-		&"pad", &"boss_pad":
+		&"boss_pad":
 			synth.sweep_lowpass(buf, 780.0, 300.0, 2.0)
 			peak = 0.11
-		&"pulse":
-			peak = 0.13
 		&"drums":
 			peak = 0.66
-		&"drive":
-			peak = 0.15
-		&"arp":
-			synth.echo(buf, step * 3, 0.25, 0.22, 0.55)
-			peak = 0.085
-		&"lead":
-			synth.echo(buf, step * 3, 0.22, 0.20, 0.6)
-			peak = 0.115
 		&"perc":
 			peak = 0.14
 		&"tension":
