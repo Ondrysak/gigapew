@@ -1,0 +1,467 @@
+{
+  "sample_rate": 22050,
+  "channels": 1,
+  "pcm_bits": 16,
+  "permission": "Unverified: supplied pack contained no licence/readme",
+  "processing": "Stereo average; 127-tap 6kHz Hamming/sinc source lowpass; quadratic pitch traversal; per-cut DC removal and RMS balance; 4ms layer crossfades; final DC removal, 5ms fades and peak ceiling",
+  "sources": {
+    "snap": {
+      "filename": "KICKS/PTKSD - KICK F 05.wav",
+      "sha256": "783e7c69e8b7a5477af5c7576258c0ccd3c45a4901ec4c22e6b01ec959b1637d"
+    },
+    "metal": {
+      "filename": "KICKS/PTKSD - KICK G# 03.wav",
+      "sha256": "b1dfa37ecd7611670315f8b7b58b9088ad3e3eb77747ab7e57d5c3317d02db2d"
+    },
+    "crunch": {
+      "filename": "KICKS/PTKSD - KICK D 01.wav",
+      "sha256": "d0da3a434a8314690be312a736be68529bf80b33e1349e3537749e4c7d261421"
+    },
+    "slam": {
+      "filename": "KICKS/PTKSD - KICK F 22.wav",
+      "sha256": "6be08b4dfa50656d1f25cfcd08ffafddc47f01ac5172a28ae64e3d17d9b9e795"
+    },
+    "acid": {
+      "filename": "SYNTHS, DRUMS, LEADS/PTKSD - 303 01.wav",
+      "sha256": "7727347f76bd8401c517c1d34a0f28c3d2bff2f37f9d46217e0aa22d7322a9ff"
+    },
+    "scrape": {
+      "filename": "SYNTHS, DRUMS, LEADS/PTKSD - FX 03.wav",
+      "sha256": "a4d92be29209ccd71998f375f88807c9920688be6ce0253d0cea2026876b5018"
+    },
+    "tail": {
+      "filename": "SYNTHS, DRUMS, LEADS/PTKSD - FX 05.wav",
+      "sha256": "8cc6741b1c8d72125e4a26c6d2080998e84a6acadf0a76eebd5dd5e06e90d97d"
+    },
+    "drums": {
+      "filename": "SYNTHS, DRUMS, LEADS/PTKSD - DRUM LOOP 04.wav",
+      "sha256": "c67584125f5221883b7966936a8eb3f5d4569b918ae38e4812ce173ddb649c39"
+    },
+    "lead": {
+      "filename": "SYNTHS, DRUMS, LEADS/PTKSD - LEAD 01.wav",
+      "sha256": "d258a50192a8f3d96fab0102f15c06f6d10e5e7fa37aae7b004fbb88db925259"
+    }
+  },
+  "clips": [
+    {
+      "name": "flip_launch",
+      "variation": 0,
+      "contact": false,
+      "frames": 7938,
+      "seconds": 0.36,
+      "peak": 0.459991455078125,
+      "rms": 0.10947550449645099,
+      "peak_dbfs": -6.745004716233161,
+      "rms_dbfs": -19.21366089540092,
+      "pcm_bytes": 15876,
+      "wav_sha256": "30a998a5f5dedc2ef8f2fda0a2514c5e108457357ea86e2ab000c9aa730484c7",
+      "layers": [
+        {
+          "source": "lead",
+          "source_seconds": [
+            0.48,
+            0.8
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.3,
+          "gain": 1.0,
+          "reverse": true,
+          "sweep": 0.25,
+          "rise": true,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "snap",
+          "source_seconds": [
+            0.015,
+            0.085
+          ],
+          "at_seconds": 0.275,
+          "duration_seconds": 0.085,
+          "gain": 0.42,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 3,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "flip_impact",
+      "variation": 0,
+      "contact": true,
+      "frames": 5292,
+      "seconds": 0.24,
+      "peak": 0.65997314453125,
+      "rms": 0.11678856328122665,
+      "peak_dbfs": -3.6094747261075217,
+      "rms_dbfs": -18.651993683349556,
+      "pcm_bytes": 10584,
+      "wav_sha256": "e371c98d9bec39f51e19da44744481aae50ca9769dd19be99889ec38d6e69200",
+      "layers": [
+        {
+          "source": "snap",
+          "source_seconds": [
+            0,
+            0.22
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.24,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 5,
+          "drive": 1.0
+        },
+        {
+          "source": "tail",
+          "source_seconds": [
+            0.005,
+            0.1
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.11,
+          "gain": 0.3,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 4,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "corkscrew_launch",
+      "variation": 1,
+      "contact": false,
+      "frames": 8820,
+      "seconds": 0.4,
+      "peak": 0.439971923828125,
+      "rms": 0.10893382829277322,
+      "peak_dbfs": -7.131500730074421,
+      "rms_dbfs": -19.256744671274095,
+      "pcm_bytes": 17640,
+      "wav_sha256": "b7de68fb895e0e747697e29ed6dd7b0a56a6538f5e485191bef57c27abef5690",
+      "layers": [
+        {
+          "source": "acid",
+          "source_seconds": [
+            0.54,
+            0.64
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.1,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": 0.3,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "acid",
+          "source_seconds": [
+            0.66,
+            0.76
+          ],
+          "at_seconds": 0.085,
+          "duration_seconds": 0.095,
+          "gain": 0.9,
+          "reverse": true,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "acid",
+          "source_seconds": [
+            0.8,
+            0.9
+          ],
+          "at_seconds": 0.165,
+          "duration_seconds": 0.085,
+          "gain": 0.8,
+          "reverse": false,
+          "sweep": 0.4,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "acid",
+          "source_seconds": [
+            1.2,
+            1.3
+          ],
+          "at_seconds": 0.235,
+          "duration_seconds": 0.075,
+          "gain": 0.7,
+          "reverse": true,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "scrape",
+          "source_seconds": [
+            0.1,
+            0.23
+          ],
+          "at_seconds": 0.295,
+          "duration_seconds": 0.105,
+          "gain": 0.6,
+          "reverse": false,
+          "sweep": 0.2,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "corkscrew_impact",
+      "variation": 1,
+      "contact": true,
+      "frames": 6615,
+      "seconds": 0.3,
+      "peak": 0.6199951171875,
+      "rms": 0.10325695653491929,
+      "peak_dbfs": -4.152234616063158,
+      "rms_dbfs": -19.721613595764197,
+      "pcm_bytes": 13230,
+      "wav_sha256": "73846bd58b02559f12e5403dd6cf03ff2e6eb2e3072e84de748ccb34ae4068ca",
+      "layers": [
+        {
+          "source": "metal",
+          "source_seconds": [
+            0.002,
+            0.245
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.3,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 7,
+          "drive": 1.0
+        },
+        {
+          "source": "scrape",
+          "source_seconds": [
+            0.12,
+            0.27
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.18,
+          "gain": 0.45,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 9,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "drop_kick_launch",
+      "variation": 2,
+      "contact": false,
+      "frames": 7056,
+      "seconds": 0.32,
+      "peak": 0.449981689453125,
+      "rms": 0.05488702863357532,
+      "peak_dbfs": -6.936103161438021,
+      "rms_dbfs": -25.21060559131658,
+      "pcm_bytes": 14112,
+      "wav_sha256": "fac426c8538367212faa2b7aebf7ec9fafd77581c79719674cdb3a317920c434",
+      "layers": [
+        {
+          "source": "drums",
+          "source_seconds": [
+            0.72,
+            0.83
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.12,
+          "gain": 0.7,
+          "reverse": true,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 0.0,
+          "drive": 1.0
+        },
+        {
+          "source": "lead",
+          "source_seconds": [
+            0.78,
+            0.95
+          ],
+          "at_seconds": 0.1,
+          "duration_seconds": 0.22,
+          "gain": 1.0,
+          "reverse": true,
+          "sweep": 0.0,
+          "rise": true,
+          "decay": 0.0,
+          "drive": 2.5
+        }
+      ]
+    },
+    {
+      "name": "drop_kick_impact",
+      "variation": 2,
+      "contact": true,
+      "frames": 8820,
+      "seconds": 0.4,
+      "peak": 0.67999267578125,
+      "rms": 0.07016956285519954,
+      "peak_dbfs": -3.349915301314036,
+      "rms_dbfs": -23.07702458091464,
+      "pcm_bytes": 17640,
+      "wav_sha256": "5b19e2769e8b535363447f9e15285881c5908a295eb45823e95c0a2af91a793a",
+      "layers": [
+        {
+          "source": "crunch",
+          "source_seconds": [
+            0,
+            0.19
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.24,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 9,
+          "drive": 1.8
+        },
+        {
+          "source": "crunch",
+          "source_seconds": [
+            0.025,
+            0.26
+          ],
+          "at_seconds": 0.095,
+          "duration_seconds": 0.305,
+          "gain": 0.85,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 8,
+          "drive": 2.3
+        },
+        {
+          "source": "drums",
+          "source_seconds": [
+            0.72,
+            0.85
+          ],
+          "at_seconds": 0.09,
+          "duration_seconds": 0.13,
+          "gain": 0.35,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 6,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "axe_kick_launch",
+      "variation": 3,
+      "contact": false,
+      "frames": 9261,
+      "seconds": 0.42,
+      "peak": 0.439971923828125,
+      "rms": 0.09870196335663664,
+      "peak_dbfs": -7.131500730074421,
+      "rms_dbfs": -20.113484167180186,
+      "pcm_bytes": 18522,
+      "wav_sha256": "61ea6d1647fe9bcc71f0194972f228133eadfba2eb349a4d2df2d75f8e8e24ce",
+      "layers": [
+        {
+          "source": "scrape",
+          "source_seconds": [
+            0.08,
+            0.38
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.42,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": -0.45,
+          "rise": false,
+          "decay": 1,
+          "drive": 3
+        },
+        {
+          "source": "lead",
+          "source_seconds": [
+            0.48,
+            0.72
+          ],
+          "at_seconds": 0.045,
+          "duration_seconds": 0.34,
+          "gain": 0.5,
+          "reverse": false,
+          "sweep": -0.4,
+          "rise": false,
+          "decay": 2,
+          "drive": 1.0
+        }
+      ]
+    },
+    {
+      "name": "axe_kick_impact",
+      "variation": 3,
+      "contact": true,
+      "frames": 7938,
+      "seconds": 0.36,
+      "peak": 0.67999267578125,
+      "rms": 0.10447777691491265,
+      "peak_dbfs": -3.349915301314036,
+      "rms_dbfs": -19.619521538351286,
+      "pcm_bytes": 15876,
+      "wav_sha256": "c4215b5c6b3acef10e8bd0b1c57402dec22bd9979a860d9945dcb638d949abec",
+      "layers": [
+        {
+          "source": "slam",
+          "source_seconds": [
+            0,
+            0.25
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.36,
+          "gain": 1.0,
+          "reverse": false,
+          "sweep": -0.25,
+          "rise": false,
+          "decay": 7,
+          "drive": 1.0
+        },
+        {
+          "source": "tail",
+          "source_seconds": [
+            0,
+            0.25
+          ],
+          "at_seconds": 0,
+          "duration_seconds": 0.3,
+          "gain": 0.35,
+          "reverse": false,
+          "sweep": 0.0,
+          "rise": false,
+          "decay": 5,
+          "drive": 1.8
+        }
+      ]
+    }
+  ]
+}

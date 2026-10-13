@@ -15,6 +15,16 @@ The environment packs include their original `LICENSE.txt` in `assets/third_part
 
 **Soundtrack samples:** `assets/audio/protokseed/*.wav` contains complete conversions of all **87 WAVs** in the locally supplied **PROTOKSEED SAMPLE PACK**: 52 labelled tuned kicks, four drum loops, two 303 recordings, 17 ambience recordings, ten synth FX plus one kick FX, and one lead. `tools/music_samples.py` retains whole recordings, antialiases/downsamples stereo PCM16/44100 to mono PCM16/22050 and generates `catalog.gd` with explicit exported dependencies, original source paths, SHA256 checksums, roles, labelled kick pitch classes and exact measured loop grids. The complete converted bank holds 18,287,572 PCM bytes; the five old selected/trimmed conversions have been removed. Original Luďas recording bytes are unchanged; six voice imports retain uncompressed PCM for shared sample-bank access.
 
+**Finisher samples:** `assets/audio/finishers/*.wav` contains eight new short
+launch/contact derivatives cut directly from the same supplied pack.
+`tools/finisher_samples.py` uses KICK F 05, G# 03, D 01 and F 22, 303 01,
+FX 03 and 05, DRUM LOOP 04 and LEAD 01. Mono PCM16/22050 edits combine
+reversals, stutters, pitch traversal, saturation and faded layering; a 6 kHz
+source lowpass precedes traversal. `assets/audio/finishers/catalog.json`
+records original SHA256 hashes, exact source intervals and processing,
+derived WAV hashes and PCM measurements. Originals and Luďas recordings are
+unchanged. These derivatives inherit the pack's unverified terms below.
+
 The supplied PROTOKSEED folder contained no licence/readme. **Redistribution permission is unverified; these samples are not CC0 or claimed royalty-free.** Confirm the pack's terms before publishing the new sample-backed source/assets or release binaries. The pushed `v0.6.0` precedes this soundtrack integration.
 
 ## Engine and bundled libraries

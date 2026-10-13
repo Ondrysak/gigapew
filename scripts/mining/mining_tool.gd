@@ -126,6 +126,12 @@ func is_presented() -> bool:
 	return _enabled() and not _player.is_finishing() and not _player.finisher_ready() \
 			and (_using or (is_instance_valid(target_deposit) and target_fragment >= 0))
 
+## The firearm can defer to the same pending press the physics input owner
+## will consume, even after the render-frame "just pressed" flag has expired.
+func finisher_press_pending() -> bool:
+	return _enabled() and _query != null and Input.is_action_pressed(&"mine") \
+			and not _mine_held and not _press_blocked and _player.finisher_ready()
+
 func _physics_process(delta: float) -> void:
 	var held := Input.is_action_pressed(&"mine")
 	var fresh_press := held and not _mine_held and not _press_blocked

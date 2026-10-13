@@ -298,18 +298,29 @@ func _player_finishers(game: ArenaGame) -> void:
 	await lab.wait(0.25)
 	lab.check(horde.is_alive(next) and not player.is_finishing() and _members() == 1, "holding F through recovery never executes the next dazed body")
 	Input.action_release(&"mine")
-	await lab.frames(2)
+	await game.get_tree().physics_frame
+	await game.get_tree().physics_frame
 	hp = player.health
 	player._heal_budget = 3.0
+	var budget_tick := Engine.get_physics_frames()
+	# Leave the actual contextual owner one scheduling window behind the gun.
+	# The press remains fresh for that owner after render just-pressed expires.
+	player.mining_tool.set_physics_process(false)
 	lab.fire(true)
 	Input.action_press(&"mine")
+	await lab.wait(0.08)
+	lab.check(horde.is_alive(next) and horde._hp[next] == 20.0 and _members() == 1, \
+			"a pending fresh F suppresses LMB even before the contextual physics owner consumes it")
+	player.mining_tool.set_physics_process(true)
 	await lab.capture_strip("f_execution_motion", 12, 0.07)
 	await lab.wait(0.15)
 	Input.action_release(&"mine")
 	lab.fire(false)
-	lab.check(not horde.is_alive(next) and _members() == 2 and player.health > hp \
-			and player.health <= hp + ceili(3.0 + ArenaPlayer.FINISH_HEAL_REFILL * ArenaPlayer.FINISHER_CONTACT), \
-			"F wins over simultaneous fire and the execution consumes only the remaining shared healing budget")
+	var refill := ArenaPlayer.FINISH_HEAL_REFILL * float(Engine.get_physics_frames() - budget_tick + 1) / float(Engine.physics_ticks_per_second)
+	lab.check(not horde.is_alive(next) and _members() == 2, "F wins over simultaneous fire after delayed contextual input processing")
+	lab.check(player.health > hp and player.health <= hp + ceili(3.0 + refill) \
+			and player.health < hp + ArenaPlayer.FINISHER_HEAL, \
+			"the execution heals only the remaining budget plus real physics-tick refill")
 
 	slot = await _player_fixture(game)
 	await _press_finish(game)
@@ -367,6 +378,7 @@ func _player_finishers(game: ArenaGame) -> void:
 		lab.check(false, "the shared-F fixture reaches a real native cabinet")
 
 	await _leaping_finishers(game)
+	await _variation_finishers(game)
 
 	slot = await _player_fixture(game)
 	await _press_finish(game)
@@ -435,6 +447,96 @@ func _leaping_finishers(game: ArenaGame) -> void:
 		Input.action_release(&"mine")
 		obstacle.queue_free()
 		await lab.frames(2)
+
+## Actual F presses exercise both shuffled bags and routed launch/contact PCM.
+func _variation_finishers(game: ArenaGame) -> void:
+	var player := game.player
+	var horde := game.horde
+	player._rng.seed = 30821
+	player._finisher_next = KickView.Finish.COUNT
+	var master := AudioServer.get_bus_index(&"Master")
+	var sfx := AudioServer.get_bus_index(&"SFX")
+	var master_mute := AudioServer.is_bus_mute(master)
+	var sfx_mute := AudioServer.is_bus_mute(sfx)
+	var master_db := AudioServer.get_bus_volume_db(master)
+	var sfx_db := AudioServer.get_bus_volume_db(sfx)
+	AudioServer.set_bus_mute(master, false)
+	AudioServer.set_bus_mute(sfx, false)
+	AudioServer.set_bus_volume_db(master, 0.0)
+	AudioServer.set_bus_volume_db(sfx, 0.0)
+	var capture := AudioEffectCapture.new()
+	capture.buffer_length = 2.0
+	var effect_index := AudioServer.get_bus_effect_count(sfx)
+	AudioServer.add_bus_effect(sfx, capture)
+	var names := ["flip", "corkscrew", "drop_kick", "axe_kick"]
+	var seen := 0
+	var previous := -1
+	for attempt in KickView.Finish.COUNT * 2:
+		if attempt % KickView.Finish.COUNT == 0:
+			seen = 0
+		var slot := await _player_fixture(game, Vector2(0.0, 11.5))
+		game.voice.stop()
+		await lab.wait(0.20)
+		capture.clear_buffer()
+		await _press_finish(game)
+		var variation: int = player.finisher_variant
+		lab.check(variation != previous, "fresh finishers never repeat the preceding move, including bag boundaries")
+		previous = variation
+		seen |= 1 << variation
+		horde.set_physics_process(true)
+		player.set_physics_process(true)
+		await lab.wait(0.10)
+		var pcm := capture.get_buffer(capture.get_frames_available())
+		lab.check(_audio_rms(pcm) > 0.001 and horde.is_alive(slot), \
+				"the %s launch produces actual SFX-bus PCM before lethal contact" % names[variation])
+		if attempt < KickView.Finish.COUNT:
+			await lab.capture_strip("variation_%s_motion" % names[variation], 11, 0.07)
+		else:
+			await lab.wait(ArenaPlayer.FINISHER_DURATION)
+		await lab.wait(0.15)
+		pcm.append_array(capture.get_buffer(capture.get_frames_available()))
+		lab.check(not horde.is_alive(slot) and _members() == 1 and not player.is_finishing(), \
+				"the %s variation completes one real execution and recovery" % names[variation])
+		if attempt < KickView.Finish.COUNT:
+			_save_sfx(pcm, names[variation])
+		if attempt % KickView.Finish.COUNT == KickView.Finish.COUNT - 1:
+			lab.check(seen == (1 << KickView.Finish.COUNT) - 1, "each four-move bag presents every finisher exactly once")
+		Input.action_release(&"mine")
+		horde.set_physics_process(false)
+	AudioServer.remove_bus_effect(sfx, effect_index)
+	AudioServer.set_bus_mute(master, master_mute)
+	AudioServer.set_bus_mute(sfx, sfx_mute)
+	AudioServer.set_bus_volume_db(master, master_db)
+	AudioServer.set_bus_volume_db(sfx, sfx_db)
+	var guided := bool(Profile.settings.get("guided_start", true))
+	Profile.set_setting("guided_start", true)
+	await _player_fixture(game, Vector2(0.0, 11.5))
+	await lab.wait(0.30)
+	await lab.capture("variation_tip")
+	game.hud.tutor.clear()
+	Profile.set_setting("guided_start", guided)
+
+func _audio_rms(pcm: PackedVector2Array) -> float:
+	var energy := 0.0
+	for frame in pcm:
+		energy += frame.length_squared() * 0.5
+	return sqrt(energy / maxi(1, pcm.size()))
+
+func _save_sfx(pcm: PackedVector2Array, variation: String) -> void:
+	var bytes := PackedByteArray()
+	bytes.resize(pcm.size() * 2)
+	for index in pcm.size():
+		var sample := (pcm[index].x + pcm[index].y) * 0.5
+		bytes.encode_s16(index * 2, roundi(clampf(sample, -1.0, 1.0) * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = int(AudioServer.get_mix_rate())
+	stream.data = bytes
+	var path := lab.out_dir.path_join("finishers_%s_sfx.wav" % variation)
+	if stream.save_to_wav(path) != OK:
+		push_error("Could not save native finisher SFX recording: %s" % path)
+	else:
+		print("LAB audio ", path)
 
 func _paused_daze_visual(game: ArenaGame, slot: int) -> void:
 	var intensity := float(Profile.settings.get("hallucination_intensity", 0.65))

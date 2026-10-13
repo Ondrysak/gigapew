@@ -9,10 +9,18 @@
   one 2.8-second orange/gold window per non-boss life. Dazed bodies stop attacking,
   remain damageable and cannot fuse away; expiry resumes pursuit. Lethal hits
   still kill normally.
-- F now selects dazed bodies up to 8 m away and commits to a real
-  collision-driven leap, not teleportation. Cached hands brace, the knee tucks
-  and the boot rotates through a front-flip kick: contact at 0.46s, planted
-  recovery ending at 0.80s. Bounded camera bank/pitch and FOV rush preserve aim.
+- F selects dazed bodies up to 8 m away and commits to a real collision-driven
+  leap, not teleportation. Every variation contacts at 0.46s and recovers by
+  0.80s. Bounded camera bank/pitch and FOV rush preserve actual aim.
+- Added four finisher variations: front flip, corkscrew heel sweep, two-boot
+  flying dropkick and overhead axe chop. A cached shuffled bag presents all
+  four and prevents consecutive repeats, including its reshuffle boundary.
+- Eight fresh launch/impact edits from the supplied PROTOKSEED pack use
+  reversed lead/drums, chopped 303 stutters, metallic scrape, double-kick crunch
+  and descending slam. Cached SFX voices play launch only on a valid F start
+  and impact only on successful contact; interruption cancels pending audio.
+  No soundtrack ducking or runtime sample cutting. Reproducible generator and
+  source/cut/hash provenance accompany the clips; sample terms remain unverified.
 - Successful melee contact adds a hollow gold/magenta crown, directed sparks,
   tumbling debris and terrain-aligned stamp alongside species death FX.
   Exact-once score/STYLE/DROP and up to 12 HP still use the shared healing budget.
@@ -25,6 +33,16 @@
   limits. Combat regressions reported `failures=0`. Front-flip/contact/death/
   recovery and interrupted leap captures were inspected visually. Frame rate
   and long-session balance are not measured.
+- Variation verification: seven native scenarios, 58 captures, zero failures
+  or script/engine errors. Two real-input bags exercised all four moves with
+  no adjacent repeat; measured SFX-bus PCM preceded contact for every variant.
+  Four live launch/contact WAV recordings and all four visual animation strips
+  and the updated tutorial were captured. Fixed simultaneous-F/LMB priority
+  to follow the contextual handler's pending press, including delayed physics
+  consumption; the regression counts actual healing-budget refill ticks.
+  WAV/catalog payloads regenerated identically. Combat regressions reported
+  `failures=0`. Subjective listening, frame rate and long-session balance
+  are not measured.
 - The three-sector score attack now links physical venue fights: choose an
   unvisited hospoda, herna, nonstop or metro, travel there, then clear a finite
   local fight. Each sector has seven distinct sites; 3/4/5 cleared sites reach

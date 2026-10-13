@@ -119,7 +119,7 @@ same version; older versioned releases remain intact.
 - **Hold LMB** fires the active gun with unlimited ammunition. A fresh LMB press on the audible beat is required to spend a charged **DROP**.
 - **Q** or the **mouse wheel** toggles the two guns drafted at the start. Catalogue replacement is available only during empty breaks (**Tab** or the route screen's pair button) and in the sector shop; either slot can be replaced for free. Shared primary/gadget ranks apply once to both guns.
 - **RMB** kicks on a fresh press. An incoming projectile is parried first; otherwise the kick launches light bodies, staggers heavies, or kicks a keg. A slide kick carries the launch; an airborne kick stomps downward and bounces on contact, but commits to a dive on a miss.
-- **F** leaps toward an aimed, dazed non-boss enemy within 8 m and finishes with a front-flip kick, or otherwise smashes one aimed machine compartment within 2.6 m. Release and press again for another action. Machine loot is optional; the raised crowbar replaces the gun, including impact recovery.
+- **F** leaps toward an aimed, dazed non-boss enemy within 8 m and finishes with one of four acrobatic kicks, or otherwise smashes one aimed machine compartment within 2.6 m. Release and press again for another action. Machine loot is optional; the raised crowbar replaces the gun, including impact recovery.
 - **1 / 2 / 3 / 4 / 5** activate your class abilities. With **Guided start** (default) only key 1 works at first; the rest unlock as you level (see below).
 - **E** collects optional gear: hold it for 2 s at a stash, or press it at an elite's drop. Authored lab arenas also use E for consoles, vents and the guarded-machine beacon.
 - **G** pauses to inspect all four equipped gear slots, with their effects and source hlášky; **Esc** closes the inspection.
@@ -236,9 +236,24 @@ Kick animation has a fast extension, contact hold and weighted return, with dist
 
 **Daze and finishing moves:** surviving damage at or below 20% of a non-boss lifetime's starting HP opens one 2.8-second window. The original body pulses orange/gold and stops pursuit/attacks, but remains damageable; lethal hits are never clamped into a forced finisher. Dazed lives cannot fuse away. If the window expires, pursuit resumes and that lifetime cannot daze again.
 
-Aim at a dazed body within **8 m** for **F · DORAZIT**. F commits to a real capsule-colliding leap and a **0.80-second** execution: hands brace, the knee tucks, the boot makes a full forward rotation, then the sole snaps into contact at **0.46 seconds** before a planted recovery. The original launch direction and travel budget are fixed; there is no homing, correction warp or aim snap. A bounded camera bank/pitch and FOV rush sell the flip without spinning the entire view. The gun and crowbar stay hidden until recovery ends.
+Aim at a dazed body within **8 m** for **F · DORAZIT**. F commits to a real capsule-colliding leap and a **0.80-second** execution, with actual contact at **0.46 seconds** and a planted recovery. A cached shuffled bag presents all four moves before reshuffling and never repeats the preceding move, even across bag boundaries. The original launch direction and travel budget are fixed; there is no homing, correction warp or aim snap. Each move has bounded camera bank/pitch and a FOV rush without spinning the entire view. The gun and crowbar stay hidden until recovery ends.
 
 Lethal contact still requires the recorded dazed body within **2.3 m**, with a clear lane on the same floor. Successful contact adds a directional gold/magenta crown, penetration sparks, tumbling debris and a hollow terrain-aligned floor stamp alongside the victim's ordinary species death effects. Score/STYLE/DROP credit and up to 12 HP draw from the shared close-healing budget. Walls or ceilings interrupt the leap; intervening bodies, different floors, expired daze, death and recycled target identities invalidate contact. There is no immunity or soundtrack pause. Held F cannot repeat or also claim nearby salvage; a fresh F takes priority over simultaneous gunfire.
+
+| Finisher | Animation | Fresh launch / impact cuts |
+| --- | --- | --- |
+| Front flip | Bracing hands, knee tuck, full forward boot rotation and sole snap | Reversed rising lead with kick snap / tuned kick with FX transient |
+| Corkscrew heel | Depth-changing horizontal orbit, yaw revolution and lateral heel sweep | Forward/reverse 303 stutters and scrape / metallic tuned kick and scrape |
+| Flying dropkick | Both knees tuck, then both boots extend together | Reversed drum/lead rise / staggered double-kick crunch |
+| Overhead axe kick | Raised heel above the reticle, then a vertical downward chop | Descending abrasive lead/FX sweep / descending kick slam and saturated tail |
+
+`assets/audio/finishers/` holds eight short mono PCM16/22050 edits, not full
+loops. Launch clips end before contact; the impact clip plays only after a
+successful execution. Interrupts cancel pending finisher sound. Cached voices
+use SFX routing without changing soundtrack gain. `tools/finisher_samples.py`
+rebuilds the cuts from the original supplied pack; `catalog.json` records
+source hashes, cut ranges, reversals, pitch traversals, layering and WAV hashes.
+The sample pack's redistribution terms remain unverified (see CREDITS).
 
 | Setup → finish | Payoff |
 | --- | --- |
@@ -579,7 +594,7 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `routes` | initial draft, route choice and actual doorway traversal at 960×600 | duplicate refusal, pending/cancel atomicity, real keyboard confirmation, break replacement, physical arrival starts the selected fight, combat cannot reopen draft and HUD regions do not overlap |
 | `pinball` | actual RMB boot, returns, slide/stomp, four weapon combos and keg | kill-only action credit, bounded recovery, parry/no-farm, heavy/ceiling constraints, AIR MAIL, exact-once bursts, ambient exclusions and pause/death release gates |
 | `horde_pinball` | native launch/shatter/return/keg/hype and enemy counters | wall/body collision, precise ledger, perk reach/homing/refreeze, one-shot kegs, aura health conservation, blocking/locked shove and committed bottle splash |
-| `finishers` | original-body gold daze, aimed F prompt, front-flip leap and live contact/death strip | threshold/HP conservation, expiry/resumption, once-per-life, boss/overkill/ambient exclusions, real forward/airborne travel, long-range limit, wall/ceiling interruption, no correction warp or aim steering, floor/body/generation constraints, exact-once credit, shared recovery budget, simultaneous-fire priority, pause pixels, stale/dead cancellation and no double salvage |
+| `finishers` | original-body gold daze, aimed F prompt, four leaping execution/death strips and captured SFX WAVs | threshold/HP conservation, expiry/resumption, once-per-life, boss/overkill/ambient exclusions, real forward/airborne travel, long-range limit, wall/ceiling interruption, no correction warp or aim steering, floor/body/generation constraints, exact-once credit, shared recovery budget, simultaneous-fire priority, pause pixels, stale/dead cancellation, no double salvage, all four moves per bag, no consecutive repeats and routed launch PCM before contact |
 | `hallucinations` | native recursive heads/limbs on human and mouse megas, inward head-cycle strips, STYLE-driven peripheral feedback-loop vision and paused settings | actual primary kills reaching the 65% ceiling, actual keyboard ceiling changes, 65%/100% world-only feedback, clear main precision head/center/HUD, frozen drive/anatomy/feedback motion, exact off restoration and real precision damage with STYLE bonus |
 | `hallucination_modes` | actual keyboard preset selection, six world/anatomy views, four-phase head strips and spatial floors in all three stages and six indoor types | compact settings reachability, clear centre/HUD, STYLE-driven ceiling, pause and exact off restoration, real precision-shot damage, independently moving floor patterns with unchanged physical floor |
 | `levels` | first-person, overhead and deck views of all three themes, repeated furnished venues, station halls, public/portable WCs and hlášky boards | seeded repeatability/variation, two-door combat venues with indoor/outdoor routes and headroom, actual held-W entry, slide escape and double-jump deck shortcut, one-press F bank opening, compatible reachable optional loot, fitted whole-source quote text, connected routes/stairs and actual descent/enemy following |
@@ -770,4 +785,20 @@ playback also passed: **9 captures, zero failures**, under
 F, real long-leap travel and wall/ceiling interruption. Combat regressions
 reported `failures=0`. The brace/tuck/boot orbit, contact, directional burst,
 live death and recovery sequence were inspected visually. Frame rate and
+long-session balance are not measured.
+
+The four-move/sample-cut pass ran native `finishers mining pinball gunplay
+recoil music onboarding`: **7 scenarios / 58 captures, zero failures or
+script/engine errors**, under `/tmp/kbb_finisher_variants_verified`. Two actual F-driven
+bags each exercised every move without adjacent repeats. All four launches
+produced measured SFX-bus PCM before contact; launch/contact recordings are
+saved there as `finishers_{flip,corkscrew,drop_kick,axe_kick}_sfx.wav`. All four
+brace/flight/contact/death/recovery strips and the updated tutorial were
+inspected visually. A delayed contextual-input regression proves pending fresh
+F suppresses LMB until its owner consumes it; budget checks count actual physics
+refill rather than assuming screenshot timing. Existing salvage switching,
+movement, gunplay, paused input and steady backing checks also passed.
+Regenerating the eight WAVs and provenance catalog produced identical payloads;
+Godot adds resource UIDs to the import sidecars on first import.
+Combat regressions reported `failures=0`. Subjective listening, frame rate and
 long-session balance are not measured.

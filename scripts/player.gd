@@ -127,6 +127,10 @@ var _finisher_left := 0.0
 var _finisher_direction := Vector3.ZERO
 var _finisher_travel_left := 0.0
 var _finisher_speed := 0.0
+var finisher_variant := KickView.Finish.FLIP
+var _finisher_order := PackedInt32Array()
+var _finisher_next := 0
+var _last_finisher_variant := -1
 var _last_kill_weapon: StringName = &""
 var _combo_left := 0.0
 ## Snapshot the current phase's period; damage never extends its deadline.
@@ -236,6 +240,10 @@ func _ready() -> void:
 	_kick_query.exclude = [get_rid()]
 	_kick_view = KickView.new()
 	camera.add_child(_kick_view)
+	_finisher_order.resize(KickView.Finish.COUNT)
+	for variation in KickView.Finish.COUNT:
+		_finisher_order[variation] = variation
+	_finisher_next = KickView.Finish.COUNT
 	if horde != null:
 		horde.action_killed.connect(_on_action_killed)
 	_directions.resize(WeaponBuild.MAX_PROJECTILES)
@@ -316,6 +324,8 @@ func cancel_actions() -> void:
 	_waiting_for_kick_release = Input.is_action_pressed("kick")
 	_jump_buffer = 0.0
 	_slide_left = 0.0
+	if is_finishing() and sound != null:
+		sound.stop_finisher()
 	if is_finishing() and _finisher_slot >= 0:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -464,9 +474,16 @@ func _process(delta: float) -> void:
 	_step_camera_kick(delta)
 	var flight := clampf((FINISHER_DURATION - _finisher_left) / FINISHER_CONTACT, 0.0, 1.0) if is_finishing() else 0.0
 	var leap_bank := sin(flight * PI)
-	# The limbs perform the full flip; bounded camera motion keeps the victim readable.
-	camera.rotation = _camera_rest_rotation + _camera_kick \
-			+ Vector3(-sin(flight * TAU) * 0.16, 0.0, _slide_visual * 0.055 + leap_bank * 0.14)
+	# The limbs perform the acrobatics; bounded motion never steers actual aim.
+	var flourish := Vector3(-sin(flight * TAU) * 0.16, 0.0, leap_bank * 0.14)
+	match finisher_variant:
+		KickView.Finish.CORKSCREW:
+			flourish = Vector3(-leap_bank * 0.06, 0.0, sin(flight * TAU) * 0.20)
+		KickView.Finish.DROP_KICK:
+			flourish = Vector3(leap_bank * 0.10, 0.0, -leap_bank * 0.07)
+		KickView.Finish.AXE_KICK:
+			flourish = Vector3(-sin(flight * TAU) * 0.22, 0.0, leap_bank * 0.05)
+	camera.rotation = _camera_rest_rotation + _camera_kick + flourish + Vector3(0.0, 0.0, _slide_visual * 0.055)
 	camera.fov = lerpf(camera.fov, 90.0 + speed_ratio * 2.5 + _slide_visual * 6.0 + leap_bank * 18.0, 1.0 - exp(-8.0 * delta))
 	aim_bloom *= exp(-5.0 * delta)
 	_trauma = maxf(0.0, _trauma - delta * 1.8)
@@ -559,7 +576,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var shooting := captured and not _waiting_for_fire_release and not is_finishing() \
 			and not (mining_tool != null and mining_tool.is_presented()) \
-			and not (Input.is_action_just_pressed("mine") and finisher_ready()) \
+			and not (mining_tool != null and mining_tool.finisher_press_pending()) \
 			and Input.is_action_pressed("fire") and _draw_left <= 0.0
 	if weapon.spin_up_time > 0.0:
 		if shooting:
@@ -752,6 +769,24 @@ func _update_finisher_target() -> void:
 		finisher_target = horde.finisher_target(camera.global_position, -head.global_basis.z, FINISHER_REACH)
 		_finisher_target_generation = horde.enemy_generation(finisher_target)
 
+## Shuffle a cached four-move bag; its boundary also cannot repeat the last move.
+func _choose_finisher() -> void:
+	if _finisher_next == KickView.Finish.COUNT:
+		for index in range(KickView.Finish.COUNT - 1, 0, -1):
+			var other := _rng.randi_range(0, index)
+			var swap := _finisher_order[index]
+			_finisher_order[index] = _finisher_order[other]
+			_finisher_order[other] = swap
+		if _finisher_order[0] == _last_finisher_variant:
+			var other := _rng.randi_range(1, KickView.Finish.COUNT - 1)
+			var swap := _finisher_order[0]
+			_finisher_order[0] = _finisher_order[other]
+			_finisher_order[other] = swap
+		_finisher_next = 0
+	finisher_variant = _finisher_order[_finisher_next] as KickView.Finish
+	_finisher_next += 1
+	_last_finisher_variant = finisher_variant
+
 ## MiningTool owns fresh F presses; this claims a valid enemy before salvage.
 func try_finisher() -> bool:
 	if not active or get_tree().paused or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED \
@@ -779,8 +814,9 @@ func try_finisher() -> bool:
 	_waiting_for_mine_release = true
 	_waiting_for_fire_release = Input.is_action_pressed("fire")
 	mining_tool.cancel()
-	_kick_view.finish(FINISHER_DURATION, FINISHER_CONTACT)
-	sound.play_cue(&"jump", 0.85)
+	_choose_finisher()
+	_kick_view.finish(FINISHER_DURATION, FINISHER_CONTACT, finisher_variant)
+	sound.play_finisher(finisher_variant, false)
 	add_shake(0.10)
 	if _view != null:
 		_view.brace(1.0)
@@ -814,6 +850,7 @@ func _interrupt_finisher() -> void:
 	velocity.x = 0.0
 	velocity.z = 0.0
 	_kick_view.cancel()
+	sound.stop_finisher()
 
 func _step_finisher(delta: float) -> void:
 	if not is_finishing():
@@ -824,7 +861,7 @@ func _step_finisher(delta: float) -> void:
 	if before > contact and _finisher_left <= contact:
 		if horde != null and horde.finish(_finisher_slot, _finisher_generation, camera.global_position, FINISHER_CONTACT_REACH):
 			velocity.y = minf(velocity.y, -3.0)
-			sound.play_cue(&"land", 0.70)
+			sound.play_finisher(finisher_variant, true)
 			add_shake(0.55)
 			hit_confirmed.emit(true)
 		_finisher_slot = -1

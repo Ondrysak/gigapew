@@ -13,7 +13,7 @@ const TIPS := {
 	&"repair": ["OTOČ TO PROTI NIM", "Úspěšné parry a riskantní zabití zblízka doplní zdraví okamžitě. Samotné kopání do rekvizit ani zásahy do mrtvol nic nevrátí. Lékárničky a zásoby zůstávají další možností."],
 	&"drop": ["TEĎ PŘIJDE DROP", "Zabití nabíjí jeden DROP; přesná, rytmická, vzdušná a slide zabití jej urychlí. Až je připravený, novým stiskem LMB vystřel pomalou zbraní na beat pro ×10 a speciální efekt. Mimo beat normálně střílíš a náboj zůstává."],
 	&"pinball": ["NEPŘÍTEL JE PROJEKTIL", "Zamraz tvarohem a kopni do davu. Hořícího doraz brokovnicí. Vyhozeného sejmi railem. Zelektrizovaný dav odpal výbuchem. Slide kop vyhazuje, kop ze vzduchu sráží dolů."],
-	&"finisher": ["SALTO DO KSICHTU", "Zesláblý nepřítel zlatě pulzuje jen krátce. Zamiř až na 8 metrů a jednou stiskni F: skočíš k němu a salto zakončí kopem pro větší doplnění zdraví. Zeď, strop nebo ztracený cíl skok přeruší. Nejsi nesmrtelný a bossové se takhle dorazit nedají."],
+	&"finisher": ["KOP DO KSICHTU", "Zesláblý nepřítel zlatě pulzuje jen krátce. Zamiř až na 8 metrů a jednou stiskni F: skočíš k němu a jeden ze čtyř střídajících se kopů doplní zdraví. Zeď, strop nebo ztracený cíl skok přeruší. Nejsi nesmrtelný; pro další kop pusť F. Bossové se takhle dorazit nedají."],
 	&"combos": ["TRIKY DOHROMADY", "Výbušné triky uvnitř Ban zóny spustí POWNED za +60 %. Valhalla poblíž zóny spustí PERMABAN. Úprk pod štítem spustí LAST TIME KRATOS."],
 }
 const MIN_SECONDS := 5.0

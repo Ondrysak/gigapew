@@ -5,6 +5,7 @@ extends Node3D
 ## The foot pivot stays in front of the near plane even through a full rotation.
 
 enum Kind { KICK, SLIDE, STOMP }
+enum Finish { FLIP, CORKSCREW, DROP_KICK, AXE_KICK, COUNT }
 
 const KICK_TIME := 0.38
 const PARRY_TIME := 0.30
@@ -17,8 +18,12 @@ const SLIDE_REST := Vector3(0.29, -0.39, -0.92)
 const SLIDE_ANGLE := Vector3(0.30, -0.48, -0.22)
 const HAND_REST := Vector3(-0.42, -0.48, -0.58)
 const HAND_STRIKE := Vector3(-0.18, -0.12, -0.72)
+const SOLE_COLOR := Color(0.66, 0.23, 0.07)
+const SOLE_EMISSION := Color(1.0, 0.55, 0.15)
+const FINISH_LIGHT_COLOR := Color(1.0, 0.80, 0.60)
 
 var _boot := Node3D.new()
+var _second_boot := Node3D.new()
 var _hand := Node3D.new()
 var _brace_hand := Node3D.new()
 var _finish_light := OmniLight3D.new()
@@ -31,6 +36,7 @@ var _parry_left := 0.0
 var _finish_left := 0.0
 var _finish_duration := 0.0
 var _finish_contact := 0.0
+var _finish_variation := Finish.FLIP
 var _sliding := false
 var _slide_blend := 0.0
 var _boot_clearance := 0.72
@@ -44,21 +50,14 @@ func _ready() -> void:
 	var denim := _material(Color(0.13, 0.16, 0.24), 0.9)
 	var leather := _material(Color(0.07, 0.06, 0.05), 0.45)
 	var laces := _material(Color(0.36, 0.31, 0.24), 0.8)
-	_sole_material.albedo_color = Color(0.66, 0.23, 0.07)
+	_sole_material.albedo_color = SOLE_COLOR
 	_sole_material.roughness = 0.8
-	_sole_material.emission = Color(1.0, 0.55, 0.15)
+	_sole_material.emission = SOLE_EMISSION
 	_sole_material.emission_energy_multiplier = 0.0
 	_sole_material.emission_enabled = true
 	# Foot-centred pivot, with the shin reaching back toward the player. Unlike
 	# the old hip pivot, no geometry begins behind the camera at windup/rest.
-	_add_box(_boot, Vector3(0.16, 0.17, 0.50), Vector3(0.0, 0.08, 0.29), denim)
-	_add_box(_boot, Vector3(0.22, 0.18, 0.39), Vector3(0.0, 0.0, -0.09), leather)
-	_add_box(_boot, Vector3(0.20, 0.23, 0.16), Vector3(0.0, 0.055, 0.075), leather)
-	_add_box(_boot, Vector3(0.24, 0.045, 0.42), Vector3(0.0, -0.115, -0.09), _sole_material)
-	for ridge in 4:
-		_add_box(_boot, Vector3(0.23, 0.025, 0.035), Vector3(0.0, -0.15, -0.25 + ridge * 0.10), leather)
-	for lace in 3:
-		_add_box(_boot, Vector3(0.15, 0.015, 0.025), Vector3(0.0, 0.098, -0.12 + lace * 0.055), laces)
+	_build_boot(denim, leather, laces)
 	_palm_material.albedo_color = Color(0.86, 0.62, 0.48)
 	_palm_material.roughness = 0.7
 	_palm_material.emission = Color(0.45, 0.85, 1.0)
@@ -70,11 +69,12 @@ func _ready() -> void:
 	# Local fill makes the rotating toe, laces and sole readable in dark arenas.
 	# Cached once and enabled only for the execution; no screen-space flash.
 	_finish_light.position = Vector3(0.0, 0.25, -0.40)
-	_finish_light.light_color = Color(1.0, 0.80, 0.60)
+	_finish_light.light_color = FINISH_LIGHT_COLOR
 	_finish_light.light_energy = 1.2
 	_finish_light.omni_range = 2.0
 	_finish_light.shadow_enabled = false
 	add_child(_boot)
+	add_child(_second_boot)
 	add_child(_hand)
 	add_child(_brace_hand)
 	add_child(_finish_light)
@@ -86,6 +86,25 @@ func _material(color: Color, roughness: float) -> StandardMaterial3D:
 	material.roughness = roughness
 	return material
 
+func _build_boot(denim: Material, leather: Material, laces: Material) -> void:
+	_add_boot_box(Vector3(0.16, 0.17, 0.50), Vector3(0.0, 0.08, 0.29), denim)
+	_add_boot_box(Vector3(0.22, 0.18, 0.39), Vector3(0.0, 0.0, -0.09), leather)
+	_add_boot_box(Vector3(0.20, 0.23, 0.16), Vector3(0.0, 0.055, 0.075), leather)
+	_add_boot_box(Vector3(0.24, 0.045, 0.42), Vector3(0.0, -0.115, -0.09), _sole_material)
+	for ridge in 4:
+		_add_boot_box(Vector3(0.23, 0.025, 0.035), Vector3(0.0, -0.15, -0.25 + ridge * 0.10), leather)
+	for lace in 3:
+		_add_boot_box(Vector3(0.15, 0.015, 0.025), Vector3(0.0, 0.098, -0.12 + lace * 0.055), laces)
+
+func _add_boot_box(size: Vector3, at: Vector3, material: Material) -> void:
+	var first := _add_box(_boot, size, at, material)
+	var second := MeshInstance3D.new()
+	second.mesh = first.mesh
+	second.material_override = material
+	second.position = at
+	second.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_second_boot.add_child(second)
+
 func _build_hand(hand: Node3D, sleeve: Material) -> void:
 	_add_box(hand, Vector3(0.11, 0.11, 0.32), Vector3(0.0, 0.0, 0.22), sleeve)
 	_add_box(hand, Vector3(0.13, 0.035, 0.13), Vector3.ZERO, _palm_material)
@@ -93,7 +112,7 @@ func _build_hand(hand: Node3D, sleeve: Material) -> void:
 		_add_box(hand, Vector3(0.025, 0.025, 0.09), Vector3(-0.045 + finger * 0.03, 0.0, -0.1), _palm_material)
 	_add_box(hand, Vector3(0.025, 0.025, 0.07), Vector3(0.075, 0.0, -0.03), _palm_material)
 
-func _add_box(parent: Node3D, size: Vector3, at: Vector3, material: Material) -> void:
+func _add_box(parent: Node3D, size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	var instance := MeshInstance3D.new()
@@ -102,6 +121,7 @@ func _add_box(parent: Node3D, size: Vector3, at: Vector3, material: Material) ->
 	instance.position = at
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(instance)
+	return instance
 
 ## Repeated slide state updates preserve the current strike and its clock.
 ## The idle extended leg stays below the crosshair, blending in/out in 0.167s.
@@ -130,11 +150,12 @@ func parry() -> void:
 
 ## Caller owns gameplay contact. Cached poses brace, tuck, orbit, snap at its
 ## contact clock, briefly plant, then recover over the remaining duration.
-func finish(duration: float, contact: float) -> void:
+func finish(duration: float, contact: float, variation: Finish) -> void:
 	if get_tree().paused:
 		return
 	_finish_duration = maxf(duration, 0.001)
 	_finish_contact = clampf(contact, 0.001, _finish_duration)
+	_finish_variation = variation
 	_finish_left = _finish_duration
 	_kick_left = 0.0
 	_parry_left = 0.0
@@ -149,9 +170,9 @@ func cancel() -> void:
 	_connected = false
 	_sliding = false
 	_slide_blend = 0.0
-	_sole_material.emission_energy_multiplier = 0.0
-	_palm_material.emission_energy_multiplier = 0.0
+	_reset_finish_accent()
 	_boot.hide()
+	_second_boot.hide()
 	_hand.hide()
 	_brace_hand.hide()
 	_finish_light.hide()
@@ -176,11 +197,11 @@ func _pose() -> void:
 	var boot_rest := BOOT_REST.lerp(SLIDE_REST, slide)
 	var boot_angle := BOOT_REST_ANGLE.lerp(SLIDE_ANGLE, slide)
 	_boot.visible = _kick_left > 0.0 or _finish_left > 0.0 or _slide_blend > 0.0
+	_second_boot.visible = _finish_left > 0.0 and _finish_variation == Finish.DROP_KICK
 	_hand.visible = _parry_left > 0.0 or _finish_left > 0.0
 	_brace_hand.visible = _finish_left > 0.0
 	_finish_light.visible = _finish_left > 0.0
-	_sole_material.emission_energy_multiplier = 0.0
-	_palm_material.emission_energy_multiplier = 0.0
+	_reset_finish_accent()
 	if _finish_left > 0.0:
 		_pose_finish(boot_rest, boot_angle)
 		return
@@ -248,7 +269,23 @@ func _pose_finish(rest: Vector3, rest_angle: Vector3) -> void:
 	_brace_hand.rotation = Vector3(hand_angle.x, -hand_angle.y, -hand_angle.z)
 	_hand.visible = age < tuck_end
 	_brace_hand.visible = age < tuck_end
+	match _finish_variation:
+		Finish.FLIP:
+			_pose_flip(rest, rest_angle, age, brace_end, tuck_end, snap_start, plant_end)
+		Finish.CORKSCREW:
+			_pose_corkscrew(rest, rest_angle, age, brace_end, tuck_end, snap_start, plant_end)
+			_sole_material.emission = Color(0.35, 0.85, 1.0)
+		Finish.DROP_KICK:
+			_pose_drop_kick(rest, rest_angle, age, brace_end, tuck_end, snap_start, plant_end)
+			_sole_material.emission = Color(1.0, 0.75, 0.20)
+		Finish.AXE_KICK:
+			_pose_axe_kick(rest, rest_angle, age, brace_end, tuck_end, snap_start, plant_end)
+			_sole_material.emission = Color(1.0, 0.30, 0.18)
+	_finish_light.light_color = _sole_material.emission.lerp(FINISH_LIGHT_COLOR, 0.5)
+	_sole_material.emission_energy_multiplier = 0.18 + _contact_glow(age, _finish_contact)
 
+func _pose_flip(rest: Vector3, rest_angle: Vector3, age: float, brace_end: float, tuck_end: float, snap_start: float, plant_end: float) -> void:
+	var brace := _smooth(clampf(age / brace_end, 0.0, 1.0))
 	var tucked := Vector3(0.396, -0.354, -0.90)
 	var tucked_angle := Vector3(-0.65, 0.25, -0.35)
 	var orbit_end := Vector3(-0.396, -0.354, -0.90)
@@ -282,7 +319,126 @@ func _pose_finish(rest: Vector3, rest_angle: Vector3) -> void:
 		# Preserve the completed revolution during recovery, avoiding a reverse
 		# spin. Once hidden, the next ordinary kick sets its own resting angle.
 		_set_boot(strike.lerp(rest, recover), strike_angle.lerp(rest_angle + Vector3(TAU, 0.0, 0.0), recover))
-	_sole_material.emission_energy_multiplier = 0.18 + _contact_glow(age, _finish_contact)
+
+func _pose_corkscrew(rest: Vector3, rest_angle: Vector3, age: float, brace_end: float, tuck_end: float, snap_start: float, plant_end: float) -> void:
+	var crouch := Vector3(0.42, -0.56, -0.86)
+	var crouch_angle := Vector3(-0.35, 0.45, -0.45)
+	var tucked := Vector3(0.56, -0.27, -1.00)
+	var tucked_angle := Vector3(0.20, 0.65, -0.80)
+	var sweep_start := Vector3(-0.56, -0.12, -1.04)
+	var sweep_angle := Vector3(0.30, -TAU - PI * 0.50, 1.25)
+	var strike := Vector3(0.14, -0.18, -1.12)
+	if age < brace_end:
+		var brace := _smooth(age / brace_end)
+		_set_boot(rest.lerp(crouch, brace), rest_angle.lerp(crouch_angle, brace))
+	elif age < tuck_end:
+		var tuck := _smooth((age - brace_end) / (tuck_end - brace_end))
+		_set_boot(crouch.lerp(tucked, tuck), crouch_angle.lerp(tucked_angle, tuck))
+	elif age < snap_start:
+		var flight := (age - tuck_end) / (snap_start - tuck_end)
+		# A horizontal, depth-changing corkscrew around the sightline. The
+		# heel winds around the outside before sweeping laterally at contact.
+		var arc := PI * flight
+		var at := Vector3(cos(arc) * 0.56, -0.27 + sin(arc) * 0.18 + flight * 0.15, -1.00 - sin(arc) * 0.28 - flight * 0.04)
+		var angles := tucked_angle.lerp(sweep_angle, flight)
+		angles.z -= sin(arc) * 1.10
+		_set_boot(at, angles)
+	elif age < _finish_contact:
+		var snap := _snap_progress(age, snap_start)
+		_set_boot(sweep_start.lerp(strike, snap), sweep_angle)
+	elif age < plant_end:
+		_set_boot(strike, sweep_angle)
+	else:
+		var recover := _recovery_progress(age, plant_end)
+		_set_boot(strike.lerp(rest, recover), sweep_angle.lerp(rest_angle + Vector3(0.0, -TAU, 0.0), recover))
+
+func _pose_drop_kick(rest: Vector3, rest_angle: Vector3, age: float, brace_end: float, tuck_end: float, snap_start: float, plant_end: float) -> void:
+	var crouch := Vector3(0.38, -0.58, -0.86)
+	var crouch_angle := Vector3(-0.45, 0.22, -0.30)
+	var tucked := Vector3(0.44, -0.36, -0.92)
+	var tucked_angle := Vector3(-0.95, 0.28, -0.40)
+	var flight_end := Vector3(0.32, -0.12, -1.00)
+	var flight_angle := Vector3(0.35, 0.15, -0.18)
+	var strike := Vector3(0.18, -0.20, -1.18)
+	var strike_angle := Vector3(1.45, 0.08, -0.08)
+	if age < brace_end:
+		var brace := _smooth(age / brace_end)
+		_set_drop_pair(rest.lerp(crouch, brace), rest_angle.lerp(crouch_angle, brace))
+	elif age < tuck_end:
+		var tuck := _smooth((age - brace_end) / (tuck_end - brace_end))
+		_set_drop_pair(crouch.lerp(tucked, tuck), crouch_angle.lerp(tucked_angle, tuck))
+	elif age < snap_start:
+		var flight := (age - tuck_end) / (snap_start - tuck_end)
+		# Both knees float outside the reticle, then the two soles drive
+		# forward together rather than tracing the single-leg flip orbit.
+		var at := tucked.lerp(flight_end, _smooth(flight))
+		at.y -= sin(PI * flight) * 0.12
+		at.x += sin(PI * flight) * 0.08
+		_set_drop_pair(at, tucked_angle.lerp(flight_angle, _smooth(flight)))
+	elif age < _finish_contact:
+		var snap := _snap_progress(age, snap_start)
+		_set_drop_pair(flight_end.lerp(strike, snap), flight_angle.lerp(strike_angle, snap))
+	elif age < plant_end:
+		_set_drop_pair(strike, strike_angle)
+	else:
+		var recover := _recovery_progress(age, plant_end)
+		var at := strike.lerp(rest, recover)
+		at.y -= sin(PI * recover) * 0.16
+		_set_drop_pair(at, strike_angle.lerp(rest_angle, recover))
+
+func _pose_axe_kick(rest: Vector3, rest_angle: Vector3, age: float, brace_end: float, tuck_end: float, snap_start: float, plant_end: float) -> void:
+	var crouch := Vector3(0.34, -0.58, -0.86)
+	var crouch_angle := Vector3(-0.25, 0.12, -0.18)
+	var tucked := Vector3(0.48, -0.18, -0.98)
+	var tucked_angle := Vector3(-0.80, 0.30, -0.40)
+	var raised := Vector3(0.34, 0.58, -1.08)
+	var raised_angle := Vector3(-1.15, 0.12, 0.20)
+	var strike := Vector3(0.04, -0.24, -1.14)
+	var strike_angle := Vector3(-0.30, 0.10, 0.05)
+	if age < brace_end:
+		var brace := _smooth(age / brace_end)
+		_set_boot(rest.lerp(crouch, brace), rest_angle.lerp(crouch_angle, brace))
+	elif age < tuck_end:
+		var tuck := _smooth((age - brace_end) / (tuck_end - brace_end))
+		_set_boot(crouch.lerp(tucked, tuck), crouch_angle.lerp(tucked_angle, tuck))
+	elif age < snap_start:
+		var flight := _smooth((age - tuck_end) / (snap_start - tuck_end))
+		# Lift outside the aim point, presenting the heel high above it.
+		# There is no somersault: the contact stroke is a vertical chop.
+		var at := tucked.lerp(raised, flight)
+		at.x += sin(PI * flight) * 0.13
+		_set_boot(at, tucked_angle.lerp(raised_angle, flight))
+	elif age < _finish_contact:
+		var snap := _snap_progress(age, snap_start)
+		_set_boot(raised.lerp(strike, snap), raised_angle.lerp(strike_angle, snap))
+	elif age < plant_end:
+		_set_boot(strike, strike_angle)
+	else:
+		var recover := _recovery_progress(age, plant_end)
+		var at := strike.lerp(rest, recover)
+		at.y -= sin(PI * recover) * 0.12
+		_set_boot(at, strike_angle.lerp(rest_angle, recover))
+
+func _snap_progress(age: float, snap_start: float) -> float:
+	var snap := clampf((age - snap_start) / (_finish_contact - snap_start), 0.0, 1.0)
+	return 1.0 - (1.0 - snap) * (1.0 - snap) * (1.0 - snap)
+
+func _recovery_progress(age: float, plant_end: float) -> float:
+	return _smooth(clampf((age - plant_end) / maxf(_finish_duration - plant_end, 0.001), 0.0, 1.0))
+
+func _set_drop_pair(at: Vector3, angles: Vector3) -> void:
+	_set_boot(at, angles)
+	at.x = -at.x
+	at.z = minf(at.z, -_boot_clearance)
+	_second_boot.position = at
+	_second_boot.rotation = Vector3(angles.x, -angles.y, -angles.z)
+
+func _reset_finish_accent() -> void:
+	_sole_material.albedo_color = SOLE_COLOR
+	_sole_material.emission = SOLE_EMISSION
+	_sole_material.emission_energy_multiplier = 0.0
+	_palm_material.emission_energy_multiplier = 0.0
+	_finish_light.light_color = FINISH_LIGHT_COLOR
 
 func _set_boot(at: Vector3, angles: Vector3) -> void:
 	at.z = minf(at.z, -_boot_clearance)

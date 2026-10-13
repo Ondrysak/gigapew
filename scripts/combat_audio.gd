@@ -4,10 +4,31 @@ extends Node
 const SAMPLE_RATE := 22050
 const VICTORY_NOTES := [0, 4, 7, 12]
 
+# Pair ordering matches KickView.Finish: FLIP, CORKSCREW, DROP_KICK, AXE_KICK.
+# Explicit preloads keep all eight derived cuts in exported builds.
+const FINISHER_STREAMS := [
+	preload("res://assets/audio/finishers/flip_launch.wav"),
+	preload("res://assets/audio/finishers/flip_impact.wav"),
+	preload("res://assets/audio/finishers/corkscrew_launch.wav"),
+	preload("res://assets/audio/finishers/corkscrew_impact.wav"),
+	preload("res://assets/audio/finishers/drop_kick_launch.wav"),
+	preload("res://assets/audio/finishers/drop_kick_impact.wav"),
+	preload("res://assets/audio/finishers/axe_kick_launch.wav"),
+	preload("res://assets/audio/finishers/axe_kick_impact.wav"),
+]
+const FINISHER_CUES := [
+	&"finisher_flip_launch", &"finisher_flip_impact",
+	&"finisher_corkscrew_launch", &"finisher_corkscrew_impact",
+	&"finisher_drop_kick_launch", &"finisher_drop_kick_impact",
+	&"finisher_axe_kick_launch", &"finisher_axe_kick_impact",
+]
+
 ## Supply recorded sounds per cue in the Inspector to replace the default synth.
 @export var sound_overrides: Dictionary[StringName, AudioStream] = {}
 
 var _voices: Dictionary = {}
+var _finisher_voices: Array[AudioStreamPlayer] = []
+var _active_finisher_voice: AudioStreamPlayer
 
 func _ready() -> void:
 	# Small original synthesized cues: no downloads or runtime audio streaming.
@@ -19,11 +40,33 @@ func _ready() -> void:
 		voice.bus = &"SFX"
 		add_child(voice)
 		_voices[cue] = voice
+	for index in FINISHER_STREAMS.size():
+		var cue: StringName = FINISHER_CUES[index]
+		var voice := AudioStreamPlayer.new()
+		voice.stream = sound_overrides[cue] if sound_overrides.get(cue) != null else FINISHER_STREAMS[index]
+		voice.volume_db = -10.0 if index % 2 == 0 else -9.0
+		voice.max_polyphony = 1
+		voice.bus = &"SFX"
+		add_child(voice)
+		_finisher_voices.append(voice)
 
 func play_cue(cue: StringName, pitch: float = 1.0) -> void:
 	var voice: AudioStreamPlayer = _voices[cue]
 	voice.pitch_scale = pitch
 	voice.play()
+
+func play_finisher(variation: int, contact: bool) -> void:
+	if variation < 0 or variation >= FINISHER_STREAMS.size() / 2:
+		return
+	# New launches replace old tails; contact replaces its launch immediately.
+	stop_finisher()
+	_active_finisher_voice = _finisher_voices[variation * 2 + int(contact)]
+	_active_finisher_voice.play()
+
+func stop_finisher() -> void:
+	if _active_finisher_voice != null:
+		_active_finisher_voice.stop()
+		_active_finisher_voice = null
 
 func _make_cue(cue: StringName) -> AudioStreamWAV:
 	var duration := 0.16
