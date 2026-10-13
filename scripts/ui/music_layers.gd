@@ -23,7 +23,7 @@ const PARTS := [
 	[&"boss_drive", "BOSS ACID", SYNTH],
 	[&"accent", "LIVE ACCENT", VOICE],
 ]
-const ACCENT_LABELS := {&"salvage": "SALVAGE", &"combo": "COMBO", &"danger": "DANGER", &"extraction": "EXTRACTION"}
+const ACCENT_LABELS := {&"salvage": "SALVAGE", &"combo": "COMBO", &"danger": "DANGER", &"drop": "DROP"}
 const STINGER_LABELS := {&"level_up": "LEVEL UP", &"stage_clear": "CLEAR", &"death": "DEATH", &"run_complete": "FINALE"}
 
 var _meter = Music.MixMeter.new()

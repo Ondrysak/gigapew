@@ -77,9 +77,8 @@ func _refresh_operator() -> void:
 	var records_data := Profile.records
 	parts.append("VÝPRAVY  %d" % int(records_data.runs))
 	parts.append("v%s" % ProjectSettings.get_setting("application/config/version"))
-	if float(records_data.best_time) > 0.0:
-		var seconds := int(records_data.best_time)
-		parts.append("REKORD  %d:%02d" % [floori(seconds / 60.0), seconds % 60])
+	if int(records_data.best_score) > 0:
+		parts.append("REKORD  %d BODŮ" % int(records_data.best_score))
 	operator_label.text = "   ·   ".join(parts)
 
 func _deploy(definition: ClassDefinition) -> void:

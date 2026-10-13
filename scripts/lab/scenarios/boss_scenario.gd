@@ -4,7 +4,7 @@ func title() -> String:
 	return "Boss"
 
 func summary() -> String:
-	return "Robot and alien bosses: arrival, fight, low health, kill without bypassing an unfinished contract"
+	return "Robot and alien bosses: arrival, fight, low health, kill without bypassing an unfinished arena"
 
 func run() -> void:
 	for stage in [0, 2]:
@@ -37,5 +37,5 @@ func _fight(stage: int) -> void:
 	await lab.capture("%s_low" % tag)
 	game.horde.damage(slot, maximum)
 	await lab.wait(0.6)
-	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "%s boss death cannot bypass unfinished mining and kill objectives" % tag)
+	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.director.finished, "%s actual boss defeat cannot complete an unfinished arena director" % tag)
 	await lab.capture("%s_cleared" % tag)

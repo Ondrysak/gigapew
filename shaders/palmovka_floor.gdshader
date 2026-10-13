@@ -18,9 +18,12 @@ uniform vec3 paint_color : source_color = vec3(0.62, 0.55, 0.36);
 uniform vec3 oil_color : source_color = vec3(0.035, 0.032, 0.036);
 
 void fragment() {
-	vec2 p = world_position.xz;
-	float track_z = floor(p.y / track_period + 0.5) * track_period;
-	float across = p.y - track_z;
+	vec2 p = floor_hallucinated_uv(world_position.xz);
+	// Rails and road-navigation paint stay on the authored world axes; only
+	// the asphalt/setts finish receives the hallucinated pattern coordinates.
+	vec2 markings = world_position.xz;
+	float track_z = floor(markings.y / track_period + 0.5) * track_period;
+	float across = markings.y - track_z;
 
 	// Asphalt with tar cracks.
 	float grain = zz_noise(p * 9.0);
@@ -47,9 +50,9 @@ void fragment() {
 
 	// Faded paint: a dashed centre line between the tracks, kerb-side stripe.
 	float lane = abs(abs(across) - track_period * 0.5);
-	float dash = step(0.5, fract(p.x / 4.0));
+	float dash = step(0.5, fract(markings.x / 4.0));
 	float line = (1.0 - smoothstep(0.07, 0.07 + fwidth(lane), lane)) * dash;
-	float wear = smoothstep(0.35, 0.65, zz_fbm(p * 0.7 + 11.0));
+	float wear = smoothstep(0.35, 0.65, zz_fbm(markings * 0.7 + 11.0));
 	color = mix(color, paint_color, line * wear * 0.85);
 
 	// Oil and puddles.

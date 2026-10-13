@@ -7,10 +7,10 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Excalibur"
-description = "Těžký průraz na dálku. Jedna rána projde celou řadou halucinací."
-damage = 240
+description = "Přesný průraz celé řady na dálku. Zadní jádra a těžké cíle; vyrovnej si lajnu."
+damage = 190
 recoil_degrees = 0.22
-fire_interval = 0.45
+fire_interval = 0.55
 range_meters = 64.0
 knockback = 10.0
 pierce = 30

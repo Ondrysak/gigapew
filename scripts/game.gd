@@ -1,12 +1,11 @@
 class_name ArenaGame
 extends Node3D
 
-## Owns a run for the class chosen in the menu: stages in `campaign` order, a
-## RunState carried between them (class + meta upgrades + level-ups), mining,
-## pause and level-up flow, banking of mined currency into the Profile, and
-## music intensity. Each stage is rebuilt from data under a fresh Round node.
+## Three scored Prague arenas share a run build. Finite encounters end only
+## after their real survivors are cleared; optional cabinets and caches never
+## gate progression. Shops bank earned loot and retain the combat build.
 
-enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD, GEAR }
+enum RoundState { LOADING, PLAYING, LEVEL_UP, PAUSED, SHOP, LOST, ENCOUNTER_REWARD, GEAR, DRAFT, ROUTE }
 
 const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const SHOP_SCENE := preload("res://scenes/ui/round_shop_screen.tscn")
@@ -39,10 +38,11 @@ var class_definition: ClassDefinition
 var stage_index := 0
 var round_state := RoundState.LOADING
 var kills := 0
+var arena_score := 0
+var stage_score := 0
 var run_time := 0.0
 var stages_cleared := 0
 var level_seed := 0
-var quests: LevelQuests
 ## Currency banked into the Profile during this run, id -> amount.
 var run_banked: Dictionary = {}
 var player: ArenaPlayer
@@ -57,8 +57,6 @@ var round_shop: RoundShopScreen
 var damage_numbers: DamageNumbers
 var mining_encounter: MiningDefense
 var boss_fight: YardBossFight
-## Present between contract completion and lift-off; null otherwise.
-var extraction: ExtractionPod
 var _pending_encounter_rewards := 0
 var _stage_clear_pending := false
 var _rng := RandomNumberGenerator.new()
@@ -81,6 +79,9 @@ var gear_loot: GearLootDirector
 var _pending_gear_rewards: Array[Dictionary] = []
 var _gear_offers: Array[GearDefinition] = []
 var _gear_inspection := false
+var weapon_draft: WeaponDraftScreen
+var route_screen: RouteChoiceScreen
+var _initial_draft := false
 
 func _ready() -> void:
 	_rng.randomize()
@@ -109,10 +110,21 @@ func _ready() -> void:
 	gear_screen.chosen.connect(_on_gear_chosen)
 	gear_screen.declined.connect(_on_gear_declined)
 	hud.gear_hud.inspect_requested.connect(_inspect_gear)
+	weapon_draft = WeaponDraftScreen.new()
+	add_child(weapon_draft)
+	weapon_draft.confirmed.connect(_on_weapon_draft_confirmed)
+	weapon_draft.cancelled.connect(_on_weapon_draft_cancelled)
+	route_screen = RouteChoiceScreen.new()
+	add_child(route_screen)
+	route_screen.chosen.connect(_on_route_chosen)
+	route_screen.weapons_requested.connect(_open_weapon_draft.bind(true))
 	_new_run()
 
 func _new_run() -> void:
 	get_tree().paused = false
+	weapon_draft.close()
+	route_screen.close()
+	_initial_draft = true
 	Music.new_run()
 	_cancel_gear()
 	class_definition = Profile.roster.find(Profile.selected_class_id)
@@ -135,6 +147,8 @@ func _new_run() -> void:
 	run_state.resources_changed.connect(hud.set_resource)
 	run_state.supply_changed.connect(hud.set_supply)
 	kills = 0
+	arena_score = 0
+	stage_score = 0
 	hud.gear_hud.setup(run_state)
 	run_time = 0.0
 	RenderingServer.global_shader_parameter_set("hallucination_time", run_time)
@@ -160,7 +174,8 @@ func _process(delta: float) -> void:
 	hud.radar.refresh(horde, player, horde.boss_index, pickups, mining_encounter)
 	hud.set_abilities(player.abilities)
 	hud.set_gunplay(player)
-	hud.set_objectives(mining_encounter, extraction, player)
+	hud.set_objectives(mining_encounter, player)
+	hud.set_arena_progress(director, player)
 	hud.set_boss_fight(boss_fight)
 	hud.set_gear_loot(gear_loot, round_state == RoundState.PLAYING)
 	if round_state == RoundState.PLAYING:
@@ -174,8 +189,7 @@ func _process(delta: float) -> void:
 		_music_kill_heat = move_toward(_music_kill_heat, 0.0, delta * 0.28)
 		_music_damage_heat = move_toward(_music_damage_heat, 0.0, delta * 0.5)
 		var tool := player.mining_tool
-		var contact := tool.resonance if tool != null and player.drilling() and is_instance_valid(tool.target_deposit) else 0.0
-		Music.set_mining(contact)
+		Music.set_mining(1.0 if tool != null and tool.is_smashing() else 0.0)
 		_music_timer -= delta
 		if _music_timer <= 0.0:
 			_music_timer = 0.25
@@ -201,6 +215,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		RoundState.PLAYING:
 			if event.is_action_pressed("pause"):
 				_open_pause()
+			elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_TAB:
+				if director.phase_name in ["RECOVERY", "ROUTE"]:
+					get_viewport().set_input_as_handled()
+					_open_weapon_draft(true)
 			elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_G:
 				get_viewport().set_input_as_handled()
 				_inspect_gear()
@@ -215,6 +233,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _request(action: Callable) -> void:
 	round_state = RoundState.LOADING
+	weapon_draft.close()
+	route_screen.close()
 	_cancel_encounters()
 	_cancel_gear()
 	player.active = false
@@ -245,13 +265,13 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	_cancel_gear()
 	mining_encounter = null
 	boss_fight = null
-	extraction = null
 	gear_loot = null
 	_pending_encounter_rewards = 0
 	_stage_clear_pending = false
 	if is_instance_valid(_round):
 		_round.free()
 	stage_index = index
+	stage_score = 0
 	var stage := campaign[index]
 	level_seed = _rng.randi() if seed_value < 0 else seed_value
 	_round = Node3D.new()
@@ -282,9 +302,7 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	player.camera.add_child(tool)
 	tool.setup(player, run_state)
 	deposits = deposit_field_scene.instantiate() as DepositField
-	quests = LevelQuests.new()
-	quests.configure(stage, deposits.deposit_types, level_seed, world is ProceduralWorld)
-	deposits.configure_quests(quests, level_seed)
+	deposits.configure_level(level_seed)
 	_round.add_child(deposits)
 	deposits.setup(world, stage.play_area, player, run_state)
 	deposits.compartment_opened.connect(player.gear_effects.grant_salvage_shield)
@@ -301,24 +319,35 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	director = HordeDirector.new()
 	director.name = "Director"
 	_round.add_child(director)
-	director.setup(horde, stage.schedule, player, level_seed)
+	director.setup(horde, stage.schedule, player, level_seed, stage.arena_encounters)
+	director.arena_completed.connect(_on_arena_completed.bind(director.get_instance_id()), CONNECT_DEFERRED)
+	director.phase_changed.connect(_on_arena_phase_changed.bind(director.get_instance_id()))
 	director.grace = stage.spawn_grace
+	director.route_choices_changed.connect(_on_route_choices_changed.bind(director.get_instance_id()), CONNECT_DEFERRED)
+	if world is ProceduralWorld:
+		director.configure_routes(world as ProceduralWorld)
+	var props := world.get_node_or_null("PinballProps")
+	if props != null:
+		for prop in props.get_children():
+			prop.setup(horde, player)
 	# Level hazards (barrels, consoles, vents...) stay inert until given the round.
 	for hazard in get_tree().get_nodes_in_group(&"hazard"):
 		if world.is_ancestor_of(hazard):
 			hazard.setup(horde, player, run_state)
 
 	hud.show_stage(stage, index, campaign.size())
-	hud.set_quests(quests, level_seed)
-	quests.changed.connect(hud.refresh_quests)
-	quests.completed.connect(_on_quests_completed.bind(quests.get_instance_id()), CONNECT_DEFERRED)
+	hud.setup_arena(level_seed)
+	hud.set_arena_score(arena_score, int(Profile.records.get("best_score", 0)))
 	player.health_changed.connect(hud.set_health)
 	player.health_changed.connect(_on_health_for_tips)
 	player.died.connect(_on_player_died)
 	player.shot_fired.connect(hud.show_shot)
 	player.hit_confirmed.connect(hud.show_hit)
 	player.combo_changed.connect(hud.show_combo)
+	player.arena_scored.connect(_on_arena_scored.bind(player.get_instance_id()))
+	player.drop_fired.connect(_on_drop_fired)
 	player.ability_combo.connect(hud.show_ability_combo)
+	player.action_feedback.connect(hud.show_action)
 	player.ability_combo.connect(func(_id: StringName): voice.say(&"combo"))
 	player.ability_combo.connect(func(_id: StringName): Music.accent(&"combo"))
 	horde.enemy_killed.connect(_on_enemy_killed)
@@ -339,7 +368,6 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 		_round.add_child(gear_loot)
 		gear_loot.setup(world as ProceduralWorld, horde, player, run_state, level_seed, stage_index)
 		gear_loot.reward_ready.connect(_on_gear_reward_ready.bind(gear_loot.get_instance_id()), CONNECT_DEFERRED)
-		gear_loot.stash_looted.connect(quests.record_stash)
 	player.weapon_changed.connect(func(_definition: WeaponDefinition): hud.set_primary(run_state))
 	hud.set_health(player.health, player.max_health)
 	hud.set_xp(run_state.xp, run_state.xp_required, run_state.level)
@@ -361,10 +389,14 @@ func _load_stage(index: int, seed_value: int = -1) -> void:
 	voice.say(&"arrive")
 	if index == 0:
 		hud.tutor.offer(&"basics")
-		hud.tutor.offer(&"contract")
+		hud.tutor.offer(&"arena")
+		hud.tutor.offer(&"drop")
+		hud.tutor.offer(&"pinball")
 		if run_state.guided and not player.abilities.is_empty():
 			_offer_skill_tip(player.abilities[0])
 
+	if _initial_draft:
+		_open_weapon_draft(false)
 ## Guided start: a level reveals a new skill slot.
 func _on_ability_unlocked(slot: int) -> void:
 	if not is_instance_valid(player) or slot >= player.abilities.size():
@@ -401,19 +433,86 @@ func _stage_enemies(schedule: SpawnSchedule) -> Array[HordeEnemyDefinition]:
 		definitions.append(schedule.boss)
 	return definitions
 
-func _on_enemy_killed(definition: HordeEnemyDefinition, _position: Vector3) -> void:
+func _on_enemy_killed(_definition: HordeEnemyDefinition, _position: Vector3) -> void:
 	if round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
 		return
 	kills += 1
 	_music_kill_heat = minf(1.0, _music_kill_heat + 0.16)
 	hud.set_kills(kills)
-	quests.record_kill(definition)
 	_burst_kills += 1
 	_burst_left = BURST_WINDOW
 	if _burst_kills >= BURST_KILLS:
 		_burst_kills = 0
 		voice.say(&"multikill")
 		Music.accent(&"combo")
+
+func _on_arena_phase_changed(source_id: int) -> void:
+	if is_instance_valid(director) and director.get_instance_id() == source_id and is_instance_valid(player):
+		player.set_arena_recovery(director.recovering)
+
+func _on_route_choices_changed(source_id: int) -> void:
+	if not is_instance_valid(director) or director.get_instance_id() != source_id \
+			or director.phase_name != "ROUTE" or round_state != RoundState.PLAYING:
+		return
+	_present_routes()
+
+func _present_routes() -> void:
+	if director.route_choices.is_empty() or horde.alive_count > 0 or horde.population_count > 0:
+		return
+	round_state = RoundState.ROUTE
+	player.cancel_actions()
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	route_screen.present(director.route_choices, player.global_position, director.encounter_index + 1, director.encounter_count)
+
+func _on_route_chosen(id: StringName) -> void:
+	if round_state != RoundState.ROUTE or not director.choose_route(id):
+		return
+	route_screen.close()
+	_resume_play()
+
+func _open_weapon_draft(allow_cancel: bool = false) -> void:
+	if not is_instance_valid(player) or round_state not in [RoundState.PLAYING, RoundState.ROUTE]:
+		return
+	if allow_cancel and (director.phase_name not in ["RECOVERY", "ROUTE"] \
+			or horde.alive_count > 0 or horde.population_count > 0):
+		return
+	route_screen.close()
+	player.cancel_actions()
+	round_state = RoundState.DRAFT
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	weapon_draft.open(run_state, allow_cancel)
+
+func _on_weapon_draft_confirmed(first: WeaponDefinition, second: WeaponDefinition) -> void:
+	if round_state != RoundState.DRAFT or not run_state.equip_pair(first, second):
+		return
+	_initial_draft = false
+	weapon_draft.close()
+	player.refresh_weapon()
+	hud.set_primary(run_state)
+	_resume_play()
+
+func _on_weapon_draft_cancelled() -> void:
+	if round_state != RoundState.DRAFT or _initial_draft:
+		return
+	weapon_draft.close()
+	_resume_play()
+
+func _on_arena_scored(points: int, _label: String, source_id: int) -> void:
+	if not is_instance_valid(player) or player.get_instance_id() != source_id or points <= 0 \
+			or round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
+		return
+	arena_score += points
+	stage_score += points
+	hud.set_arena_score(arena_score, int(Profile.records.get("best_score", 0)))
+
+func _on_drop_fired(_weapon_id: StringName) -> void:
+	if round_state in [RoundState.LOADING, RoundState.SHOP, RoundState.LOST]:
+		return
+	_music_kill_heat = 1.0
+	Music.accent(&"drop")
+	voice.say(&"drop")
 
 func _on_salvage_music() -> void:
 	if round_state == RoundState.PLAYING:
@@ -559,7 +658,7 @@ func _resume_play() -> void:
 	if not _pending_gear_rewards.is_empty():
 		_present_gear_reward()
 		return
-	# Preserve earned choices when the contract finishes during a picker callback.
+	# Preserve earned choices when the final arena kill happens during a picker.
 	if _pending_encounter_rewards > 0:
 		_present_encounter_reward()
 		return
@@ -568,6 +667,9 @@ func _resume_play() -> void:
 		return
 	if run_state.pending_level_ups > 0:
 		_present_level_up()
+		return
+	if director.phase_name == "ROUTE" and not director.route_choices.is_empty():
+		_present_routes()
 		return
 	get_tree().paused = false
 	round_state = RoundState.PLAYING
@@ -587,43 +689,13 @@ func _on_abandon() -> void:
 func _on_boss_killed() -> void:
 	Music.set_boss(false)
 	hud.boss_panel.hide()
-	hud.contract_box.visible = hud.quest_panel.visible and not hud.death.visible
+	hud.arena_round_box.visible = hud.arena_panel.visible and not hud.death.visible
 
-## Contract done: a drop pod lands far away and the horde surges until the
-## player holds its beam. Only lift-off clears the stage and opens the shop.
-func _on_quests_completed(source_id: int) -> void:
-	# Bind the id, not the RefCounted itself: no self-owned signal reference cycle.
-	# Deferred until the impact finishes; a simultaneous player death wins.
-	if quests == null or source_id != quests.get_instance_id() or not quests.is_complete() or _stage_clear_pending or extraction != null:
-		return
-	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
-		return
-	if is_instance_valid(mining_encounter) and mining_encounter.state == MiningDefense.State.READY:
-		mining_encounter.claim_reward()
-	_cancel_encounters()
-	extraction = ExtractionPod.new()
-	extraction.name = "ExtractionPod"
-	extraction.setup(player)
-	_round.add_child(extraction)
-	var at := _extraction_point()
-	extraction.global_position = Vector3(at.x, horde.ground_height(Vector2(at.x, at.z)), at.z)
-	extraction.departed.connect(_on_extraction_departed.bind(extraction.get_instance_id()), CONNECT_DEFERRED)
-	director.surge = extraction.surge_multiplier
-	hud.radar.set_extraction_point(Vector2(at.x, at.z))
-	voice.say(&"extraction")
-	hud.show_extraction_warning()
-	Music.set_boss(true)
-	Music.accent(&"extraction")
-	hud.tutor.offer(&"extraction")
-
-## The farthest clear room of a generated level; authored arenas use the spawn.
-func _extraction_point() -> Vector3:
-	if world is ProceduralWorld:
-		return (world as ProceduralWorld).extraction_point(player.global_position)
-	return world.get_node("PlayerSpawn").global_position
-
-func _on_extraction_departed(source_id: int) -> void:
-	if extraction == null or source_id != extraction.get_instance_id() or _stage_clear_pending:
+## Deferred until the final damage transaction finishes. Stale arena signals
+## cannot clear a new round, and simultaneous player death takes precedence.
+func _on_arena_completed(source_id: int) -> void:
+	if not is_instance_valid(director) or source_id != director.get_instance_id() \
+			or not director.finished or _stage_clear_pending:
 		return
 	if round_state in [RoundState.SHOP, RoundState.LOST, RoundState.LOADING]:
 		return
@@ -640,6 +712,13 @@ func _finish_stage_clear() -> void:
 	stages_cleared += 1
 	if stage_reward != null:
 		run_state.add_resource(stage_reward, stage_reward_amount)
+	for definition in resources:
+		var reward := 0
+		match definition.id:
+			&"gold": reward = 10 + stage_index * 6 + mini(30, floori(float(stage_score) / 300.0))
+			&"crystal": reward = 3 + stage_index * 2
+		if reward > 0:
+			run_state.add_resource(definition, reward)
 	# Loot still on the floor is swept up with the clear.
 	deposits.collect_all()
 	var banked := _bank(1.0)
@@ -667,6 +746,8 @@ func _on_player_died() -> void:
 	round_state = RoundState.LOST
 	hud.tutor.clear()
 	_cancel_encounters()
+	weapon_draft.close()
+	route_screen.close()
 	_cancel_gear()
 	var banked := _bank(death_bank_fraction)
 	_record_run(false)
@@ -676,7 +757,7 @@ func _on_player_died() -> void:
 	Music.set_intensity(0.0)
 	Music.set_mining(0.0)
 	Music.stinger(&"death")
-	hud.finish_run(run_state.level, kills, run_time, stages_cleared, banked)
+	hud.finish_run(run_state.level, kills, arena_score, run_time, stages_cleared, banked)
 
 ## Moves collected currency into the Profile; returns what was banked now.
 func _bank(fraction: float) -> Dictionary:
@@ -694,6 +775,7 @@ func _record_run(victory: bool) -> void:
 	Profile.record_run({
 		"class_id": class_definition.id,
 		"kills": kills,
+		"score": arena_score,
 		"time": run_time,
 		"level": run_state.level,
 		"stages_cleared": stages_cleared,
@@ -703,7 +785,7 @@ func _record_run(victory: bool) -> void:
 
 func _summary() -> String:
 	var whole := int(run_time)
-	return "ÚR %d   /   %d ROZPRÁŠENO   /   %d:%02d" % [run_state.level, kills, whole / 60, whole % 60]
+	return "%d BODŮ   /   ÚR %d   /   %d ROZPRÁŠENO   /   %d:%02d" % [arena_score, run_state.level, kills, whole / 60, whole % 60]
 
 func _banked_text(banked: Dictionary) -> String:
 	var parts: PackedStringArray = []

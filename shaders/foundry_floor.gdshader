@@ -21,7 +21,7 @@ uniform float heat_half_width = 20.0;
 
 void fragment() {
 	vec2 p = world_position.xz;
-	vec2 q = p - plate_origin;
+	vec2 q = floor_hallucinated_uv(p) - plate_origin;
 
 	float plate = aa_checker(q, plate_size);
 	float seam = max(aa_grid_line(q.x, plate_size, 0.0, 0.035), aa_grid_line(q.y, plate_size, 0.0, 0.035));

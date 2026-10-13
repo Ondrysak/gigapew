@@ -15,6 +15,11 @@ const BACKUP_PATH := "user://profile.json.bak"
 const VERSION := 1
 const ROSTER_PATH := "res://data/classes/roster.tres"
 const META_POOL_PATH := "res://data/meta/pool.tres"
+enum HallucinationMode { FEEDBACK, VORTEX, LIQUID, CRYSTAL, HEADS, MIX }
+const HALLUCINATION_MODE_NAMES: Array[String] = [
+	"Zpětná vazba", "Vířivá podlaha", "Tekuté vidění",
+	"Krystalové zrcadlo", "Kolotoč hlav", "Delirium mix",
+]
 const DEFAULT_SETTINGS := {
 	"master_volume": 0.8,
 	"music_volume": 0.7,
@@ -22,11 +27,13 @@ const DEFAULT_SETTINGS := {
 	"mouse_sensitivity": 1.0,
 	"fullscreen": false,
 	"hallucination_intensity": 0.65,
+	"hallucination_mode": HallucinationMode.MIX,
 	## Gradual skill unlocks, level-gated upgrade kinds and first-time tips.
 	"guided_start": true,
 }
 const DEFAULT_RECORDS := {
 	"best_time": 0.0,
+	"best_score": 0,
 	"best_kills": 0,
 	"best_level": 0,
 	"runs": 0,
@@ -53,8 +60,9 @@ var meta_pool: MetaPool
 ## best_time, best_kills, best_level, runs, victories, total_kills,
 ## deepest_stage, and last_run (the latest record_run summary, JSON-safe).
 var records: Dictionary = {}
-## Volumes and hallucination_intensity (0..1), mouse_sensitivity
-## (multiplier), fullscreen and guided_start (bool). Change through set_setting().
+## Volumes and hallucination_intensity (0..1), hallucination_mode (enum),
+## mouse_sensitivity (multiplier), fullscreen and guided_start (bool).
+## Change through set_setting().
 var settings: Dictionary = {}
 ## Ids of first-time tips already shown; persisted so each appears once.
 var _seen_tips: Dictionary = {}
@@ -380,6 +388,7 @@ func meta_levels() -> Dictionary:
 ## the game adds currency itself via add_currency() when it banks.
 func record_run(summary: Dictionary) -> void:
 	var kills := int(summary.get("kills", 0))
+	var score := maxi(0, int(summary.get("score", 0)))
 	var time := float(summary.get("time", 0.0))
 	var level := int(summary.get("level", 0))
 	var stages := int(summary.get("stages_cleared", 0))
@@ -390,6 +399,7 @@ func record_run(summary: Dictionary) -> void:
 		records.victories = int(records.victories) + 1
 	records.best_time = maxf(float(records.best_time), time)
 	records.best_kills = maxi(int(records.best_kills), kills)
+	records.best_score = maxi(int(records.best_score), score)
 	records.best_level = maxi(int(records.best_level), level)
 	records.deepest_stage = maxi(int(records.deepest_stage), stages)
 	var banked := {}
@@ -400,6 +410,7 @@ func record_run(summary: Dictionary) -> void:
 	records.last_run = {
 		"class_id": String(summary.get("class_id", &"")),
 		"kills": kills,
+		"score": score,
 		"time": time,
 		"level": level,
 		"stages_cleared": stages,
@@ -599,6 +610,8 @@ func _sanitize_setting(key: String, value: Variant) -> Variant:
 			return clampf(_number(value, 1.0), SENSITIVITY_RANGE.x, SENSITIVITY_RANGE.y)
 		"hallucination_intensity":
 			return clampf(_number(value, float(DEFAULT_SETTINGS.hallucination_intensity)), 0.0, 1.0)
+		"hallucination_mode":
+			return clampi(int(_number(value, float(DEFAULT_SETTINGS.hallucination_mode))), HallucinationMode.FEEDBACK, HallucinationMode.MIX)
 		_:
 			return clampf(_number(value, 1.0), 0.0, 1.0)
 

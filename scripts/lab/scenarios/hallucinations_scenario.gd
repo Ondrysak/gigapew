@@ -10,6 +10,7 @@ func summary() -> String:
 	return "Combo-driven world tunnels and recursive native anatomy; rendered 65%/100% ceilings, real paused settings, clear aim/HUD and precision shots"
 
 func run() -> void:
+	Profile.set_setting("hallucination_mode", Profile.HallucinationMode.FEEDBACK)
 	Profile.set_setting("hallucination_intensity", 0.65)
 	var game := await lab.start_game()
 	game.player.set_physics_process(false)
@@ -40,20 +41,26 @@ func run() -> void:
 	await lab.capture("default")
 	await lab.capture_strip("recursive_anatomy", 9, 0.8)
 
-	# Build the drive from actual direct-hit transactions, not an assigned count.
+	# Build sensory drive from actual primary kills, never an assigned count.
 	var vision := game.get_node("HallucinationVision") as HallucinationVision
 	var low_drive := vision.effective_intensity
 	lab.check(is_equal_approx(low_drive, 0.65 * 0.28), "an idle combo retains the low baseline beneath the saved 65% ceiling")
 	var combo_gun := lab.weapon("pulse").duplicate() as WeaponDefinition
-	combo_gun.damage = 0.01
+	combo_gun.damage = 25
 	combo_gun.jitter_degrees = 0.0
 	combo_gun.pierce = 0
 	game.run_state.initialize_primary(combo_gun)
 	game.player.refresh_weapon()
-	lab.aim_at(game.horde.weak_spot_position(mega))
-	for shot in 100:
-		game.player._shoot()
-	lab.check(game.player.combo_hits == 100, "100 real direct-hit shots build the full hallucination drive")
+	for kill in 20:
+		if game.player.combo_hits >= 100:
+			break
+		var victim := game.horde.spawn(grunt, Vector2(game.player.global_position.x, game.player.global_position.z - 2.0), 1.0 / grunt.max_health)
+		game.horde._rebuild_grid()
+		lab.aim_at(game.horde.enemy_position(victim) + Vector3.UP * 0.4)
+		game.player._shoot(false)
+		lab.check(not game.horde.is_alive(victim), "sensory drive fixture dies to an actual primary shot")
+	var held_style := game.player.combo_hits
+	lab.check(held_style >= 100, "actual primary kills build full STYLE hallucination drive")
 	for frame in 240:
 		if is_equal_approx(vision.effective_intensity, 0.65):
 			break
@@ -61,7 +68,7 @@ func run() -> void:
 	game.horde._physics_process(0.3)
 	game.horde._process(0.0)
 	lab.aim_at(game.horde.enemy_position(mega))
-	lab.check(is_equal_approx(vision.effective_intensity, 0.65), "the real direct-hit chain raises hallucinations to the saved 65% ceiling")
+	lab.check(is_equal_approx(vision.effective_intensity, 0.65), "real kill-earned STYLE raises hallucinations to the saved 65% ceiling")
 
 	# Hold poses and simulation while exercising the actual settings control.
 	# Only the new shader treatment may change between these snapshots.
@@ -116,7 +123,7 @@ func run() -> void:
 	var held := await _image()
 	lab.check(_difference(full, held, anatomy) < 0.0005, "recursive anatomical motion remains frozen while paused")
 	lab.check(_difference(full, held, periphery) < 0.0005, "feedback zoom stops flowing while paused")
-	lab.check(is_equal_approx(vision.effective_intensity, 1.0) and game.player.combo_hits == 100, "pause freezes the combo-driven shader intensity as well as its clock")
+	lab.check(is_equal_approx(vision.effective_intensity, 1.0) and game.player.combo_hits == held_style, "pause freezes the STYLE-driven shader intensity as well as its clock")
 	game.pause_menu.show()
 	settings.hallucinations_slider.grab_focus()
 	await _slider_key(KEY_HOME)
@@ -158,7 +165,8 @@ func run() -> void:
 	await _anatomy_gallery(game)
 
 func _anatomy_gallery(game: ArenaGame) -> void:
-	for species in ["robot_grunt", "alien_grunt", "alien_runner"]:
+	# Only SWARM roles fuse: human and mouse silhouettes provide real mega heads.
+	for species in ["robot_grunt", "alien_grunt"]:
 		game.horde.clear()
 		game.player.global_position = Vector3(0, 1, 15)
 		var definition := lab.enemy(species)

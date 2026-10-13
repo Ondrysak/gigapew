@@ -1,6 +1,6 @@
 # Kakaboomboom
 
-A first-person horde shooter in the style of Deep Rock Galactic: Survivor. Pick an operator, mine and fight through three procedurally generated sectors, complete their contracts and spend banked currency between levels and runs. Built with Godot's GL Compatibility renderer and CC0 art credited in [CREDITS.md](CREDITS.md); the music is synthesized at runtime. Open `project.godot` and press **F5**, or run `godot --path .`. Current source verified with Godot 4.7.2.
+A first-person hardtek arena shooter. Pick an operator, carve through three procedurally generated Prague arenas for score, combine two complementary guns, double jumps and slides, then spend banked currency between arenas and runs. Built with Godot's GL Compatibility renderer and CC0 art credited in [CREDITS.md](CREDITS.md); the music is synthesized at runtime. Open `project.godot` and press **F5**, or run `godot --path .`. Current source verified with Godot 4.7.2.
 
 ## Current Prague reskin
 
@@ -42,9 +42,9 @@ The implemented asset changes are:
   Skills use the bible's names; combo callouts are **POWNED / PERMABAN /
   LAST TIME KRATOS**. Their mechanics and internal identifiers are unchanged.
 - Four more recorded phrases, cut from longer voice messages, vary combo,
-  extraction and clear reactions alongside the existing barks.
-- Mining is now close-range crowbar salvage from gambling/cigarette/jackpot
-  machines, with physical breakable compartments and currency-shaped loot.
+  DROP and clear reactions alongside the existing barks.
+- Optional close-range crowbar salvage opens gambling/cigarette/jackpot
+  machines with physical breakable compartments and currency-shaped loot.
 - All XP/permanent/workshop/shop upgrade names, descriptions, mastery previews
   and purchase/status labels use Czech scene fiction with unchanged effects.
 - Intro, main menu, character selection, workshop, records/settings, pause,
@@ -56,12 +56,12 @@ The implemented asset changes are:
   The remaining primary labels follow the bible: **Excalibur / Vinyly /
   Holubí letka / Absintové molotov / Rum + zapalovač**.
 
-The later-sector environments retain their existing designs. All six primary guns
-are original improvised junk models with unchanged numbers (see below).
+The later-sector environments retain their visual designs. The nine improvised
+junk guns have distinct combat jobs (see below).
 The narrative ending is specified in the bible, not a newly implemented cutscene.
 The authored lab arenas (Yard, Foundry, Reactor) are now dressed as Žižkov courtyards,
 Palmovka and Hlavák through `scenes/levels/arena_skin.gd`; collisions and gameplay nodes
-are unchanged. The `levels`, `quests`, `onboarding` and `venues` scenarios exercise generated campaign worlds.
+are unchanged. The `levels`, `arena`, `onboarding` and `venues` scenarios exercise generated campaign worlds.
 
 
 ## Linux release
@@ -114,19 +114,22 @@ same version; older versioned releases remain intact.
 
 ## Controls
 
-- **WASD** moves; **mouse** aims; **Space** jumps.
-- **Hold LMB** fires your single primary gun with unlimited ammunition. The **mouse wheel** swaps among the nine firearms; purchased primary-mod ranks follow the new gun. Swaps retain the 0.2 s draw.
-- **Aim at a visible machine compartment within 2.6 m** to automatically raise the crowbar, then **hold F** to pry. Target the brass **+ lock** for faster progress. Look away to return to your gun. Guns and abilities cannot extract machine loot.
-- **1 / 2 / 3 / 4 / 5** activate your class abilities. WASD is unchanged; W remains movement, not an ability binding. With **Guided start** (default) only key 1 works at first; the rest unlock as you level (see below).
-- **E** interacts with consoles, flame vents or a secured guarded-machine beacon in the standalone authored lab arenas. In generated sectors, aim at a gear stash within 2.6 m and **hold E for 2 s** to pry it open; **press E** to collect an elite's dropped gear. Loot at least **two distinct stashes per level** before extraction.
+- **WASD** moves; **mouse** aims. **Space** jumps; a fresh second press in the air double-jumps once.
+- **Ctrl** starts a momentum slide when you are already moving. The gun tucks/cants and a forward leg appears with a short visual bank/FOV rush. Aim and shooting remain available; the lowered capsule waits for headroom before standing.
+- **Hold LMB** fires the active gun with unlimited ammunition. A fresh LMB press on the audible beat is required to spend a charged **DROP**.
+- **Q** or the **mouse wheel** toggles the two guns drafted at the start. Catalogue replacement is available only during empty breaks (**Tab** or the route screen's pair button) and in the sector shop; either slot can be replaced for free. Shared primary/gadget ranks apply once to both guns.
+- **RMB** kicks on a fresh press. An incoming projectile is parried first; otherwise the kick launches light bodies, staggers heavies, or kicks a keg. A slide kick carries the launch; an airborne kick stomps downward and bounces on contact, but commits to a dive on a miss.
+- **F** leaps toward an aimed, dazed non-boss enemy within 8 m and finishes with a front-flip kick, or otherwise smashes one aimed machine compartment within 2.6 m. Release and press again for another action. Machine loot is optional; the raised crowbar replaces the gun, including impact recovery.
+- **1 / 2 / 3 / 4 / 5** activate your class abilities. With **Guided start** (default) only key 1 works at first; the rest unlock as you level (see below).
+- **E** collects optional gear: hold it for 2 s at a stash, or press it at an elite's drop. Authored lab arenas also use E for consoles, vents and the guarded-machine beacon.
 - **G** pauses to inspect all four equipped gear slots, with their effects and source hlášky; **Esc** closes the inspection.
 - **Level up / full supply meter:** the game pauses; press **1 / 2 / 3** or click a card.
 - **Esc** pauses (Resume, Settings, Abandon Run).
-- **Finish every level objective:** a drop pod lands in the farthest room, with a green beam over the walls and a radar marker. Reach it and hold its ring for 10 s while the horde surges (progress is kept if you step out to fight). Lift-off banks currency and opens the shop. Swap the primary freely, upgrade any of your five abilities, buy primary mods or protection, then continue. After death: **R** retries with the same class and a new layout; **Enter** returns to the menu.
+- **Clear the final set:** defeating the last real survivor opens the shop. Swap guns freely, upgrade abilities, buy primary mods or protection, then continue. After death: **R** retries with the same class and a new layout; **Enter** returns to the menu.
 
 ## Flow
 
-Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) → class select with the full five-ability kit → run. Each level is carved from solid rock by a new seed: irregular rooms joined by winding corridors, never one open box. Rooms come as L, T, cross, chamfered, round, ring (a walk-around central pillar of rock) and pillared colonnade shapes. Corridors are dog-legged, 4 m chokepoints, 6 m passages or 8 m boulevards; extra loops mean every area has a second way out and the horde can flank. Short dead-end alcoves make defensive pockets, or traps. Painted floor lines trace every corridor: accent for normal passages, secondary colour for chokepoints. The radar draws the walls around you.
+Intro → main menu (**Deploy**, **Base Workshop**, **Records**, **Settings**) → class select → **draft two distinct guns** → choose a venue → physically travel there → fight → breather → next route. Each sector is generated from a new seed as connected combat spaces rather than one open box. Rooms come as L, T, cross, chamfered, round, ring and pillared colonnade shapes. Corridors are 6 m passages or 8 m boulevards; every room gets an extra loop where possible, removing dead-end alcoves and narrow chokepoints. Painted floor lines trace routes; a cyan radar marker and distance readout guide you to the chosen venue.
 
 Each theme plans differently:
 
@@ -134,29 +137,25 @@ Each theme plans differently:
 - **Palmovka** (`foundry`): two long furnace halls joined by transfer passages and indoor streets. Its 120×88 m footprint accommodates repeated venues, the retained večerka and outdoor fixtures without overlapping their approaches.
 - **Hlavák** (`reactor`): a round hub, narrow spokes and diagonal chords linking the outer rooms. The underlying environment remains the existing Reactor.
 
-**Overlooks** sit in large rooms: raised decks reached by a treaded ramp, giving firing height while the horde funnels up a choke point for Ban zóna and Valhalla. **Salvage islands** remain solid outdoor cover, not arbitrary machine mounts. Žižkov has 1 overlook / 2 islands, Palmovka and Hlavák 2 / 3. Floor themes and enemy schedules retain their existing designs. Most groups arrive behind you.
+**Traverse routes:** large rooms contain raised decks with ordinary ramps for the horde. Decks stand 1.5–1.8 m high, so a double jump can take a shortcut from their non-ramp side. Small cover and traverse blocks are 1.1–1.5 m high; taller landmark islands still break long sightlines. Žižkov has 1 overlook / 2 traverse covers, Palmovka and Hlavák 2 / 3. Most groups arrive away from your view.
 
-Every generated sector includes a **roofed underground station hall at −4.5 m**, a connecting passage, a tiled public WC and two street stair entrances. Station dressing uses Jiřího z Poděbrad / green line A, Palmovka / yellow line B and Hlavní nádraží / red line C panels, signs, maps, validators, ticket machines, benches and utility fittings. Every sector has **two herny, two hospody and two nonstops**; Palmovka also retains its **večerka**. These are separate 12×18 m interiors with signed 4 m entrances and connected street porches. Seeded assignment, bars, taps, shelving, goods and seating vary the rooms; outdoor sites add portable WC cabins, construction equipment and a small park. Public toilets have actual hollow bowls, seats, cisterns, flush buttons and paper holders, alongside stalls, urinals, basins, mirrors, soap/towels and the attendant's coin table.
+Every generated sector includes a **roofed underground station hall at −4.5 m**, a connecting passage, a tiled public WC and two street stair entrances. Station dressing uses Jiřího z Poděbrad / green line A, Palmovka / yellow line B and Hlavní nádraží / red line C panels, signs, maps, validators, ticket machines, benches and utility fittings. Every sector has **two herny, two hospody and two nonstops**; Palmovka also retains its **večerka**. Combat venues are 12×16 m interiors with a 6 m front door, a separate 6 m side escape and a carved outdoor lane between them. Their 4.4 m ceilings and 3.2 m central aisles leave room for jumps and slides. Seeded assignment, bars, taps, shelving, goods and seating vary the rooms; outdoor sites add portable WC cabins, construction equipment and a small park. Public toilets have actual hollow bowls, seats, cisterns, flush buttons and paper holders, alongside stalls, urinals, basins, mirrors, soap/towels and the attendant's coin table.
 
 **Interior finishes and service areas:** hospody use worn plank floors, timber seating and a backbar separated from the counter by a real staff passage. Nonstops use checker vinyl, cold-drinks cabinets, food displays, espresso/till equipment and wipe-clean cafe seating. Herny have patterned carpet and a front cashier area with transparent security panes, a cash-transfer slot, register, security monitor and CCTV; the front bay beside it stays free of machines. The večerka uses commercial tile and places its checkout before shelving. Ceiling finishes, fitted lights, menus, clocks and electrical/safety details vary the rooms. Floor finish/palette choices remain room-seeded but share one instanced material across every venue; furnishing and quotes keep their independent seeds. Up to ten unshadowed kit lights cover the station, WC and venues; kit labels remain capped at 64.
 
-**Hlášky signs:** hanging indoor notices, entrance boards, station/toilet notices and park/construction signs draw random complete lines from [`hlasky.txt`](hlasky.txt). Text wraps and fits its board; choices repeat for the same run seed and vary between runs. A separate quote RNG leaves furnishing, layout and quest randomness untouched. The text file is explicitly included in exports.
+**Hlášky signs:** hanging indoor notices, entrance boards, station/toilet notices and park/construction signs draw random complete lines from [`hlasky.txt`](hlasky.txt). Text wraps and fits its board; choices repeat for the same run seed and vary between runs. A separate quote RNG leaves furnishing, layout and encounter randomness untouched. The text file is explicitly included in exports.
 
-The navigation model still has **one walkable height per XZ cell**: underground halls sit beneath reserved, nonwalkable building footprints, not beneath a second playable street. Both stair ramps link the street to the hall for players and enemies. Rotated kit visuals and colliders share local dimensions; portal-cut linings have physical walls even between adjoining rooms. Furniture preserves doorway and machine approaches, with usable gaps rather than narrow trapping pockets. Extraction and sky-dropped supplies remain outside; loose loot and floor effects use the actual floor, including negative heights.
+The navigation model still has **one walkable height per XZ cell**: underground halls sit beneath reserved, nonwalkable building footprints, not beneath a second playable street. Both stair ramps link the street to the hall for players and enemies. Rotated kit visuals and colliders share local dimensions; portal-cut linings have physical walls even between adjoining rooms. Furniture preserves both venue doors, the central aisle and machine approaches. Sky-dropped supplies remain outside; loose loot and floor effects use the actual floor, including negative heights.
 
-**No level countdown or deadline.** The contract requests machine salvage, non-boss hallucination kills and looting **two distinct stashes**. Salvage counts and kill species vary with the seed and sector; early guided contracts are smaller (see below). Pry machine compartments with F, defeat the listed enemies and open any two of the three stashes with E. Unrelated kills, carried/banked currency, collected loose loot and resource bonuses do not advance salvage objectives. Progress remains earned when you stop to fight.
+**Linked venue score attack:** each sector has seven physical fight locations: two hospodas, two hernas, two nonstops and the metro. Choose a deterministic, unvisited route between fights; choosing resumes travel, not remote spawning. Physical arrival starts finite BUILD/PEAK admissions through that location's authored entry/approach lanes. Blocked placement retains its real budget rather than spilling enemies across the district. Each fight ends only after all actual represented survivors are defeated; elapsed time never wins. The empty five-second breather, route choice and travel freeze STYLE decay. Clear 3 / 4 / 5 distinct venues across the three sectors to reach their shops and victory. There is no level countdown, mining quota, required stash or extraction.
 
-Every generated contract starts with enough supported, reachable machine stock, with spare yield where possible. Every indoor venue receives a compatible machine before quest and weighted filling; additional stock favours less-populated compatible rooms. Fruit-machine banks belong in the herna and hospoda, the rare bank in the herna, and cigarette machines in the hospoda, večerka or nonstop. Procedural population and respawns use these venue bays exclusively, with real backing walls and reserved access to every compartment. Requested enemy species spawn after the arrival calm and remain available indefinitely. Crowd pressure ramps to a capped final rate, not a timer-triggered boss.
+Optional automaty stay in supported, reachable venue bays. Fruit-machine banks belong in the herna and hospoda, the rare bank in the herna, and cigarette machines in the hospoda, večerka or nonstop. Respawns use the same bays; no random cabinets appear in the street.
 
-**Extraction:** finishing **all** objectives calls a drop pod to the clear room spot farthest from you. It descends for 3 s, then hovers in a beam; standing inside its 4.5 m ring for 10 s lifts off, banks minerals and opens the round shop. Progress accrues only inside the ring and while unpaused, and is kept if you step out. The director spawns at double rate until lift-off, and dying during extraction still ends the run at 50% banking. Earned upgrade choices can be answered mid-extraction; killing a boss cannot bypass unfinished objectives.
-
-### Gear and required stash raids
+### Optional gear raids
 
 Each generated sector has one guarded stash, two exploration caches and one elite hunt.
-**Loot any two of the three stashes to complete the level**, alongside its salvage
-and kill objectives. The guarded stash and both exploration caches count; elite
-drops do not. A stash counts when opened, even if you decline its offered gear.
-Repeated claims never count twice, and progress resets each sector. Approaching within
+These rewards are optional detours; none is needed to clear the arena.
+Repeated claims never count twice. Approaching within
 6 m activates the stash's finite defenders or the elite and its escort. Fight first, or
 hold E to steal the stash while its guards remain alive. Partial opening survives
 retreat and pause; rewards can be claimed only once.
@@ -187,19 +186,91 @@ Each item has a pixel icon, Czech effect description and a matching quote from
 shows four compact slots, shield/lighter status, loot-source distances and the
 aimed stash's E prompt.
 
-| Stage | Crowd cap (represented lives) | Objective scale | Contract | Arrival calm |
-| --- | --- | --- | --- | --- |
-| Žižkov (88 × 88 m, ~43% walkable) | 1000 | 1.0× | 1 salvage + 1 kill + loot 2 stashes | 12 s |
-| Palmovka (120 × 72 m, ~62% walkable) | 1500 | 1.35× | 2 salvage + 1 kill + loot 2 stashes | none |
-| Hlavák (104 × 104 m, ~43% walkable) | 2100 | 1.7× | 2 salvage + 2 kill + loot 2 stashes | none |
+| Stage | Arena sets | Arrival calm | Live represented-life cap |
+| --- | ---: | ---: | ---: |
+| Žižkov (88 × 88 m) | 3 | 6 s | 40 |
+| Palmovka (120 × 72 m) | 4 | 4 s | 48 |
+| Hlavák (104 × 104 m) | 5 | 4 s | 56 |
 
-Continue carries the primary build, all five ability ranks, level-up upgrades, perks and auto weapons into a newly generated next sector, resets its quest counters and refills health. Finishing Hlavák records victory; its final shop returns to the base. Run duration remains a record statistic, not a progression gate. Contact damage remains capped at 4 damage per 0.5 s; ordinary spawn pressure and aggregate remaining enemy health are preserved through fusion.
+Continue carries score, both equipped guns, primary ranks, all five ability ranks, level-up upgrades, perks and auto weapons into a newly generated next arena, then refills health. Clearing Hlavák records victory; its final shop returns to the base. Contact damage remains capped at 4 damage per 0.5 s; fusion preserves represented lives and aggregate remaining enemy health.
 
 **Standalone tactical fixtures:** `encounter`, `boss` and `boss_patterns` retain an authored guarded machine, interactive hazards, raised decks and ramp combat. These fixed placements are not inserted into generated campaign layouts. Vyhazovač still uses directional front armor and a rear precision target; explicit boss fixtures retain ram/mortar attacks and staggerable recovery windows.
 
+### Combat roles and weapons
+
+Enemy types now pose different tactical problems:
+
+| Role | Base HP | Behavior |
+| --- | ---: | --- |
+| Grunt | 90 | Commits to a left or right flanking lane before closing. |
+| Runner | 65 | Visibly winds up, commits to a fast dash only with line of sight, then recovers in place. |
+| Ranged specialist | 150 | Holds a firing lane, repositions for sight, then fires a locked three-lane fan. |
+| Charger | 420 | Commits to a charge and leaves a 1.2 s recovery. |
+| Plated Vyhazovač | 480 | Rams only along its armored facing; circling exposes its rear core and recovery. |
+| Boss | 2600 | Authored attacks and recovery windows. |
+| Flaškař | 110 | Lobs a bottle at a committed landing spot; dodge the splash or return the bottle. |
+| Bouncer | 600 | Physically blocks your movement, winds up a locked shove; sidestep or interrupt with a kick. |
+| Hecíř | 70 | Visibly buffs nearby allies' speed, attack cadence and damage without adding health; kill or stun the source. |
+
+Stun interrupts any non-boss windup. Stage health scaling remains 1.0× / 1.25× / 1.6×; boss scaling remains 1.0× / 1.6× / 2.4×.
+
+| Gun | Job |
+| --- | --- |
+| Pulse | Reliable precision; pierces one target. |
+| Scatter | Close-range crowd displacement. |
+| Rail | Long lines and exposed rear cores. |
+| Autocannon | Clustered packs and plate-ignoring blasts. |
+| Tvarohomet | Slowing splash. |
+| Maschine | Shock chains. |
+| Cihlomet | Mid-range lanes; pierces one target. |
+| Flamethrower | Burns through armor. |
+| Minigun | Sustained single-target fire. |
+
+Explosions damage first, then apply a separate line-of-sight blast reaction: enemies are pushed outward, attacks are interrupted and lighter bodies are launched. The reaction deals no hidden damage or extra rewards. Wall- and ceiling-constrained motion keeps the visual, physical and precision body together. Deaths throw larger directional debris, and each blast has an expanding ground ring and a rate-limited boom. Hardtek playback is never ducked or paused.
+
+### Combat pinball
+
+Light enemies fly from a kick and damage themselves/other bodies on real wall or body impacts. Heavy enemies, bosses and megas stagger without becoming airborne. All kicks and manual bursts check wall lanes; launched bodies keep their collision, floor and ceiling constraints. A missed kick has longer recovery, held input never repeats it, and a press carried through a menu requires release.
+
+Kick animation has a fast extension, contact hold and weighted return, with distinct standing, horizontal slide and downward stomp poses. Misses overextend without the contact glow. Gun motion, boot geometry and impact shake are visual only; they never steer the player's aim. Pausing cancels committed melee actions and freezes the remaining presentation.
+
+**Daze and finishing moves:** surviving damage at or below 20% of a non-boss lifetime's starting HP opens one 2.8-second window. The original body pulses orange/gold and stops pursuit/attacks, but remains damageable; lethal hits are never clamped into a forced finisher. Dazed lives cannot fuse away. If the window expires, pursuit resumes and that lifetime cannot daze again.
+
+Aim at a dazed body within **8 m** for **F · DORAZIT**. F commits to a real capsule-colliding leap and a **0.80-second** execution: hands brace, the knee tucks, the boot makes a full forward rotation, then the sole snaps into contact at **0.46 seconds** before a planted recovery. The original launch direction and travel budget are fixed; there is no homing, correction warp or aim snap. A bounded camera bank/pitch and FOV rush sell the flip without spinning the entire view. The gun and crowbar stay hidden until recovery ends.
+
+Lethal contact still requires the recorded dazed body within **2.3 m**, with a clear lane on the same floor. Successful contact adds a directional gold/magenta crown, penetration sparks, tumbling debris and a hollow terrain-aligned floor stamp alongside the victim's ordinary species death effects. Score/STYLE/DROP credit and up to 12 HP draw from the shared close-healing budget. Walls or ceilings interrupt the leap; intervening bodies, different floors, expired daze, death and recycled target identities invalidate contact. There is no immunity or soundtrack pause. Held F cannot repeat or also claim nearby salvage; a fresh F takes priority over simultaneous gunfire.
+
+| Setup → finish | Payoff |
+| --- | --- |
+| Tvarohomet → kick → impact | Frozen bodies shatter on death or first launch impact. |
+| Flamethrower → scatter / Cihlomet | Consumes burning state for a short, bounded flame burst. |
+| Kick → rail | **AIR MAIL** doubles direct rail damage to a launched body in the same shot. |
+| Maschine → autocannon / Tvarohomet | Consumes electric charge for at most five local conduction targets; no onward recursion. |
+
+AIR MAIL requires actual ascent or airborne motion; standing on a raised floor never doubles damage.
+
+Successful projectile parries heal 6 HP once, but award no STYLE/charge until a returned shot actually kills. Rank-zero returns fly straight; the return build adds homing. Ordinary close kills within 3.5 m heal one 6 HP step per transaction, including multi-kills; deliberate F executions can heal 12 HP. Both draw from an 18 HP budget refilling at 4 HP/s. Distant kills, corpse/prop hits and missed parries do not heal. Death and maximum health take precedence.
+
+Finite steel kegs can be kicked into enemies/walls or shot in place. An armed keg detonates on impact or after its fuse; each keg explodes once, with real wall-clipped damage. Keg chains remain finite and synchronous.
+
+Three two-rank perks change the tools: **Mokrá podlaha** adds slide speed and refunds landed slide-kick recovery; **Rozbitej led** widens/strengthens shatter and freezes survivors without recursion; **Zpátky k odesílateli** extends parry reach, strengthens/homes returned shots and refunds parry recovery.
+
+### STYLE, score and DROP
+
+Actual primary-gun kills and explicitly credited player kicks, F executions, launch impacts, reflected shots, manual weapon combinations and keg explosions earn score and STYLE once per defeated represented life. Nonlethal hits, random critical rolls, ambient burn/shock deaths, abilities, auto weapons and external deaths do not. Precision, perfect beat, air, slide, multi-kill and gun variety add primary bonuses. STYLE feeds the capped +40% damage bonus, hallucinations and soundtrack intensity. A spent DROP's own synchronous chain windfall cannot recharge that DROP; independent later actions can.
+
+STYLE also charges one **DROP**. Each kill transaction adds at most 32% charge; a full charge cannot bank a second one. Fire a fresh manual shot on the audible beat (±10% of a quarter note) with a heavy gun whose upgraded interval is at least half a beat. That shot deals **×10 damage** and adds its gun's signature payoff:
+
+- Scatter or Cihlomet: stronger push and stun.
+- Rail: pierces the whole line.
+- Explosive guns: 1.8× radius and stronger knockback.
+- Frost and shock: stronger slow or stun.
+
+Off-beat, held/automatic, fast-gun, muted-music and unavailable-clock shots retain normal damage and keep the charge. Inputs are never delayed or fired automatically. Timing follows the playing stage mix's rounded PCM grid, playback pitch and audio-output latency. Overkill reports only the enemy's actual remaining health.
+
 ### Mega hallucinations
 
-Persistent overcrowding turns **6–8 ordinary enemies of the same species into
+Persistent overcrowding turns **6–8 ordinary grunts of the same species into
 one mega**: constituents must stay within 2.4 m of the seed for 0.75 s. Sparse
 packs remain ordinary. Fusion gathers small amber sparks, grows the body to
 1.7× scale over 0.55 s, broadens its torso and adds brass binding seams and a
@@ -207,7 +278,7 @@ segmented crown. Megas use slower, heavier, asymmetric gait/stomp motion;
 ordinary enemies also vary gait timing per instance.
 
 Fusion preserves the sum of current and maximum health, without healing or
-awarding kills, loot or contract progress. Defeating the mega credits each
+awarding kills, loot or score. Defeating the mega credits each
 absorbed life to its original species, normal sparse XP/utility-drop rules and
 primary-kill gear streaks. The enlarged main head/core remains a precision
 target. Megas move at 68% of ordinary speed, resist knockback with combined
@@ -237,26 +308,54 @@ reused.
 
 The crowned main head/core remains the real precision target. Phantom
 appendages add no enemy lives, health, collision, damage or rewards.
-Peripheral vision runs a Fraksl/crystaldive-style video-feedback loop over the
-rendered world: six recursive, mirror-tiled copies nest inside each other and shrink endlessly toward the aim point, spiral,
-hue-drift, separate chromatically and fold into a six-way mirror at depth, on
-top of soft blur and a drifting double image. The loop is unrolled in one
-pass (the steady state of `frame + decay · warp(previous)`), so it needs no
-history buffer and never echoes the HUD. The central aim region, HUD and menus
-stay clear. New motion freezes in pause/reward screens, with no camera
-steering or strobing. Smaller/distant appendages fade to limit clutter.
+**Settings → REŽIM HALUCINACÍ** saves one of six presets. **Delirium mix**
+is the default; the original feedback effect remains selectable.
 
-**Settings → INTENZITA HALUCINACÍ** saves an intensity ceiling from 0–100% (default 65%).
-The actual direct-hit chain drives anatomy and world feedback from 28% of that
-ceiling with no chain to 100% at 100 beats; the drive changes over about half a
-second and falls with decay or a wipe. Zero immediately removes the new anatomy
-and screen-reading pass, while retaining the original mega body, brass binding
-and six-segment crown. Pause freezes the drive and feedback motion.
+| Preset | Effect |
+| --- | --- |
+| Zpětná vazba | Original recursive spiral echoes, chromatic separation and mirror folding |
+| Vířivá podlaha | Authored floor patterns twist into bounded vortices; peripheral vision curls radially |
+| Tekuté vidění | Travelling floor waves and slow, gradient-driven peripheral lensing |
+| Krystalové zrcadlo | Eight-way polar world reflections with gently breathing rings |
+| Kolotoč hlav | Source-textured phantom heads counter-rotate, nod and breathe, without a screen-reading pass |
+| Delirium mix | Smoothly blended feedback/lensing, both floor fields and rotating phantom heads |
 
-The feedback loop is stronger at every ceiling: deeper zoom, slower echo decay,
-earlier six-way folding, wider chromatic separation and stronger hue cycling.
-It remains six levels deep, with no history buffer; the centre aim area and HUD
-stay unchanged.
+Screen effects sample only the rendered world, leaving the central aim region,
+HUD and menus clear. Floor effects warp procedural pattern coordinates, never
+vertices or collision: outdoor surfaces, metro terrazzo, WC tiles and wood,
+carpet, vinyl and ceramic venue floors keep their real geometry. Wall tiles and
+industrial warning/navigation markings remain anchored. Rotating head copies
+use baked head-radius clearance, including long quadruped snouts, around the real
+precision face; the main head and hitbox are unchanged. New motion freezes in
+pause/reward screens, without camera steering or strobing.
+
+**Settings → STROP HALUCINACÍ** saves an intensity ceiling from 0–100% (default 65%).
+Actual STYLE drives anatomy, floor fields and world vision from
+28% of that ceiling with no STYLE to 100% at 100 STYLE; the drive changes
+over about half a second and falls with decay or a wipe. Zero immediately
+removes the new anatomy, floor warps, screen-reading pass and beat-driven combo
+dance, while retaining the original mega body, brass binding and six-segment
+crown. Pause freezes the drive and counter motion.
+
+The intensity ceiling remains intact beyond 100 STYLE; higher STYLE escalates
+the selected preset's **motifs**, not the saved scalar limit. Delirium mix adds:
+
+| STYLE | Escalation |
+| --- | --- |
+| 100 | Beat-kicked combo lettering, orbiting print shards and peripheral breathing rings |
+| 200 | Stronger counter rotation/shake, crystalline harmonics and wilder phantom-head motion |
+| 300+ | Layered print orbits, a bounded wild counter dance and deeper tunnel/floor ripples |
+
+Milestone styles blend between tiers and retreat with the real chain. Counter
+movement stays in a bounded lower-centre lane: the reticle, damage bonus, decay
+bar and rhythm cue do not dance. Beat accents use the audible music clock; no
+camera roll or strobing is added. The saved hallucination ceiling also scales
+the new counter decoration.
+
+Feedback and Mixed retain a six-level, mirror-tiled tunnel in one unrolled pass,
+without a history buffer. The presets adapt CrystalDive's polar folding,
+analytic-gradient lensing and twisted-lattice ideas into the existing Godot
+shaders; no CrystalDive assets or rendering pipeline are bundled.
 
 
 
@@ -278,10 +377,11 @@ All five skills have separate cooldowns and three run-upgrade ranks through leve
 
 - **Skills by level:** a run starts with skill 1 only. Skills 2, 3, 4 (Ban zóna) and 5 (Valhalla) unlock at levels 2, 3, 5 and 7, with an unlocked-skill callout and a tip. The HUD shows a dim teaser of the next skill with its unlock level; locked skills cannot be cast and do not appear as level-up cards. Shop cards show their unlock level.
 - **Upgrade types by level:** early level-ups offer auto weapons, stats and unlocked skill masteries; perks join at level 3 and gun mods at level 5.
-- **One-time tips:** cards above the skill bar explain moving/shooting, contracts, skills, prying machines, low health, extraction and combos. A tip counts as seen after 2 s on screen (an interrupted tip comes back) and is remembered in the profile; Settings → *Show tips again* resets them.
+- **First fight:** the calm arrival ends at route choice. Enemies wait until you physically reach your selected venue.
+- **One-time tips:** cards above the skill bar explain movement, arena sets, DROP, skills, optional machine smashing, low health and combos. A tip counts as seen after 2 s on screen (an interrupted tip comes back) and is remembered in the profile; Settings → *Show tips again* resets them.
 - **Footer:** the controls line lists only what you have unlocked.
 
-Turning Guided start off gives experienced players all five skills and every upgrade type from the first second, with no tips. The smaller early contracts and the Yard's 12 s arrival calm are stage design and apply either way.
+Turning Guided start off gives experienced players all five skills and every upgrade type from the first second, with no tips. Arena set counts and arrival calms are stage design and apply either way.
 
 **Skill combos** (every class carries Ban zóna and Valhalla). A named callout appears below the crosshair:
 
@@ -313,11 +413,11 @@ Turning Guided start off gives experienced players all five skills and every upg
 
 **Precision hits (source changes, not yet packaged):** main-gun rays through a visible head or exposed weak point earn a guaranteed ×3 critical hit without a luck perk. Ordinary rolled body crits deal ×2. Precision uses the current crit-damage factor plus one base-damage unit; it never multiplies a random crit again. **Štěstí z automatu** improves both rolled crits and aimed hits. Each pierced victim is judged separately; headshots do not amplify splash, burns or chained damage. Weak volumes follow enemy yaw, scale and feet height and cannot be hit through a world blocker. Kill numbers retain actual damage; critical numbers show an icon.
 
-Spitters have 180 base health, tanks 420 and bosses 6000; schedule multipliers still apply. These values are not a full-campaign balance certification.
+Base health and combat roles are listed above; schedule multipliers still apply. These values are not a long-session balance certification.
 
 **Gunplay research:** Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf) emphasizes reliable target reactions and coherent presentation. Contact feedback precedes restrained camera effects; recoil never drifts aim, and the horde simulation has no global hit-stop. Nine original Blender-authored junk guns share one gloved grip rig. Static parts are batched by material; pumps, rotary parts and pooled thrown projectiles stay movable. The quote additions include drum pads and a speaker cabinet, a hollow-brick feeder and a dairy tub with a pressure pump.
 
-**Hit chains:** each main-gun shot that directly hits an enemy adds one beat, no matter how many pellets hit. The next-shot damage curve stays +8% per beat after the first two, capped at +40%. Up to 10 beats, each direct hit restores a **six-second grace period** and idle decay removes **10% (rounded up, at least one beat) every 1.5 seconds**. From 10 to 100 beats both timers tighten linearly: at 100+, grace is **3 seconds** and each 10% decay step arrives after **0.45 seconds**. A decay step snapshots the timer for its new lower count. Misses neither erase nor refresh it; actual nonlethal damage costs two beats, blocked damage costs none, and death clears it. Explosions alone do not extend it. Pause freezes decay. The crosshair draws a large fractured **SÉRIE** count with offset cyan/magenta print layers, a readable bonus line and the authoritative countdown. Higher chains turn the count hotter and slightly lean it, without rapid flashing or scrambled digits. Hit-confirmation sounds climb in pitch; hits and kills have brighter impact sparks and stronger recoil.
+**STYLE timing:** each credited kill transaction refreshes STYLE. Up to 10 STYLE, a **six-second grace period** applies and idle decay removes **10% (rounded up, at least one point) every 1.5 seconds**. From 10 to 100 STYLE both timers tighten linearly: at 100+, grace is **3 seconds** and each 10% decay step arrives after **0.45 seconds**. The damage bonus scales linearly to its +40% cap at 100 STYLE. Misses and nonlethal hits neither extend nor erase it; actual nonlethal player damage costs two points, blocked damage costs none, and death clears it. Pause, arrival, empty breathers, route choice and travel freeze decay. The crosshair shows readable action labels, fractured STYLE, DROP charge and the beat cue. The compact HUD separates vitals, all five skills and both gun names.
 
 **Typography:** Rubik Glitch gives titles, actions, card names, kills, criticals and the combo a torn rave-flyer look. Barlow Semi Condensed keeps descriptions, settings, small HUD labels and music readouts compact and readable. Both bundled fonts cover Czech diacritics.
 
@@ -369,9 +469,9 @@ compartments**, real matching triangle colliders, permanent trays/backing and a
 labelled frame. Reels and coin slots identify gambling machines; rows of packs
 identify cigarette machines; jackpot panels show **777**.
 
-**Pry, open, retarget.** Aim close at a live compartment and hold F. The
-fingerless-gloved hand raises an original hooked steel crowbar, inserts it and
-levers backward repeatedly. Damage persists when you stop to fight. Doors pull
+**Smash and grab.** Aim close at a live compartment and press F. The
+fingerless-gloved hand swings an original hooked steel crowbar and opens that
+compartment immediately. Holding F cannot repeat payouts; release and press again for another door. Doors pull
 outward with their colliders before breaking, then release their allocated loot
 and lose their harvestable collider. Empty housing remains visible and cannot
 yield again. Guns and abilities do not salvage; a wall or out-of-range aim
@@ -379,18 +479,13 @@ prevents tool contact.
 
 The conserved pre-rolled bank budget remains **14–20 Drobné**, **5–8 Cigára**
 or **one rare Kešulky**. Rare banks may have zero-yield outer compartments.
-Contract stock is guaranteed on clear supported faces; ordinary stock retains
-the 11–18 live-bank cap and 35–50 s respawn intervals. Empty housings reserve
-their footprints for the remainder of the level. Contract progress counts
-actual emitted compartment units, never collection, carried currency or banking.
-The authored guarded-machine encounter remains separate from campaign contracts.
+Optional stock uses clear supported venue faces with the 11–18 live-bank cap and 35–50 s respawn intervals. Empty housings reserve
+their footprints for the remainder of the level. Payouts are the actual emitted
+compartment units; opening machines is never required to finish an arena.
+The authored guarded-machine encounter remains a separate optional event.
 
-**Locks and leverage.** The brass **+** cue marks a real lock for **×1.75**
-prying damage. Working the same latch builds up to **+35% rate over 0.65 s**.
-Releasing, losing contact, changing compartment or pausing resets leverage,
-not the door's health. Czech feedback shows currency type, local opening
-progress, compartments remaining and current bonus. Metal chips, sparks,
-clanks and crowbar motion replace drill hum and crystal effects.
+Czech feedback shows currency type and compartments remaining. Metal chips,
+sparks, clanks and crowbar motion replace drill hum and crystal effects.
 
 Coin, paper cigarette-pack and token pickups use the existing pooled collection
 and banking path. The fractal crystal shader, rotating history-texture halo,
@@ -404,19 +499,19 @@ an alternative mining mode.
 
 All three currencies move into your profile at 100% on stage clear (loose loot is swept up), and at 50% on death or abandonment. Cigára spent on consoles is removed before banking.
 
-**Round shop:** extraction pauses gameplay and opens the exchange. The primary panel shows current stats, a free weapon selector and a comparison with purchased mods reapplied. Five skill cards show their ranks, accurate effect previews and currency prices; guided progression locks unavailable skills. Random stock has four primary mods and two protection/health/power offers in scrollable tabs. Rerolls replace only unsold stock and cost 3 Drobné + 1 Cigára more after each refresh. Sold, capped or unaffordable purchases do not debit currency. Primary and skill ranks carry into the next sector; run-only upgrades expire at run end. `RoundShop.CATALOG` owns prices, caps and previews.
+**Round shop:** clearing a sector pauses gameplay and opens the exchange. The primary panel shows both upgraded equipped guns and a free selector with separate replace-A/replace-B buttons. Invalid replacements never lose the partner or compound shared mods. Five skill cards show ranks, effects and prices; guided progression locks unavailable skills. Random stock has four primary mods and two protection/health/power offers in scrollable tabs. Rerolls replace only unsold stock and cost 3 Drobné + 1 Cigára more after each refresh. Sold, capped or unaffordable purchases do not debit currency. The pair and primary/skill ranks carry into the next sector; run-only upgrades expire at run end. `RoundShop.CATALOG` owns prices, caps and previews.
 
-**Persistent base:** craft protection, starting-primary blueprints and one gadget, plus automatically applied perks and ranked talents. Equip one protection set, one starting primary and one gadget; resetting the primary restores the class default. Eight five-level permanent talents are Trénink u výčepu, Škola disrespectu, Útěk před účtem, Velká igelitka, Páka z bazaru, Veksláckej čuch, DJ legenda and Kožená bunda. Records track time, kills, level, runs, victories and deepest sector in `user://profile.json`. Stable IDs preserve currencies, unlocks, crafting, upgrades, records and settings; older gear migrates to a single primary/gadget without restoring deleted melee blueprints.
+**Persistent base:** craft protection, starting-primary blueprints and one gadget, plus automatically applied perks and ranked talents. Equip one protection set, one starting primary and one gadget; resetting the primary restores the class default. Eight five-level permanent talents are Trénink u výčepu, Škola disrespectu, Útěk před účtem, Velká igelitka, Páka z bazaru, Veksláckej čuch, DJ legenda and Kožená bunda. Records track best score, time, kills, level, runs, victories and deepest arena in `user://profile.json`. Stable IDs preserve currencies, unlocks, crafting, upgrades, records and settings; older gear migrates to a single primary/gadget without restoring deleted melee blueprints.
 
 ## Music
 
 Every **new game or run restart** generates a fresh **180, 186, 192 or 198 BPM hardtek mix** on background threads. A private seeded composition chooses a minor key, chord progression, acid riff, melody, accents, vocal placement and 32-bar arrangement without consuming gameplay RNG. The **87-WAV PROTOKSEED pack is a selection pool between runs, not a playlist within one run**. Each run keeps one key-matched kick, one drum loop, one 303 loop, one ambience recording and one transition FX. Drum/303 phrases repeat on a fixed two-bar grid; ambience and FX keep the same source window and playback rate. A sampled lead can replace the generated melody, never stack a second lead over it. Full recordings remain available for different selections on later runs. Six original Luďas voices join the synthesized sub/acid, percussion and harmony. All thirteen stems share the exact rounded PCM grid. Gameplay changes layer intensity, not the selected sound set; sector changes retain it. A new run cancels old rendering and rejects stale worker results.
 
-The kick stays present during exploration. Nearby/total horde pressure, the actual direct-hit chain, real kill momentum, health loss and low-health danger bring in harder layers; the stronger of crowd pressure and chain drive wins. A 100-beat chain reaches full intensity and the lead layer; decay lowers it with the chain. Actual held-F contact/resonance adds mining drive. Bosses and extraction move to the peak arrangement on a bar boundary. Kill bursts, salvage openings, danger and departure queue priority/cooldown-bounded vocal accents on beats. The hardtek backing keeps a steady gain through weapon effects, spoken reactions, accents, milestone stingers and pause: these events never turn the track down. Spoken Luďas reactions still silence just the remix vocal layer to avoid overlapping voices; pause cancels queued gameplay accents without softening the backing. Reactive layer changes and track crossfades remain. The 90 BPM menu motif and milestone stingers remain. Music, SFX and master volumes are adjustable in Settings; master clipping protection is unchanged.
+The kick stays present during exploration. Nearby/total horde pressure, actual kill STYLE, real kill momentum, health loss and low-health danger bring in harder layers; the stronger of crowd pressure and STYLE drive wins. 100 STYLE reaches full intensity and the lead layer; decay lowers it. A fresh crowbar swing adds brief salvage drive. Bosses move to the peak arrangement on a bar boundary. Kill bursts, DROP shots, salvage openings and danger queue priority/cooldown-bounded vocal accents on beats. The hardtek backing keeps a steady gain through weapon effects, spoken reactions, accents, milestone stingers and pause: these events never turn the track down. Spoken Luďas reactions still silence just the remix vocal layer to avoid overlapping voices; pause cancels queued gameplay accents without softening the backing. Reactive layer changes and track crossfades remain. The 90 BPM menu motif and milestone stingers remain. Music, SFX and master volumes are adjustable in Settings; master clipping protection is unchanged.
 
 The **HARDTEK** panel below the radar names all thirteen stems plus the live gameplay accent. Its header identifies the current mix; pad ambience and sampled leads are labelled explicitly. A lit dot means that part is routed into the mix; its bar follows the player's actual mono PCM16 audio, so gaps in vocal chops or sparse leads remain gaps rather than a fake equalizer. Meters use a 46 ms source window at 20 Hz, adjusted for playback pitch/output latency, track fades, vocal gating and Music/Master attenuation or mute. They are **pre-FX**: reverb tails and the master limiter are not attributed to individual stems.
 
-The panel shows the mix ID, key, BPM, beat pulses, current bar out of 32, active accents/stingers, spoken-vocal priority, full-volume pause playback, mute and score-generation progress. It continues updating during pause and uses a shorter layout below 660 px viewport height. Prying contact feeds the mix every gameplay frame, so fast fractures cannot disappear between crowd-intensity checks.
+The panel shows the mix ID, key, BPM, beat pulses, current bar out of 32, active accents/stingers, spoken-vocal priority, full-volume pause playback, mute and score-generation progress. It continues updating during pause and uses a shorter layout below 660 px viewport height. A fresh crowbar swing feeds salvage drive every gameplay frame, so the brief smash cannot disappear between crowd-intensity checks.
 
 To rebuild the complete sample bank, run `python3 tools/music_samples.py "/path/to/PROTOKSEED SAMPLE PACK"` (requires NumPy), then import with Godot. The generated `assets/audio/protokseed/catalog.gd` explicitly preloads every recording for exported builds and records its original path, SHA256, role, labelled kick root and exact loop grid. Conversion keeps complete recordings as antialiased mono PCM16/22050; sample redistribution terms remain unverified, as documented in `CREDITS.md`.
 
@@ -425,7 +520,7 @@ To rebuild the complete sample bank, run `python3 tools/music_samples.py "/path/
 Gameplay code reads data resources and draws through replaceable scenes and materials. It never refers to mesh names, so a reskin replaces art without touching controllers.
 
 - **Autoloads:** `Profile` (`scripts/meta/profile.gd`) holds persistent currency, class unlocks, Armory levels, crafting ranks, equipped armor/primary/gadget, records and settings. Multi-mineral payments validate the entire cost before debiting. `Music` (`scripts/audio/music_director.gd`) uses persistent render workers, one `MusicComposition` per run and a once-decoded, shared immutable sample bank (`music_samples.gd`). New-run generations cancel obsolete work and reject stale callbacks; main-thread gameplay changes gains and schedules recorded accents without rendering audio samples. `MusicLayers` (`scripts/ui/music_layers.gd`) reads a caller-owned `Music.MixMeter` snapshot for bounded, read-only PCM metering. Buses are defined in `default_bus_layout.tres`. Sample preparation/provenance is in `tools/music_samples.py`; sampled-audio terms are separate from CC0 art in `CREDITS.md`.
-- **Stats and economy:** `RunState` combines class/Armory/crafted modifiers and level-up stacks, owns one `WeaponBuild` (`scripts/progression/weapon_build.gd`), and stores five ability ranks. Swaps rebuild from an immutable authored snapshot, retaining purchased ranks and the latest element conversion without compounding. `RoundShop` purchases stock and individual skills; `CraftingCatalog` supplies persistent `CraftRecipe` definitions.
+- **Stats and economy:** `RunState` combines class/Armory/crafted modifiers and level-up stacks, owns one shared `WeaponBuild` plus `secondary_primary_source`, and stores five ability ranks. `equip_pair` validates and commits a distinct available pair atomically; `swap_equipped` only toggles those sources. Immutable authored snapshots and shared gadget/ranks prevent compounding. `WeaponDraftScreen` presents both effective previews without mutating the equipped pair before confirmation. `RoundShop` purchases stock and individual skills; `CraftingCatalog` supplies persistent recipes.
 - **Classes and abilities:** `data/classes/*.tres` and `roster.tres` define stats, class unlock cost, `primary_weapon` and five `ability_scenes`. `ActiveAbility` (`scripts/abilities/`, scenes in `scenes/abilities/`) owns slot-specific cooldowns and shared rank scaling. Buffs, exposure zones and protection are source-owned, so one ending skill cannot remove another's effect.
 - **Main guns:** `data/weapons/*.tres` (`WeaponDefinition`: damage type, damage, cadence, pellets, spread, pierce, recoil, knockback, explosion, spin-up and icon) reference `WeaponView` scenes in `scenes/weapons/`, instancing the original `assets/guns/*.glb` meshes. Rebuild with `blender -b --python tools/guns/build_guns.py`, then import with the project Godot executable. No image-generation access is required. `ArenaPlayer` owns one trigger, draw lock, combo, gun mods and camera spring; hit/tracer/casing visuals remain pooled.
 - **Auto weapons, perks and gun mods:** `AutoWeapon` subclasses in `scripts/weapons/auto/` and `PerkEffect` subclasses in `scripts/perks/` use `UpgradeDefinition`s (STAT, WEAPON, OVERCLOCK, PERK, GUN_MOD) in `data/upgrades/pool.tres`. ABILITY offers are generated for the actual five class slots. `AutoWeaponRack` owns passive auto weapons and perks; perks, primary mods and ability ranks do not consume its four slots.
@@ -446,13 +541,13 @@ Gameplay code reads data resources and draws through replaceable scenes and mate
 - **Procedural levels:** `data/stages/*.tres` configure play area, `layout_theme`, `cover_count`, `overlook_count`, `outcrop_count`, `quest_scale` and `SpawnSchedule`. `ProceduralWorld` (`scripts/world/procedural_world.gd`, `scenes/levels/procedural.tscn`) is configured with the stage and seed before entering the tree. It carves a 2 m grid identical to the horde grid: the theme plan places rooms, corridors join them (spanning tree plus loops, or the Reactor's spokes and chords), and alcoves are added. Venue wall rings are reserved before carving; connectors aim at explicit street porches and entrances. Ring cores are refilled and cells unreachable from spawn are pruned. Remaining rock merges greedily into exact axis-aligned blocks under `Obstacles`; `mining_sites` instead come from supported, resource-compatible wall bays inside playable venues. Overlook decks and tilted ramp boxes live under `Elevation`, which the horde rasterises into its walkable heightfield. Set pieces, pillars and cover check carved floor plus margins, so passages and machine standing room stay open. `layout_open` is public for the radar. Original authored worlds remain explicit lab fixtures with their own play areas.
 - **Prague rooms and underground:** `scripts/world/prague_layout.gd` reserves the station, passage, WC and stair footprints before street carving. `ProceduralWorld` publishes `layout_level`, `layout_roofed`, `layout_walkable`, `stairs` and `kit_sites`; venue sites carry stable ownership IDs, reserved machine zones and deterministic `quote_signs` records. `Ground` contains exact street/passage floor rectangles. `PragueKits` and `KitTarget` (`scripts/world/kits/`) batch palette furniture, printed signs and venue floors, with bounded local lights and real colliders. `venue_floor.gdshader` reads each floor's finish and palette from normalized instance channels, so all four finish types and three variants use one shared MultiMesh batch. Hlášky boards reuse the palette and fixed text labels, capped at 64 kit labels per world; their private RNG and cached source do not change gameplay RNG order. Horde obstacle intervals follow pitched box planes at the queried position, so stair roofs do not close the upper ramp. Spawning, radar, supplies, stashes, salvage pickups and auto-weapon floor effects consume floor/roof metadata. The heightfield remains single-layer per XZ.
 - **Shop venues:** `ShopVenue` resources (`scripts/data/shop_venue.gd`, `data/venues/*.tres`, listed in `data/venues/catalog.tres`) carry the shop name, sign text, tagline, window goods and colours. `ProceduralWorld` builds storefronts ~4 physics frames after the world, on wall stretches a physics query finds clear, through the batched visual path (`shaders/venue_front.gdshader`) with a private RNG seeded from the stage seed, so layouts and the global RNG are untouched. The round shop header reads the sector's first seeded venue.
-- **Level contracts:** `LevelQuests` (`scripts/level_quests.gd`) selects seeded resource/ordinary-species targets, clamps progress and emits completion once. `DepositField` records conserved raw section fractures; `ArenaGame` records exact horde victim definitions. Inventory/banking signals never count. `HordeDirector` sustains every ordinary wave; `SpawnSchedule.ramp_duration` bounds pressure ramping, not level length, and `surge` multiplies spawning during extraction. Boss release is explicit. Completion defers beyond the current impact, rejects stale source ids and respects death and earned upgrade choices, then spawns an `ExtractionPod` (`scripts/extraction_pod.gd`, collision-free) at `ProceduralWorld.extraction_point()`; only its stale-checked `departed` signal clears the stage.
+- **Arena flow:** routed `HordeDirector` runs ARRIVAL/ROUTE/TRAVEL/BUILD/PEAK/CLEANUP/RECOVERY/CLEAR from physical `ProceduralWorld.combat_venues` and finite authored wave budgets. `choose_route` accepts a paused modal commit but waits for physical arrival before admitting safely placed bodies through local role lanes; no whole-district fallback. Completion is once-only and requires zero live bodies/represented lives. `ArenaGame` defers it, rejects stale directors, preserves earned choices and death precedence, then opens the shop. Primary captures and explicit `Horde.action_killed` scopes feed `ArenaPlayer.arena_scored`; callback/ambient deaths cannot steal action credit. Authored fixtures retain automatic finite sets and explicit boss release.
 - **Skill combos:** `ActiveAbility.combo_blast_damage()` applies POWNED (`crush`) against `ArenaPlayer.active_gravity_well()`. Existing radial attacks use it through `blast()`; the three producer attacks share it before their wall/floor-filtered native hits. `arrive()` is called at movement-skill landings for LAST TIME KRATOS (`ram`) via `is_shielded_by_other()`; Valhalla calls `GravityWell.collapse()` for PERMABAN (`collapse`). `ArenaPlayer.ability_combo` drives the HUD callout (rate-limited per combo), while `combo_counts` records every trigger.
-- **Luďas's voice:** `LudasVoice` (`scripts/audio/ludas_voice.gd`, owned by `ArenaGame` so it survives stage loads) plays recorded reactions from `assets/voice/ludas/`: arrival, kill bursts (12 kills within 1.5 s), combos, a skill unlock (*Jaj… krajíc… chleba* in sequence), dropping below 40% health, healing, extraction, stage clear and death. One line plays at a time; a higher-priority reaction interrupts a lower one, and each reaction has its own cooldown. The reskin plan lives in `docs/ludas/BIBLE.md`.
-- **UI:** `scenes/ui/hud.tscn` has currency/supply counters, salvage/kill/stash contracts, hostiles/kills, vitals, a primary readout, numbered skill tiles and a close-range F prying prompt. There is no level timer or ammo readout. Boss fixtures retain health/recovery readouts and radar markers. Numeric level-up choices consume input before resuming, so choosing a card cannot cast a combat ability.
-- **Guided start:** `RunState.start_guided()` sets `unlocked_abilities` from `ABILITY_UNLOCK_LEVELS` and emits `ability_unlocked` as levels are gained; `can_upgrade_ability()` and `_is_eligible()` gate skills, perks and gun mods. `Tutor` (`scripts/ui/tutor.gd`) queues one-time tips stored in `Profile` (`seen_tips`, `guided_start` setting). `StageDefinition.mine_objectives`, `kill_objectives` and `spawn_grace` (`HordeDirector.grace`) size each sector's contract and arrival.
+- **Luďas's voice:** `LudasVoice` (`scripts/audio/ludas_voice.gd`, owned by `ArenaGame` so it survives stage loads) plays recorded reactions from `assets/voice/ludas/`: arrival, kill bursts (12 kills within 1.5 s), combos and DROP shots, a skill unlock (*Jaj… krajíc… chleba* in sequence), dropping below 40% health, healing, stage clear and death. One line plays at a time; a higher-priority reaction interrupts a lower one, and each reaction has its own cooldown. The reskin plan lives in `docs/ludas/BIBLE.md`.
+- **UI:** `scenes/ui/hud.tscn` has currencies/supply, score/record/fight/venue, hostiles/kills, vitals, both gun names, five numbered skills and a close-range F smash prompt. `CombatFeedback` draws action labels, STYLE, DROP and the beat cue. Responsive compact bounds prevent the bottom-row overlap. `WeaponDraftScreen` and `RouteChoiceScreen` own choice input; Game owns pause, validation and resume. Numeric choice inputs are consumed before combat resumes. There is no ammo/level timer.
+- **Guided start:** `RunState.start_guided()` sets `unlocked_abilities` from `ABILITY_UNLOCK_LEVELS` and emits `ability_unlocked` as levels are gained; `can_upgrade_ability()` and `_is_eligible()` gate skills, perks and gun mods. `Tutor` (`scripts/ui/tutor.gd`) queues one-time tips stored in `Profile` (`seen_tips`, `guided_start` setting). `StageDefinition.arena_encounters` and `spawn_grace` (`HordeDirector.grace`) size each arena and its arrival.
 - **Pixel-art icons:** every upgrade, gun, class, ability, Armory upgrade, mineral, workshop recipe, shop item and HUD glyph has a 16 × 16 icon in `assets/icons/<group>/<id>.png`. They are authored as text grids in `tools/icons/art_*.py` on the shared palette in `tools/icons/pixel.py` (automatic dark outline). Data resources reference their icon through `icon` exports; code-only concepts use `GameIcons.lookup(group, id)` (`scripts/ui/game_icons.gd`), and `CraftRecipe.display_icon()` resolves a recipe's payload icon. Show them nearest-filtered at 2×, 3× or 4× (`GameIcons.rect`). After editing art, run `make icons` (renders, then imports); `python3 tools/icons/build.py --group <g> --preview /tmp/icons` also writes a labelled 6× preview sheet.
-- **Run flow:** `ArenaGame` builds each stage under a fresh `Round`, carries the primary build and five skill ranks, and handles level-up, pause, shop and return to base. It banks all three currencies into `Profile`, records runs and drives music from crowd density.
+- **Run flow:** `ArenaGame` builds each stage under a fresh `Round`, carries score, both equipped guns, the primary build and five skill ranks, and handles level-up, pause, shop and return to base. It banks all three currencies into `Profile`, records runs and drives music from crowd density and STYLE.
 
 Legacy performance evidence, **before the Prague model/environment swap**: the mixed-faction 1,600-enemy horde was measured in a Godot 4.4.1 headless CPU check (120 frames). On the elevated stages, simulation averaged 7.2 ms per frame on the Yard and 7.5 ms on the Reactor (about 20% of the horde on raised ground); draw preparation took about 2.6 ms. The same check before the heightfield measured 6.1–6.5 ms. These are not measurements of the new assets; **60 fps has not been certified on the Radeon GPU**.
 
@@ -472,30 +567,36 @@ Run the precision-damage and nested-blast regressions with the editor executable
 | `weapons` | each of the nine main guns firing | visual review |
 | `recoil` | 6-frame strips after one rail shot and during minigun fire | camera kicks and recovers, sustained kick stays capped, player aim unchanged |
 | `guns` | side/three-quarter views of all nine Blender models and their flying projectile templates | visual review |
-| `gunplay` | sustained unlimited fire, low-chain grace/decay, upgraded gun swaps and paused trigger | real damage beyond a burst, stable aim, preserved chain across a movement gap/miss, two-beat hurt penalty, gradual expiry, fresh-hit renewal, unchanged +40% damage cap, paused combo timing, mods preserved without compounding and release before resumed fire |
-| `combo_pressure` | fractured hot-combo lettering, combo-driven hallucinations and cooldown | 10-beat forgiving grace, 100-beat 3 s grace and faster decay, actual hallucination ceiling, soundtrack lead-layer drive and idle return after wipe |
+| `gunplay` | sustained fire, kill STYLE, two-gun swaps, double jump, slide and paused input | real damage beyond a burst, stable aim, hit-spam exclusion, miss/decay/recovery timing, drafted partner swaps without compounding ranks, one air jump, collider shrink/headroom, sliding fire, ceiling/wall bounds and fresh resumed actions |
+| `combo_pressure` | kill-earned hot STYLE, sensory drive and cooldown | actual primary kills only, finite grace and gradual decay, recovery freeze, nonlethal-hit exclusion, hallucination ceiling, soundtrack drive and banked score/DROP retention |
+| `rhythm_combo` | earned DROP, compact HUD and real beat-timed heavy shots | primary-kill charge, single bank, offbeat/held/fast/muted/stopped retention, early-wrap ×10 spend, return to baseline, precision, actual overkill, pause and DROP-chain self-charge exclusion |
 | `quotes` | new gun impacts and ranked passive builds | shock chaining, brick penetration/knockback, frost splash, Workshop crafting/equipping, retained primary ranks, passive caps, actual health cost/clamping and regeneration |
 | `producer` | guarded cone strikes, inward/outward turntable waves and a remote speaker | physical 1–3, directional/wall/deck exclusions, guard expiry, ranked strikes, opposite native impulses, pause, remote persistence, rejected placement and cancellation |
 | `tempo` | real held-input firing for nine guns and boosted Minigun | actual cadence above 60 shots/s, stable aim, gentle recoil and bounded hitch catch-up |
-| `pressure` | real stage directors and accelerated crowds with scarce loot | arrival calm free of spawns, prompt groups after it, all-stage caps, ordinary/specialist admissions, sparse XP/magnet boundaries, repair RNG, overflow conservation and paused/inactive/freed-player supply timers |
-| `fusion` | dense-pack grow-in, mega/ordinary motion strips and actual primary shots | no healing or early rewards, bounded same-species membership, director cap preservation, enlarged precision hits, per-member quests/XP/gear streaks, protected identities, statuses, player proximity and pause |
-| `hallucinations` | native recursive heads/limbs on human, mouse and insect megas, inward head-cycle strips, combo-driven peripheral feedback-loop vision and paused settings | 100 real direct hits reaching the 65% ceiling, actual keyboard ceiling changes, 65%/100% world-only feedback, clear main precision head/center/HUD, frozen drive/anatomy/feedback motion, exact off restoration and real precision damage with combo bonus |
-| `levels` | first-person, overhead and deck views of all three themes, repeated furnished venues, station halls, public/portable WCs and hlášky boards | seeded repeatability/variation, two enterable herna/hospoda/nonstop rooms per sector, actual held-W entry/wall blocking and held-F bank prying, every room's compatible reachable loot and complete initial contract stock, fitted whole-source indoor/outdoor quote text, connected routes/stairs and actual descent/enemy following, roof/floor exclusions, fixture/light/label budgets and overlook/island counts |
-| `quests` | F prying, hallucination kills, required E stash looting, earned choices and three extractions | exact emitted-unit/species progress, two distinct stashes, elite/duplicate exclusion, declined gear counts, stash-first/last completion, stock/reward exclusion, pause, touchdown/ring progress, surge, shop only after lift-off and stale-level rejection |
+| `pressure` | finite stage directors, live sets and scarce loot | arrival calm, small admissions, pause/inactive freezes, caps, survivor cleanup, empty recovery, exact finite budgets, blocked placement retention, sparse XP/magnet boundaries, repair RNG and supply timers |
+| `fusion` | dense-pack grow-in, mega/ordinary motion strips and actual primary shots | no healing or early rewards, bounded same-species membership, director cap preservation, enlarged precision hits, per-member kills/XP/gear streaks, protected identities, statuses, player proximity and pause |
+| `arena` | linked venue choices, primary scoring and all three sector shops | real distinct local fights, actual survivor cleanup, unopened optional cabinets, earned-choice input, duplicate/stale clear rejection, carried score and victory record |
+| `routes` | initial draft, route choice and actual doorway traversal at 960×600 | duplicate refusal, pending/cancel atomicity, real keyboard confirmation, break replacement, physical arrival starts the selected fight, combat cannot reopen draft and HUD regions do not overlap |
+| `pinball` | actual RMB boot, returns, slide/stomp, four weapon combos and keg | kill-only action credit, bounded recovery, parry/no-farm, heavy/ceiling constraints, AIR MAIL, exact-once bursts, ambient exclusions and pause/death release gates |
+| `horde_pinball` | native launch/shatter/return/keg/hype and enemy counters | wall/body collision, precise ledger, perk reach/homing/refreeze, one-shot kegs, aura health conservation, blocking/locked shove and committed bottle splash |
+| `finishers` | original-body gold daze, aimed F prompt, front-flip leap and live contact/death strip | threshold/HP conservation, expiry/resumption, once-per-life, boss/overkill/ambient exclusions, real forward/airborne travel, long-range limit, wall/ceiling interruption, no correction warp or aim steering, floor/body/generation constraints, exact-once credit, shared recovery budget, simultaneous-fire priority, pause pixels, stale/dead cancellation and no double salvage |
+| `hallucinations` | native recursive heads/limbs on human and mouse megas, inward head-cycle strips, STYLE-driven peripheral feedback-loop vision and paused settings | actual primary kills reaching the 65% ceiling, actual keyboard ceiling changes, 65%/100% world-only feedback, clear main precision head/center/HUD, frozen drive/anatomy/feedback motion, exact off restoration and real precision damage with STYLE bonus |
+| `hallucination_modes` | actual keyboard preset selection, six world/anatomy views, four-phase head strips and spatial floors in all three stages and six indoor types | compact settings reachability, clear centre/HUD, STYLE-driven ceiling, pause and exact off restoration, real precision-shot damage, independently moving floor patterns with unchanged physical floor |
+| `levels` | first-person, overhead and deck views of all three themes, repeated furnished venues, station halls, public/portable WCs and hlášky boards | seeded repeatability/variation, two-door combat venues with indoor/outdoor routes and headroom, actual held-W entry, slide escape and double-jump deck shortcut, one-press F bank opening, compatible reachable optional loot, fitted whole-source quote text, connected routes/stairs and actual descent/enemy following |
 | `pickups` | repair kits, distant XP vacuum and timed repair supplies | actual healing, full-health preservation, exact XP/overflow conservation, later loose gems, supply cap, pause/inactive timers and raised-deck fallback |
 | `abilities` | every class's five physical number keys and actual effects | damage, movement, healing, source-owned buffs, overlapping shields, pause/death cleanup, rank-scaled damage/cooldown/protection |
 | `combos` | POWNED, PERMABAN and LAST TIME KRATOS through physical keys | exact +60% crush versus a plain blast, real thrown charge into a well, out-of-reach control, collapse burst scaling with held enemies, dash-without-shield control and ram damage on arrival |
-| `onboarding` | guided arrival, an unlocked-skill callout/tip and locked shop cards | one skill plus teaser, footer, locked key, 12 s calm with a real director, no early perks/gun mods/locked skills, level-gated unlocks and working key, combo tip at level 7, tips seen once, Guided start off shows everything |
+| `onboarding` | guided arrival, an unlocked-skill callout/tip and locked shop cards | one skill plus teaser, footer, locked key, enemy-free arena calm with a real director, no early perks/gun mods/locked skills, level-gated unlocks and working key, combo tip at level 7, tips seen once, Guided start off shows everything |
 | `voice` | Luďas's recorded reactions | arrival, kill-burst trigger and cooldown, skill-unlock sequence order and interruption, hurt growl with cooldown, heal gulp, death outranking everything |
-| `music` | live PCM layer meters, pressure, speech, weapon FX, cues, pause, mute, quick held-F salvage, a new run and sector transition | repeated actual downbeat kick waveform throughout the run, vocal notes versus silent gaps, unchanged backing gain through effects/voice/all stingers/accents/pause, audio/UI clocks across loop seams, Music/Master mute clearing, a real fast fracture activating acid, different rendered kick PCM on restart and unchanged score across sectors |
-| `boss` | Pan Herna and Pan Jackpot: arrival, fight, low health, kill | tracked boss, WARNING/health frame, death cannot bypass unfinished objectives |
+| `music` | live PCM layer meters, pressure, speech, weapon FX, cues, pause, mute, quick salvage, a new run and sector transition | repeated actual downbeat kick waveform throughout the run, vocal notes versus silent gaps, unchanged backing gain through effects/voice/all stingers/accents/pause, audio/UI clocks across loop seams, Music/Master mute clearing, real salvage drive, different rendered kick PCM on restart and unchanged score across sectors |
+| `boss` | Pan Herna and Pan Jackpot: arrival, fight, low health, kill | tracked boss, WARNING/health frame, boss death does not finish an unfinished arena |
 | `boss_patterns` | ram lanes, mortar footprints/impacts and teal recovery | real damage and movement dodges, locked targets, cover/height/radius boundaries, +50% recovery, stagger interruption, pause and death/menu/node-removal cancellation |
 | `armor` | front shield/rear core, rotated markers and independent auto guns | real armor/precision arc boundaries, actual source direction, tag ordering, mixed splash, burn potency, finite stun/turning, slot reuse and reserved admission |
 | `encounter` | authored guarded machine, prying under pressure and earned reward | real compartments/response identities, completion orders, conserved loot, pause, E once and queued XP choice preservation |
 | `levelup` | new, mixed, ranked and ability mastery cards | selection upgrades the run and resumes play; physical numeric selection cannot leak into a combat skill |
 | `shop` | primary comparison/swap, five skill upgrades, sold/maxed/empty wallet | real UI purchases, preserved mod ranks, layout bounds, exact debits, rerolls, capped/unaffordable refusals and no Esc skip |
 | `hud` | five skill cooldowns/ranks, primary mods, armor, low health and death | actual lethal damage ends the run |
-| `mining` | whole fruit-machine bank, blinking lamps, a reel-stop strip, a win, paused spin, a tampered cabinet, automatic crowbar, held-F leverage strip, opened compartments, empty housing and out of order | lamps chase in play and freeze in pause, reels spin, stop exactly and freeze in pause, wins count the credit LED up, a tampered cabinet halts, out of order is darker, pried doors go dark, firearm/reach rejection, conserved loot, wall occlusion, pause and return to gun |
+| `mining` | whole fruit-machine bank, blinking lamps, a reel-stop strip, a win, paused spin, a tampered cabinet, automatic crowbar, one-press opened compartments, empty housing and out of order | lamps and reels freeze in pause, wins count up, tampered/out-of-order states read clearly, held/duplicate/paused presses cannot repeat payouts, firearm/reach/wall rejection, conserved loot and return to gun |
 | `street` | all twenty homeless faces on the Bezdomovec, the eight archetypes on the other two bodies, close faces, the harder men, the boss and a crowd per sector | atlas ranges and grime on every human, 18+ of 20 faces appear in a crowd, homeless admitted by the real director in all three sectors |
 | `menu` | intro, every party member and scrollable skill details, workshop tabs, records, settings and pause/abandon screens | saved gear, free primary switching and gadgets reapplied exactly once |
 | `venues` | all fourteen storefronts in a generated Žižkov, natural views of all three sectors and the stage-clear shop for several venues | unique ids and text, no florist, identical carve/mining sites/RNG end state with and without storefronts, venue named in the shop header, Label3D/instance/batch/light bounds |
@@ -509,8 +610,8 @@ python3 tools/lab.py gunplay mining abilities shop  # single primary, close-rang
 python3 tools/lab.py encounter armor boss_patterns  # tactical Yard features
 python3 tools/lab.py tempo pressure pickups  # faster fire, scarce loot and healing supplies
 python3 tools/lab.py fusion pressure armor  # crowd fusion, heavy gait and conserved combat
-python3 tools/lab.py levels quests     # generated arenas and mining/kill progression
-python3 tools/lab.py gear quests       # passive gear, required stash raids and extraction
+python3 tools/lab.py levels arena     # generated combat spaces and complete arena progression
+python3 tools/lab.py gear arena       # optional gear raids and stage rewards
 python3 tools/lab.py --list            # scenario names; --window renders visibly, --clean hides the overlay
 make lab                               # interactive: pick a scenario, play on; F1 list, F12 screenshot
 ```
@@ -606,3 +707,67 @@ scenarios / 81 captures**. Four first-run failures were fixed; the corrected
 failures or script/engine errors. Combat precision/nested-blast regressions
 reported `failures=0`. Hot combo, menu detail and level-up card captures were
 inspected visually. Frame rate is not measured.
+
+The CrystalDive-inspired presets passed native
+`hallucination_modes hallucinations combo_pressure menu`: **four scenarios /
+98 captures, zero failures**. This covers actual preset/ceiling input, all
+three stages, six indoor types, frozen/off restoration, unchanged physical
+floors and real precision-shot damage for human, mouse and
+insect megas. Combat regressions also reported `failures=0`. Settings,
+crystal mirrors, rotating-head strips and warped indoor floors were inspected.
+Frame rate is not measured.
+
+The sustained-gunplay balance passed native
+`gunplay pressure armor fusion boss quests`: **six scenarios / 51 captures,
+zero failures**, including all three contract-driven extractions and recorded
+campaign victory. A throwaway real-shot trace checked body/precision kills
+against actual wave health in all three stages; `failures=0`. Combat precision,
+piercing and nested-blast regressions also reported `failures=0`. Sustained
+fire and live crowd/loot captures were inspected visually. The throwaway
+driver was removed; frame rate is not measured.
+
+The beat-shot and milestone escalation pass ran native
+`rhythm_combo combo_pressure gunplay hallucination_modes hallucinations armor music`:
+**seven scenarios / 104 captures, zero failures**. This includes actual
+early/late beat shots, graded/off-beat damage, direct-plus-splash scaling,
+fast-gun exclusions, real 100/200/300-hit chains, unchanged physical floors,
+paused counter pixels, zero-intensity restoration and existing armor/music
+boundaries. Combat regressions reported `failures=0`. Maximum-shot confirmation,
+milestone effects, the 960×600 counter and off restoration were inspected
+visually; frame rate is not measured.
+
+The combat-pinball and venue-route overhaul passed the complete native lab:
+**38 scenarios / 607 captures, zero failures or script/engine errors**.
+It covers all three sectors' 3/4/5 distinct venue clears, local admission
+budgets, initial/break/shop drafts, physical doorway arrival, kick/slide/stomp,
+wall/ceiling constraints, returned shots, four weapon interactions, recovery
+limits, exact-once manual credit, counter enemies and one-shot kegs. Existing
+music, hallucination, armor, optional loot and progression paths also passed.
+Combat regressions reported `failures=0` with clean teardown. Draft, routes,
+live indoor combat and HUD at 960×600, launch/shatter/keg effects and hype aura
+captures were inspected visually. Evidence: `/tmp/kbb_pinball_final`.
+Frame rate and long-session balance are not measured.
+
+The salvage presentation, movement animation and daze/finisher pass ran the
+complete native lab: **39 scenarios / 616 captures, zero failures or
+script/engine errors**, under `/tmp/kbb_finishers_final`. The final contact,
+simultaneous-fire and paused-highlight changes also passed native `finishers
+mining gunplay recoil music onboarding`: **40 captures, zero failures or
+script/engine errors**, under `/tmp/kbb_finishers_boundaries`. A separate
+native mining run covered automatic and cigarette cabinets: **19 captures,
+zero failures**, under `/tmp/kbb_cigarette_switch`.
+Crowbar-only salvage, standing/slide kicks, sustained slide, stomp and the
+live F execution sequence were inspected visually. The finisher checks cover
+daze expiry, bosses, walls, intervening bodies, floors, recycled lives,
+held/released F, simultaneous fire/F, bounded healing, pause and death.
+Frame rate and long-session balance are not measured.
+
+The leaping front-flip upgrade passed native `finishers mining pinball
+horde_pinball gunplay recoil music onboarding`: **8 scenarios / 57 captures,
+zero failures**, under `/tmp/kbb_flip_finishers`. Final native `finishers`
+playback also passed: **9 captures, zero failures**, under
+`/tmp/kbb_flip_live_contact`, including live enemy death physics, out-of-range
+F, real long-leap travel and wall/ceiling interruption. Combat regressions
+reported `failures=0`. The brace/tuck/boot orbit, contact, directional burst,
+live death and recovery sequence were inspected visually. Frame rate and
+long-session balance are not measured.

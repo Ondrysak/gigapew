@@ -2,16 +2,23 @@ shader_type spatial;
 render_mode diffuse_burley;
 
 #include "res://shaders/kits/kit_common.gdshaderinc"
+#include "res://shaders/floor_hallucination.gdshaderinc"
 
 // All finishes share one material. INSTANCE_CUSTOM.rg encode kind / 3 and
 // variant / 2. Pattern dimensions are metres, independent of room transforms.
 
 varying vec2 floor_metres;
 varying flat vec2 floor_style;
+varying vec2 floor_world_metres;
+varying flat vec2 floor_world_x;
+varying flat vec2 floor_world_z;
 
 void vertex() {
 	floor_metres = VERTEX.xz * vec2(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[2].xyz));
 	floor_style = floor(INSTANCE_CUSTOM.rg * vec2(3.0, 2.0) + vec2(0.5));
+	floor_world_metres = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	floor_world_x = normalize(MODEL_MATRIX[0].xz);
+	floor_world_z = normalize(MODEL_MATRIX[2].xz);
 }
 
 // Filter narrow joints and motif outlines rather than letting them shimmer.
@@ -25,6 +32,12 @@ void fragment() {
 	int venue_kind = int(floor_style.x);
 	int variant = int(floor_style.y);
 	vec2 p = floor_metres;
+	// Evaluate the lens in world metres, then resolve its displacement onto
+	// the authored room axes without changing finish scale or batching.
+	if (floor_hallucination_active()) {
+		vec2 warp = floor_hallucinated_uv(floor_world_metres) - floor_world_metres;
+		p += vec2(dot(warp, floor_world_x), dot(warp, floor_world_z));
+	}
 	vec2 pixel = max(fwidth(p), vec2(0.0001));
 	float pixel_size = max(pixel.x, pixel.y);
 	float fine_detail = 1.0 - smoothstep(0.015, 0.065, pixel_size);

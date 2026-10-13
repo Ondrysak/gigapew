@@ -7,11 +7,11 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Holubí letka"
-description = "Nepřetržitý proud projektilů. Chvíli trvá, než nabere plné tempo."
-damage = 26
+description = "Holubi drží souvislý tlak na jeden cíl. Roztoč letku na těžkého, nepouštěj ji do plátu."
+damage = 18
 recoil_degrees = 0.04
-fire_interval = 0.032
-range_meters = 45.0
+fire_interval = 0.05
+range_meters = 40.0
 jitter_degrees = 1.6
 knockback = 2.5
 screen_shake = 0.015

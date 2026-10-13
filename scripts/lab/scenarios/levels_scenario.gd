@@ -9,12 +9,11 @@ func title() -> String:
 	return "Procedural levels"
 
 func summary() -> String:
-	return "Connected Prague streets, enterable roofed venues, physical cabinet approaches, WC fixtures and reachable contract loot"
+	return "Dual-route Prague combat loops, jumpable ramp decks, sliding venue escapes, real WC fixtures and optional cabinet loot"
 
 func run() -> void:
 	for stage in 3:
 		var first_layout: Array = []
-		var first_contract: Array = []
 		var first_quotes: Array[String] = []
 		for sample in 3:
 			if is_instance_valid(lab.game):
@@ -35,7 +34,10 @@ func run() -> void:
 			layout.append(world.layout_walkable.duplicate())
 			layout.append(world.layout_level.duplicate())
 			layout.append(world.layout_roofed.duplicate())
+			layout.append(world.arena_focus_points.duplicate())
 			layout.append(world.kit_sites.duplicate(true))
+			for venue: Dictionary in world.combat_venues:
+				layout.append([venue.id, venue.name, venue.position, venue.arrival, venue.admission_area])
 			for child in game.deposits.get_children():
 				if child is MineralDeposit:
 					layout.append([child.definition.resource.id, child.global_transform, child.total_yield])
@@ -45,29 +47,27 @@ func run() -> void:
 					for collider in body.get_children():
 						if collider is CollisionShape3D:
 							layout.append(collider.shape.size if collider.shape is BoxShape3D else Vector2(collider.shape.radius, collider.shape.height))
-			var contract: Array = []
-			for quest: Dictionary in game.quests.quests:
-				contract.append([quest.kind, quest.id, quest.target])
 			if sample == 0:
 				first_layout = layout
-				first_contract = contract
 				first_quotes = quotes
 			elif sample == 1:
-				lab.check(layout == first_layout and contract == first_contract, "stage %d repeats identical collision layout, spawn and objectives for the same seed" % stage)
+				lab.check(layout == first_layout, "stage %d repeats identical collision layout, spawn, combat anchors and optional loot for the same seed" % stage)
 			else:
 				lab.check(layout != first_layout, "stage %d changes collision layout and spawn with another seed" % stage)
-				lab.check(contract != first_contract, "stage %d changes its contract with another seed" % stage)
 				lab.check(quotes != first_quotes, "stage %d changes its hlasky sign selections with another run seed" % stage)
 			_validate_routes(game, world)
-			_validate_ore(game, world)
+			_validate_optional_loot(game, world)
 			_validate_elevation(game, world)
 			_validate_layers(game, world)
 			_validate_fixture_geometry(world)
 			_validate_quotes(world)
+			_validate_combat_spaces(game, world)
+			_validate_route_venues(game, world)
 			if sample == 0:
 				await _descend(game, world)
 				await _collide_lining(game, world)
 				await _enter_venues(game, world)
+				await _jump_shortcut(game, world)
 				await _capture_layers(game, world)
 			if sample != 1:
 				await lab.capture("%s_%d_start" % [game.campaign[stage].id, sample])
@@ -183,8 +183,7 @@ func _segment_clear(game: ArenaGame, from: Vector3, to: Vector3, floor_y: float)
 			return false
 	return true
 
-func _validate_ore(game: ArenaGame, world: ProceduralWorld) -> void:
-	var available: Dictionary = {}
+func _validate_optional_loot(game: ArenaGame, world: ProceduralWorld) -> void:
 	var count := 0
 	var occupied_venues: Dictionary = {}
 	for child in game.deposits.get_children():
@@ -227,17 +226,12 @@ func _validate_ore(game: ArenaGame, world: ProceduralWorld) -> void:
 			if accessible and semantic and physical:
 				section_yield += int(section.yield)
 		lab.check(reachable and section_yield == deposit.total_yield - deposit.yield_emitted, "%s has unobstructed on-floor player approaches and real in-reach compartment rays for all initial loot" % deposit.name)
-		available[deposit.definition.resource] = int(available.get(deposit.definition.resource, 0)) + section_yield
 		if semantic and physical and section_yield > 0:
 			occupied_venues[int(venue.venue_id)] = true
-	lab.check(count > 0, "the generated rooms contain actual mineable cabinets")
-	var requirements := game.quests.requirements()
-	for resource: ResourceDefinition in requirements:
-		var stock := int(available.get(resource, 0))
-		lab.check(stock >= int(requirements[resource]), "%s has enough physically reachable initial venue loot (%d available / %d needed), without a respawn" % [resource.display_name, stock, requirements[resource]])
+	lab.check(count > 0, "the generated venues contain real optional smashable cabinets")
 	for venue: Dictionary in world.kit_sites:
 		if venue.kind in [&"herna", &"hospoda", &"nonstop"]:
-			lab.check(occupied_venues.has(int(venue.venue_id)), "%s venue %d starts with compatible, physically reachable mineable loot" % [venue.kind, venue.venue_id])
+			lab.check(occupied_venues.has(int(venue.venue_id)), "%s venue %d starts with compatible, physically reachable optional loot" % [venue.kind, venue.venue_id])
 
 ## The horde's own heightfield must read each deck as flat high ground and its
 ## ramp as one continuous climb from the floor.
@@ -421,11 +415,11 @@ func _validate_layers(game: ArenaGame, world: ProceduralWorld) -> void:
 			metadata = metadata and world.layout_open[index] == 0 and world.layout_roofed[index] != 0
 	lab.check(metadata and underground_count > 0, "layer metadata reserves underground XZ without an overlapping street floor")
 	var spawn := world.get_node("PlayerSpawn").position as Vector3
-	var extraction := world.extraction_point(spawn)
-	for anchor in [spawn, extraction]:
+	var focus := world.arena_point(spawn)
+	for anchor in [spawn, focus]:
 		var cell := Vector2i(floori((anchor.x - world.layout_origin.x) / world.CELL_SIZE), floori((anchor.z - world.layout_origin.y) / world.CELL_SIZE))
 		var index := cell.y * world.layout_width + cell.x
-		lab.check(world.layout_level[index] == 0 and world.layout_roofed[index] == 0, "spawn and extraction remain outdoors on street level")
+		lab.check(world.layout_level[index] == 0 and world.layout_roofed[index] == 0, "spawn and arena focus remain outdoors on street level")
 	var connected := world.stairs.size() >= 2
 	for stair in world.stairs:
 		var top: Vector3 = stair.top
@@ -535,7 +529,9 @@ func _enter_venues(game: ArenaGame, world: ProceduralWorld) -> void:
 		lab.check(crossed and remains_inside and stayed_on_floor, "held W crosses the actual %s main doorway and remains inside on its %.1f m floor" % [venue.kind, floor_y])
 		await lab.capture("%s_%s_%d_held_w_entrance" % [game.campaign[game.stage_index].id, venue.kind, int(venue.get("venue_id", -1))])
 		if crossed and remains_inside and stayed_on_floor and venue.kind == &"herna":
-			await _pry_from_room(game, world, venue)
+			await _smash_from_room(game, world, venue)
+		if crossed and remains_inside and stayed_on_floor and bool(venue.get("combat_venue", false)):
+			await _slide_escape(game, venue)
 	Input.action_release(&"move_forward")
 	Input.action_release(&"mine")
 	game.horde.clear()
@@ -551,7 +547,7 @@ func _enter_venues(game: ArenaGame, world: ProceduralWorld) -> void:
 
 ## Find a clearance-tested room route, then actually walk it: no teleport from
 ## the entered doorway to the machine and no forwarded mining damage.
-func _room_route(game: ArenaGame, venue: Dictionary, from: Vector3, to: Vector3) -> Array[Vector3]:
+func _room_route(game: ArenaGame, venue: Dictionary, from: Vector3, to: Vector3, avoid: Rect2 = Rect2()) -> Array[Vector3]:
 	var rect: Rect2 = venue.rect
 	var floor_y := float(venue.floor_y)
 	from.y = floor_y
@@ -570,7 +566,7 @@ func _room_route(game: ArenaGame, venue: Dictionary, from: Vector3, to: Vector3)
 		for x in width:
 			var point := Vector3(rect.position.x + x + 0.5, floor_y, rect.position.y + z + 0.5)
 			points.append(point)
-			if not _clear_floor(game, point, floor_y):
+			if avoid.has_point(Vector2(point.x, point.z)) or not _clear_floor(game, point, floor_y):
 				continue
 			var index := z * width + x
 			previous[index] = -3
@@ -631,7 +627,222 @@ func _walk_room_path(game: ArenaGame, path: Array[Vector3], floor_y: float) -> b
 			return false
 	return true
 
-func _pry_from_room(game: ArenaGame, world: ProceduralWorld, venue: Dictionary) -> void:
+func _validate_combat_spaces(game: ArenaGame, world: ProceduralWorld) -> void:
+	lab.check(not world.arena_focus_points.is_empty(), "the generated arena publishes real combat focus points")
+	for point in world.arena_focus_points:
+		lab.check(_clear_floor(game, point, 0.0), "arena focus %s has actual standing clearance and street-height collision" % point)
+	for venue: Dictionary in world.kit_sites:
+		if not bool(venue.get("combat_venue", false)):
+			continue
+		var rect: Rect2 = venue.rect
+		var floor_y := float(venue.floor_y)
+		var front: Vector3 = venue.door
+		var side: Vector3 = venue.escape_door
+		var front_out := Vector3(venue.facing.x, 0.0, venue.facing.y)
+		var side_out := Vector3(venue.escape_facing.x, 0.0, venue.escape_facing.y)
+		var clear := front.distance_to(side) > 6.0 and front_out.dot(side_out) < 0.1
+		for portal: Dictionary in [{"point": front, "outward": front_out}, {"point": side, "outward": side_out}]:
+			var point: Vector3 = portal.point
+			var outward: Vector3 = portal.outward
+			var across := Vector3(outward.z, 0.0, -outward.x)
+			for offset in range(-2, 3):
+				var lane := point + across * float(offset)
+				clear = clear and _segment_clear(game, lane + outward * 1.3, lane - outward * 1.5, floor_y)
+		var inside_front := front - front_out * 1.5
+		var inside_side := side - side_out * 1.5
+		var internal := _room_route(game, venue, inside_front, inside_side)
+		var exterior := {"rect": rect.grow(8.0).intersection(game.campaign[game.stage_index].play_area), "floor_y": floor_y}
+		var external := _room_route(game, exterior, front + front_out * 1.3, side + side_out * 1.3, rect.grow(0.3))
+		lab.check(clear and not internal.is_empty() and not external.is_empty(), "%s venue %d has wide physical portals joined by separate indoor and exterior flank routes" % [venue.kind, venue.venue_id])
+		lab.check(float(venue.ceiling_y) - floor_y >= 4.0, "%s venue %d retains standing and double-jump headroom above its furnished combat floor" % [venue.kind, venue.venue_id])
+
+## Route venues: two each of herna/hospoda/nonstop plus the metro, each with a
+## reachable arrival, two exits, authored local lanes and a physical tactic.
+func _validate_route_venues(game: ArenaGame, world: ProceduralWorld) -> void:
+	var counts := {}
+	var ids := {}
+	var tactics := {}
+	var space := world.get_world_3d().direct_space_state
+	for venue: Dictionary in world.combat_venues:
+		counts[venue.kind] = int(counts.get(venue.kind, 0)) + 1
+		ids[venue.id] = true
+		tactics[venue.tactic] = true
+		var floor_y := float(venue.floor_y)
+		var arrival: Vector3 = venue.arrival
+		var bounds: Rect2 = venue.bounds
+		var exits: Array = venue.exits
+		var escapes := exits.size() >= 2 and (exits[0] as Vector3).distance_to(exits[1]) > 6.0
+		lab.check(_clear_floor(game, arrival, floor_y) and game.horde.is_reachable(Vector2(arrival.x, arrival.z)) and escapes, "%s has a reachable clear arrival on its %.1f m floor and two separate exits" % [venue.id, floor_y])
+		var local := true
+		var lanes_ok := (venue.lanes as Array).size() >= 2
+		var elevated := false
+		var farthest := 0.0
+		for lane: Dictionary in venue.lanes:
+			var usable := 0
+			for point: Vector3 in lane.points:
+				var xz := Vector2(point.x, point.z)
+				var on_approach := bounds.grow(18.0).has_point(xz)
+				if venue.kind == &"metro":
+					# The hall's bounds exclude its actual 16 m ramps. Check the
+					# real stair rectangles and their short street mouths, not
+					# an arbitrary hall expansion which clips the top landings.
+					on_approach = bounds.has_point(xz)
+					for stair: Dictionary in world.stairs:
+						var top: Vector3 = stair.top
+						on_approach = on_approach or (stair.rect as Rect2).has_point(xz) or xz.distance_to(Vector2(top.x, top.z)) <= 7.5
+					for entry: Vector3 in venue.entries:
+						on_approach = on_approach or xz.distance_to(Vector2(entry.x, entry.z)) <= 6.0
+				local = local and (venue.admission_area as Rect2).has_point(xz) and on_approach
+				elevated = elevated or point.y > floor_y + 1.0
+				if lane.id == &"front_street":
+					farthest = maxf(farthest, xz.distance_to(Vector2(venue.entry.x, venue.entry.z)))
+				if not game.horde.is_blocked(xz, 0.4) and game.horde.is_reachable(xz) and absf(game.horde.ground_height(xz) - point.y) <= 0.6:
+					usable += 1
+			lanes_ok = lanes_ok and usable > 0 and not (lane.roles as Array).is_empty()
+			if usable == 0:
+				for point: Vector3 in lane.points:
+					var xz := Vector2(point.x, point.z)
+					lab.log_line("unusable %s/%s at=%s blocked=%s reachable=%s ground=%.2f" % [venue.id, lane.id, point, game.horde.is_blocked(xz, 0.4), game.horde.is_reachable(xz), game.horde.ground_height(xz)])
+		if not local:
+			lab.log_line("nonlocal %s bounds=%s admission=%s lanes=%s" % [venue.id, bounds, venue.admission_area, venue.lanes])
+		lab.check(lanes_ok and local, "%s publishes %d authored local lanes, each with admissible points near its own approaches" % [venue.id, (venue.lanes as Array).size()])
+		var piece: Dictionary = venue.centerpiece
+		match venue.kind:
+			&"hospoda":
+				var ok: bool = piece.get("kind", &"") == &"round_bar"
+				if ok:
+					var at: Vector3 = piece.position
+					var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 3.0, at + Vector3.UP * 0.1, 1))
+					var cylindrical := not hit.is_empty() and ((hit.collider as Node).get_node("Collision") as CollisionShape3D).shape is CylinderShape3D
+					ok = cylindrical and absf((hit.position as Vector3).y - floor_y - float(piece.height)) < 0.05 and game.horde.is_blocked(Vector2(at.x, at.z), 0.4)
+					for step in 8:
+						var around := Vector2(at.x, at.z) + Vector2.from_angle(TAU * step / 8.0) * (float(piece.radius) + 1.2)
+						ok = ok and not game.horde.is_blocked(around, 0.5)
+				lab.check(ok, "%s fights around a real colliding round island bar with a clear ring aisle" % venue.id)
+			&"herna":
+				var lane_ids: Array[StringName] = []
+				for lane: Dictionary in venue.lanes:
+					lane_ids.append(lane.id)
+				var ok: bool = piece.get("kind", &"") == &"machine_bank" and lane_ids.has(&"machine_aisle_left") and lane_ids.has(&"machine_aisle_right")
+				if ok:
+					var at: Vector3 = piece.position
+					var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 3.0, at + Vector3.UP * 0.1, 1))
+					ok = not hit.is_empty() and absf((hit.position as Vector3).y - floor_y - 1.8) < 0.05 and game.horde.is_blocked(Vector2(at.x, at.z), 0.4)
+				lab.check(ok, "%s splits its floor with a colliding central machine bank into two admitted machine lanes" % venue.id)
+			&"nonstop":
+				lab.check(farthest >= 12.0, "%s draws its street-to-counter crowd from %.0f m down the street" % [venue.id, farthest])
+			&"metro":
+				var pillars: Array = venue.pillars
+				var ok := pillars.size() >= 2 and elevated
+				for pillar: Vector3 in pillars:
+					var xz := Vector2(pillar.x, pillar.z)
+					ok = ok and game.horde.is_blocked(xz, 0.3) and absf(game.horde.ground_height(xz + Vector2(1.4, 0.0)) - floor_y) < 0.1
+				lab.check(ok, "%s holds %d real platform pillars under elevated stair admission lanes" % [venue.id, pillars.size()])
+	lab.check(int(counts.get(&"herna", 0)) == 2 and int(counts.get(&"hospoda", 0)) == 2 and int(counts.get(&"nonstop", 0)) == 2 and int(counts.get(&"metro", 0)) == 1 and ids.size() == 7 and tactics.size() == 4, "%s links seven uniquely named route venues with four distinct tactics" % game.campaign[game.stage_index].id)
+	var expected := 0
+	for site: Dictionary in world.kit_sites:
+		expected += (site.get("prop_points", []) as Array).size()
+	var kegs := world.get_node("PinballProps").get_children()
+	var placed := kegs.size() == expected and expected >= 7
+	for keg: Node3D in kegs:
+		var inside := false
+		for venue: Dictionary in world.combat_venues:
+			var clear_of_doors := true
+			for entry: Vector3 in venue.entries:
+				clear_of_doors = clear_of_doors and Vector2(entry.x, entry.z).distance_to(Vector2(keg.position.x, keg.position.z)) > 2.0
+			inside = inside or ((venue.bounds as Rect2).has_point(Vector2(keg.position.x, keg.position.z)) and absf(keg.position.y - float(venue.floor_y)) < 0.15 and clear_of_doors)
+		placed = placed and inside
+	lab.check(placed, "%d finite kickable kegs stand on venue floors clear of every doorway" % kegs.size())
+
+func _slide_escape(game: ArenaGame, venue: Dictionary) -> void:
+	var player := game.player
+	var floor_y := float(venue.floor_y)
+	var door: Vector3 = venue.escape_door
+	var facing: Vector2 = venue.escape_facing
+	var outward := Vector3(facing.x, 0.0, facing.y)
+	var inside := door - outward * 4.0
+	var route := _room_route(game, venue, player.global_position, inside)
+	var walked := not route.is_empty()
+	if walked:
+		walked = await _walk_room_path(game, route, floor_y)
+	lab.check(walked, "%s venue %d has a real walk from the entered room to its independent side escape" % [venue.kind, venue.venue_id])
+	if not walked:
+		return
+	player.rotation.y = atan2(-outward.x, -outward.z)
+	Input.action_release(&"slide")
+	Input.action_press(&"move_forward")
+	await _physics_frames(10)
+	Input.action_press(&"slide")
+	await _physics_frames(2)
+	var sliding := player.is_sliding()
+	Input.action_release(&"slide")
+	var escaped := false
+	for frame in 45:
+		await lab.get_tree().physics_frame
+		if (player.global_position - door).dot(outward) > 1.4:
+			escaped = player.is_on_floor()
+			break
+	Input.action_release(&"move_forward")
+	lab.check(sliding and escaped, "real W + slide escapes %s venue %d through the other physics doorway without snagging" % [venue.kind, venue.venue_id])
+	await lab.capture("%s_%s_%d_slide_escape" % [game.campaign[game.stage_index].id, venue.kind, int(venue.venue_id)])
+	player.cancel_actions()
+	await lab.frames(3)
+
+func _jump_shortcut(game: ArenaGame, world: ProceduralWorld) -> void:
+	if world.overlooks.is_empty():
+		return
+	var player := game.player
+	var saved := player.global_transform
+	var saved_head := player.head.transform
+	var saved_mouse := Input.mouse_mode
+	var deck: Dictionary = world.overlooks[0]
+	var top: Vector3 = deck.center
+	var outward: Vector3 = -deck.direction
+	var size: Vector2 = deck.size
+	var half_edge := (size.x if absf(outward.x) > 0.5 else size.y) * 0.5
+	game.horde.clear()
+	Input.action_release(&"jump")
+	Input.action_release(&"slide")
+	Input.action_release(&"move_forward")
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	player.cancel_actions()
+	player.global_position = Vector3(top.x, 0.95, top.z) + outward * (half_edge + 1.8)
+	player.velocity = Vector3.ZERO
+	player.rotation.y = atan2(outward.x, outward.z)
+	player.head.rotation.x = 0.0
+	await _physics_frames(3)
+	Input.action_press(&"move_forward")
+	Input.action_press(&"jump")
+	await _physics_frames(2)
+	Input.action_release(&"jump")
+	# JUMP_SPEED / GRAVITY: fire the fresh air jump at the first apex.
+	await lab.wait(ArenaPlayer.JUMP_SPEED / ArenaPlayer.GRAVITY - 0.02)
+	var airborne := not player.is_on_floor()
+	Input.action_press(&"jump")
+	await _physics_frames(2)
+	Input.action_release(&"jump")
+	var footprint := Rect2(Vector2(top.x, top.z) - size * 0.5, size)
+	var landed := false
+	for frame in 180:
+		await lab.get_tree().physics_frame
+		if player.is_on_floor() and player.global_position.y - 0.9 >= top.y - 0.1 and footprint.has_point(Vector2(player.global_position.x, player.global_position.z)):
+			landed = true
+			break
+	Input.action_release(&"move_forward")
+	lab.check(airborne and landed, "two fresh Space presses reach the %.2f m combat deck from its non-ramp side using real capsule physics" % top.y)
+	await lab.capture("%s_double_jump_deck_shortcut" % game.campaign[game.stage_index].id)
+	player.cancel_actions()
+	player.global_transform = saved
+	player.head.transform = saved_head
+	player.velocity = Vector3.ZERO
+	Input.mouse_mode = saved_mouse
+	await lab.frames(2)
+
+func _physics_frames(count: int) -> void:
+	for frame in count:
+		await lab.get_tree().physics_frame
+
+func _smash_from_room(game: ArenaGame, world: ProceduralWorld, venue: Dictionary) -> void:
 	var deposit: MineralDeposit
 	for child in game.deposits.get_children():
 		var candidate := child as MineralDeposit
@@ -670,13 +881,11 @@ func _pry_from_room(game: ArenaGame, world: ProceduralWorld, venue: Dictionary) 
 	var health := deposit.health
 	var emitted := deposit.yield_emitted
 	Input.action_press(&"mine")
-	for frame in ceili(Engine.physics_ticks_per_second * (health / game.player.mining_tool.mining_per_second + game.player.mining_tool.resonance_seconds + game.player.mining_tool.tick_interval)):
-		await lab.get_tree().physics_frame
-		if deposit.yield_emitted > emitted:
-			break
+	await _physics_frames(2)
 	Input.action_release(&"mine")
-	lab.check(deposit.health < health and deposit.yield_emitted > emitted, "held F physically pries the indoor cabinet and emits its conserved loot")
-	await lab.capture("%s_herna_%d_real_cabinet_prying" % [game.campaign[game.stage_index].id, int(venue.venue_id)])
+	await _physics_frames(1)
+	lab.check(deposit.health < health and deposit.yield_emitted > emitted, "one fresh F press physically smashes an indoor compartment and emits its conserved optional loot")
+	await lab.capture("%s_herna_%d_real_cabinet_smash" % [game.campaign[game.stage_index].id, int(venue.venue_id)])
 	game.horde.clear()
 
 func _descend(game: ArenaGame, world: ProceduralWorld) -> void:

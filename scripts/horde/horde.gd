@@ -14,6 +14,10 @@ signal boss_health_changed(current: float, maximum: float)
 signal boss_killed
 signal damage_reported(at: Vector3, amount: float, damage_type: int, critical: bool, killed: bool)
 signal enemy_fused(index: int, members: int)
+## One emission per intentional pinball action (kick, reflected projectile,
+## explicit manual combo, prop) that killed at least one life. Ordinary primary
+## damage, ambient burn/shock ticks, auto guns and external deaths never emit.
+signal action_killed(members: int, position: Vector3, label: String)
 
 const CAPACITY := 4096
 const CELL := 2.0
@@ -35,6 +39,9 @@ const BURN_DURATION := 2.0
 const BURN_TICK := 0.5
 const FROST_FACTOR := 0.55
 const FROST_DURATION := 1.8
+## One finite execution opportunity per surviving non-boss lifetime.
+const DAZE_DURATION := 2.8
+const DAZE_HEALTH_FRACTION := 0.2
 const SHOCK_RADIUS := 3.5
 const SHOCK_TARGETS := 3
 const SHOCK_CHECKS := 96
@@ -50,8 +57,72 @@ const FUSION_SEEDS := 256
 const FUSION_CHECKS := 48
 const FUSION_DECK_GAP := 0.3
 
+## combo_flags bits, read by the player before a primary hit transaction.
+const FROZEN := 1
+const BURNING := 2
+const ELECTRIC := 4
+const AIRBORNE := 8
+## Frost marks follow actual FROST damage (not every slow); charge follows SHOCK.
+const CHARGE_DURATION := 2.5
+const AIRBORNE_CLEARANCE := 0.25
+## Kick: bounded cone around the actual aim, nearest KICK_TARGETS bodies only.
+const KICK_REACH := 2.4
+const SLIDE_KICK_REACH := 2.9
+const STOMP_RADIUS := 2.6
+const KICK_COS := 0.57
+const KICK_TARGETS := 6
+const KICK_DAMAGE := 30.0
+const SLIDE_KICK_DAMAGE := 26.0
+const STOMP_DAMAGE := 40.0
+const KICK_LAUNCH_SPEED := 15.0
+const KICK_LIFT := 6.0
+const STOMP_LIFT := 7.5
+## Heavier bodies, bosses, megas and bouncers only stagger; never airborne.
+const HEAVY_MASS := 2.5
+const HEAVY_STAGGER := 0.9
+const LAUNCH_TIME := 1.1
+## Knockback decay per second while launched (ground knockback uses 7).
+const LAUNCH_DECAY := 1.6
+const IMPACT_MIN_SPEED := 4.0
+const IMPACT_DAMAGE := 32.0
+const IMPACT_CHECKS := 12
+const MAX_IMPACTS := 32
+const SHATTER_RADIUS := 2.6
+const SHATTER_DAMAGE := 60.0
+## Parried projectiles: one reflection each, swept against enemies and walls.
+const REFLECT_SPEED := 26.0
+const REFLECT_DAMAGE := 70.0
+const REFLECT_SPLASH := 2.4
+const REFLECT_LIFE := 2.0
+const REFLECT_TURN := 9.0
+const MAX_PARRY := 4
+const BOTTLE_GRAVITY := 14.0
+const BOTTLE_SPLASH := 1.8
+const FLAME_BURST_RADIUS := 2.8
+const FLAME_BURST_BASE := 25.0
+const CONDUCTION_RADIUS := 6.0
+const CONDUCTION_TARGETS := 5
+const HYPE_SPEED_SCALE := 1.3
+const SURGE_SPEED_SCALE := 1.6
+const HYPE_DAMAGE_SCALE := 1.5
+const HYPE_COOLDOWN_SCALE := 1.6
+## Manual weapon combo bursts allowed per physics frame (multi-target shots).
+const COMBO_BUDGET := 3
+const CONDUCTION_CHECKS := 128
+## Hype auras refresh every pulse and lapse BUFF_HOLD after source death/range exit.
+const HYPE_PULSE := 0.2
+const BUFF_HOLD := 0.3
+const HYPE_TARGETS := 48
+const SHOT_LOBBED := 1
+const SHOT_REFLECTED := 2
+const SHOT_HOMING := 4
+const SHOT_SPIT_COLOR := Color(1.0, 0.55, 0.12)
+const SHOT_BOTTLE_COLOR := Color(0.25, 0.85, 0.3)
+const SHOT_REFLECT_COLOR := Color(0.35, 0.95, 1.0)
+
 enum { FREE, ALIVE, DYING }
-enum Mode { SEEK, WINDUP, CHARGE }
+enum Mode { SEEK, WINDUP, CHARGE, RECOVER }
+enum Impact { WALL, BODY }
 
 @export var enemy_shader: Shader
 ## Used for definitions with a vertex_animation (see HordeVertexAnimation).
@@ -129,6 +200,10 @@ var _mode := PackedInt32Array()
 var _pos := PackedVector2Array()
 var _knock := PackedVector2Array()
 var _aim := PackedVector2Array()
+var _attack_target := PackedVector3Array()
+var _has_lane := PackedByteArray()
+var _lane_query := PhysicsRayQueryParameters3D.new()
+var _lane_excluded := RID()
 var _yaw := PackedFloat32Array()
 var _hp := PackedFloat32Array()
 var _max_hp := PackedFloat32Array()
@@ -146,6 +221,23 @@ var _burn_tick := PackedFloat32Array()
 var _burn_damage := PackedFloat32Array()
 var _exposed := PackedFloat32Array()
 var _stunned := PackedFloat32Array()
+var _daze_time := PackedFloat32Array()
+var _daze_used := PackedByteArray()
+var _life_hp := PackedFloat32Array()
+var _finisher_hits := PackedInt32Array()
+var _finisher_distances := PackedFloat32Array()
+## Seconds of frost mark (actual FROST damage) and electric charge (SHOCK damage).
+var _frost_time := PackedFloat32Array()
+var _charge_time := PackedFloat32Array()
+## Hype aura: remaining hold and strongest level (1 = hyped, 2 = surge).
+var _buff_time := PackedFloat32Array()
+var _buff_pulse := PackedInt32Array()
+var _hype_pulses := 0
+var _buff_level := PackedInt32Array()
+var _kick_buffer := PackedInt32Array()
+## Kick flight: remaining launch time and whether the body was frozen when kicked.
+var _launch_time := PackedFloat32Array()
+var _launch_frozen := PackedByteArray()
 var _stamp := PackedInt32Array()
 var _cell_of := PackedInt32Array()
 var _query_id := 0
@@ -257,6 +349,23 @@ var _shot_damage := PackedFloat32Array()
 var _shot_count := 0
 var _shot_renderer: MultiMeshInstance3D
 var _shot_buffer := PackedFloat32Array()
+var _shot_flags := PackedByteArray()
+var _shot_splash := PackedFloat32Array()
+var _shot_target := PackedInt32Array()
+var _shot_target_generation := PackedInt64Array()
+var _shot_query := PhysicsRayQueryParameters3D.new()
+var _shot_excluded := RID()
+var _sweep_hits := PackedInt32Array()
+var _sweep_distances := PackedFloat32Array()
+# Reflected-projectile impacts resolve after the shot list is compacted.
+var _shot_impact_pos := PackedVector3Array()
+var _shot_impact_origin := PackedVector3Array()
+var _shot_impact_slot := PackedInt32Array()
+var _shot_impact_generation := PackedInt64Array()
+var _shot_impact_damage := PackedFloat32Array()
+var _shot_impact_splash := PackedFloat32Array()
+var _shot_impact_collider: Array[Object] = []
+var _shot_impact_count := 0
 
 var _candidate_index := PackedInt32Array()
 var _candidate_t := PackedFloat32Array()
@@ -268,6 +377,31 @@ var _chain_index := PackedInt32Array()
 var _radius_generations: Array[PackedInt64Array] = []
 var _chain_distance := PackedFloat32Array()
 
+# Action ledger: kills inside an open action scope are credited exactly once to
+# the innermost scope. Signal callbacks run suspended so their deaths never count.
+var _action_depth := 0
+var _action_members := 0
+var _action_suspend := 0
+var _action_last_kill := Vector3.ZERO
+var _kick_index := PackedInt32Array()
+var _kick_generation := PackedInt64Array()
+var _kick_flags := PackedInt32Array()
+var _kick_distance := PackedFloat32Array()
+var _conduct_index := PackedInt32Array()
+var _conduct_distance := PackedFloat32Array()
+var _conduct_generation := PackedInt64Array()
+# Launch impacts found during the movement loop resolve after it, bounded per frame.
+var _impact_kind := PackedInt32Array()
+var _impact_slot := PackedInt32Array()
+var _impact_generation := PackedInt64Array()
+var _impact_other := PackedInt32Array()
+var _impact_other_generation := PackedInt64Array()
+var _impact_velocity := PackedVector2Array()
+var _impact_count := 0
+var _hype_timer := 0.0
+var _combo_budget := COMBO_BUDGET
+var _aura_buffer := PackedInt32Array()
+
 ## Ground supplies explicit floors; arenas without it retain the authored y=0 floor.
 ## Elevation adds deck and ramp top faces to that heightfield.
 func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Node, player: ArenaPlayer, elevation: Node = null, ground: Node = null) -> void:
@@ -278,6 +412,9 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_state.resize(CAPACITY)
 	_type.resize(CAPACITY)
 	_mode.resize(CAPACITY)
+	_attack_target.resize(CAPACITY)
+	_has_lane.resize(CAPACITY)
+	_has_lane.fill(0)
 	_stamp.resize(CAPACITY)
 	_cell_of.resize(CAPACITY)
 	_state.fill(FREE)
@@ -331,6 +468,48 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_exposed.fill(0.0)
 	_stunned.resize(CAPACITY)
 	_stunned.fill(0.0)
+	_daze_time.resize(CAPACITY)
+	_daze_time.fill(0.0)
+	_daze_used.resize(CAPACITY)
+	_daze_used.fill(0)
+	_life_hp.resize(CAPACITY)
+	_life_hp.fill(0.0)
+	_finisher_hits.resize(1)
+	_finisher_distances.resize(1)
+	_frost_time.resize(CAPACITY)
+	_frost_time.fill(0.0)
+	_charge_time.resize(CAPACITY)
+	_charge_time.fill(0.0)
+	_buff_time.resize(CAPACITY)
+	_buff_time.fill(0.0)
+	_buff_level.resize(CAPACITY)
+	_buff_level.fill(0)
+	_buff_pulse.resize(CAPACITY)
+	_buff_pulse.fill(-1)
+	_hype_pulses = 0
+	_hype_timer = 0.0
+	_launch_time.resize(CAPACITY)
+	_launch_time.fill(0.0)
+	_launch_frozen.resize(CAPACITY)
+	_launch_frozen.fill(0)
+	_kick_index.resize(KICK_TARGETS)
+	_kick_generation.resize(KICK_TARGETS)
+	_kick_flags.resize(KICK_TARGETS)
+	_kick_distance.resize(KICK_TARGETS)
+	_conduct_index.resize(CONDUCTION_TARGETS)
+	_conduct_distance.resize(CONDUCTION_TARGETS)
+	_conduct_generation.resize(CONDUCTION_TARGETS)
+	_impact_kind.resize(MAX_IMPACTS)
+	_impact_slot.resize(MAX_IMPACTS)
+	_impact_generation.resize(MAX_IMPACTS)
+	_impact_other.resize(MAX_IMPACTS)
+	_impact_other_generation.resize(MAX_IMPACTS)
+	_impact_velocity.resize(MAX_IMPACTS)
+	_impact_count = 0
+	_aura_buffer.resize(64)
+	_action_depth = 0
+	_action_members = 0
+	_action_suspend = 0
 	_pos.resize(CAPACITY)
 	_y.resize(CAPACITY)
 	_y.fill(0.0)
@@ -382,8 +561,27 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_shot_vel.resize(MAX_PROJECTILES)
 	_shot_life.resize(MAX_PROJECTILES)
 	_shot_damage.resize(MAX_PROJECTILES)
+	_shot_flags.resize(MAX_PROJECTILES)
+	_shot_splash.resize(MAX_PROJECTILES)
+	_shot_target.resize(MAX_PROJECTILES)
+	_shot_target_generation.resize(MAX_PROJECTILES)
+	# Every live shot can impact in the same frame; none is silently dropped.
+	_shot_impact_pos.resize(MAX_PROJECTILES)
+	_shot_impact_origin.resize(MAX_PROJECTILES)
+	_shot_impact_slot.resize(MAX_PROJECTILES)
+	_shot_impact_generation.resize(MAX_PROJECTILES)
+	_shot_impact_damage.resize(MAX_PROJECTILES)
+	_shot_impact_splash.resize(MAX_PROJECTILES)
+	_shot_impact_collider.resize(MAX_PROJECTILES)
+	_shot_impact_count = 0
+	_sweep_hits.resize(1)
+	_sweep_distances.resize(1)
+	_shot_query.collision_mask = 1
+	_shot_query.collide_with_areas = false
 	var shots := MultiMesh.new()
 	shots.transform_format = MultiMesh.TRANSFORM_3D
+	# Per-shot tint and stretched shape: spit, lobbed bottle and reflected streak.
+	shots.use_colors = true
 	shots.mesh = projectile_mesh
 	shots.instance_count = MAX_PROJECTILES
 	shots.visible_instance_count = 0
@@ -393,7 +591,7 @@ func setup(definitions: Array[HordeEnemyDefinition], area: Rect2, obstacles: Nod
 	_shot_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_shot_renderer.custom_aabb = bounds
 	add_child(_shot_renderer)
-	_shot_buffer.resize(MAX_PROJECTILES * 12)
+	_shot_buffer.resize(MAX_PROJECTILES * 16)
 
 ## Optional encounter species share the normal batched rendering/simulation.
 func registered_definitions() -> Array[HordeEnemyDefinition]:
@@ -750,6 +948,8 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_timer[slot] = 0.0
 	_death[slot] = 0.0
 	_aim[slot] = Vector2.ZERO
+	_attack_target[slot] = Vector3.ZERO
+	_has_lane[slot] = 0
 	xz.x = clampf(xz.x, _area.position.x + radius, _area.end.x - radius)
 	xz.y = clampf(xz.y, _area.position.y + radius, _area.end.y - radius)
 	_state[slot] = ALIVE
@@ -761,6 +961,9 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_knock[slot] = Vector2.ZERO
 	_hp[slot] = definition.max_health * health_multiplier
 	_max_hp[slot] = _hp[slot]
+	_life_hp[slot] = _hp[slot]
+	_daze_time[slot] = 0.0
+	_daze_used[slot] = 0
 	_flash[slot] = 0.0
 	_cooldown[slot] = _rng.randf_range(0.5, definition.attack_cooldown)
 	_slow[slot] = 1.0
@@ -770,6 +973,7 @@ func _spawn(definition: HordeEnemyDefinition, xz: Vector2, health_multiplier: fl
 	_burn_damage[slot] = 0.0
 	_exposed[slot] = 0.0
 	_stunned[slot] = 0.0
+	_clear_pinball_state(slot)
 	# Stay away from encoding boundaries after MultiMesh float32 rounding.
 	_phase[slot] = _rng.randf_range(0.0001, TAU - 0.0001)
 	_yaw[slot] = _rng.randf() * TAU
@@ -904,6 +1108,8 @@ func clear() -> void:
 	_fusion_cursor = 0
 	_rebuild_grid()
 	_shot_count = 0
+	_shot_impact_count = 0
+	_impact_count = 0
 
 # ---------------------------------------------------------------- queries
 
@@ -928,10 +1134,646 @@ func is_exposed(index: int) -> bool:
 ## Bosses get a short stagger; regular enemies stop attacks as well as movement.
 func stun(index: int, duration: float) -> void:
 	if is_alive(index):
-		_stunned[index] = maxf(_stunned[index], duration * (0.25 if _t_boss[_type[index]] != 0 else 1.0))
+		var boss := _t_boss[_type[index]] != 0
+		_stunned[index] = maxf(_stunned[index], duration * (0.25 if boss else 1.0))
+		if not boss:
+			_mode[index] = Mode.SEEK
+			_timer[index] = 0.0
+			_cooldown[index] = _defs[_type[index]].attack_cooldown
+
+## One bounded non-damage pass: displacement and attack interruption are not hits.
+func blast_react(center: Vector3, radius: float, impulse: float) -> void:
+	if radius <= 0.0 or impulse <= 0.0:
+		return
+	for a in _active_count:
+		var i := _active[a]
+		if not is_alive(i):
+			continue
+		var offset := enemy_position(i) - center
+		var reach := radius + _radius[i]
+		if offset.length_squared() > reach * reach or not _lane_clear(center, enemy_position(i)):
+			continue
+		var falloff := clampf(1.0 - offset.length() / reach, 0.2, 1.0)
+		var away := Vector2(offset.x, offset.z).normalized()
+		if away == Vector2.ZERO:
+			away = Vector2.from_angle(_phase[i])
+		_knock[i] += away * minf(16.0, impulse * falloff / _mass[i])
+		stun(i, 0.25 + 0.3 * falloff)
+		if _mass[i] < 2.0:
+			_vy[i] = maxf(_vy[i], minf(4.5, impulse * falloff * 0.24 / _mass[i]))
+
+func _clear_pinball_state(slot: int) -> void:
+	_frost_time[slot] = 0.0
+	_charge_time[slot] = 0.0
+	_buff_time[slot] = 0.0
+	_buff_level[slot] = 0
+	_launch_time[slot] = 0.0
+	_launch_frozen[slot] = 0
+
+# ---------------------------------------------------------------- pinball
+
+## Status bits of a live body. Callers read them before their hit transaction.
+func combo_flags(index: int) -> int:
+	if not is_alive(index):
+		return 0
+	var flags := 0
+	if _frost_time[index] > 0.0:
+		flags |= FROZEN
+	if _burn_time[index] > 0.0:
+		flags |= BURNING
+	if _charge_time[index] > 0.0:
+		flags |= ELECTRIC
+	# Height alone is not flight: raised floors and static elevated poses must
+	# retain ordinary rail damage. Kick/blast ascent and genuine falling qualify.
+	if _vy[index] > 0.0 or ((_launch_time[index] > 0.0 or _vy[index] < 0.0) and _y[index] - ground_height(_pos[index]) > AIRBORNE_CLEARANCE):
+		flags |= AIRBORNE
+	return flags
+
+## True while a kicked light body is still in its pinball flight.
+func is_launched(index: int) -> bool:
+	return is_alive(index) and _launch_time[index] > 0.0
+
+## 0 = not hyped, 1 = inside a living hype man's aura, 2 = during its surge.
+func hype_level(index: int) -> int:
+	return _buff_level[index] if is_alive(index) and _buff_time[index] > 0.0 else 0
+
+## Living hype sources for the aura marker; returns the count written.
+func query_hype_sources(out: PackedInt32Array) -> int:
+	var count := 0
+	for a in _active_count:
+		var slot := _active[a]
+		if is_alive(slot) and _t_behavior[_type[slot]] == HordeEnemyDefinition.Behavior.HYPE:
+			if count >= out.size():
+				out.resize(maxi(8, out.size() * 2))
+			out[count] = slot
+			count += 1
+	return count
+
+func _is_heavy(slot: int) -> bool:
+	var type := _type[slot]
+	return _mass[slot] >= HEAVY_MASS or _t_boss[type] != 0 or _members[slot] > 1 \
+		or _t_behavior[type] == HordeEnemyDefinition.Behavior.BOUNCER
+
+func _build_rank(id: StringName) -> int:
+	if not is_instance_valid(target) or target.run_state == null:
+		return 0
+	return int(target.run_state.upgrade_levels.get(id, 0))
+
+func _action_open() -> int:
+	var outer := _action_members
+	_action_members = 0
+	_action_depth += 1
+	return outer
+
+## Emits once for this scope's own kills; nested scopes already emitted theirs.
+func _action_close(outer: int, fallback: Vector3, label: String) -> int:
+	var members := _action_members
+	var at := _action_last_kill if members > 0 else fallback
+	_action_members = outer
+	_action_depth -= 1
+	if members > 0:
+		_action_suspend += 1
+		action_killed.emit(members, at, label)
+		_action_suspend -= 1
+	return members
+
+## Leg strike from the camera `origin` along the aim. Light bodies launch into a
+## pinball flight; heavy bodies, bosses, megas and bouncers only stagger. A
+## frozen body that dies here or later hits a wall/body shatters once.
+func kick(origin: Vector3, forward: Vector3, sliding: bool, slam: bool) -> bool:
+	if _state.is_empty() or _active_count == 0:
+		return false
+	var flat := Vector2(forward.x, forward.z)
+	flat = flat.normalized() if flat.length_squared() > 0.0001 else Vector2.ZERO
+	if flat == Vector2.ZERO and not slam:
+		return false
+	var eye := Vector2(origin.x, origin.z)
+	var reach := STOMP_RADIUS if slam else (SLIDE_KICK_REACH if sliding else KICK_REACH)
+	var center: Vector3
+	if slam:
+		var below := eye + flat * 0.8
+		var floor_y := ground_height(below)
+		if not is_finite(floor_y):
+			floor_y = origin.y - 1.6
+		# The stomp lands on the floor beneath an airborne player, at most 3.5 m down.
+		floor_y = maxf(floor_y, origin.y - 3.5)
+		center = Vector3(below.x, floor_y + 0.9, below.y)
+	else:
+		center = Vector3(origin.x + flat.x * reach * 0.5, origin.y - 0.8, origin.z + flat.y * reach * 0.5)
+	var count := query_radius(center, reach + 0.6, _kick_buffer)
+	var chosen := 0
+	for n in count:
+		var slot := _kick_buffer[n]
+		var offset := _pos[slot] - (Vector2(center.x, center.z) if slam else eye)
+		var d := offset.length()
+		if d - _radius[slot] > reach:
+			continue
+		if not slam:
+			if d > _radius[slot] + 0.6 and offset.dot(flat) < KICK_COS * d:
+				continue
+			# The leg reaches bodies overlapping the band below the camera.
+			if _y[slot] > origin.y - 0.1 or _y[slot] + _height[slot] < origin.y - 2.1:
+				continue
+		chosen = _rank_insert(_kick_index, _kick_distance, chosen, KICK_TARGETS, slot, d)
+	# Identities and statuses are captured before any damage callbacks run.
+	var lane_from := Vector3(origin.x, origin.y - 0.6, origin.z)
+	for k in chosen:
+		var slot := _kick_index[k]
+		_kick_generation[k] = _generation[slot]
+		_kick_flags[k] = combo_flags(slot)
+		if not _lane_clear(lane_from, enemy_position(slot)):
+			_kick_generation[k] = -1
+	var label := "STOMP" if slam else ("SLIDE KICK" if sliding else "KICK")
+	var amount := STOMP_DAMAGE if slam else (SLIDE_KICK_DAMAGE if sliding else KICK_DAMAGE)
+	var touched := false
+	var outer := _action_open()
+	for k in chosen:
+		var slot := _kick_index[k]
+		var generation := _kick_generation[k]
+		if not is_alive(slot) or _generation[slot] != generation:
+			continue
+		touched = true
+		var away := _pos[slot] - Vector2(center.x, center.z)
+		var direction := flat
+		if slam:
+			direction = away.normalized() if away.length_squared() > 0.0001 else (flat if flat != Vector2.ZERO else Vector2.from_angle(_phase[slot]))
+		elif away.length_squared() > 0.0001:
+			direction = (flat + away.normalized() * 0.35).normalized()
+		var heavy := _is_heavy(slot)
+		var frozen := _kick_flags[k] & FROZEN != 0
+		var at := enemy_position(slot)
+		if damage_combined(slot, amount, origin, 0.0, Vector3.ZERO, DamageType.Kind.KINETIC, false):
+			if frozen:
+				_shatter(at)
+			continue
+		if not is_alive(slot) or _generation[slot] != generation:
+			continue
+		if heavy:
+			stun(slot, HEAVY_STAGGER)
+			_knock[slot] += direction * minf(6.0, 18.0 / _mass[slot])
+		else:
+			stun(slot, LAUNCH_TIME)
+			_knock[slot] = direction * KICK_LAUNCH_SPEED * (1.2 if sliding else 1.0)
+			_vy[slot] = STOMP_LIFT if slam else (KICK_LIFT * 0.7 if sliding else KICK_LIFT)
+			_launch_time[slot] = LAUNCH_TIME
+			_launch_frozen[slot] = 1 if frozen else 0
+	_action_close(outer, center, label)
+	if touched and is_instance_valid(_fx):
+		_fx.burst_kick(center, slam)
+	return touched
+
+# Keeps the `limit` nearest candidates sorted by distance; returns the new count.
+func _rank_insert(indices: PackedInt32Array, distances: PackedFloat32Array, count: int, limit: int, slot: int, distance: float) -> int:
+	var at := count
+	while at > 0 and distances[at - 1] > distance:
+		at -= 1
+	if at >= limit:
+		return count
+	var last := mini(count, limit - 1)
+	for shift in range(last, at, -1):
+		indices[shift] = indices[shift - 1]
+		distances[shift] = distances[shift - 1]
+	indices[at] = slot
+	distances[at] = distance
+	return mini(count + 1, limit)
+
+## Reflects up to MAX_PARRY live enemy projectiles near `origin` in front of the
+## aim. Each reflects once, never hurts the player again and is swept against
+## enemies and real world geometry. build_return multiplies damage and homes.
+func parry_projectile(origin: Vector3, forward: Vector3, reach: float) -> bool:
+	if _shot_count == 0 or forward.length_squared() < 0.0001:
+		return false
+	var aim := forward.normalized()
+	var rank := _build_rank(&"build_return")
+	var parried := 0
+	for s in _shot_count:
+		if parried >= MAX_PARRY:
+			break
+		if _shot_flags[s] & SHOT_REFLECTED != 0:
+			continue
+		var offset := _shot_pos[s] - origin
+		var d := offset.length()
+		if d > reach + projectile_radius or (d > 0.9 and offset.dot(aim) < 0.35 * d):
+			continue
+		var lobbed := _shot_flags[s] & SHOT_LOBBED != 0
+		_shot_flags[s] = SHOT_REFLECTED | (SHOT_LOBBED if lobbed else 0)
+		_shot_vel[s] = aim * REFLECT_SPEED
+		_shot_life[s] = REFLECT_LIFE
+		_shot_damage[s] = maxf(REFLECT_DAMAGE, _shot_damage[s] * 12.0) * (1.0 + rank)
+		_shot_splash[s] = REFLECT_SPLASH if lobbed else 0.0
+		_shot_target[s] = -1
+		if rank >= 1:
+			var homing := nearest(_shot_pos[s] + aim * 6.0, 24.0)
+			if homing >= 0:
+				_shot_flags[s] |= SHOT_HOMING
+				_shot_target[s] = homing
+				_shot_target_generation[s] = _generation[homing]
+		parried += 1
+	if parried > 0 and is_instance_valid(_fx):
+		_fx.burst_return(origin + aim * minf(reach, 1.2))
+	return parried > 0
+
+## Manual weapon combos after the player's captured primary transaction.
+## Each is one bounded, nonrecursive burst credited through the action ledger.
+## Rail AIRBORNE is the player's own damage bonus and adds nothing here.
+func trigger_weapon_combo(index: int, flags: int, weapon_id: StringName, _origin: Vector3, amount: float) -> void:
+	if flags == 0 or index < 0 or index >= CAPACITY or _state.is_empty() or _state[index] == FREE or _combo_budget <= 0:
+		return
+	# Bursts center on the struck body (dying bodies keep their position).
+	var at := enemy_position(index)
+	match weapon_id:
+		&"scatter", &"cihlomet":
+			if flags & BURNING == 0:
+				return
+			_combo_budget -= 1
+			# The blast consumes the target's fire; re-arming it takes a new ignition.
+			if is_alive(index):
+				_burn_time[index] = 0.0
+				_burn_tick[index] = 0.0
+				_burn_damage[index] = 0.0
+			if is_instance_valid(_fx):
+				_fx.burst_flame(at, FLAME_BURST_RADIUS)
+			_action_radius(at, FLAME_BURST_RADIUS, FLAME_BURST_BASE + amount * 0.6, "FLAME BURST", 7.0, DamageType.Kind.KINETIC, false)
+		&"autocannon", &"tvarohomet":
+			if flags & ELECTRIC == 0:
+				return
+			_combo_budget -= 1
+			if is_alive(index):
+				_charge_time[index] = 0.0
+			_conduct(index, at, 30.0 + amount * 0.5)
+
+## Explosive conduction: arcs from the charged target to its CONDUCTION_TARGETS
+## nearest neighbours (bounded scan) with a clear lane. Charged neighbours take
+## double, but arcs never chain onward.
+func _conduct(source: int, center: Vector3, amount: float) -> void:
+	var c := Vector2(center.x, center.z)
+	_query_id += 1
+	if source >= 0 and source < CAPACITY:
+		_stamp[source] = _query_id
+	var chosen := 0
+	var checks := 0
+	for slot in _big:
+		if checks >= CONDUCTION_CHECKS:
+			break
+		checks += 1
+		chosen = _conduct_consider(slot, center, chosen)
+	var reach := CONDUCTION_RADIUS + BIG_RADIUS
+	for cz in range(_cell_z(c.y - reach), _cell_z(c.y + reach) + 1):
+		for cx in range(_cell_x(c.x - reach), _cell_x(c.x + reach) + 1):
+			var cell := cz * _grid_w + cx
+			for k in range(_cell_start[cell], _cell_start[cell + 1]):
+				if checks >= CONDUCTION_CHECKS:
+					break
+				checks += 1
+				chosen = _conduct_consider(_cell_items[k], center, chosen)
+	var doubled := 0
+	for k in chosen:
+		var slot := _conduct_index[k]
+		_conduct_generation[k] = _generation[slot] if _lane_clear(center, enemy_position(slot)) else -1
+		if _charge_time[slot] > 0.0:
+			doubled |= 1 << k
+	var outer := _action_open()
+	for k in chosen:
+		var slot := _conduct_index[k]
+		if not is_alive(slot) or _generation[slot] != _conduct_generation[k]:
+			continue
+		if is_instance_valid(_fx):
+			_fx.arc(center, enemy_position(slot))
+		_deal_damage(slot, amount * (2.0 if doubled & (1 << k) != 0 else 1.0), Vector3.ZERO, DamageType.Kind.SHOCK, false)
+		if is_alive(slot) and _generation[slot] == _conduct_generation[k]:
+			_charge_time[slot] = 0.0
+			stun(slot, 0.35)
+	_action_close(outer, center, "CONDUCTION")
+
+func _conduct_consider(slot: int, center: Vector3, chosen: int) -> int:
+	if not is_alive(slot) or _stamp[slot] == _query_id:
+		return chosen
+	_stamp[slot] = _query_id
+	var d2 := _body_distance_squared(slot, center)
+	if d2 > CONDUCTION_RADIUS * CONDUCTION_RADIUS:
+		return chosen
+	return _rank_insert(_conduct_index, _conduct_distance, chosen, CONDUCTION_TARGETS, slot, d2)
+
+## Explicit manual/prop area hit with real wall lanes and generation snapshots;
+## one action_killed emission aggregates every life it kills.
+func damage_radius_action(center: Vector3, radius: float, amount: float, label: String, impulse: float = 0.0) -> int:
+	return _action_radius(center, radius, amount, label, impulse, DamageType.Kind.KINETIC, false)
+
+func _action_radius(center: Vector3, radius: float, amount: float, label: String, impulse: float, damage_type: int, refreeze: bool) -> int:
+	if amount <= 0.0 or radius <= 0.0 or _state.is_empty():
+		return 0
+	var outer := _action_open()
+	var damaged := _radius_core(center, radius, amount, impulse, damage_type, refreeze)
+	_action_close(outer, center, label)
+	return damaged
+
+# Bounded by the per-depth snapshot buffers; deeper nesting is refused, not scanned.
+func _radius_core(center: Vector3, radius: float, amount: float, impulse: float, damage_type: int, refreeze: bool) -> int:
+	if _radius_depth >= RADIUS_DEPTH:
+		return 0
+	var depth := _radius_depth
+	_radius_depth += 1
+	var buffer := _radius_buffers[depth]
+	_radius_buffers[depth] = PackedInt32Array()
+	var generations := _radius_generations[depth]
+	_radius_generations[depth] = PackedInt64Array()
+	var count := query_radius(center, radius, buffer)
+	for n in count:
+		generations[n] = _generation[buffer[n]]
+	# Lanes are resolved before damage so callbacks cannot alter the snapshot.
+	for n in count:
+		if not _lane_clear(center, enemy_position(buffer[n])):
+			generations[n] = -1
+	var c := Vector2(center.x, center.z)
+	var damaged := 0
+	for n in count:
+		var slot := buffer[n]
+		if not is_alive(slot) or _generation[slot] != generations[n]:
+			continue
+		var away := _pos[slot] - c
+		var falloff := clampf(1.0 - maxf(0.0, away.length() - _radius[slot]) / radius, 0.35, 1.0)
+		var push := Vector3.ZERO
+		if impulse > 0.0 and away.length_squared() > 0.0001:
+			var shove := away.normalized() * impulse * falloff
+			push = Vector3(shove.x, 0.0, shove.y)
+		var before := _hp[slot]
+		damage(slot, amount * falloff, push, damage_type, false)
+		if _generation[slot] != generations[n] or _hp[slot] < before:
+			damaged += 1
+		if is_alive(slot) and _generation[slot] == generations[n]:
+			if impulse > 0.0 and not _is_heavy(slot):
+				_vy[slot] = maxf(_vy[slot], minf(4.5, impulse * falloff * 0.24 / _mass[slot]))
+			if refreeze:
+				_freeze(slot)
+	_radius_buffers[depth] = buffer
+	_radius_generations[depth] = generations
+	_radius_depth -= 1
+	return damaged
+
+func _freeze(slot: int) -> void:
+	slow(slot, FROST_FACTOR, FROST_DURATION)
+	_frost_time[slot] = maxf(_frost_time[slot], FROST_DURATION)
+
+## Frozen kicked body breaks into an ice burst: `body` (if still that life)
+## dies, and its kill plus the burst's are one SHATTER emission. Survivors are
+## only re-frozen (build_shatter rank >= 1), never launched or shattered again.
+func _shatter(at: Vector3, body: int = -1, body_generation: int = -1) -> int:
+	var rank := _build_rank(&"build_shatter")
+	var radius := SHATTER_RADIUS + 1.5 * rank
+	if is_instance_valid(_fx):
+		_fx.burst_shatter(at, radius)
+	var outer := _action_open()
+	if is_alive(body) and _generation[body] == body_generation:
+		_deal_damage(body, _hp[body], Vector3.ZERO, DamageType.Kind.FROST, false)
+	var damaged := _radius_core(at, radius, SHATTER_DAMAGE * (1.0 + 0.5 * rank), 8.0, DamageType.Kind.KINETIC, rank >= 1)
+	_action_close(outer, at, "SHATTER")
+	return damaged
+
+## Launched body movement result: walls and other bodies turn speed into impacts.
+func _track_launch(i: int, intended: Vector2, moved: Vector2, delta: float) -> void:
+	_launch_time[i] = maxf(0.0, _launch_time[i] - delta)
+	var velocity := _knock[i]
+	if velocity.length() < IMPACT_MIN_SPEED or _impact_count >= MAX_IMPACTS:
+		return
+	var other := -1
+	var kind := Impact.WALL
+	if moved.distance_squared_to(intended) <= 0.0025:
+		other = _launch_contact(i, moved)
+		if other < 0:
+			return
+		kind = Impact.BODY
+	_impact_kind[_impact_count] = kind
+	_impact_slot[_impact_count] = i
+	_impact_generation[_impact_count] = _generation[i]
+	_impact_other[_impact_count] = other
+	_impact_other_generation[_impact_count] = _generation[other] if other >= 0 else -1
+	_impact_velocity[_impact_count] = velocity
+	_impact_count += 1
+	# One impact per flight; the body rebounds weakly off a wall.
+	_launch_time[i] = 0.0
+	_knock[i] = -velocity * 0.2 if kind == Impact.WALL else velocity * 0.3
+
+## Nearest overlapping live body on the same level, IMPACT_CHECKS grid entries at most.
+func _launch_contact(i: int, p: Vector2) -> int:
+	var cell := _cell_z(p.y) * _grid_w + _cell_x(p.x)
+	var cx := cell % _grid_w
+	var cz := cell / _grid_w
+	var checks := 0
+	for nz in range(maxi(0, cz - 1), mini(_grid_h, cz + 2)):
+		for nx in range(maxi(0, cx - 1), mini(_grid_w, cx + 2)):
+			var neighbor := nz * _grid_w + nx
+			for k in range(_cell_start[neighbor], _cell_start[neighbor + 1]):
+				if checks >= IMPACT_CHECKS:
+					return -1
+				checks += 1
+				var j := _cell_items[k]
+				if j == i or not is_alive(j):
+					continue
+				var reach := _radius[i] + _radius[j]
+				if _pos[j].distance_squared_to(p) < reach * reach \
+						and _y[i] < _y[j] + _height[j] and _y[j] < _y[i] + _height[i]:
+					return j
+	for j in _big:
+		if j != i and is_alive(j):
+			var reach := _radius[i] + _radius[j]
+			if _pos[j].distance_squared_to(p) < reach * reach \
+					and _y[i] < _y[j] + _height[j] and _y[j] < _y[i] + _height[i]:
+				return j
+	return -1
+
+## Wall splats and body hits found during movement, after the loop finished.
+func _resolve_impacts() -> void:
+	var count := _impact_count
+	_impact_count = 0
+	for n in count:
+		var slot := _impact_slot[n]
+		var generation := _impact_generation[n]
+		var velocity := _impact_velocity[n]
+		var speed := velocity.length()
+		var frozen := _launch_frozen[slot] != 0
+		var alive := is_alive(slot) and _generation[slot] == generation
+		var at := enemy_position(slot) if _state[slot] != FREE else Vector3(_pos[slot].x, _y[slot], _pos[slot].y)
+		var amount := IMPACT_DAMAGE + speed * 1.5
+		if alive:
+			_launch_frozen[slot] = 0
+		if frozen and alive:
+			# Ice shatters on contact: the body breaks and bursts once.
+			_shatter(at, slot, generation)
+			continue
+		var outer := _action_open()
+		var push := Vector3(velocity.x, 0.0, velocity.y)
+		if _impact_kind[n] == Impact.WALL:
+			if alive:
+				damage(slot, amount, Vector3.ZERO, DamageType.Kind.KINETIC, false)
+			_action_close(outer, at, "WALL SPLAT")
+		else:
+			var other := _impact_other[n]
+			if alive:
+				damage(slot, amount * 0.6, Vector3.ZERO, DamageType.Kind.KINETIC, false)
+			if is_alive(other) and _generation[other] == _impact_other_generation[n]:
+				var other_generation := _generation[other]
+				damage(other, amount, Vector3.ZERO, DamageType.Kind.KINETIC, false)
+				# The struck body is shoved, never launched: impacts do not chain.
+				if is_alive(other) and _generation[other] == other_generation:
+					if _is_heavy(other):
+						stun(other, 0.4)
+					else:
+						_knock[other] += Vector2(push.x, push.z) * 0.5 / _mass[other]
+						_vy[other] = maxf(_vy[other], 2.5)
+						stun(other, 0.5)
+			_action_close(outer, at, "PINBALL")
+		if is_instance_valid(_fx):
+			_fx.burst_kick(at, false)
+
+## Hype aura pulse: refreshes allies in range; level drops/expires with the source.
+func _hype_aura(source: int, pulse: int) -> void:
+	var definition := _defs[_type[source]]
+	var level := 2 if _mode[source] == Mode.RECOVER else 1
+	var count := query_radius(enemy_position(source), definition.aura_radius, _aura_buffer)
+	var applied := 0
+	for n in count:
+		if applied >= HYPE_TARGETS:
+			break
+		var slot := _aura_buffer[n]
+		var type := _type[slot]
+		if slot == source or _t_boss[type] != 0 or _t_behavior[type] == HordeEnemyDefinition.Behavior.HYPE:
+			continue
+		# A fresh pulse resets the level; overlapping auras keep the strongest.
+		_buff_level[slot] = level if _buff_pulse[slot] != pulse else maxi(_buff_level[slot], level)
+		_buff_pulse[slot] = pulse
+		_buff_time[slot] = BUFF_HOLD
+		applied += 1
+
+func _buff_speed(slot: int) -> float:
+	if _buff_time[slot] <= 0.0:
+		return 1.0
+	return SURGE_SPEED_SCALE if _buff_level[slot] >= 2 else HYPE_SPEED_SCALE
+
+func _buff_damage(slot: int) -> float:
+	return HYPE_DAMAGE_SCALE if _buff_time[slot] > 0.0 else 1.0
+
+## Bouncer shove: only a player still in front of the committed aim is thrown.
+func _shove(i: int, type: int) -> void:
+	if not is_instance_valid(target) or not target.active:
+		return
+	var definition := _defs[type]
+	var to := Vector2(target.global_position.x, target.global_position.z) - _pos[i]
+	var d := to.length()
+	if d > definition.attack_range + 0.5 or absf(target.global_position.y - 0.9 - _y[i]) > LEVEL_GAP:
+		return
+	if d > 0.01 and to.dot(_aim[i]) < 0.3 * d:
+		return
+	var away := to / d if d > 0.01 else _aim[i]
+	target.velocity += Vector3(away.x * definition.shove_impulse, 3.5, away.y * definition.shove_impulse)
+	target.take_damage(ceili(definition.contact_damage * 2.0 * _buff_damage(i)))
+
+## Bouncers hold space: an overlapping player is pushed out along the floor
+## through move_and_collide (walls still stop it) and loses the velocity
+## component driving into the body. No collider or extra physics layer.
+func _block_player(i: int) -> void:
+	var center := target.global_position
+	var feet := center.y - 0.9
+	if feet >= _y[i] + _height[i] or feet + 1.8 <= _y[i]:
+		return
+	var offset := Vector2(center.x, center.z) - _pos[i]
+	var reach := _radius[i] + PLAYER_RADIUS
+	var d := offset.length()
+	if d >= reach:
+		return
+	var away := offset / d if d > 0.001 else Vector2(-sin(_yaw[i]), -cos(_yaw[i]))
+	var depth := reach - d
+	target.move_and_collide(Vector3(away.x * depth, 0.0, away.y * depth))
+	var into := -(target.velocity.x * away.x + target.velocity.z * away.y)
+	if into > 0.0:
+		target.velocity.x += away.x * into
+		target.velocity.z += away.y * into
+
+## Hype man still in its stationary surge (RECOVER) window.
+func is_surging(index: int) -> bool:
+	return is_alive(index) and _t_behavior[_type[index]] == HordeEnemyDefinition.Behavior.HYPE and _mode[index] == Mode.RECOVER
+
+## Public enemy projectile: `lobbed` arcs under gravity and splashes on landing.
+func launch_projectile(from: Vector3, velocity: Vector3, damage_amount: float, lobbed: bool = false) -> bool:
+	if _shot_flags.is_empty():
+		return false
+	var life := 4.0 if lobbed else 30.0 / maxf(1.0, velocity.length()) + 1.0
+	return _add_shot(from, velocity, damage_amount, SHOT_LOBBED if lobbed else 0, BOTTLE_SPLASH if lobbed else 0.0, life)
+
+func _add_shot(from: Vector3, velocity: Vector3, damage_amount: float, flags: int, splash: float, life: float) -> bool:
+	if _shot_count >= MAX_PROJECTILES:
+		return false
+	_shot_pos[_shot_count] = from
+	_shot_vel[_shot_count] = velocity
+	_shot_life[_shot_count] = life
+	_shot_damage[_shot_count] = damage_amount
+	_shot_flags[_shot_count] = flags
+	_shot_splash[_shot_count] = splash
+	_shot_target[_shot_count] = -1
+	_shot_target_generation[_shot_count] = -1
+	_shot_count += 1
+	return true
 
 func is_stunned(index: int) -> bool:
 	return is_alive(index) and _stunned[index] > 0.0
+
+func is_dazed(index: int) -> bool:
+	return is_alive(index) and _daze_time[index] > 0.0
+
+## The first actual aimed body blocks selection, even if it is not dazed.
+## Uses the ordinary shot bodies, never enlarged highlight geometry.
+func finisher_target(origin: Vector3, forward: Vector3, reach: float = 3.2) -> int:
+	if _active_count == 0 or not origin.is_finite() or not forward.is_finite() \
+			or forward.length_squared() < 0.000001 or not is_finite(reach) or reach <= 0.0:
+		return -1
+	var direction := forward.normalized()
+	if raycast(origin, direction, reach, 1, _finisher_hits, _finisher_distances) == 0:
+		return -1
+	var slot := _finisher_hits[0]
+	if not is_dazed(slot) or not _finisher_same_floor(slot, origin) \
+			or not _lane_clear(origin, origin + direction * _finisher_distances[0]):
+		return -1
+	return slot
+
+## Contact-time validation of the recorded lifetime; no delayed kill or aim snap.
+## Callback reentrancy cannot turn automatic/callback deaths into manual credit.
+func finish(index: int, generation: int, origin: Vector3, reach: float = 3.2) -> bool:
+	if _action_suspend > 0 or not is_dazed(index) or _generation[index] != generation \
+			or _t_boss[_type[index]] != 0 or not origin.is_finite() \
+			or not is_finite(reach) or reach <= 0.0 or not _finisher_same_floor(index, origin):
+		return false
+	var offset := enemy_position(index) - origin
+	var direction := offset.normalized()
+	if direction == Vector3.ZERO \
+			or raycast(origin, direction, reach, 1, _finisher_hits, _finisher_distances) == 0 \
+			or _finisher_hits[0] != index \
+			or not _lane_clear(origin, origin + direction * _finisher_distances[0]):
+		return false
+	var at := enemy_position(index)
+	var outer := _action_open()
+	var killed := _deal_damage(index, _hp[index], direction * 14.0, DamageType.Kind.KINETIC, false)
+	_action_close(outer, at, "FINISHER")
+	if killed and is_instance_valid(_fx):
+		_fx.burst_finisher(at, direction)
+	return killed
+
+func _finisher_same_floor(index: int, origin: Vector3) -> bool:
+	var floor_y := ground_height(Vector2(origin.x, origin.z))
+	return is_finite(floor_y) and absf(_y[index] - floor_y) <= LEVEL_GAP \
+		and origin.y >= _y[index] - 0.2 and origin.y <= _y[index] + 2.2
+
+func _enter_daze(index: int) -> void:
+	_daze_used[index] = 1
+	_daze_time[index] = DAZE_DURATION
+	_dense_count[index] = 0
+	_mode[index] = Mode.SEEK
+	_timer[index] = 0.0
+	_cooldown[index] = _defs[_type[index]].attack_cooldown
+	_aim[index] = Vector2.ZERO
+	_attack_target[index] = Vector3.ZERO
+	_has_lane[index] = 0
+	_anim_clip[index] = _t_clip_idle[_type[index]] if _t_clip_idle[_type[index]] >= 0 else _t_clip_move[_type[index]]
+	_anim_frame[index] = 0.0
+	_anim_speed[index] = 0.0
 
 func is_alive(index: int) -> bool:
 	return index >= 0 and index < CAPACITY and _state[index] == ALIVE
@@ -1301,6 +2143,9 @@ func _damage_effects(index: int, amount: float, effect_amount: float, knockback:
 			_burn_damage[index] = maxf(_burn_damage[index], effect_amount * 0.15)
 		DamageType.Kind.FROST:
 			slow(index, FROST_FACTOR, FROST_DURATION)
+			_frost_time[index] = maxf(_frost_time[index], FROST_DURATION)
+		DamageType.Kind.SHOCK:
+			_charge_time[index] = CHARGE_DURATION
 	var killed := _deal_damage(index, amount, knockback, damage_type, critical)
 	if damage_type == DamageType.Kind.SHOCK and _generation[index] == generation:
 		_chain_shock(index, at, effect_amount * 0.4, critical)
@@ -1329,6 +2174,9 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 	_flash[index] = 1.0
 	_knock[index] += Vector2(knockback.x, knockback.z) / _mass[index]
 	var killed := _hp[index] <= 0.0
+	if not killed and _t_boss[_type[index]] == 0 and _daze_used[index] == 0 \
+			and _hp[index] <= _life_hp[index] * DAZE_HEALTH_FRACTION:
+		_enter_daze(index)
 	if killed:
 		_begin_death(index)
 		alive_count -= 1
@@ -1338,7 +2186,12 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 			control_boss(false)
 		# Visual death belongs to the body, not each credited constituent life.
 		if is_instance_valid(_fx):
-			_fx.burst_death(definition, at, _body[index])
+			_fx.burst_death(definition, at, _body[index], Vector3(_knock[index].x, knockback.y, _knock[index].y))
+		# Only an open action scope earns credit, and never from inside callbacks.
+		if _action_depth > 0 and _action_suspend == 0:
+			_action_members += members
+			_action_last_kill = at
+	_action_suspend += 1
 	if was_boss:
 		boss_health_changed.emit(health_after, maximum)
 	damage_reported.emit(at, removed, damage_type, critical, killed)
@@ -1347,7 +2200,8 @@ func _deal_damage(index: int, amount: float, knockback: Vector3, damage_type: in
 			enemy_killed.emit(definition, at)
 		if was_boss:
 			boss_killed.emit()
-	elif is_instance_valid(_fx):
+	_action_suspend -= 1
+	if not killed and is_instance_valid(_fx):
 		_fx.burst_hit(definition, at)
 	return killed
 
@@ -1496,6 +2350,10 @@ func _begin_death(slot: int) -> void:
 	_dense_count[slot] = 0
 	_exposed[slot] = 0.0
 	_stunned[slot] = 0.0
+	_daze_time[slot] = 0.0
+	_daze_used[slot] = 0
+	_life_hp[slot] = 0.0
+	_clear_pinball_state(slot)
 	var at := _big.find(slot)
 	if at >= 0:
 		_big.remove_at(at)
@@ -1512,6 +2370,8 @@ func _fusion_eligible(slot: int, player: Vector2) -> bool:
 	return is_alive(slot) and _fusion_allowed[slot] != 0 and _members[slot] == 1 \
 		and _mode[slot] == Mode.SEEK and _burn_time[slot] <= 0.0 \
 		and _slow_time[slot] <= 0.0 and _stunned[slot] <= 0.0 and _exposed[slot] <= 0.0 \
+		and _daze_time[slot] <= 0.0 \
+		and _charge_time[slot] <= 0.0 and _launch_time[slot] <= 0.0 \
 		and absf(_vy[slot]) < 0.001 and _knock[slot].length_squared() < 0.01 \
 		and _pos[slot].distance_squared_to(player) >= 16.0
 
@@ -1663,6 +2523,9 @@ func _fuse_group(seed: int, player: Vector2) -> bool:
 	_dense_count[seed] = 0
 	_hp[seed] = health
 	_max_hp[seed] = maximum
+	_life_hp[seed] = health
+	_daze_time[seed] = 0.0
+	_daze_used[seed] = 0
 	_pos[seed] = center
 	_y[seed] = ground_height(center)
 	_knock[seed] = Vector2.ZERO
@@ -1694,6 +2557,8 @@ func _recycle(slot: int) -> void:
 	_max_hp[slot] = 0.0
 	_knock[slot] = Vector2.ZERO
 	_aim[slot] = Vector2.ZERO
+	_attack_target[slot] = Vector3.ZERO
+	_has_lane[slot] = 0
 	_timer[slot] = 0.0
 	_cooldown[slot] = 0.0
 	_flash[slot] = 0.0
@@ -1705,6 +2570,10 @@ func _recycle(slot: int) -> void:
 	_burn_damage[slot] = 0.0
 	_exposed[slot] = 0.0
 	_stunned[slot] = 0.0
+	_daze_time[slot] = 0.0
+	_daze_used[slot] = 0
+	_life_hp[slot] = 0.0
+	_clear_pinball_state(slot)
 	_anim_clip[slot] = -1
 	_anim_frame[slot] = 0.0
 	_anim_speed[slot] = 0.0
@@ -1736,6 +2605,12 @@ func _physics_process(delta: float) -> void:
 	var inverse_cell := 1.0 / CELL
 	var last_x := _grid_w - 1
 	var last_z := _grid_h - 1
+	_combo_budget = COMBO_BUDGET
+	_hype_timer -= delta
+	var hype_pulse := _hype_timer <= 0.0
+	if hype_pulse:
+		_hype_timer = HYPE_PULSE
+		_hype_pulses += 1
 	for a in _active_count:
 		var i := _active[a]
 		if not is_alive(i):
@@ -1745,9 +2620,20 @@ func _physics_process(delta: float) -> void:
 			var progress := _grow[i] / FUSION_GROW_TIME
 			_set_body(i, lerpf(1.0, FUSION_SCALE, progress * progress * (3.0 - 2.0 * progress)))
 		_exposed[i] = maxf(0.0, _exposed[i] - delta)
-		var stunned := _stunned[i] > 0.0
+		var dazed := _daze_time[i] > 0.0
+		var stunned := _stunned[i] > 0.0 or dazed
+		_daze_time[i] = maxf(0.0, _daze_time[i] - delta)
 		_stunned[i] = maxf(0.0, _stunned[i] - delta)
+		_frost_time[i] = maxf(0.0, _frost_time[i] - delta)
+		_charge_time[i] = maxf(0.0, _charge_time[i] - delta)
+		if _buff_time[i] > 0.0:
+			_buff_time[i] -= delta
+			if _buff_time[i] <= 0.0:
+				_buff_time[i] = 0.0
+				_buff_level[i] = 0
 		var type := _type[i]
+		if hype_pulse and not stunned and chasing and _t_behavior[type] == HordeEnemyDefinition.Behavior.HYPE:
+			_hype_aura(i, _hype_pulses)
 		var p := _pos[i]
 		var to := player - p
 		var distance := to.length()
@@ -1783,12 +2669,15 @@ func _physics_process(delta: float) -> void:
 				move = _boss_velocity
 				face = _boss_facing
 			else:
-				move = _steer(i, type, route, direction, distance, delta)
-			if _mode[i] == Mode.CHARGE:
+				# Flank only on open same-level floor: on ramps/decks the side push
+				# would shove bodies off the route into cliffs and stall the climb.
+				var flank := absf(rise) <= LEVEL_GAP and _cell_flat[_cell_of[i]] != 0 and absf(_y[i] - player_y) <= LEVEL_GAP
+				move = _steer(i, type, route, direction, distance, delta, flank) * _buff_speed(i)
+			if _mode[i] == Mode.CHARGE or _mode[i] == Mode.WINDUP or _mode[i] == Mode.RECOVER:
 				face = _aim[i]
 			var touching := distance < reach + 0.15 and rise < _height[i] and rise > -1.9
-			if touching:
-				contact += _t_contact[type] * (minf(2.0, 1.0 + float(_members[i] - 1) * 0.15) if _members[i] > 1 else 1.0)
+			if touching and _mode[i] != Mode.RECOVER:
+				contact += _t_contact[type] * _buff_damage(i) * (minf(2.0, 1.0 + float(_members[i] - 1) * 0.15) if _members[i] > 1 else 1.0)
 				if _mode[i] == Mode.CHARGE and not (i == _boss_index and _boss_controlled):
 					target.take_damage(ceili(_t_contact[type] * 2.0))
 					_end_charge(i, type)
@@ -1797,31 +2686,50 @@ func _physics_process(delta: float) -> void:
 		if _slow_time[i] > 0.0:
 			_slow_time[i] -= delta
 			move *= _slow[i]
-		p += (move + _knock[i]) * delta + _separation(i, p, radius)
-		_knock[i] -= _knock[i] * knock_decay
-		var clamped := _constrain(p, radius, _y[i])
+		var separation := Vector2.ZERO if dazed else _separation(i, p, radius)
+		p += (move + _knock[i]) * delta + separation
+		var launched := _launch_time[i] > 0.0
+		_knock[i] -= _knock[i] * (minf(1.0, LAUNCH_DECAY * delta) if launched else knock_decay)
+		var clamped := _sweep_move(i, p)
 		var feet := _y[i]
 		var landing := clampi(int((clamped.y - origin.y) * inverse_cell), 0, last_z) * _grid_w \
 				+ clampi(int((clamped.x - origin.x) * inverse_cell), 0, last_x)
 		# Floor to plain floor (most of the crowd) needs no height work.
-		if feet != 0.0 or _cell_flat[landing] == 0:
+		if feet != 0.0 or _cell_flat[landing] == 0 or _vy[i] > 0.0:
 			clamped = _walkable(i, _pos[i], clamped)
 			# Walk up ramps at once; fall off ledges under gravity.
-			if feet > _step_ground + 0.001:
+			if feet > _step_ground + 0.001 or _vy[i] > 0.0:
 				_vy[i] -= FALL_GRAVITY * delta
-				_y[i] = maxf(_step_ground, feet + _vy[i] * delta)
+				var next_y := maxf(_step_ground, feet + _vy[i] * delta)
+				if _vy[i] > 0.0:
+					# Deck undersides/ceilings stop launch at the actual body height.
+					for k in range(_cell_obstacle_start[landing], _cell_obstacle_start[landing + 1]):
+						var o := _cell_obstacle_items[k]
+						var half := _obstacle_half[o] + Vector2.ONE * radius
+						if absf(clamped.x - _obstacle_center[o].x) > half.x or absf(clamped.y - _obstacle_center[o].y) > half.y:
+							continue
+						var bottom := _obstacle_bottom[o] + _obstacle_height_slope[o].dot(clamped - _obstacle_center[o])
+						if bottom >= feet + _height[i] - 0.02 and next_y + _height[i] > bottom:
+							next_y = maxf(feet, bottom - _height[i])
+							_vy[i] = 0.0
+				_y[i] = next_y
 			else:
 				_y[i] = _step_ground
 				_vy[i] = 0.0
+		if launched:
+			_track_launch(i, p, clamped, delta)
 		if _mode[i] == Mode.CHARGE and not clamped.is_equal_approx(p):
 			_end_charge(i, type)
 		_pos[i] = clamped
+		if chasing and _t_behavior[type] == HordeEnemyDefinition.Behavior.BOUNCER:
+			_block_player(i)
 		if face != Vector2.ZERO and chasing and not stunned:
 			var desired := atan2(-face.x, -face.y)
 			if _t_turn_speed[type] > 0.0:
 				_yaw[i] = rotate_toward(_yaw[i], desired, _t_turn_speed[type] * delta)
 			else:
 				_yaw[i] = lerp_angle(_yaw[i], desired, turn)
+	_resolve_impacts()
 	_update_dying(delta)
 	_update_projectiles(delta)
 	_contact_timer = maxf(0.0, _contact_timer - delta)
@@ -1848,47 +2756,134 @@ func _walkable(i: int, from: Vector2, to: Vector2) -> Vector2:
 
 ## `route` is the path direction (flow field); `direct` points straight at the
 ## player and is used for aiming attacks and backing off.
-func _steer(i: int, type: int, route: Vector2, direct: Vector2, distance: float, delta: float) -> Vector2:
+func _steer(i: int, type: int, route: Vector2, direct: Vector2, distance: float, delta: float, flank: bool = false) -> Vector2:
 	var definition := _defs[type]
 	var behavior := _t_behavior[type]
-	_cooldown[i] = maxf(0.0, _cooldown[i] - delta)
+	# Hype quickens every committed attack cycle, never health.
+	_cooldown[i] = maxf(0.0, _cooldown[i] - delta * (HYPE_COOLDOWN_SCALE if _buff_time[i] > 0.0 else 1.0))
 	match _mode[i]:
 		Mode.WINDUP:
 			_timer[i] -= delta
 			if _timer[i] <= 0.0:
 				_cooldown[i] = definition.attack_cooldown
-				if behavior == HordeEnemyDefinition.Behavior.RANGED:
-					_fire(i, type)
-					_mode[i] = Mode.SEEK
-				else:
-					_mode[i] = Mode.CHARGE
-					_aim[i] = direct
-					_timer[i] = definition.charge_duration
+				match behavior:
+					HordeEnemyDefinition.Behavior.RANGED, HordeEnemyDefinition.Behavior.THROWER:
+						_fire(i, type)
+						_end_charge(i, type)
+					HordeEnemyDefinition.Behavior.BOUNCER:
+						_shove(i, type)
+						_end_charge(i, type)
+					HordeEnemyDefinition.Behavior.HYPE:
+						# RECOVER is the surge: a stationary, louder aura and punish window.
+						_end_charge(i, type)
+					_:
+						_mode[i] = Mode.CHARGE
+						_timer[i] = definition.charge_duration
 			return Vector2.ZERO
 		Mode.CHARGE:
 			_timer[i] -= delta
 			if _timer[i] <= 0.0:
-				_mode[i] = Mode.SEEK
+				_end_charge(i, type)
+				return Vector2.ZERO
 			return _aim[i] * definition.charge_speed
+		Mode.RECOVER:
+			_timer[i] -= delta
+			if _timer[i] <= 0.0:
+				_mode[i] = Mode.SEEK
+			return Vector2.ZERO
 	var move := route * _t_speed[type] * (0.68 if _members[i] > 1 else 1.0)
-	if behavior == HordeEnemyDefinition.Behavior.RANGED:
+	if behavior == HordeEnemyDefinition.Behavior.SWARM and flank and _members[i] == 1 and distance > 2.5 and distance < 14.0 and route.dot(direct) > 0.8:
+		# Stable left/right lanes make the crowd surround instead of forming a line.
+		var side := Vector2(-direct.y, direct.x) * (1.0 if sin(_phase[i]) >= 0.0 else -1.0)
+		move = (route + side * 0.75).normalized() * _t_speed[type]
+	elif behavior == HordeEnemyDefinition.Behavior.RANGED:
+		if _has_lane[i] != 0:
+			if distance < definition.preferred_range - 1.5:
+				move = -direct * _t_speed[type] * 0.7
+			elif distance < definition.preferred_range + 1.5:
+				move = Vector2.ZERO
+		if _cooldown[i] <= 0.0 and distance <= definition.attack_range:
+			var from := Vector3(_pos[i].x, _y[i] + _height[i] * 0.7, _pos[i].y)
+			_has_lane[i] = 1 if _lane_clear(from, target.global_position) else 0
+			if _has_lane[i] != 0:
+				_begin_windup(i, definition, direct)
+			else:
+				_cooldown[i] = 0.3
+	elif behavior == HordeEnemyDefinition.Behavior.CHARGER or behavior == HordeEnemyDefinition.Behavior.RUNNER or behavior == HordeEnemyDefinition.Behavior.CARRIER:
+		if _cooldown[i] <= 0.0 and distance <= definition.charge_range and distance > 1.3:
+			var from := enemy_position(i)
+			if _lane_clear(from, target.global_position):
+				_begin_windup(i, definition, direct)
+				return Vector2.ZERO
+			_cooldown[i] = 0.3
+	elif behavior == HordeEnemyDefinition.Behavior.THROWER:
+		# Holds range like a spitter but lobs over the crowd at a committed spot.
 		if distance < definition.preferred_range - 1.5:
 			move = -direct * _t_speed[type] * 0.7
 		elif distance < definition.preferred_range + 1.5:
 			move = Vector2.ZERO
 		if _cooldown[i] <= 0.0 and distance <= definition.attack_range:
-			_mode[i] = Mode.WINDUP
-			_timer[i] = definition.telegraph_duration
-	elif behavior == HordeEnemyDefinition.Behavior.CHARGER:
-		if _cooldown[i] <= 0.0 and distance <= definition.charge_range and distance > 2.0:
-			_mode[i] = Mode.WINDUP
-			_timer[i] = definition.telegraph_duration
+			var release := Vector3(_pos[i].x, _y[i] + _height[i] + 1.2, _pos[i].y)
+			if _lane_clear(release, target.global_position + Vector3.UP * 0.6):
+				_begin_windup(i, definition, direct)
+				return Vector2.ZERO
+			_cooldown[i] = 0.3
+	elif behavior == HordeEnemyDefinition.Behavior.BOUNCER:
+		# Plants a body's width away, physically holding the space in front.
+		if distance < definition.preferred_range:
+			move = Vector2.ZERO
+		var level := absf(target.global_position.y - 0.9 - _y[i]) <= LEVEL_GAP
+		if _cooldown[i] <= 0.0 and level and distance <= definition.attack_range:
+			_begin_windup(i, definition, direct)
+			return Vector2.ZERO
+	elif behavior == HordeEnemyDefinition.Behavior.HYPE:
+		# Hangs back behind the crowd and backs off when approached.
+		if distance < definition.preferred_range - 1.5:
+			move = -direct * _t_speed[type]
+		elif distance < definition.preferred_range + 1.5:
+			move = Vector2.ZERO
+		if _cooldown[i] <= 0.0 and distance <= definition.attack_range:
+			_begin_windup(i, definition, direct)
 			return Vector2.ZERO
 	return move
 
+func _begin_windup(i: int, definition: HordeEnemyDefinition, direct: Vector2) -> void:
+	_mode[i] = Mode.WINDUP
+	_timer[i] = definition.telegraph_duration
+	_aim[i] = Vector2(-sin(_yaw[i]), -cos(_yaw[i])) if definition.behavior == HordeEnemyDefinition.Behavior.CARRIER else direct
+	_attack_target[i] = target.global_position
+
 func _end_charge(i: int, type: int) -> void:
-	_mode[i] = Mode.SEEK
+	_mode[i] = Mode.RECOVER
+	_timer[i] = _defs[type].recovery_duration
 	_cooldown[i] = _defs[type].attack_cooldown
+
+## Shared query object: no dictionary/query allocation per enemy attack.
+func _lane_clear(from: Vector3, to: Vector3) -> bool:
+	if from.is_equal_approx(to):
+		return true
+	_lane_query.from = from
+	_lane_query.to = to
+	_lane_query.collision_mask = 1
+	_lane_query.collide_with_areas = false
+	var body := target.get_rid() if is_instance_valid(target) else RID()
+	if body != _lane_excluded:
+		_lane_excluded = body
+		var excluded: Array[RID] = []
+		if body.is_valid():
+			excluded.append(body)
+		_lane_query.exclude = excluded
+	return get_world_3d().direct_space_state.intersect_ray(_lane_query).is_empty()
+
+## Substeps prevent fast charges and explosions tunnelling through thin walls.
+func _sweep_move(i: int, to: Vector2) -> Vector2:
+	var from := _pos[i]
+	var steps := maxi(1, ceili(from.distance_to(to) / maxf(0.12, _radius[i] * 0.6)))
+	var step := (to - from) / float(steps)
+	var p := from
+	for n in steps:
+		p = _walkable(i, p, _constrain(p + step, _radius[i], _y[i]))
+	return p
 
 func _separation(i: int, p: Vector2, radius: float) -> Vector2:
 	var push := Vector2.ZERO
@@ -1988,6 +2983,12 @@ func _update_dying(delta: float) -> void:
 		var slot := _dying[d]
 		_death[slot] -= delta
 		if _death[slot] > 0.0:
+			var motion := _pos[slot] + _knock[slot] * delta
+			_pos[slot] = _sweep_move(slot, motion)
+			_knock[slot] *= maxf(0.0, 1.0 - delta * 3.0)
+			var floor_y := ground_height(_pos[slot])
+			_vy[slot] -= FALL_GRAVITY * delta
+			_y[slot] = maxf(floor_y, _y[slot] + _vy[slot] * delta)
 			_dying[n] = slot
 			n += 1
 		else:
@@ -1997,16 +2998,35 @@ func _update_dying(delta: float) -> void:
 # ---------------------------------------------------------------- projectiles
 
 func _fire(i: int, type: int) -> void:
-	if _shot_count >= MAX_PROJECTILES or not is_instance_valid(target):
+	if not is_instance_valid(target):
 		return
 	var definition := _defs[type]
+	var damage_amount := definition.projectile_damage * _buff_damage(i)
+	if _t_behavior[type] == HordeEnemyDefinition.Behavior.THROWER:
+		_lob(i, damage_amount)
+		return
 	var from := Vector3(_pos[i].x, _y[i] + _height[i] * 0.7, _pos[i].y)
-	var aim := target.global_position + Vector3(0.0, 0.2, 0.0) - from
-	_shot_pos[_shot_count] = from
-	_shot_vel[_shot_count] = aim.normalized() * definition.projectile_speed
-	_shot_life[_shot_count] = 30.0 / maxf(1.0, definition.projectile_speed) + 1.0
-	_shot_damage[_shot_count] = definition.projectile_damage
-	_shot_count += 1
+	var aim := _attack_target[i] - from
+	if not _lane_clear(from, _attack_target[i]):
+		return
+	# A readable committed three-lane fan denies space, not a tracking hit.
+	for lane in 3:
+		_add_shot(from, aim.normalized().rotated(Vector3.UP, float(lane - 1) * 0.14) * definition.projectile_speed,
+			damage_amount, 0, 0.0, 30.0 / maxf(1.0, definition.projectile_speed) + 1.0)
+
+## One ballistic bottle at the spot the player stood when the windup began:
+## moving off it is the counterplay, parrying returns it as a line drive.
+func _lob(i: int, damage_amount: float) -> void:
+	var start := Vector3(_pos[i].x, _y[i] + _height[i] * 0.95, _pos[i].y)
+	var land := _attack_target[i]
+	var floor_y := ground_height(Vector2(land.x, land.z))
+	land.y = floor_y if is_finite(floor_y) else land.y - 0.9
+	var apex := maxf(start.y, land.y) + clampf(1.2 + start.distance_to(land) * 0.08, 1.2, 2.6)
+	var up := sqrt(2.0 * BOTTLE_GRAVITY * (apex - start.y))
+	var down := sqrt(2.0 * BOTTLE_GRAVITY * (apex - land.y))
+	var flight := (up + down) / BOTTLE_GRAVITY
+	var horizontal := Vector2(land.x - start.x, land.z - start.z) / flight
+	_add_shot(start, Vector3(horizontal.x, up, horizontal.y), damage_amount, SHOT_LOBBED, BOTTLE_SPLASH, flight + 1.0)
 
 func _update_projectiles(delta: float) -> void:
 	if not is_instance_valid(target) or not target.active:
@@ -2014,22 +3034,140 @@ func _update_projectiles(delta: float) -> void:
 		return
 	var center := target.global_position
 	var hit_reach := projectile_radius + PLAYER_RADIUS
+	var player_body := target.get_rid()
+	if player_body != _shot_excluded:
+		_shot_excluded = player_body
+		var excluded: Array[RID] = [player_body]
+		_shot_query.exclude = excluded
+	_shot_impact_count = 0
 	var n := 0
 	for s in _shot_count:
-		var p := _shot_pos[s] + _shot_vel[s] * delta
+		var flags := _shot_flags[s]
+		var velocity := _shot_vel[s]
 		var life := _shot_life[s] - delta
-		var closest := Vector3(center.x, clampf(p.y, center.y - 0.9, center.y + 0.9), center.z)
-		if p.distance_squared_to(closest) < hit_reach * hit_reach:
-			target.take_damage(ceili(_shot_damage[s]))
-			continue
-		if life <= 0.0 or p.y < ground_height(Vector2(p.x, p.z)) or is_blocked(Vector2(p.x, p.z), 0.0, p.y - projectile_radius, projectile_radius * 2.0):
-			continue
+		var p := _shot_pos[s]
+		if flags & SHOT_REFLECTED != 0:
+			if flags & SHOT_HOMING != 0:
+				velocity = _home(s, p, velocity, delta)
+				flags = _shot_flags[s]
+			# Returned shots never touch the player; enemies and walls are swept.
+			if _sweep_reflected(s, p, velocity, delta) or life <= 0.0:
+				continue
+			p += velocity * delta
+		else:
+			if flags & SHOT_LOBBED != 0:
+				velocity.y -= BOTTLE_GRAVITY * delta
+			p += velocity * delta
+			var closest := Vector3(center.x, clampf(p.y, center.y - 0.9, center.y + 0.9), center.z)
+			if p.distance_squared_to(closest) < hit_reach * hit_reach:
+				if flags & SHOT_LOBBED != 0:
+					_bottle_splash(p, _shot_damage[s], _shot_splash[s])
+				else:
+					target.take_damage(ceili(_shot_damage[s]))
+				continue
+			if life <= 0.0 or p.y < ground_height(Vector2(p.x, p.z)) or is_blocked(Vector2(p.x, p.z), 0.0, p.y - projectile_radius, projectile_radius * 2.0):
+				if flags & SHOT_LOBBED != 0:
+					_bottle_splash(p, _shot_damage[s], _shot_splash[s])
+				continue
 		_shot_pos[n] = p
-		_shot_vel[n] = _shot_vel[s]
+		_shot_vel[n] = velocity
 		_shot_life[n] = life
 		_shot_damage[n] = _shot_damage[s]
+		_shot_flags[n] = flags
+		_shot_splash[n] = _shot_splash[s]
+		_shot_target[n] = _shot_target[s]
+		_shot_target_generation[n] = _shot_target_generation[s]
 		n += 1
 	_shot_count = n
+	_resolve_shot_impacts()
+
+func _home(s: int, p: Vector3, velocity: Vector3, delta: float) -> Vector3:
+	var slot := _shot_target[s]
+	if not is_alive(slot) or _generation[slot] != _shot_target_generation[s]:
+		_shot_flags[s] &= ~SHOT_HOMING
+		return velocity
+	var desired := (enemy_position(slot) - p).normalized() * velocity.length()
+	return velocity.move_toward(desired, REFLECT_TURN * velocity.length() * delta)
+
+## The splash of a landed/struck bottle hurts the player only within its radius.
+func _bottle_splash(at: Vector3, damage_amount: float, radius: float) -> void:
+	if is_instance_valid(_fx):
+		_fx.burst_bottle(at)
+	var center := target.global_position
+	var closest := Vector3(center.x, clampf(at.y, center.y - 0.9, center.y + 0.9), center.z)
+	if at.distance_squared_to(closest) <= radius * radius and _lane_clear(at + Vector3.UP * 0.2, center):
+		target.take_damage(ceili(damage_amount))
+
+## Sweeps this frame's segment: nearest enemy body vs world collider vs floor.
+func _sweep_reflected(s: int, p: Vector3, velocity: Vector3, delta: float) -> bool:
+	var step := velocity * delta
+	var length := step.length()
+	if length <= 0.00001:
+		return false
+	var direction := step / length
+	var reach := length + projectile_radius
+	var enemy := -1
+	var enemy_t := INF
+	if raycast(p, direction, reach, 1, _sweep_hits, _sweep_distances) > 0:
+		enemy = _sweep_hits[0]
+		enemy_t = _sweep_distances[0]
+	_shot_query.from = p
+	_shot_query.to = p + direction * reach
+	var hit := get_world_3d().direct_space_state.intersect_ray(_shot_query)
+	var wall_t := INF
+	var collider: Object = null
+	if not hit.is_empty():
+		wall_t = p.distance_to(hit["position"])
+		collider = hit["collider"]
+	var end := p + step
+	var floor_y := ground_height(Vector2(end.x, end.z))
+	if wall_t == INF and (not is_finite(floor_y) or end.y < floor_y or not _area.has_point(Vector2(end.x, end.z))):
+		wall_t = length
+	if enemy >= 0 and enemy_t <= wall_t:
+		_queue_shot_impact(s, p, p + direction * enemy_t, enemy, null)
+		return true
+	if wall_t < INF:
+		_queue_shot_impact(s, p, p + direction * maxf(0.0, wall_t - projectile_radius), -1, collider)
+		return true
+	return false
+
+func _queue_shot_impact(s: int, from: Vector3, at: Vector3, slot: int, collider: Object) -> void:
+	if _shot_impact_count >= _shot_impact_pos.size():
+		return
+	var k := _shot_impact_count
+	_shot_impact_pos[k] = at
+	_shot_impact_origin[k] = from
+	_shot_impact_slot[k] = slot
+	_shot_impact_generation[k] = _generation[slot] if slot >= 0 else -1
+	_shot_impact_damage[k] = _shot_damage[s]
+	_shot_impact_splash[k] = _shot_splash[s]
+	_shot_impact_collider[k] = collider
+	_shot_impact_count += 1
+
+## Returned projectile hits as one RETURN action: direct body hit, shootable
+## world object and (bottles) a walled splash, all in the same scope.
+func _resolve_shot_impacts() -> void:
+	var count := _shot_impact_count
+	_shot_impact_count = 0
+	for k in count:
+		var at := _shot_impact_pos[k]
+		var from := _shot_impact_origin[k]
+		var amount := _shot_impact_damage[k]
+		var slot := _shot_impact_slot[k]
+		var collider := _shot_impact_collider[k]
+		_shot_impact_collider[k] = null
+		var outer := _action_open()
+		if slot >= 0 and is_alive(slot) and _generation[slot] == _shot_impact_generation[k]:
+			var push := (at - from).normalized() * 8.0
+			damage_combined(slot, amount, from, 0.0, Vector3(push.x, 0.0, push.z), DamageType.Kind.KINETIC, false)
+		if is_instance_valid(collider) and collider.has_method(&"take_hit"):
+			collider.take_hit(amount, at)
+		if _shot_impact_splash[k] > 0.0:
+			var back := (from - at).normalized() * 0.3
+			_radius_core(at + back, _shot_impact_splash[k], amount * 0.6, 8.0, DamageType.Kind.KINETIC, false)
+		_action_close(outer, at, "RETURN")
+		if is_instance_valid(_fx):
+			_fx.burst_return(at)
 
 # ---------------------------------------------------------------- rendering
 
@@ -2146,7 +3284,7 @@ func _draw_anatomy(type: int) -> void:
 		k = _write_instance(buffer, k, slot, scale, scale, _flash[slot], stride)
 		if stride == 20:
 			var clip := _anim_clip[slot] if _anim_clip[slot] >= 0 else _t_clip_move[type]
-			var loop := 0.0 if _stunned[slot] > 0.0 or _mode[slot] == Mode.WINDUP else 1.0
+			var loop := 0.0 if _stunned[slot] > 0.0 or _daze_time[slot] > 0.0 or _mode[slot] == Mode.WINDUP else 1.0
 			_write_clip(buffer, k - 8, clip, _anim_frame[slot], loop)
 	RenderingServer.multimesh_set_buffer(renderer.multimesh.get_rid(), buffer)
 	renderer.multimesh.visible_instance_count = k / stride
@@ -2193,10 +3331,24 @@ func _write_instance(buffer: PackedFloat32Array, k: int, slot: int, scale_xz: fl
 	buffer[k + 10] = c * scale_xz
 	buffer[k + 11] = p.y
 	var custom := k + stride - 4
-	buffer[custom] = flash
+	# Integer part carries readable statuses (1 burning, 2 charged, 4 hyped,
+	# 8 hype source, 16 dazed); the fraction stays the hit flash.
+	var status := 0
+	if _state[slot] == ALIVE:
+		if _burn_time[slot] > 0.0:
+			status |= 1
+		if _charge_time[slot] > 0.0:
+			status |= 2
+		if _buff_time[slot] > 0.0:
+			status |= 4
+		if _t_behavior[_type[slot]] == HordeEnemyDefinition.Behavior.HYPE:
+			status |= 8
+		if _daze_time[slot] > 0.0:
+			status |= 16
+	buffer[custom] = float(status) + minf(flash, 0.99)
 	buffer[custom + 1] = -1.0 if _stunned[slot] > 0.0 else telegraph
 	buffer[custom + 2] = _phase[slot] + TAU * float(_members[slot] - 1)
-	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 or (slot == _boss_index and _boss_recovering) else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
+	buffer[custom + 3] = -1.0 if _exposed[slot] > 0.0 or (_mode[slot] == Mode.RECOVER and _t_armored[_type[slot]] != 0) or (slot == _boss_index and _boss_recovering) else (1.0 - _slow[slot]) if _slow_time[slot] > 0.0 else 0.0
 	return k + stride
 
 func _reset_animation(slot: int) -> void:
@@ -2211,7 +3363,7 @@ func _animate(buffer: PackedFloat32Array, at: int, slot: int, type: int, delta: 
 	var p := _pos[slot]
 	var moved := minf(p.distance_to(_anim_prev[slot]) / maxf(delta, 0.0001), 40.0)
 	_anim_prev[slot] = p
-	if _stunned[slot] > 0.0 and _anim_clip[slot] >= 0:
+	if (_stunned[slot] > 0.0 or _daze_time[slot] > 0.0) and _anim_clip[slot] >= 0:
 		_write_clip(buffer, at, _anim_clip[slot], _anim_frame[slot], 0.0)
 		return
 	var speed := _anim_speed[slot] + (moved - _anim_speed[slot]) * minf(1.0, delta * 6.0)
@@ -2257,21 +3409,52 @@ func _draw_projectiles() -> void:
 	# it would otherwise fill the view for its last frame; it shrinks away instead.
 	var eye := target.camera.global_position if is_instance_valid(target) else Vector3.INF
 	for s in _shot_count:
-		var k := s * 12
+		var k := s * 16
 		var p := _shot_pos[s]
 		var size := clampf((p.distance_to(eye) - PROJECTILE_FADE_NEAR) / (PROJECTILE_FADE_FAR - PROJECTILE_FADE_NEAR), 0.0, 1.0)
-		buffer[k] = size
-		buffer[k + 1] = 0.0
-		buffer[k + 2] = 0.0
+		var flags := _shot_flags[s]
+		# Spit is a round orange blob, a bottle a tumbling green capsule and a
+		# returned shot a long cyan streak along its flight.
+		var color := SHOT_SPIT_COLOR
+		var stretch := 1.0
+		var thin := 1.0
+		if flags & SHOT_REFLECTED != 0:
+			color = SHOT_REFLECT_COLOR
+			stretch = 2.8
+			thin = 0.7
+		elif flags & SHOT_LOBBED != 0:
+			color = SHOT_BOTTLE_COLOR
+			stretch = 1.6
+			thin = 0.55
+		var forward := _shot_vel[s]
+		forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
+		var side := forward.cross(Vector3.UP)
+		side = side.normalized() if side.length_squared() > 0.0001 else Vector3.RIGHT
+		var up := side.cross(forward)
+		if flags & (SHOT_LOBBED | SHOT_REFLECTED) == SHOT_LOBBED:
+			var spin := _shot_life[s] * 14.0
+			var turned := forward * cos(spin) + up * sin(spin)
+			up = up * cos(spin) - forward * sin(spin)
+			forward = turned
+		var x := side * (thin * size)
+		var y := up * (thin * size)
+		var z := forward * (stretch * size)
+		buffer[k] = x.x
+		buffer[k + 1] = y.x
+		buffer[k + 2] = z.x
 		buffer[k + 3] = p.x
-		buffer[k + 4] = 0.0
-		buffer[k + 5] = size
-		buffer[k + 6] = 0.0
+		buffer[k + 4] = x.y
+		buffer[k + 5] = y.y
+		buffer[k + 6] = z.y
 		buffer[k + 7] = p.y
-		buffer[k + 8] = 0.0
-		buffer[k + 9] = 0.0
-		buffer[k + 10] = size
+		buffer[k + 8] = x.z
+		buffer[k + 9] = y.z
+		buffer[k + 10] = z.z
 		buffer[k + 11] = p.z
+		buffer[k + 12] = color.r
+		buffer[k + 13] = color.g
+		buffer[k + 14] = color.b
+		buffer[k + 15] = 1.0
 	RenderingServer.multimesh_set_buffer(_shot_renderer.multimesh.get_rid(), buffer)
 	_shot_renderer.multimesh.visible_instance_count = _shot_count
 	_shot_buffer = buffer

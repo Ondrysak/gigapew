@@ -221,14 +221,14 @@ func _world_sources() -> void:
 			if loot.initialized:
 				break
 			await lab.wait(0.1)
-		lab.check(loot.initialized and loot.stashes.size() == 3, "sector %d supplies a guarded quest stash and two exploration caches" % stage)
+		lab.check(loot.initialized and loot.stashes.size() == 3, "sector %d supplies a guarded optional stash and two exploration caches" % stage)
 		if not loot.initialized:
 			game.free()
 			continue
 		var quest := loot.stashes[0]
 		_stand_at_stash(game, quest)
 		await lab.wait(0.15)
-		lab.check(loot.target_stash() == quest and quest.guards_started and game.horde.alive_count >= 4, "sector %d approaching the quest stash activates its finite defenders" % stage)
+		lab.check(loot.target_stash() == quest and quest.guards_started and game.horde.alive_count >= 4, "sector %d approaching the guarded stash activates its finite defenders" % stage)
 		await lab.capture("sector_%d_stash" % stage)
 		Input.action_press(&"interact")
 		await lab.wait(0.5)
@@ -256,7 +256,7 @@ func _world_sources() -> void:
 		Input.action_press(&"interact")
 		await lab.wait(2.3)
 		Input.action_release(&"interact")
-		lab.check(cache.claimed and game._gear_offers.size() == 1, "exploration cache reveals one random item instead of the quest's three choices")
+		lab.check(cache.claimed and game._gear_offers.size() == 1, "exploration cache reveals one random item instead of the guarded stash's three choices")
 		await _click(game.gear_screen.offer_buttons[0])
 		game.player.global_position = loot.elite_site + Vector3(0, 0.1, 2)
 		await lab.wait(0.2)

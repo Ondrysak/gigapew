@@ -7,11 +7,11 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Maschine"
-description = "Ja pres maschine jsem real producer to je vis hard to na kompu to je izi delat (hlasky.txt:349). Šest elektrických beatů z reproduktoru; zblízka zkratují celý houf."
-damage = 42
+description = "Šest elektrických beatů. Zblízka vede proud mezi těly; čím hustší parket, tím víc zásahů."
+damage = 20
 damage_type = 3
 recoil_degrees = 0.13
-fire_interval = 0.42
+fire_interval = 0.46
 range_meters = 13.0
 pellet_count = 6
 spread_degrees = 7.5

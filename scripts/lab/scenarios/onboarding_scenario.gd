@@ -1,15 +1,13 @@
 extends LabScenario
 
-## Guided start through the real campaign: one skill at first, the rest
-## revealed by level with callouts and tips; a small first contract and a calm
-## arrival; early level-ups without perks or gun mods; tips once per profile;
-## and the experienced mode (Guided start off) showing everything at once.
+## Guided arena arrival, gradual skills and one-time tips. Experienced mode
+## exposes the full combat kit immediately; upgrades retain their level gates.
 
 func title() -> String:
 	return "Guided start"
 
 func summary() -> String:
-	return "Gradual skills, small first contract, spawn grace, gated upgrades and one-time tips"
+	return "Gradual skills, calm arena arrival, gated upgrades and one-time tips"
 
 func run() -> void:
 	var game := await lab.start_game(&"driller", 0, true, 8721, true)
@@ -30,10 +28,17 @@ func run() -> void:
 	game.director.set_physics_process(true)
 	var grace := game.director.grace
 	await lab.wait(1.0)
-	lab.check(grace > 10.0 and game.horde.alive_count == 0 and game.director.grace < grace, "the first sector opens with a calm before spawning (%.0fs)" % grace)
+	lab.check(game.director.phase_name == "ARRIVAL" and game.horde.alive_count == 0 and game.director.grace < grace, "arrival remains free of enemies while its unpaused calm counts down")
 	game.director.grace = 0.01
 	await lab.wait(1.5)
-	lab.check(game.horde.alive_count > 0, "spawning starts once the calm ends")
+	lab.check(game.director.phase_name == "ROUTE" and game.horde.alive_count == 0, "the calm ends at a route choice, never an unsolicited fight")
+	game.route_screen.choice_buttons[0].pressed.emit()
+	await lab.frames(2)
+	lab.check(game.director.phase_name == "TRAVEL" and game.horde.alive_count == 0, "choosing the first venue waits for physical arrival")
+	game.player.global_position = game.director.current_venue().arrival + Vector3.UP * 0.95
+	game.player.velocity = Vector3.ZERO
+	await lab.wait(1.5)
+	lab.check(game.horde.alive_count > 0, "the first guided fight admits enemies only after reaching its venue")
 	game.director.set_physics_process(false)
 	game.horde.clear()
 	_check_offers(game, false)

@@ -7,11 +7,11 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Vinyly"
-description = "Sedm projektilů do vějíře. Zblízka smetou celý houf."
-damage = 32
+description = "Sedm vinylů odhodí houf zblízka. Široký vějíř na boky, ne sniper."
+damage = 26
 recoil_degrees = 0.2
-fire_interval = 0.38
-range_meters = 24.0
+fire_interval = 0.42
+range_meters = 20.0
 pellet_count = 7
 spread_degrees = 5.0
 knockback = 12.0

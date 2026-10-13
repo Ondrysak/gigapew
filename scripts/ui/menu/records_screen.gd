@@ -6,7 +6,7 @@ extends MenuScreen
 @export var victories_value: Label
 @export var total_kills_value: Label
 @export var best_kills_value: Label
-@export var best_time_value: Label
+@export var best_score_value: Label
 @export var deepest_stage_value: Label
 @export var best_level_value: Label
 @export var last_run_label: Label
@@ -18,7 +18,7 @@ func refresh() -> void:
 	victories_value.text = str(int(records.victories))
 	total_kills_value.text = str(int(records.total_kills))
 	best_kills_value.text = str(int(records.best_kills))
-	best_time_value.text = format_time(float(records.best_time))
+	best_score_value.text = str(int(records.best_score))
 	deepest_stage_value.text = "%d HOTOVO" % int(records.deepest_stage) if int(records.deepest_stage) > 0 else "—"
 	best_level_value.text = str(int(records.best_level)) if int(records.best_level) > 0 else "—"
 	last_run_label.text = _describe_last_run(records.get("last_run", {}))
@@ -37,6 +37,7 @@ func _describe_last_run(run: Dictionary) -> String:
 	var parts := PackedStringArray([
 		operator,
 		outcome,
+		"%d BODŮ" % int(run.get("score", 0)),
 		"%d ZABITÍ" % int(run.get("kills", 0)),
 		format_time(float(run.get("time", 0.0))),
 		"ÚR. %d" % int(run.get("level", 0)),

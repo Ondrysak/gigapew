@@ -9,6 +9,7 @@ render_mode diffuse_burley;
 //                  glossy puddles.
 
 #include "res://shaders/kits/kit_common.gdshaderinc"
+#include "res://shaders/floor_hallucination.gdshaderinc"
 
 uniform bool is_floor = false;
 uniform float base_y = 0.0;
@@ -29,10 +30,10 @@ void fragment() {
 	vec3 albedo;
 	float rough;
 	if (is_floor) {
-		vec2 p = world_pos.xz;
+		vec2 p = floor_hallucinated_uv(world_pos.xz);
 		vec2 id = floor(p / 0.1);
 		albedo = vec3(0.42, 0.42, 0.4) * (0.88 + kit_hash(id) * 0.16);
-		float grout = kit_grout(p, vec2(0.1), 0.006);
+		float grout = floor_hallucination_active() ? floor_hallucinated_grout(p, vec2(0.1), 0.006) : kit_grout(p, vec2(0.1), 0.006);
 		albedo = mix(albedo, vec3(0.12, 0.11, 0.09), grout);
 		vec2 dirt_uv = p + vec2(wear_seed * 0.17, wear_seed * 0.11);
 		float wet = smoothstep(0.72 - wear * 0.14, 0.82 - wear * 0.14, kit_fbm(dirt_uv * 0.8));

@@ -10,7 +10,7 @@ func title() -> String:
 	return "Close-range machine salvage"
 
 func summary() -> String:
-	return "Fruit-machine bank reels, wins, LEDs and lamps, automatic crowbar, held F prying, gun/reach rejection, wall occlusion, pause and out of order"
+	return "Real optional machine loot, one-press crowbar, held-input rejection, conserved payout, wall/range/pause boundaries and authored bank feedback"
 
 func run() -> void:
 	var game := await lab.start_game(&"driller")
@@ -74,18 +74,33 @@ func run() -> void:
 
 	lab.check(await lab.aim_deposit(deposit, 2.2), "close camera ray hits a real machine compartment")
 	await lab.wait(0.15)
-	lab.check(player.mining_ready() and not player.drilling(), "visible close compartment raises the idle crowbar before F is held")
+	lab.check(player.mining_ready() and not player.drilling(), "visible close compartment raises the idle crowbar before a fresh press")
+	lab.check(player.mining_tool.model.visible and not player._view.visible, "the raised idle crowbar exclusively replaces the gun")
 	await lab.capture("automatic_crowbar")
 	lab.fire(true)
 	await lab.wait(0.2)
 	lab.fire(false)
 	lab.check(is_equal_approx(deposit.health, before), "left click cannot pry or damage a compartment while the crowbar is raised")
+	var opened := [0]
+	deposit.fragment_mined.connect(func(_deposit: MineralDeposit, _amount: int, _at: Vector3): opened[0] += 1)
+	var contact := game.player.mining_tool._target_hit()
+	var hit_position: Vector3 = contact["position"]
+	var hit_shape := int(contact["shape"])
+	game.run_state.resource_multiplier = 1.0
+	var resource_before := int(game.run_state.resources.get(deposit.definition.resource.id, 0))
 	Input.action_press(&"mine")
-	await lab.capture_strip("crowbar_leverage", 6, 0.03)
-	await lab.wait(0.2)
+	await lab.frames(2)
+	var first_payout := deposit.yield_emitted
+	lab.check(deposit.health < before and first_payout > 0 and opened[0] == 1, "one fresh F press immediately opens exactly one compartment and emits real loot")
+	lab.check(player.mining_tool.model.visible and not player._view.visible, "the crowbar alone remains visible through compartment impact and recovery")
+	deposit.smash_compartment(hit_position, hit_shape)
+	lab.check(deposit.yield_emitted == first_payout and opened[0] == 1, "a duplicate hit on the opened compartment cannot pay or signal twice")
+	lab.check(await lab.aim_deposit(deposit, 2.2), "held-input boundary points at a different unopened compartment")
+	await lab.wait(0.5)
+	lab.check(deposit.yield_emitted == first_payout and opened[0] == 1, "holding F while aiming another compartment never repeats the opening")
 	Input.action_release(&"mine")
-	lab.check(deposit.health < before and deposit.yield_emitted > 0, "held F breaks a real close compartment and releases its conserved currency")
-	await lab.capture("f_prying")
+	await lab.frames(2)
+	await lab.capture("one_press_smash")
 	if slot:
 		await _tamper_review(game, deposit)
 
@@ -94,9 +109,20 @@ func run() -> void:
 	game.get_tree().paused = true
 	Input.action_press(&"mine")
 	await lab.wait(0.3)
-	Input.action_release(&"mine")
 	lab.check(is_equal_approx(deposit.health, before), "paused F input cannot damage a machine")
 	game.get_tree().paused = false
+	await lab.wait(0.2)
+	lab.check(is_equal_approx(deposit.health, before), "F held across unpause is blocked until release")
+	Input.action_release(&"mine")
+	await lab.frames(2)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Input.action_press(&"mine")
+	await lab.wait(0.2)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	await lab.wait(0.2)
+	lab.check(is_equal_approx(deposit.health, before), "a menu-held press cannot open loot after mouse capture resumes")
+	Input.action_release(&"mine")
+	await lab.frames(2)
 	player.suppress_fire_until_release()
 
 	var blocker := StaticBody3D.new()
@@ -117,6 +143,7 @@ func run() -> void:
 	player.rotation.y += PI
 	await lab.wait(0.15)
 	lab.check(not player.mining_ready(), "looking away from a machine returns to the primary firearm")
+	lab.check(player._view.visible and not player.mining_tool.model.visible, "looking away restores only the gun, never both viewmodels")
 	await lab.capture("return_to_gun")
 
 	for attempt in 30:
@@ -126,10 +153,14 @@ func run() -> void:
 			lab.check(false, "every unopened compartment remains reachable by the real crowbar ray")
 			return
 		Input.action_press(&"mine")
-		await lab.wait(0.85)
+		await lab.frames(2)
 		Input.action_release(&"mine")
+		await lab.frames(2)
 	await lab.frames(2)
 	lab.check(deposit.health == 0.0 and deposit.yield_emitted == deposit.total_yield, "emptying the real machine emits its complete conserved currency budget")
+	game.deposits.collect_all()
+	var earned := int(game.run_state.resources.get(deposit.definition.resource.id, 0)) - resource_before
+	lab.check(earned == floori(deposit.total_yield * game.run_state.resource_multiplier), "emitted stock reaches the real run resource balance without lost or duplicated units")
 	var removed := true
 	for section: Dictionary in deposit._sections:
 		removed = removed and (section["collider"] as CollisionShape3D).disabled and not (section["mesh"] as MeshInstance3D).visible
@@ -148,6 +179,7 @@ func run() -> void:
 	player.global_position = Vector3(stand.x, game.horde.ground_height(Vector2(stand.x, stand.z)) + 1.0, stand.z)
 	lab.aim_at(deposit.global_position)
 	await lab.capture_strip("out_of_order", 4, 0.3)
+	await _cigarette_switch(game)
 
 ## Whole bank from 4.5 m at a fixed gameplay time.
 func _front_view(game: ArenaGame, deposit: MineralDeposit, label: String) -> void:
@@ -399,3 +431,27 @@ func _luminance(image: Image, region: Rect2i) -> float:
 		for x in range(clipped.position.x, clipped.end.x, 2):
 			total += image.get_pixel(x, y).get_luminance()
 	return total / maxf(float(clipped.get_area()) * 0.25, 1.0)
+
+func _cigarette_switch(game: ArenaGame) -> void:
+	var pack: MineralDeposit
+	for node in game.deposits.get_children():
+		if node is MineralDeposit and node.definition.resource.id == &"crystal" and node.health > 0.0:
+			if await lab.aim_deposit(node, 2.2):
+				pack = node
+				break
+	lab.check(pack != null, "a real cigarette stock is reachable for the weapon-switch regression")
+	if pack == null:
+		return
+	var player := game.player
+	await lab.wait(0.2)
+	lab.check(player.mining_ready() and player.mining_tool.model.visible and not player._view.visible, "aiming at cigarette stock replaces the gun with only the crowbar")
+	await lab.capture("cigarette_crowbar")
+	var before := pack.yield_emitted
+	Input.action_press(&"mine")
+	await lab.frames(2)
+	lab.check(pack.yield_emitted > before and player.mining_tool.model.visible and not player._view.visible, "cigarette salvage pays real loot while only the crowbar animates")
+	Input.action_release(&"mine")
+	player.head.rotation.x = deg_to_rad(80.0)
+	await lab.wait(0.3)
+	lab.check(player._view.visible and not player.mining_tool.model.visible, "leaving cigarette salvage restores only the gun after recovery")
+	await lab.capture("cigarette_return_to_gun")

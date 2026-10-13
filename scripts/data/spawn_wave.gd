@@ -1,13 +1,14 @@
 class_name SpawnWave
 extends Resource
 
-## Sustained population: ramps from rate_start to rate_end over the configured
-## pressure window, then holds the final rate until the level contract is done.
+## A finite species allocation in each selected encounter, not an endless rate.
 @export var enemy: HordeEnemyDefinition
-@export var start_time := 0.0
-@export var end_time := 300.0
-@export var rate_start := 1.0
-@export var rate_end := 4.0
-## Enemies arrive in clusters of this size at one spawn point.
-@export var group_size := 4
+@export_range(1, 8, 1) var encounter_start := 1
+@export_range(1, 8, 1) var encounter_end := 8
+## BUILD brings the crowd; PEAK introduces a second, deliberately different mix.
+@export var peak := false
+@export_range(1, 200, 1) var count := 16
+@export_range(0, 40, 1) var count_growth := 4
+## Small groups share a safe approach without filling a blocked ring backlog.
+@export_range(1, 8, 1) var group_size := 4
 @export var health_multiplier := 1.0

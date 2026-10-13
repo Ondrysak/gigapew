@@ -15,5 +15,6 @@ layout_theme = &"reactor"
 cover_count = 24
 overlook_count = 2
 outcrop_count = 3
-quest_scale = 1.7
+arena_encounters = 5
+spawn_grace = 4.0
 schedule = ExtResource("schedule")

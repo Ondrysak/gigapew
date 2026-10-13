@@ -30,6 +30,23 @@ const FOUNDRY_STEEL = preload("res://scenes/levels/foundry/materials/foundry_ste
 const FOUNDRY_WALL = preload("res://scenes/levels/foundry/materials/foundry_wall.tres")
 const FOUNDRY_DARK = preload("res://scenes/levels/foundry/materials/foundry_dark.tres")
 const VENUE_FRONT = preload("res://shaders/venue_front.gdshader")
+const PINBALL_PROP = preload("res://scripts/world/pinball_prop.gd")
+## Fixed per-kind display names of the route venues (by ordinal), and the metro
+## station of each sector.
+const VENUE_NAMES := {
+	&"hospoda": ["Hospoda U Kulatýho pultu", "Pivnice Na Rohu"],
+	&"herna": ["Herna Eldorádo", "Herna Klondajk"],
+	&"nonstop": ["Nonstop U Nádraží", "Nonstop Bar 24"],
+}
+const METRO_NAMES := {&"yard": "Metro Jiřího z Poděbrad", &"foundry": "Metro Palmovka", &"reactor": "Metro Hlavní nádraží"}
+## Tactic and authored lane roles per venue kind: crowd, fast, heavy, ranged, support.
+const VENUE_TACTICS := {&"hospoda": &"circular_bar", &"herna": &"machine_lanes", &"nonstop": &"street_counter", &"metro": &"pillar_stairs"}
+const LANE_ROLES := {
+	&"hospoda": {&"front_street": [&"crowd", &"heavy", &"ranged", &"support"], &"side_street": [&"crowd", &"fast", &"heavy"], &"behind_bar": [&"ranged", &"support"]},
+	&"herna": {&"front_street": [&"crowd", &"heavy", &"ranged", &"support"], &"side_street": [&"crowd", &"heavy"], &"machine_aisle_left": [&"fast", &"ranged", &"crowd"], &"machine_aisle_right": [&"fast", &"ranged", &"crowd"]},
+	&"nonstop": {&"front_street": [&"crowd", &"heavy", &"fast", &"ranged", &"support"], &"side_street": [&"fast", &"crowd"]},
+	&"metro": {&"stair_west": [&"crowd", &"fast", &"ranged", &"support"], &"stair_east": [&"crowd", &"heavy", &"fast", &"ranged", &"support"], &"passage": [&"heavy", &"crowd"]},
+}
 
 ## Storefront kit (visual only), see `_dress_storefront`.
 const STORE_MIN_GAP := 3.4
@@ -57,6 +74,8 @@ const STORE_STONE := Color(0.6, 0.57, 0.5)
 var level_seed: int
 ## Resource-compatible venue bays with real support, floor, ownership and inward normal.
 var mining_sites: Array[Dictionary] = []
+## Clear outdoor encounter anchors, populated after geometry and furniture exist.
+var arena_focus_points := PackedVector3Array()
 ## {center (deck top), size, height, foot, direction} per generated overlook.
 var overlooks: Array[Dictionary] = []
 var outcrops: Array[StaticBody3D] = []
@@ -68,12 +87,20 @@ var layout_roofed := PackedByteArray()
 ## Union of carved street, reserved underground and the two stair footprints.
 var layout_walkable := PackedByteArray()
 var kit_sites: Array[Dictionary] = []
+## Route venues: the six playable rooms plus the metro hall, each a finite local
+## fight on its real approaches. {id: StringName, name: String, kind, tactic,
+## position (street-side main entry), center, bounds: Rect2, floor_y, entry,
+## exit, entries, exits (Array[Vector3] at the venue floor), approaches (street
+## navigation points), arrival (fixture point inside the main entry), lanes:
+## [{id, roles: Array[StringName], points: PackedVector3Array}], admission_area:
+## Rect2 enclosing every lane point, centerpiece, pillars}. Ids are stable per
+## seed: kind plus ordinal, or `metro`.
+var combat_venues: Array[Dictionary] = []
 var stairs: Array[Dictionary] = []
 var _layers := PragueLayout.new()
 var _interior_rooms: Array[int] = []
 var _outdoor_room := -1
 var _landing_room := -1
-var _extraction_room := -1
 var _ground: Node3D
 var _kit_lights := 0
 var _kit_labels := 0
@@ -173,6 +200,9 @@ func _ready() -> void:
 	_build_set_pieces()
 	_build_room_features()
 	_build_kit_sites()
+	_build_combat_venues()
+	_build_pinball_props()
+	_collect_arena_focus_points()
 	if _theme == &"yard":
 		_build_zizkov_street()
 	_build_lighting()
@@ -312,7 +342,6 @@ func _generate_layout() -> void:
 		&"foundry": _plan_foundry()
 		&"reactor": _plan_reactor()
 		_: _plan_compound()
-	_add_alcoves()
 	# Ring cores go back in after corridors, which may have tunnelled through.
 	for room in rooms:
 		var core: Rect2i = room.core
@@ -326,7 +355,6 @@ func _generate_layout() -> void:
 	_layers.connect_street(layout_open, rooms[_spawn_room].anchor)
 	_prune_unreachable(rooms[_spawn_room].anchor)
 	_publish_layers()
-	_pick_extraction_room()
 
 ## Žižkov (yard): a compound of mixed-shape rooms with looping corridors.
 func _plan_compound() -> void:
@@ -335,7 +363,7 @@ func _plan_compound() -> void:
 		_try_room(Vector2i(15, 11), Vector2i(18, 13), [&"hall"], true)
 	for _index in 10 + _rng.randi_range(0, 2):
 		_try_room(Vector2i(6, 6), Vector2i(13, 12), [&"l_shape", &"t_shape", &"cross", &"chamfer", &"ring", &"pillars", &"hall", &"disc"], false)
-	_connect_rooms(0.4)
+	_connect_rooms(1.0)
 
 ## Foundry: two long furnace halls around the indoor street and outdoor plaza.
 func _plan_foundry() -> void:
@@ -345,9 +373,9 @@ func _plan_foundry() -> void:
 	_add_room(Rect2i(layout_width / 2 + 1, 18, layout_width / 2 - 11, 11), &"hall", true)
 	for _index in 5:
 		_try_room(Vector2i(6, 6), Vector2i(9, 8), [&"chamfer", &"l_shape", &"hall", &"disc"], false)
-	_connect_rooms(0.3)
+	_connect_rooms(1.0)
 
-## Reactor: a round hub around the core, narrow spokes in and a ring of chords out.
+## Reactor: a broad core hub, readable spokes and a connected outer flank ring.
 func _plan_reactor() -> void:
 	var center := Vector2i(layout_width / 2 + 3, layout_height / 2 + 5)
 	var hub := _add_room(Rect2i(center - Vector2i(8, 8), Vector2i(16, 16)), &"hub", false)
@@ -370,10 +398,10 @@ func _plan_reactor() -> void:
 		var a: Vector2i = rooms[outer[index]].anchor
 		var b: Vector2i = rooms[outer[(index + 1) % outer.size()]].anchor
 		if a != b:
-			_carve_line(Vector2(a) + Vector2(0.5, 0.5), Vector2(b) + Vector2(0.5, 0.5), 1.5)
+			_carve_line(Vector2(a) + Vector2(0.5, 0.5), Vector2(b) + Vector2(0.5, 0.5), 2.0)
 	for index in outer.size():
 		if index % 2 == 0 or outer.size() <= 3:
-			_carve_line(middle, Vector2(rooms[outer[index]].anchor) + Vector2(0.5, 0.5), 1.0 + _rng.randf_range(0.0, 0.6))
+			_carve_line(middle, Vector2(rooms[outer[index]].anchor) + Vector2(0.5, 0.5), 1.75 + _rng.randf_range(0.0, 0.5))
 
 func _try_room(min_size: Vector2i, max_size: Vector2i, kinds: Array[StringName], arena: bool) -> int:
 	var region := Rect2i(2, 2, layout_width - 4, layout_height - 4)
@@ -506,10 +534,9 @@ func _link(a: int, b: int, linked: Dictionary) -> void:
 	points.append(to)
 	_carve_path(points, _corridor_width())
 
-## 4 m chokepoints, 6 m standard passages and occasional 8 m boulevards.
+## Six-metre lanes leave room to slide past a horde; eight-metre lanes open sightlines.
 func _corridor_width() -> int:
-	var roll := _rng.randf()
-	return 2 if roll < 0.25 else (3 if roll < 0.8 else 4)
+	return 3 if _rng.randf() < 0.65 else 4
 
 func _carve_path(points: Array[Vector2i], width: int) -> void:
 	var offset := width / 2
@@ -535,20 +562,6 @@ func _carve_line(a: Vector2, b: Vector2, half_width: float) -> void:
 				_set_cell(Vector2i(x, z), 1)
 	var line: Array[Vector2] = [a, b]
 	_corridors.append({"line": line, "width": roundi(half_width * 2.0)})
-
-## Shallow dead-end pockets on room edges: cover to fall back into, or a trap.
-func _add_alcoves() -> void:
-	for _index in _rng.randi_range(3, 6):
-		var bounds: Rect2i = rooms[_rng.randi() % rooms.size()].bounds
-		var depth := _rng.randi_range(2, 3)
-		var length := _rng.randi_range(3, 5)
-		var along_x := _rng.randi_range(bounds.position.x, maxi(bounds.position.x, bounds.end.x - length))
-		var along_z := _rng.randi_range(bounds.position.y, maxi(bounds.position.y, bounds.end.y - length))
-		match _rng.randi_range(0, 3):
-			0: _set_cells(Rect2i(along_x, bounds.position.y - depth, length, depth), 1)
-			1: _set_cells(Rect2i(along_x, bounds.end.y, length, depth), 1)
-			2: _set_cells(Rect2i(bounds.position.x - depth, along_z, depth, length), 1)
-			_: _set_cells(Rect2i(bounds.end.x, along_z, depth, length), 1)
 
 func _prune_unreachable(start: Vector2i) -> void:
 	var visited := PackedByteArray()
@@ -598,26 +611,45 @@ func _room_rect(room: Dictionary) -> Rect2:
 	var bounds: Rect2i = room.bounds
 	return Rect2(_cell_world(Vector2(bounds.position)), Vector2(bounds.size) * CELL_SIZE)
 
-## Where a drop pod lands: the clear room spot farthest from `from`, so the
-## extraction is a run through the level rather than a step to the side.
-func extraction_point(from: Vector3) -> Vector3:
+## A clear outdoor combat focus far from the supplied position.
+func arena_point(from: Vector3) -> Vector3:
 	var best: Vector3 = get_node("PlayerSpawn").position
+	best.y = 0.0
 	var best_distance := -1.0
+	for point in arena_focus_points:
+		var distance := point.distance_squared_to(from)
+		if distance > best_distance:
+			best_distance = distance
+			best = point
+	return best
+
+func _collect_arena_focus_points() -> void:
 	for room_index in rooms.size():
 		if room_index in _interior_rooms:
 			continue
-		var room: Dictionary = rooms[room_index]
-		for cell: Vector2i in [room.anchor, (room.bounds as Rect2i).get_center()]:
-			if not _open_at(cell) or layout_roofed[cell.y * layout_width + cell.x] != 0:
-				continue
-			var at := _cell_world(Vector2(cell) + Vector2(0.5, 0.5))
-			if not _area_clear(Rect2(at - Vector2(1.5, 1.5), Vector2(3.0, 3.0)), 1.0):
-				continue
-			var distance := at.distance_to(Vector2(from.x, from.z))
-			if distance > best_distance:
-				best_distance = distance
-				best = Vector3(at.x, 0.0, at.y)
-	return best
+		var bounds: Rect2i = rooms[room_index].bounds
+		var best := Vector2.ZERO
+		var best_distance := INF
+		var middle := _cell_world(Vector2(bounds.get_center()) + Vector2.ONE * 0.5)
+		for z in range(bounds.position.y + 1, bounds.end.y - 1, 2):
+			for x in range(bounds.position.x + 1, bounds.end.x - 1, 2):
+				var cell := Vector2i(x, z)
+				if not _open_at(cell) or layout_roofed[z * layout_width + x] != 0:
+					continue
+				var point := _cell_world(Vector2(cell) + Vector2.ONE * 0.5)
+				if not _area_clear(Rect2(point - Vector2.ONE * 1.5, Vector2.ONE * 3.0), 1.0):
+					continue
+				var distance := point.distance_squared_to(middle)
+				if distance < best_distance:
+					best_distance = distance
+					best = point
+		if best_distance < INF:
+			var point := Vector3(best.x, 0.0, best.y)
+			if not arena_focus_points.has(point):
+				arena_focus_points.append(point)
+	if arena_focus_points.is_empty():
+		var spawn: Vector3 = get_node("PlayerSpawn").position
+		arena_focus_points.append(Vector3(spawn.x, 0.0, spawn.z))
 
 ## True when the footprint plus margin lies on carved floor clear of other pieces.
 func _area_clear(footprint: Rect2, margin: float) -> bool:
@@ -774,11 +806,13 @@ func _place_in_rooms(order: Array[int], slot: int, attempt: Callable) -> void:
 			return
 
 func _try_overlook(region: Rect2) -> bool:
-	var height := 1.8
+	# Ramps carry the horde; a 2.0 m double-jump apex gives the player a
+	# deliberate shortcut onto every deck from its non-ramp sides.
+	var height := 1.5
 	match _theme:
-		&"foundry": height = 2.2
-		&"reactor": height = 2.6
-	height += _rng.randf_range(0.0, 0.3)
+		&"foundry": height = 1.6
+		&"reactor": height = 1.7
+	height += _rng.randf_range(0.0, 0.1)
 	var run := height / tan(RAMP_ANGLE)
 	var size := Vector2(_rng.randf_range(7.0, 9.5), _rng.randf_range(7.0, 9.5))
 	var directions: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]
@@ -841,7 +875,7 @@ func _try_outcrop(region: Rect2) -> bool:
 	# Substantial cover with enough room to move around its long faces.
 	var length := _rng.randf_range(5.6, 7.0)
 	var depth := _rng.randf_range(2.6, 3.4)
-	var height := _rng.randf_range(3.4, 4.4)
+	var height := _rng.randf_range(1.1, 1.5)
 	var along_x := _rng.randf() < 0.5
 	for _orientation in 2:
 		var extent := Vector2(length, depth) if along_x else Vector2(depth, length)
@@ -862,7 +896,7 @@ func _try_outcrop(region: Rect2) -> bool:
 func _build_outcrop(footprint: Rect2, height: float, along_x: bool) -> void:
 	var center := footprint.get_center()
 	var position := Vector3(center.x, height * 0.5, center.y)
-	var body := _box_body(_obstacles, "OreOutcrop%d" % outcrops.size(), position, Vector3(footprint.size.x, height, footprint.size.y), _rock)
+	var body := _box_body(_obstacles, "TraverseCover%d" % outcrops.size(), position, Vector3(footprint.size.x, height, footprint.size.y), _rock)
 	outcrops.append(body)
 	_visual(_box, _dark, position + Vector3.UP * (height * 0.5), Vector3(footprint.size.x * 0.96, 0.012, footprint.size.y * 0.96))
 	var end_offset := Vector3(footprint.size.x * 0.5, 0.0, 0.0) if along_x else Vector3(0.0, 0.0, footprint.size.y * 0.5)
@@ -943,9 +977,9 @@ func _build_cover() -> void:
 func _island_size(landmark: bool, circular: bool) -> Vector3:
 	if circular:
 		var diameter := _rng.randf_range(3.6, 5.6) if landmark else _rng.randf_range(2.2, 3.4)
-		var height := _rng.randf_range(6.0, 9.0) if landmark else _rng.randf_range(2.5, 4.5)
+		var height := _rng.randf_range(3.8, 5.0) if landmark else _rng.randf_range(1.1, 1.5)
 		return Vector3(diameter, height, diameter)
-	var size := Vector3(_rng.randf_range(4.0, 6.0), _rng.randf_range(3.6, 5.2), _rng.randf_range(5.0, 9.0)) if landmark else Vector3(_rng.randf_range(2.0, 3.6), _rng.randf_range(1.8, 3.0), _rng.randf_range(2.0, 4.5))
+	var size := Vector3(_rng.randf_range(4.0, 6.0), _rng.randf_range(3.6, 5.2), _rng.randf_range(5.0, 9.0)) if landmark else Vector3(_rng.randf_range(2.0, 3.6), _rng.randf_range(1.1, 1.5), _rng.randf_range(2.0, 4.5))
 	if _rng.randf() < 0.5:
 		var width := size.x
 		size.x = size.z
@@ -1989,11 +2023,13 @@ func _grid_rect(cells: Rect2i) -> Rect2:
 func _plan_interiors() -> void:
 	var kinds: Array[StringName] = [&"herna", &"herna", &"hospoda", &"hospoda", &"nonstop", &"nonstop"]
 	_shuffle(kinds)
+	# Twelve-by-sixteen metre rooms; thirteen-cell rows leave a six-metre
+	# front lane between neighbours and clear the underground stair rings.
 	for index in kinds.size():
 		var x := 1 if index % 2 == 0 else layout_width - 7
-		_plan_venue(Rect2i(x, 3 + (index / 2) * 12, 6, 9), kinds[index])
+		_plan_venue(Rect2i(x, 3 + (index / 2) * 13, 6, 8), kinds[index])
 	if _theme == &"foundry":
-		_plan_venue(Rect2i(10, 10, 6, 9), &"vecerka")
+		_plan_venue(Rect2i(12, 13, 6, 7), &"vecerka")
 	# Separate uncovered landing and plaza leave the side-door porches open.
 	var landing := Vector2i(9, layout_height - 8)
 	if _theme == &"foundry":
@@ -2001,25 +2037,34 @@ func _plan_interiors() -> void:
 	elif _theme == &"reactor":
 		landing = Vector2i(9, 28)
 	_landing_room = _add_room(Rect2i(landing, Vector2i(6, 6)), &"hall", false)
-	_outdoor_room = _add_room(Rect2i(layout_width / 2 + 1, layout_height - 13, 11, 11), &"hall", false)
+	_outdoor_room = _add_room(Rect2i(layout_width / 2 + 1, layout_height - 14, 12, 12), &"hall", true)
 
 func _plan_venue(bounds: Rect2i, kind: StringName) -> void:
 	assert(not _layers.intersects(bounds.grow(1)), "Playable venues must not overlap underground reservations")
 	var room_index := _add_room(bounds, kind, false)
 	_interior_rooms.append(room_index)
-	# A real wall ring with one four-metre entrance. Street connectors aim
-	# at the porch, not through arbitrary walls toward the room centre.
+	# Two six-metre portals on different faces form a physical indoor/outdoor
+	# loop. Connectors target the front porch; the side escape has its own lane.
 	for z in range(bounds.position.y - 1, bounds.end.y + 1):
 		for column in range(bounds.position.x - 1, bounds.end.x + 1):
 			var cell := Vector2i(column, z)
 			if not bounds.has_point(cell):
 				_layers.reserved[z * layout_width + column] = 1
 	var door_cell := Vector2i(bounds.get_center().x, bounds.end.y)
-	for column in range(door_cell.x - 1, door_cell.x + 1):
-		_layers.reserved[door_cell.y * layout_width + column] = 0
+	var toward_center := Vector2i.RIGHT if bounds.get_center().x < layout_width / 2 else Vector2i.LEFT
+	var side_cell := Vector2i(bounds.end.x if toward_center.x > 0 else bounds.position.x - 1, bounds.end.y - 3)
+	for offset in range(-1, 2):
+		_layers.reserved[door_cell.y * layout_width + door_cell.x + offset] = 0
+		_layers.reserved[(side_cell.y + offset) * layout_width + side_cell.x] = 0
 	rooms[room_index]["door_cell"] = door_cell
-	rooms[room_index]["anchor"] = door_cell + Vector2i.DOWN
-	_set_cells(Rect2i(door_cell - Vector2i(1, 1), Vector2i(2, 3)), 1)
+	rooms[room_index]["side_cell"] = side_cell
+	rooms[room_index]["side_direction"] = toward_center
+	rooms[room_index]["anchor"] = door_cell + Vector2i.DOWN * 2
+	var side_porch := side_cell + toward_center * 2
+	var front_porch := door_cell + Vector2i.DOWN * 2
+	var loop: Array[Vector2i] = [side_cell - toward_center, side_porch, Vector2i(side_porch.x, front_porch.y), front_porch, door_cell + Vector2i.UP]
+	_carve_path(loop, 3)
+	rooms[room_index]["escape_lane"] = Rect2i(mini(side_porch.x, door_cell.x) - 1, side_cell.y - 1, absi(side_porch.x - door_cell.x) + 3, front_porch.y - side_cell.y + 3)
 
 func _publish_layers() -> void:
 	layout_walkable = layout_open.duplicate()
@@ -2034,21 +2079,10 @@ func _publish_layers() -> void:
 		var bounds: Rect2i = rooms[room_index].bounds
 		_layers.mark(layout_roofed, bounds)
 		_occupied.append(_grid_rect(bounds))
-		var door_cell: Vector2i = rooms[room_index].door_cell
-		_occupied.append(_grid_rect(Rect2i(door_cell - Vector2i(1, 0), Vector2i(2, 3))))
+		var lane: Rect2i = rooms[room_index].escape_lane
+		_occupied.append(_grid_rect(lane))
 	for stair in _layers.stairs:
 		_occupied.append(_grid_rect(stair.cells).grow(1.0))
-
-func _pick_extraction_room() -> void:
-	var spawn := _cell_world(Vector2(rooms[_spawn_room].anchor))
-	var distance := -1.0
-	for index in rooms.size():
-		if index in _interior_rooms or not _open_at(rooms[index].anchor):
-			continue
-		var at := _cell_world(Vector2(rooms[index].anchor))
-		if at.distance_squared_to(spawn) > distance:
-			distance = at.distance_squared_to(spawn)
-			_extraction_room = index
 
 func _build_underground() -> void:
 	var concrete := _material(Color(0.44, 0.43, 0.39), 0.9, 0.0)
@@ -2076,7 +2110,7 @@ func _build_underground() -> void:
 	for room_index in _interior_rooms:
 		var rect := _room_rect(rooms[room_index])
 		var center := rect.get_center()
-		var roof := _box_body(_obstacles, "InteriorCeiling", Vector3(center.x, 3.4, center.y), Vector3(rect.size.x, 0.4, rect.size.y), concrete)
+		var roof := _box_body(_obstacles, "InteriorCeiling", Vector3(center.x, 4.6, center.y), Vector3(rect.size.x, 0.4, rect.size.y), concrete)
 		roof.set_meta("roof", true)
 
 func _build_stair(plan: Dictionary, material: Material) -> void:
@@ -2147,12 +2181,19 @@ func _build_kit_sites() -> void:
 		var room: Dictionary = rooms[room_index]
 		var rect := _room_rect(room)
 		var door_cell: Vector2i = room.door_cell
-		var door_at := _cell_world(Vector2(door_cell))
+		var door_at := _cell_world(Vector2(door_cell) + Vector2(0.5, 0.0))
 		var door := Vector3(door_at.x, 0.0, door_at.y)
-		var openings: Array[Vector3] = [door]
-		var opening_widths: Array[float] = [4.0]
-		var walls := _build_room_shell(rect, 0.0, 3.2, openings, opening_widths)
-		var site := _site_for(room.kind, rect, 0.0, 3.2, door, Vector2.DOWN, openings)
+		var side_cell: Vector2i = room.side_cell
+		var side_direction: Vector2i = room.side_direction
+		var side_at := _cell_world(Vector2(side_cell) + Vector2(0.0 if side_direction.x > 0 else 1.0, 0.5))
+		var side_door := Vector3(side_at.x, 0.0, side_at.y)
+		var openings: Array[Vector3] = [door, side_door]
+		var opening_widths: Array[float] = [6.0, 6.0]
+		var walls := _build_room_shell(rect, 0.0, 4.4, openings, opening_widths)
+		var site := _site_for(room.kind, rect, 0.0, 4.4, door, Vector2.DOWN, openings)
+		site["combat_venue"] = true
+		site["escape_door"] = side_door
+		site["escape_facing"] = Vector2(side_direction)
 		site["venue_id"] = room_index
 		site["opening_widths"] = opening_widths
 		site["machine_zones"] = [] as Array[Rect2]
@@ -2161,6 +2202,7 @@ func _build_kit_sites() -> void:
 		_sign_points.append(door)
 	var target := KitTarget.new()
 	target.solid = _kit_solid
+	target.round_solid = _kit_round_solid
 	target.visual = _kit_visual
 	target.label = _kit_label
 	target.light = _kit_light
@@ -2196,30 +2238,33 @@ func _build_venue_sites(site: Dictionary, walls: Array[StaticBody3D]) -> void:
 		var shape := (wall.get_node("Collision") as CollisionShape3D).shape as BoxShape3D
 		var along_x := shape.size.x > shape.size.z
 		var normal := Vector3(0, 0, signf(center.y - wall.position.z)) if along_x else Vector3(signf(center.x - wall.position.x), 0, 0)
-		var offsets: Array[float] = []
+		var limit := 1
 		var resources: Array[StringName] = []
 		if along_x:
 			if normal.z < 0.0:
 				continue # Keep the main entrance and its porch free.
-			offsets.assign([0.0])
 			resources.assign([&"shard"] if kind == &"herna" else [&"crystal"])
 		elif kind == &"herna":
-			# Keep the right-hand entrance corner for the staffed cash desk.
-			offsets.assign([-6.0, 0.0] if normal.x < 0.0 else [-6.0, 0.0, 6.0])
+			limit = 3
 			resources.assign([&"gold"])
 		elif kind == &"hospoda":
 			if normal.x > 0.0:
 				continue # Leave one long wall for the bar and seating.
-			offsets.assign([-5.0, 5.0])
+			limit = 2
 			resources.assign([&"gold"])
 		else:
-			offsets.assign([-6.0, 0.0, 6.0] if normal.x < 0.0 else [-6.0, 6.0])
+			limit = 3 if normal.x < 0.0 else 2
 			resources.assign([&"crystal"])
 		# The fruit-bank housing has a 0.6 m plinth below its nominal
 		# -1.3 m cabinet base; mount that actual bottom on the room floor.
 		var mount_height := 1.9 if resources[0] in [&"gold", &"shard"] else 1.5
-		for offset in offsets:
-			var point := Vector3(center.x + offset, mount_height, wall.position.z) if along_x else Vector3(wall.position.x, mount_height, center.y + offset)
+		# Portal cuts shorten the actual support: bays are centred on the
+		# remaining segment, never across a doorway or another wall's backing.
+		var wall_length := shape.size.x if along_x else shape.size.z
+		var slots := mini(limit, floori((wall_length + 0.01) / 6.0))
+		for slot in slots:
+			var along := (wall.position.x if along_x else wall.position.z) + (slot - (slots - 1) * 0.5) * 6.0
+			var point := Vector3(along, mount_height, wall.position.z) if along_x else Vector3(wall.position.x, mount_height, along)
 			point += normal * 0.125
 			mining_sites.append({"position": point, "normal": normal, "support": wall, "floor_y": 0.0, "venue_id": site.venue_id, "venue_kind": kind, "resources": resources})
 			var inward := Vector2(normal.x, normal.z)
@@ -2229,8 +2274,8 @@ func _build_venue_sites(site: Dictionary, walls: Array[StaticBody3D]) -> void:
 			(site.machine_zones as Array[Rect2]).append(Rect2(middle - size * 0.5, size))
 
 func _build_outdoor_sites() -> void:
-	# Reserve the entire guaranteed plaza before set pieces and cover are
-	# placed. Its perimeter is the machine approach route, not spare prop space.
+	# Keep a broad connected combat court around the authentic park/worksite
+	# and toilet clusters, rather than scattering automaty through the street.
 	var plaza := _room_rect(rooms[_outdoor_room])
 	_occupied.append(plaza)
 	var kinds: Array[StringName] = [&"construction", &"park"]
@@ -2253,6 +2298,149 @@ func _kit_solid(center: Vector3, size: Vector3, yaw: float, material: Material) 
 	body.rotation.y = yaw
 	if material != null:
 		_visual(_box, material, center, size, Basis(Vector3.UP, yaw))
+
+func _kit_round_solid(center: Vector3, radius: float, height: float) -> void:
+	var shape := CylinderShape3D.new()
+	shape.radius = radius
+	shape.height = height
+	_body(_obstacles, "KitPillar", center, shape)
+
+func _build_combat_venues() -> void:
+	var ordinals := {}
+	for site in kit_sites:
+		var kind: StringName = site.kind
+		if kind == &"metro":
+			combat_venues.append(_metro_venue(site))
+		elif kind in [&"hospoda", &"herna", &"nonstop"]:
+			var ordinal := int(ordinals.get(kind, 0))
+			ordinals[kind] = ordinal + 1
+			combat_venues.append(_room_venue(site, ordinal))
+
+func _room_venue(site: Dictionary, ordinal: int) -> Dictionary:
+	var kind: StringName = site.kind
+	var door: Vector3 = site.door
+	var escape: Vector3 = site.escape_door
+	var facing: Vector2 = site.facing
+	var escape_facing: Vector2 = site.escape_facing
+	var outward := Vector3(facing.x, 0.0, facing.y)
+	var side_out := Vector3(escape_facing.x, 0.0, escape_facing.y)
+	# The nonstop draws its crowd off the long street towards the counter.
+	var lanes: Array[Dictionary] = [
+		_street_lane(&"front_street", door, outward, 16.0 if kind == &"nonstop" else 12.0),
+		_street_lane(&"side_street", escape, side_out, 10.0),
+	]
+	for lane: Dictionary in site.get("interior_lanes", []):
+		lanes.append({"id": lane.id, "points": lane.points})
+	var names: Array = VENUE_NAMES[kind]
+	var entries: Array[Vector3] = [door, escape]
+	var exits: Array[Vector3] = [escape, door]
+	var approaches: Array[Vector3] = [door + outward * 1.5, escape + side_out * 1.5]
+	return _venue(site, StringName("%s_%d" % [kind, ordinal + 1]), names[ordinal % names.size()], door, door - outward * 2.0, entries, exits, approaches, lanes)
+
+## Open street cell centres along the actual carved approach out of a doorway:
+## a breadth-first walk over uncovered street, from 4 m out to `reach` metres of
+## path, so lanes follow corners instead of running into rock.
+func _street_lane(id: StringName, door: Vector3, outward: Vector3, reach: float) -> Dictionary:
+	var points := PackedVector3Array()
+	var outside := door + outward * 1.0
+	var start := Vector2i(floori((outside.x - layout_origin.x) / CELL_SIZE), floori((outside.z - layout_origin.y) / CELL_SIZE))
+	if not _street_open(outside):
+		return {"id": id, "points": points}
+	var depth := {start: 0}
+	var queue: Array[Vector2i] = [start]
+	var cursor := 0
+	var limit := floori(reach / CELL_SIZE)
+	while cursor < queue.size():
+		var cell := queue[cursor]
+		cursor += 1
+		var steps: int = depth[cell]
+		var at := _cell_world(Vector2(cell) + Vector2(0.5, 0.5))
+		if steps * CELL_SIZE >= 4.0 and at.distance_to(Vector2(door.x, door.z)) >= 4.0:
+			points.append(Vector3(at.x, 0.0, at.y))
+		if steps >= limit:
+			continue
+		for step: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var next := cell + step
+			if depth.has(next) or not _open_at(next) or layout_roofed[next.y * layout_width + next.x] != 0:
+				continue
+			depth[next] = steps + 1
+			queue.append(next)
+	return {"id": id, "points": points}
+
+func _street_open(point: Vector3) -> bool:
+	var cell := Vector2i(floori((point.x - layout_origin.x) / CELL_SIZE), floori((point.z - layout_origin.y) / CELL_SIZE))
+	return _open_at(cell) and layout_roofed[cell.y * layout_width + cell.x] == 0
+
+## Pillared hall under two elevated stair mouths and the WC passage alcove.
+func _metro_venue(site: Dictionary) -> Dictionary:
+	var lanes: Array[Dictionary] = []
+	var entries: Array[Vector3] = []
+	var approaches: Array[Vector3] = []
+	for stair in stairs:
+		var top: Vector3 = stair.top
+		var foot: Vector3 = stair.foot
+		var inward: Vector3 = stair.direction
+		var across := Vector3(-inward.z, 0.0, inward.x)
+		var points := PackedVector3Array()
+		for t: float in [0.15, 0.3, 0.45, 0.6]:
+			for offset: float in [-1.5, 1.5]:
+				points.append(top.lerp(foot, t) + across * offset)
+		for distance: float in [2.5, 4.5, 6.5]:
+			for offset: float in [-1.5, 1.5]:
+				var point := top - inward * distance + across * offset
+				if _street_open(point):
+					points.append(Vector3(point.x, 0.0, point.z))
+		lanes.append({"id": &"stair_west" if inward.x > 0.0 else &"stair_east", "points": points})
+		entries.append(foot)
+		approaches.append(top - inward * 1.5)
+	var openings: Array = site.openings
+	var passage := _grid_rect(_layers.passage)
+	var alcove := PackedVector3Array()
+	for offset: float in [-1.5, 0.0, 1.5]:
+		alcove.append(Vector3(passage.get_center().x + offset, float(site.floor_y), passage.get_center().y + 0.5))
+	lanes.append({"id": &"passage", "points": alcove})
+	entries.append(openings[2])
+	var first: Dictionary = stairs[0]
+	var exits: Array[Vector3] = [stairs[0].foot, stairs[1].foot]
+	var arrival: Vector3 = first.foot + (first.direction as Vector3) * 2.0
+	return _venue(site, &"metro", METRO_NAMES.get(_theme, "Metro"), first.top, arrival, entries, exits, approaches, lanes)
+
+func _venue(site: Dictionary, id: StringName, title: String, position: Vector3, arrival: Vector3, entries: Array[Vector3], exits: Array[Vector3], approaches: Array[Vector3], lanes: Array[Dictionary]) -> Dictionary:
+	var kind: StringName = site.kind
+	var roles: Dictionary = LANE_ROLES[kind]
+	var rect: Rect2 = site.rect
+	var area := rect
+	var authored: Array[Dictionary] = []
+	for lane in lanes:
+		var points: PackedVector3Array = lane.points
+		if points.is_empty():
+			continue
+		var accepted: Array[StringName] = []
+		accepted.assign(roles.get(lane.id, [&"crowd"]))
+		for point in points:
+			area = area.expand(Vector2(point.x, point.z))
+		authored.append({"id": lane.id, "roles": accepted, "points": points})
+	var floor_y := float(site.floor_y)
+	return {
+		"id": id, "name": title, "kind": kind, "tactic": VENUE_TACTICS[kind],
+		"position": position, "center": Vector3(rect.get_center().x, floor_y, rect.get_center().y),
+		"bounds": rect, "floor_y": floor_y, "entry": entries[0], "exit": exits[0],
+		"entries": entries, "exits": exits, "approaches": approaches, "arrival": arrival,
+		"lanes": authored, "admission_area": area.grow(1.0),
+		"centerpiece": site.get("centerpiece", {}), "pillars": site.get("pillars", []),
+	}
+
+## Finite loose kegs the kits reserved off every aisle; the game binds them.
+func _build_pinball_props() -> void:
+	var props := Node3D.new()
+	props.name = "PinballProps"
+	add_child(props)
+	for site in kit_sites:
+		for point: Vector3 in site.get("prop_points", []):
+			var keg: Node3D = PINBALL_PROP.new()
+			keg.name = "Keg%d" % props.get_child_count()
+			keg.position = point
+			props.add_child(keg)
 
 func _kit_visual(kind: StringName, xform: Transform3D, material: Material) -> void:
 	# The world cylinder has radius one; the sphere already uses radius 0.5.

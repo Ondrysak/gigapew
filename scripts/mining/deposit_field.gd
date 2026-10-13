@@ -67,7 +67,6 @@ var _area := Rect2()
 var _player: ArenaPlayer
 var _run_state: RunState
 var _rng := RandomNumberGenerator.new()
-var _quests: LevelQuests
 var _level_seed := -1
 var _seed_configured := false
 var _query: PhysicsRayQueryParameters3D
@@ -119,10 +118,8 @@ var _break_voice: AudioStreamPlayer3D
 var _collect_voice: AudioStreamPlayer
 var _collect_cooldown := 0.0
 
-## Configure campaign objectives before setup. Non-procedural authored worlds
-## retain their existing random/authored placement API.
-func configure_quests(quests: LevelQuests, seed: int) -> void:
-	_quests = quests
+## Seed optional venue stock before setup; no campaign loot quota.
+func configure_level(seed: int) -> void:
 	_level_seed = seed
 	_seed_configured = true
 
@@ -309,22 +306,17 @@ func _populate() -> void:
 	_spawn_point = spawn.global_position if spawn != null else Vector3(_area.get_center().x, 0.0, _area.get_center().y)
 	if not _world is ProceduralWorld:
 		_read_obstacles(_world.get_node_or_null("Obstacles"))
-	# Reserve the rare guaranteed bank before quest stock can fill its herna.
+	# Reserve rare authored stock before density picks fill its compatible venue.
 	for definition in deposit_types:
 		if definition == null or definition.resource == null:
 			continue
 		for _index in definition.guaranteed:
 			if not _try_place(definition, 160, false, true) and _world is ProceduralWorld:
-				_quest_population_failed("Seed %d: no compatible clear venue bay for guaranteed %s." % [_level_seed, definition.resource.display_name])
+				_population_failed("Seed %d: no compatible clear venue bay for guaranteed %s." % [_level_seed, definition.resource.display_name])
 				set_physics_process(false)
 				return
 	if _world is ProceduralWorld:
 		if not _populate_venue_deposits():
-			set_physics_process(false)
-			return
-		_cap = maxi(_cap, _alive.size())
-	if _quests != null and _world is ProceduralWorld:
-		if not _populate_quest_deposits():
 			set_physics_process(false)
 			return
 		_cap = maxi(_cap, _alive.size())
@@ -360,44 +352,10 @@ func _populate_venue_deposits() -> bool:
 			if placed:
 				break
 		if not placed:
-			return _quest_population_failed("Seed %d: no compatible clear machine for %s room %d." % [_level_seed, kind, venue_id])
+			return _population_failed("Seed %d: no compatible clear machine for %s room %d." % [_level_seed, kind, venue_id])
 	return true
 
-## Prove the initial extraction budget on real, reachable collider faces before
-## any random placement can consume their space. No respawn or rare roll is needed.
-func _populate_quest_deposits() -> bool:
-	var requirements := _quests.requirements()
-	var definitions: Dictionary = {}
-	var available: Dictionary = {}
-	for resource: ResourceDefinition in requirements:
-		var definition: DepositDefinition
-		for candidate in deposit_types:
-			if candidate != null and candidate.resource == resource and candidate.yield_min > 0:
-				definition = candidate
-				break
-		if definition == null:
-			return _quest_population_failed("No mineable deposit definition for %s." % resource.display_name)
-		definitions[resource] = definition
-		available[resource] = 0
-		for deposit in _alive:
-			if deposit.definition.resource == resource:
-				available[resource] = int(available[resource]) + deposit.total_yield
-	# Satisfy every objective before optional spare stock consumes shared bays.
-	for spare_stock in [false, true]:
-		for resource: ResourceDefinition in requirements:
-			var definition: DepositDefinition = definitions[resource]
-			var target := int(requirements[resource])
-			var desired := maxi(ceili(target * 1.2), target + definition.yield_min) if spare_stock else target
-			while int(available[resource]) < desired:
-				var deposit := _try_venue_place(definition, false, true)
-				if deposit == null:
-					break
-				available[resource] = int(available[resource]) + deposit.total_yield
-			if int(available[resource]) < target:
-				return _quest_population_failed("Seed %d: only %d/%d %s can be mined in compatible clear venues." % [_level_seed, available[resource], target, resource.display_name])
-	return true
-
-func _quest_population_failed(message: String) -> bool:
+func _population_failed(message: String) -> bool:
 	push_error(message)
 	assert(false, message)
 	return false
@@ -739,10 +697,6 @@ func _on_fragment_mined(deposit: MineralDeposit, amount: int, center: Vector3) -
 	var normal := deposit.global_basis.z
 	_spill(definition.resource, amount, center, normal)
 	compartment_opened.emit()
-	# Currency, pickup overflow and bonus multipliers are not mining progress.
-	# Spill the conserved fracture loot before completion observers can clear a level.
-	if _quests != null:
-		_quests.record_mined(definition.resource, amount)
 	if not _bursts.is_empty():
 		_fire_emitter(_bursts[_next_burst], center, normal, Color(0.65, 0.58, 0.42))
 		_next_burst = (_next_burst + 1) % _bursts.size()

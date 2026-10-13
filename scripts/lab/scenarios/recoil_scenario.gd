@@ -8,6 +8,7 @@ func summary() -> String:
 
 func run() -> void:
 	var game := await lab.start_game(&"scout")
+	game.director.set_physics_process(false)
 	lab.equip_weapon("rail")
 	var target := lab.ahead(14.0)
 	lab.spawn_pack(lab.enemy("robot_grunt"), target, 8, 2.0)

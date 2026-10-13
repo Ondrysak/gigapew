@@ -28,6 +28,7 @@ func _run() -> void:
 	game.horde.set_physics_process(false)
 	game.player.set_physics_process(false)
 	await physics_frame
+	root.get_node("Music").stop(0.0)
 	await _check_precision(game)
 	var horde = game.horde
 	var definition = game._stage_enemies(game.campaign[0].schedule)[0]
@@ -53,6 +54,9 @@ func _run() -> void:
 			for slot in groups[depth]:
 				_check(is_equal_approx(horde._hp[slot], 95.0 - depth), "Nested blast lost, duplicated or substituted a target at depth %d" % depth)
 	game.free()
+	# Let the audio server release the fixture's stopped shot/impact playbacks
+	# before engine teardown; arithmetic checks do not need a live soundtrack.
+	await create_timer(0.05, true).timeout
 	print("Combat regressions: failures=%d" % _failures)
 	quit(1 if _failures > 0 else 0)
 

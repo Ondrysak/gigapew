@@ -27,12 +27,16 @@ var yaw: float
 var half: Vector2
 var height: float
 const AISLE_HALF := 1.05
+var aisle_half := AISLE_HALF
 const OUTDOOR_MARGIN := 0.75
 ## Leave a full 2 m navigation cell plus two 0.4 m enemy radii between assemblies.
 const FURNITURE_GAP := 2.8
 var mouths: Array[Vector2] = []
 var mouth_widths: Array[float] = []
 var clear_paths: Array[Rect2] = []
+## Mouths, their door routes, machine bays, stair landings and standing discs:
+## central islands may divert the open spine but never these reservations.
+var hard_paths: Array[Rect2] = []
 var stair_bounds: Array[Rect2] = []
 var furniture_bounds: Array[Rect2] = []
 var outdoor := false
@@ -57,6 +61,7 @@ static func build(sink: KitTarget, description: Dictionary) -> void:
 	kit.half = Vector2(absf(kit.right.x) * rect.size.x + absf(kit.right.z) * rect.size.y, absf(facing.x) * rect.size.x + absf(facing.y) * rect.size.y) * 0.5
 	kit.height = maxf(2.1, float(description.get("ceiling_y", kit.center.y + 3.0)) - kit.center.y)
 	kit.outdoor = StringName(description.get("kind", &"wc")) in [&"construction", &"park"]
+	kit.aisle_half = 1.6 if bool(description.get("combat_venue", false)) else AISLE_HALF
 	kit._reserve_routes()
 	kit.rng.seed = int(description.get("seed", 0))
 	kit.quote_rng.seed = int(description.get("seed", 0)) ^ QUOTE_SALT
@@ -150,7 +155,7 @@ func _quote_board(xform: Transform3D, size: Vector2, outside: bool, style: int) 
 
 func _hanging_quotes() -> void:
 	var size := Vector2(minf(1.9, half.x * 2.0 - 0.3), 0.86)
-	var y := minf(2.72, height - size.y * 0.5 - 0.12)
+	var y := minf(height - 0.68, height - size.y * 0.5 - 0.12) if bool(site.get("combat_venue", false)) else minf(2.72, height - size.y * 0.5 - 0.12)
 	# The clear central spine stays visible below the notices. Wall banks
 	# reach the ceiling, so hanging in the aisle avoids hiding the print.
 	for index in 2:
@@ -239,7 +244,7 @@ func _footprint(p: Vector3, size: Vector3, turn: float = 0.0) -> Rect2:
 
 
 func _reserve_segment(a: Vector2, b: Vector2) -> void:
-	clear_paths.append(Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), Vector2(absf(a.x - b.x), absf(a.y - b.y))).grow(AISLE_HALF))
+	clear_paths.append(Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), Vector2(absf(a.x - b.x), absf(a.y - b.y))).grow(aisle_half))
 
 
 func _reserve_endpoint(p: Vector2) -> void:
@@ -254,7 +259,7 @@ func _reserve_endpoint(p: Vector2) -> void:
 
 
 func _reserve_routes() -> void:
-	clear_paths.append(Rect2(Vector2(-AISLE_HALF, -half.y), Vector2(AISLE_HALF * 2.0, half.y * 2.0)))
+	clear_paths.append(Rect2(Vector2(-aisle_half, -half.y), Vector2(aisle_half * 2.0, half.y * 2.0)))
 	var openings: Array = site.get("openings", []).duplicate()
 	var widths: Array = site.get("opening_widths", [])
 	var door: Vector3 = site.get("door", _point(Vector3(0, 0, half.y)))
@@ -262,9 +267,10 @@ func _reserve_routes() -> void:
 		openings.append(door)
 	for index in openings.size():
 		var p := _local(openings[index])
-		var width := maxf(AISLE_HALF * 2.0, float(widths[index]) if index < widths.size() else AISLE_HALF * 2.0)
+		var width := maxf(aisle_half * 2.0, float(widths[index]) if index < widths.size() else aisle_half * 2.0)
 		mouths.append(p)
 		mouth_widths.append(width)
+		var before := clear_paths.size()
 		_reserve_endpoint(p)
 		# Keep the entire carved opening usable, not just its centre cell.
 		if absf(absf(p.x) - half.x) < 0.6:
@@ -273,11 +279,16 @@ func _reserve_routes() -> void:
 		elif absf(absf(p.y) - half.y) < 0.6:
 			var z := half.y - 2.0 if p.y > 0.0 else -half.y
 			clear_paths.append(Rect2(Vector2(p.x - width * 0.5, z), Vector2(width, 2.0)))
+		hard_paths.append_array(clear_paths.slice(before))
 	for standing: Vector3 in site.get("standing_points", []):
-		_reserve_endpoint(_local(standing))
+		var p := _local(standing)
+		_reserve_endpoint(p)
+		hard_paths.append(Rect2(p - Vector2.ONE * 0.8, Vector2.ONE * 1.6))
 	for zone: Rect2 in site.get("machine_zones", []):
 		clear_paths.append(_local_rect(zone))
+		hard_paths.append(clear_paths.back())
 	for entry: Dictionary in site.get("entrances", []):
+		var before := clear_paths.size()
 		var foot: Vector3 = entry.get("foot", entry.get("position", center))
 		var p := _local(foot)
 		mouths.append(p)
@@ -291,6 +302,7 @@ func _reserve_routes() -> void:
 			var landing := foot + direction * 1.0
 			var width := Vector2(absf(direction.z), absf(direction.x)) * 6.0 + Vector2(absf(direction.x), absf(direction.z)) * 2.0
 			clear_paths.append(_local_rect(Rect2(Vector2(landing.x, landing.z) - width * 0.5, width)))
+		hard_paths.append_array(clear_paths.slice(before))
 
 
 func _clear(p: Vector3, size: Vector3, turn: float = 0.0) -> bool:
@@ -351,6 +363,71 @@ func _available(p: Vector3, size: Vector3, turn: float) -> bool:
 	return true
 
 
+## A free-standing combat centrepiece (round bar, machine bank) may divert the
+## open central spine, never a mouth, door route, machine bay, stair or standing
+## disc. Its whole perimeter becomes reserved aisle: the room stays one loop.
+func _claim_island(footprint: Rect2) -> bool:
+	if count >= 40 or not Rect2(-half, half * 2.0).grow(-FURNITURE_GAP).encloses(footprint):
+		return false
+	var grown := footprint.grow(0.9)
+	for path: Rect2 in hard_paths:
+		if grown.intersects(path):
+			return false
+	var spacing := footprint.grow(FURNITURE_GAP)
+	for occupied: Rect2 in furniture_bounds:
+		if spacing.intersects(occupied):
+			return false
+	furniture_bounds.append(footprint)
+	clear_paths.append(spacing)
+	return true
+
+
+## Loose kickable kegs (instanced by the world): off the open spine and every
+## hard reservation, clear of furniture and spread apart. World floor points.
+func _prop_points(wanted: int) -> void:
+	var points: Array[Vector3] = []
+	var taken: Array[Vector2] = []
+	var inner := Rect2(-half, half * 2.0).grow(-0.7)
+	for row in int(inner.size.y) + 1:
+		for column in int(inner.size.x) + 1:
+			if points.size() >= wanted:
+				break
+			var p := inner.position + Vector2(column, row)
+			if absf(p.x) < aisle_half + 0.5:
+				continue
+			var disc := Rect2(p - Vector2.ONE * 0.45, Vector2.ONE * 0.9)
+			var free := true
+			for path: Rect2 in hard_paths:
+				free = free and not disc.intersects(path)
+			for occupied: Rect2 in furniture_bounds:
+				free = free and not disc.grow(0.4).intersects(occupied)
+			for other in taken:
+				free = free and other.distance_to(p) >= 3.0
+			if free:
+				taken.append(p)
+				points.append(_point(Vector3(p.x, 0.0, p.y)))
+	site["prop_points"] = points
+
+
+## Authored interior admission lane (world floor points), free of furniture.
+func _interior_lane(id: StringName, local_points: Array[Vector2]) -> void:
+	var points := PackedVector3Array()
+	var inner := Rect2(-half, half * 2.0).grow(-0.6)
+	for p in local_points:
+		var disc := Rect2(p - Vector2.ONE * 0.6, Vector2.ONE * 1.2)
+		var free := inner.encloses(disc)
+		for occupied: Rect2 in furniture_bounds:
+			free = free and not disc.intersects(occupied)
+		if free:
+			points.append(_point(Vector3(p.x, 0.0, p.y)))
+	if points.is_empty():
+		return
+	var lanes: Array[Dictionary] = []
+	lanes.assign(site.get("interior_lanes", []))
+	lanes.append({"id": id, "points": points})
+	site["interior_lanes"] = lanes
+
+
 func _sign(cell: int, p: Vector3, size: Vector2, turn: float = 0.0, glow: float = 0.0) -> void:
 	if absf(p.x) + size.x * 0.5 <= half.x and absf(p.z) + 0.04 <= half.y:
 		target.add_sign(_transform(p, Vector3(size.x, size.y, 0.06), turn), cell, 1, glow)
@@ -367,7 +444,9 @@ func _surface(shader: Shader, key: String, parameters: Dictionary) -> Material:
 
 
 func _entrance_sign(cell: int) -> void:
-	var position := (site.door as Vector3) + Vector3.UP * 2.55 + front * 0.16
+	# Lintel-height relative to the room: 2.55 m in a 3.2 m shop, clear of a
+	# double-jump arc through taller combat portals.
+	var position := (site.door as Vector3) + Vector3.UP * (height - 0.65) + front * 0.16
 	target.add_sign(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(3.0, 0.55, 0.035)), position), cell, 1, 0.35)
 
 
@@ -463,6 +542,7 @@ func _metro() -> void:
 	var wall := _surface(METRO, "metro%d:%s" % [line, center.y], {"mode": line, "line_color": color, "base_y": center.y})
 	_lining(wall, _surface(TERRAZZO, "terrazzo", {}))
 	_tubes()
+	_metro_pillars(color)
 	# A/B/C: golden cups, pearl glass/marble, cream ceramics; coloured inlays
 	# mark the central circulation while safe wall bays define fixture zones.
 	for side in [-1.0, 1.0]:
@@ -515,6 +595,28 @@ func _metro() -> void:
 		var p := top + Vector3(direction.z, 0, -direction.x) * 3.45
 		target.add_paint(&"box", Transform3D(Basis().scaled(Vector3(0.12, 2.5, 0.12)), p + Vector3.UP * 1.25), STEEL, KitTarget.Finish.METAL)
 		target.add_sign(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(0.8, 0.8, 0.16)), p + Vector3.UP * 2.6), 4, 1, 0.3)
+	_prop_points(2)
+
+
+## Platform colonnade: real round pillars to break sightlines and kite around,
+## never on the spine, a stair landing or the passage mouth.
+func _metro_pillars(color: Color) -> void:
+	var pillars: Array[Vector3] = []
+	for z: float in [-half.y * 0.5, half.y * 0.5, 0.0]:
+		for x: float in [-half.x * 0.5, half.x * 0.5]:
+			var p := Vector3(x, height * 0.5, z)
+			var size := Vector3(0.8, height, 0.8)
+			if pillars.size() >= 4 or count >= 40 or not _available(p, size, 0.0):
+				continue
+			furniture_bounds.append(_footprint(p, size))
+			target.add_round_solid(_point(p), 0.4, height)
+			count += 1
+			_shape(&"cylinder", p, Vector3(0.78, height - 0.02, 0.78), WHITE, false, KitTarget.Finish.SATIN)
+			_shape(&"cylinder", Vector3(x, 0.09, z), Vector3(0.86, 0.18, 0.86), DARK)
+			_shape(&"cylinder", Vector3(x, 1.25, z), Vector3(0.81, 0.08, 0.81), color, false, KitTarget.Finish.GLOSS)
+			_shape(&"cylinder", Vector3(x, height - 0.12, z), Vector3(0.9, 0.2, 0.9), STEEL, false, KitTarget.Finish.METAL)
+			pillars.append(_point(Vector3(x, 0.0, z)))
+	site["pillars"] = pillars
 
 
 func _wc_piece(kind: StringName, origin: Vector3, offset: Vector3, size: Vector3, color: Color, turn: float, block: bool = false, finish: int = KitTarget.Finish.MATTE, extra_turn: float = 0.0) -> void:
@@ -751,7 +853,8 @@ func _pub(snack: bool) -> void:
 	var length := minf(3.4, half.y * 1.1)
 	var depth := clampf(half.x - AISLE_HALF - 0.16, 2.20, 2.50)
 	var bar := Vector3(INF, INF, INF)
-	if count + 2 <= 40:
+	var round_bar := not snack and _round_bar(dado)
+	if count + 2 <= 40 and not round_bar:
 		bar = _room_assembly(Vector3(side * (half.x - depth * 0.5 - 0.1), 1.18, -half.y * 0.22), Vector3(length, 2.36, depth), turn, false)
 	if bar.is_finite():
 		side = signf(bar.x)
@@ -841,6 +944,78 @@ func _pub(snack: bool) -> void:
 			_box(dart, Vector3(0.05, 0.62, 0.62), Color(0.6, 0.15, 0.1))
 			_box(dart + Vector3(side * 0.035, 0, 0), Vector3(0.02, 0.4, 0.4), DARK)
 			_box(dart + Vector3(side * 0.05, 0, 0), Vector3(0.02, 0.08, 0.08), Color(0.2, 0.5, 0.2))
+	_prop_points(2 if snack else 3)
+
+
+## Hospoda centrepiece: a round island bar the fight can circle, its whole
+## perimeter kept as open aisle between the front and side doors.
+func _round_bar(dado: Color) -> bool:
+	var radius := 1.2
+	var bar_height := 1.12
+	for z: float in [-1.7, -1.3, -2.1, -0.9, -2.5]:
+		if not _claim_island(Rect2(Vector2(-radius, z - radius), Vector2.ONE * radius * 2.0)):
+			continue
+		var p := Vector3(0.0, bar_height * 0.5, z)
+		target.add_round_solid(_point(p), radius, bar_height)
+		count += 1
+		_shape(&"cylinder", p, Vector3(radius * 2.0 - 0.06, bar_height - 0.06, radius * 2.0 - 0.06), dado, false, KitTarget.Finish.SATIN)
+		_shape(&"cylinder", Vector3(0, bar_height - 0.03, z), Vector3(radius * 2.0 + 0.1, 0.06, radius * 2.0 + 0.1), DARK, false, KitTarget.Finish.SATIN)
+		_shape(&"ring", Vector3(0, 0.22, z), Vector3((radius + 0.08) / 0.44, 0.04 / 0.12, (radius + 0.08) / 0.44), STEEL, false, KitTarget.Finish.METAL)
+		for n in 12:
+			var angle := TAU * n / 12.0
+			_box(Vector3(cos(angle) * (radius - 0.02), 0.58, z + sin(angle) * (radius - 0.02)), Vector3(0.035, 0.95, 0.035), dado.darkened(0.25), false, KitTarget.Finish.MATTE, 0.0, -angle)
+		# Central tap tower with a ring of seated mugs and a drip tray.
+		_shape(&"cylinder", Vector3(0, bar_height + 0.28, z), Vector3(0.34, 0.5, 0.34), STEEL, false, KitTarget.Finish.METAL)
+		_shape(&"cylinder", Vector3(0, bar_height + 0.56, z), Vector3(0.5, 0.06, 0.5), STEEL, false, KitTarget.Finish.METAL)
+		for n in 4:
+			var angle := TAU * n / 4.0 + PI * 0.25
+			var tap := Vector3(cos(angle) * 0.24, bar_height + 0.47, z + sin(angle) * 0.24)
+			_box(tap, Vector3(0.05, 0.16, 0.05), dado, false, KitTarget.Finish.SATIN)
+		for n in 6:
+			var angle := TAU * n / 6.0
+			_glass(cos(angle) * (radius - 0.3), z + sin(angle) * (radius - 0.3), bar_height + 0.1)
+		_shape(&"cylinder", Vector3(0, height - 0.22, z), Vector3(radius * 2.0, 0.05, radius * 2.0), dado.darkened(0.35), false, KitTarget.Finish.SATIN, 0.4)
+		site["countertop_point"] = _point(Vector3(0, bar_height + 0.005, z + radius - 0.3))
+		site["countertop_facing"] = front
+		site["centerpiece"] = {"kind": &"round_bar", "position": _point(Vector3(0, 0, z)), "radius": radius, "height": bar_height}
+		var behind: Array[Vector2] = []
+		for step in 5:
+			var angle := -PI * 0.5 + (step - 2) * 0.7
+			behind.append(Vector2(cos(angle), sin(angle)) * (radius + 1.5) + Vector2(0, z))
+		_interior_lane(&"behind_bar", behind)
+		return true
+	return false
+
+
+## Herna centrepiece: a back-to-back bank of slot cabinets that splits the
+## floor into two machine lanes, both fed by the front and side doors.
+func _machine_bank(accent: Color) -> void:
+	for option: Vector2 in [Vector2(4.0, -1.6), Vector2(3.2, -1.3), Vector2(3.2, -2.0), Vector2(2.4, -1.6)]:
+		var size := Vector2(1.2, option.x)
+		var middle := Vector2(0.0, option.y)
+		if not _claim_island(Rect2(middle - size * 0.5, size)):
+			continue
+		var bank_height := 1.8
+		target.add_solid(_point(Vector3(0, bank_height * 0.5, middle.y)), Vector3(size.x, bank_height, size.y), yaw, null)
+		count += 1
+		var cabinets := int(size.y / 0.8)
+		for side: float in [-1.0, 1.0]:
+			for n in cabinets:
+				var z := middle.y - size.y * 0.5 + 0.4 + n * (size.y - 0.8) / maxf(1.0, cabinets - 1)
+				var screen := Color(0.2, 0.55, 0.9) if (n + int(side > 0.0)) % 2 == 0 else Color(0.95, 0.35, 0.6)
+				_box(Vector3(side * 0.3, 0.88, z), Vector3(0.58, 1.76, 0.74), DARK, false, KitTarget.Finish.SATIN)
+				_box(Vector3(side * 0.595, 1.18, z), Vector3(0.02, 0.5, 0.56), screen, false, KitTarget.Finish.GLOSS, 1.5)
+				_box(Vector3(side * 0.598, 1.64, z), Vector3(0.02, 0.16, 0.62), accent.lightened(0.3), false, KitTarget.Finish.GLOSS, 2.5)
+				_box(Vector3(side * 0.6, 0.84, z), Vector3(0.03, 0.05, 0.6), STEEL, false, KitTarget.Finish.METAL)
+		site["centerpiece"] = {"kind": &"machine_bank", "position": _point(Vector3(0, 0, middle.y)), "size": size}
+		for side: float in [-1.0, 1.0]:
+			var aisle: Array[Vector2] = []
+			for n in int(size.y) + 1:
+				# The two-metre horde raster must not share a cell with the bank:
+				# physical 1.75 m aisles were clear but rasterised as the cabinets.
+				aisle.append(Vector2(side * 3.0, middle.y - size.y * 0.5 + n))
+			_interior_lane(&"machine_aisle_left" if side < 0.0 else &"machine_aisle_right", aisle)
+		return
 
 
 func _herna() -> void:
@@ -851,6 +1026,7 @@ func _herna() -> void:
 	_room_lights(1, variant)
 	target.add_light(_point(Vector3(0, height - 0.4, half.y * 0.35)), Color(0.80, 0.85, 1.0), 1.15, 9.0)
 	_sign(18, Vector3(0, minf(2.3, height - 0.4), -half.y + 0.12), Vector2(2.5, 0.7), 0, 0.8)
+	_machine_bank(accent)
 	var turn := -PI * 0.5
 	var desk := Vector3(INF, INF, INF)
 	if count + 5 <= 40:
@@ -891,6 +1067,7 @@ func _herna() -> void:
 		site["countertop_facing"] = Basis(Vector3.UP, yaw + turn) * Vector3.BACK
 	_room_notice(-1.0, half.y * 0.55, 21, accent, (variant % 2) + 1)
 	_room_notice(1.0, half.y * 0.1, 18, accent, (variant + 1) % 3)
+	_prop_points(2)
 
 
 func _shop() -> void:

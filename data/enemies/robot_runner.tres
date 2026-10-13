@@ -7,16 +7,22 @@
 [resource]
 script = ExtResource("1_def")
 display_name = "Feťák"
-behavior = 0
-max_health = 7.0
-speed = 7.5
+behavior = 3
+max_health = 65.0
+speed = 5.4
 radius = 0.3
 height = 1.8
 weak_spot_offset = Vector3(0, 1.64, -0.03)
 weak_spot_radius = 0.18
 mass = 0.7
 contact_damage = 1.0
-xp_value = 1
+xp_value = 2
+attack_cooldown = 2.1
+telegraph_duration = 0.42
+charge_range = 9.0
+charge_speed = 17.0
+charge_duration = 0.38
+recovery_duration = 0.7
 faction = 1
 fx_color = Color(0.45, 0.06, 0.04, 1)
 model_scene = ExtResource("2_model")

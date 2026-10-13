@@ -92,6 +92,7 @@ static func bake_anatomy(body: ArrayMesh, definition: HordeEnemyDefinition) -> A
 	var mesh := ArrayMesh.new()
 	var head_origin := (min_points[0] + max_points[0]) * 0.5 if counts[0] > 0 else weak
 	var head_width := maxf(max_points[0].x - min_points[0].x, radius * 2.0) if counts[0] > 0 else radius * 2.0
+	var head_radius := (max_points[0] - min_points[0]).length() * 0.5 if counts[0] > 0 else radius
 	var pivots := PackedVector3Array()
 	var tips := PackedVector3Array()
 	for piece in range(2, 6):
@@ -136,6 +137,7 @@ static func bake_anatomy(body: ArrayMesh, definition: HordeEnemyDefinition) -> A
 		material.set_shader_parameter("anatomy_upright", upright)
 		material.set_shader_parameter("anatomy_head_origin", head_origin)
 		material.set_shader_parameter("anatomy_head_width", head_width)
+		material.set_shader_parameter("anatomy_head_radius", head_radius)
 		material.set_shader_parameter("anatomy_pivot_refs", pivot_refs)
 		material.set_shader_parameter("anatomy_tip_refs", tip_refs)
 		var names := ["left_arm", "right_arm", "left_leg", "right_leg"]

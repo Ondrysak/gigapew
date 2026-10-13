@@ -22,14 +22,16 @@ const SCENARIOS := {
 	&"guns": preload("res://scripts/lab/scenarios/guns_scenario.gd"),
 	&"gunplay": preload("res://scripts/lab/scenarios/gunplay_scenario.gd"),
 	&"combo_pressure": preload("res://scripts/lab/scenarios/combo_pressure_scenario.gd"),
+	&"rhythm_combo": preload("res://scripts/lab/scenarios/rhythm_combo_scenario.gd"),
 	&"quotes": preload("res://scripts/lab/scenarios/quotes_scenario.gd"),
 	&"producer": preload("res://scripts/lab/scenarios/producer_scenario.gd"),
 	&"tempo": preload("res://scripts/lab/scenarios/tempo_scenario.gd"),
 	&"pressure": preload("res://scripts/lab/scenarios/pressure_scenario.gd"),
 	&"fusion": preload("res://scripts/lab/scenarios/fusion_scenario.gd"),
 	&"hallucinations": preload("res://scripts/lab/scenarios/hallucinations_scenario.gd"),
+	&"hallucination_modes": preload("res://scripts/lab/scenarios/hallucination_modes_scenario.gd"),
 	&"levels": preload("res://scripts/lab/scenarios/levels_scenario.gd"),
-	&"quests": preload("res://scripts/lab/scenarios/quests_scenario.gd"),
+	&"arena": preload("res://scripts/lab/scenarios/arena_scenario.gd"),
 	&"pickups": preload("res://scripts/lab/scenarios/pickups_scenario.gd"),
 	&"abilities": preload("res://scripts/lab/scenarios/abilities_scenario.gd"),
 	&"combos": preload("res://scripts/lab/scenarios/combos_scenario.gd"),
@@ -38,6 +40,10 @@ const SCENARIOS := {
 	&"music": preload("res://scripts/lab/scenarios/music_scenario.gd"),
 	&"boss": preload("res://scripts/lab/scenarios/boss_scenario.gd"),
 	&"boss_patterns": preload("res://scripts/lab/scenarios/boss_patterns_scenario.gd"),
+	&"routes": preload("res://scripts/lab/scenarios/routes_scenario.gd"),
+	&"pinball": preload("res://scripts/lab/scenarios/pinball_scenario.gd"),
+	&"horde_pinball": preload("res://scripts/lab/scenarios/horde_pinball_scenario.gd"),
+	&"finishers": preload("res://scripts/lab/scenarios/finishers_scenario.gd"),
 	&"armor": preload("res://scripts/lab/scenarios/armor_scenario.gd"),
 	&"encounter": preload("res://scripts/lab/scenarios/encounter_scenario.gd"),
 	&"levelup": preload("res://scripts/lab/scenarios/level_up_scenario.gd"),
@@ -51,7 +57,7 @@ const SCENARIOS := {
 	&"icons": preload("res://scripts/lab/scenarios/icons_scenario.gd"),
 }
 ## Batch runs never hang: the whole process quits after this many seconds.
-const BATCH_TIMEOUT := 480.0
+const BATCH_TIMEOUT := 1200.0
 const REPORT_FILE := "lab_report.txt"
 
 var game: ArenaGame
@@ -91,7 +97,7 @@ func _ready() -> void:
 ## `procedural` exercises the real generated campaign instead. The director is
 ## halted and player invulnerable until the scenario enables normal combat.
 ## Fixtures run as an experienced player (all skills, no tips) unless `guided`.
-func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: bool = false, seed_value: int = -1, guided: bool = false) -> ArenaGame:
+func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: bool = false, seed_value: int = -1, guided: bool = false, auto_draft: bool = true) -> ArenaGame:
 	Profile.selected_class_id = class_id
 	Profile.set_setting("guided_start", guided)
 	game = GAME_SCENE.instantiate() as ArenaGame
@@ -107,6 +113,8 @@ func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: boo
 			game.campaign[index] = fixture
 	add_child(game)
 	await frames(2)
+	if auto_draft and game.round_state == ArenaGame.RoundState.DRAFT:
+		game.weapon_draft.confirm()
 	if stage != 0 or seed_value >= 0:
 		game._load_stage(stage, seed_value)
 		await frames(2)
@@ -114,9 +122,9 @@ func start_game(class_id: StringName = &"scout", stage: int = 0, procedural: boo
 	game.director.set_physics_process(false)
 	game.player.grant_invulnerability(1.0e9)
 	if not procedural:
-		game.hud.quest_panel.hide()
-		game.hud.contract_box.hide()
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		game.hud.arena_panel.hide()
+		game.hud.arena_round_box.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if game.round_state == ArenaGame.RoundState.DRAFT else Input.MOUSE_MODE_CAPTURED
 	await frames(2)
 	return game
 
@@ -204,6 +212,15 @@ func fire(held: bool) -> void:
 		Input.action_press(&"fire")
 	else:
 		Input.action_release(&"fire")
+
+func key(code: Key) -> void:
+	for pressed in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = code
+		event.physical_keycode = code
+		event.pressed = pressed
+		Input.parse_input_event(event)
+		await frames(2)
 
 func wait(seconds: float) -> void:
 	await get_tree().create_timer(seconds, true, false, true).timeout

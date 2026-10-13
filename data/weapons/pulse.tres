@@ -7,10 +7,11 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Lahve od piva"
-description = "Rychle házené lahve. Prázdný sklo, plná ruka."
-damage = 60
+description = "Rychlé přesné lahve. Dvě těla v řadě; hlavy a běžci bez čekání na DROP."
+damage = 45
 recoil_degrees = 0.1
-fire_interval = 0.09
+fire_interval = 0.14
+range_meters = 32.0
 pierce = 1
 view_scene = ExtResource("2_view")
 icon = ExtResource("icon_px")

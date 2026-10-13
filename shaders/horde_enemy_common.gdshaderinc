@@ -1,10 +1,15 @@
 // Shared surface for batched horde enemies (static and vertex-animated).
 // Per-instance state arrives in INSTANCE_CUSTOM:
-// x = hit flash 0..1, y = attack telegraph 0..1 (-1 = stagger),
+// x = status bits as the integer part (1 burning, 2 charged, 4 hyped,
+//     8 hype source, 16 dazed) + hit flash 0..0.99 as the fraction,
+// y = attack telegraph 0..1 (-1 = stagger),
 // z = phase [0, TAU) + TAU * (fusion members - 1); ordinary enemies have one member,
 // w = slow strength 0..1 (frost tint), -1 = Tag Burst exposure.
 global uniform float hallucination_intensity;
 global uniform float hallucination_time;
+global uniform float hallucination_escalation;
+global uniform float hallucination_beat;
+global uniform int hallucination_mode;
 // Only the once-baked appendage subset enables this; the real body is unchanged.
 uniform bool anatomy_enabled = false;
 uniform vec3 anatomy_head_origin = vec3(0.0, 1.15, 0.0);
@@ -17,6 +22,7 @@ uniform vec3 anatomy_right_arm_tip = vec3(0.3, 0.4, 0.0);
 uniform vec3 anatomy_left_leg_tip = vec3(-0.1, 0.0, 0.0);
 uniform vec3 anatomy_right_leg_tip = vec3(0.1, 0.0, 0.0);
 uniform float anatomy_head_width = 0.4;
+uniform float anatomy_head_radius = 0.35;
 uniform bool anatomy_upright = true;
 // Rest vertex references used only by VAT appendages to carry the attachment
 // joints with the same sampled clip/frame as the source limb.
@@ -64,6 +70,42 @@ varying float v_telegraph;
 varying float v_frost;
 varying float v_fusion;
 varying vec3 v_local;
+varying float v_status;
+
+float horde_status(float encoded) {
+	return floor(max(encoded, 0.0));
+}
+
+float horde_flash(float encoded) {
+	return max(encoded, 0.0) - horde_status(encoded);
+}
+
+// Combo statuses stay readable without per-enemy nodes: burning bodies glow
+// orange, charged rims crackle violet, hyped allies carry a gold rim and the
+// hype source itself pulses magenta. Daze pulses the entire body orange/gold,
+// not just a rim, without changing its silhouette or shot precision geometry.
+void horde_status_surface(float status, vec3 normal, vec3 view, float time, vec3 local_pos, inout vec3 out_albedo, inout vec3 out_emission) {
+	if (status < 0.5) {
+		return;
+	}
+	float rim = pow(1.0 - clamp(dot(normal, view), 0.0, 1.0), 2.0);
+	float burning = mod(status, 2.0);
+	float charged = mod(floor(status / 2.0), 2.0);
+	float hyped = mod(floor(status / 4.0), 2.0);
+	float source = mod(floor(status / 8.0), 2.0);
+	float lick = 0.75 + 0.25 * sin(time * 17.0 + local_pos.y * 9.0);
+	out_emission += vec3(1.0, 0.38, 0.06) * burning * (0.25 + rim * 1.6) * lick;
+	float crackle = step(0.8, fract(time * 7.3 + local_pos.y * 2.3 + local_pos.x * 1.7));
+	out_emission += vec3(0.62, 0.45, 1.0) * charged * rim * (1.0 + 2.0 * crackle);
+	out_emission += vec3(1.0, 0.8, 0.12) * hyped * rim * 1.2;
+	out_albedo = mix(out_albedo, vec3(1.0, 0.25, 0.75), source * 0.35);
+	out_emission += vec3(1.0, 0.25, 0.75) * source * (0.35 + rim * 1.8) * (0.6 + 0.4 * sin(time * 9.0));
+	float dazed = mod(floor(status / 16.0), 2.0);
+	float daze_pulse = 0.5 + 0.5 * sin(hallucination_time * 10.0);
+	vec3 daze_gold = mix(vec3(1.0, 0.31, 0.025), vec3(1.0, 0.78, 0.08), daze_pulse);
+	out_albedo = mix(out_albedo, daze_gold, dazed * (0.55 + 0.25 * daze_pulse));
+	out_emission = mix(out_emission, daze_gold * (0.85 + 1.5 * daze_pulse + rim * 0.6), dazed);
+}
 
 float horde_phase(float encoded) {
 	return fract(encoded / HORDE_TAU) * HORDE_TAU;
@@ -91,15 +133,19 @@ vec4 fusion_torso(vec3 p) {
 	return vec4(a * b * gradient + vec3(0.0, dy * core, 0.0), a * b * core);
 }
 
+vec3 horde_fusion_push(vec3 posed, float strength, float wave) {
+	float stomp = pow(max(sin(wave), 0.0), 4.0);
+	vec3 motion = fusion_body_height * vec3(sin(wave) * 0.027 + sin(wave * 2.0 + 0.7) * 0.009, -stomp * 0.022, sin(wave + 0.8) * 0.013);
+	return (posed * vec3(0.20, 0.0, 0.10) + motion) * strength;
+}
+
 void horde_fused_pose(inout vec3 posed, inout vec3 normal, inout vec3 tangent, inout vec3 binormal, float fusion, float wave) {
 	if (fusion <= 0.0) {
 		return;
 	}
 	vec4 torso = fusion_torso(posed);
 	float strength = mix(0.85, 1.0, fusion);
-	float stomp = pow(max(sin(wave), 0.0), 4.0);
-	vec3 motion = fusion_body_height * vec3(sin(wave) * 0.027 + sin(wave * 2.0 + 0.7) * 0.009, -stomp * 0.022, sin(wave + 0.8) * 0.013);
-	vec3 push = (posed * vec3(0.20, 0.0, 0.10) + motion) * strength;
+	vec3 push = horde_fusion_push(posed, strength, wave);
 	vec3 scale = vec3(1.0) + vec3(0.20, 0.0, 0.10) * torso.w * strength;
 	mat3 jacobian = mat3(vec3(scale.x, 0.0, 0.0) + push * torso.x,
 		vec3(0.0, 1.0, 0.0) + push * torso.y,
@@ -125,6 +171,10 @@ void horde_anatomy_pose(inout vec3 posed, inout vec3 normal, inout vec3 tangent,
 	float strength = clamp(hallucination_intensity, 0.0, 1.0)
 		* smoothstep(near_cull + 0.25, near_cull + 1.5, distance)
 		* (1.0 - smoothstep(20.0, 36.0, distance));
+	float escalation = clamp(hallucination_escalation, 0.0, 1.0);
+	float rank = clamp(escalation / max(hallucination_intensity, 0.0001), 0.0, 1.0);
+	float crystal = smoothstep(0.35, 0.70, rank);
+	float maximum = smoothstep(0.70, 1.0, rank);
 	float side = mod(piece, 2.0) > 0.5 ? -1.0 : 1.0;
 	float clock = hallucination_time * (0.55 + 0.12 * sin(phase + piece)) + phase + piece * 1.71;
 	bool head = piece < 2.5;
@@ -133,12 +183,42 @@ void horde_anatomy_pose(inout vec3 posed, inout vec3 normal, inout vec3 tangent,
 		? (side < 0.0 ? anatomy_left_arm : anatomy_right_arm)
 		: (side < 0.0 ? anatomy_left_leg : anatomy_right_leg);
 	pivot += pivot_delta;
-	float roll = head ? side * 0.17 + sin(clock) * 0.12
-		: side * (arm ? 0.52 : 0.23) + sin(clock) * (arm ? 0.27 : 0.20);
-	float pitch = sin(clock * 0.73 + piece) * (head ? 0.14 : 0.31);
-	mat3 hinge = mat3(vec3(cos(roll), sin(roll), 0.0), vec3(-sin(roll), cos(roll), 0.0), vec3(0.0, 0.0, 1.0))
-		* mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(pitch), sin(pitch)), vec3(0.0, -sin(pitch), cos(pitch)));
-	float size = sqrt(strength) * (head ? 0.73 : 0.93);
+	float roll;
+	float pitch;
+	mat3 hinge;
+	float root_strength = sqrt(strength);
+	float size = root_strength * (head ? 0.73 : 0.93);
+	if (head) {
+		// Beat breathing only shrinks source-head copies: the pre-existing
+		// swept-radius clearance remains an upper bound at every rank.
+		size *= 1.0 - escalation * (0.22 * hallucination_beat + 0.10 * crystal + 0.08 * maximum);
+	}
+	// Spin only the baked source-head copies. The primary surface never enters
+	// this path; its VAT pose and precision target remain untouched.
+	if (head && (hallucination_mode == 4 || hallucination_mode == 5)) {
+		float spin_phase = phase + level * 0.67 + piece * 1.71;
+		float spin_rate = (hallucination_mode == 5 ? 0.36 : 0.46) + 0.06 * sin(phase);
+		float yaw = side * (hallucination_time * spin_rate + spin_phase
+			+ escalation * (1.40 * hallucination_beat
+				+ crystal * sin(hallucination_time * 0.71 + spin_phase) * 0.90
+				+ maximum * sin(hallucination_time * 1.13 - spin_phase) * 0.65));
+		roll = side * 0.17 + sin(hallucination_time * 0.29 + spin_phase) * 0.28
+			+ escalation * (0.60 * (hallucination_beat - 0.5)
+				+ crystal * sin(hallucination_time * 0.53 + spin_phase) * 0.45);
+		pitch = sin(hallucination_time * 0.43 + spin_phase) * 0.12
+			+ escalation * (crystal * sin(hallucination_time * 0.67 - spin_phase) * 0.40
+				+ maximum * sin(hallucination_time * 0.97 + spin_phase) * 0.30);
+		hinge = mat3(vec3(cos(yaw), 0.0, -sin(yaw)), vec3(0.0, 1.0, 0.0), vec3(sin(yaw), 0.0, cos(yaw)))
+			* mat3(vec3(cos(roll), sin(roll), 0.0), vec3(-sin(roll), cos(roll), 0.0), vec3(0.0, 0.0, 1.0))
+			* mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(pitch), sin(pitch)), vec3(0.0, -sin(pitch), cos(pitch)));
+		size *= 1.0 + sin(hallucination_time * 0.37 + spin_phase) * 0.045;
+	} else {
+		roll = head ? side * 0.17 + sin(clock) * 0.12
+			: side * (arm ? 0.52 : 0.23) + sin(clock) * (arm ? 0.27 : 0.20);
+		pitch = sin(clock * 0.73 + piece) * (head ? 0.14 : 0.31);
+		hinge = mat3(vec3(cos(roll), sin(roll), 0.0), vec3(-sin(roll), cos(roll), 0.0), vec3(0.0, 0.0, 1.0))
+			* mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(pitch), sin(pitch)), vec3(0.0, -sin(pitch), cos(pitch)));
+	}
 	vec3 offset;
 	if (head) {
 		offset = vec3(side * (anatomy_head_width * 0.64 + fusion_body_height * 0.06),
@@ -155,7 +235,9 @@ void horde_anatomy_pose(inout vec3 posed, inout vec3 normal, inout vec3 tangent,
 		// Three native heads cycle through shrinking depths. The first/last
 		// depths collapse smoothly before reassignment, suggesting unending
 		// inward growth without ever moving the player's camera or real head.
-		float depth = mod(level - 1.0 + hallucination_time * 0.10 + phase * 0.08, 3.0) + 1.0;
+		float depth = mod(level - 1.0 + hallucination_time * 0.10 + phase * 0.08
+			+ escalation * (hallucination_beat * 0.16 + crystal * sin(clock * 0.41) * 0.28
+				+ maximum * sin(clock * 0.73 + level) * 0.20), 3.0) + 1.0;
 		float envelope = smoothstep(1.0, 1.28, depth) * (1.0 - smoothstep(3.55, 4.0, depth));
 		float child_size = pow(0.53, depth);
 		float detail = 1.0 - smoothstep(9.0, 21.0, distance + depth * 2.0);
@@ -182,7 +264,16 @@ void horde_anatomy_pose(inout vec3 posed, inout vec3 normal, inout vec3 tangent,
 		float detail = 1.0 - smoothstep(12.0, 25.0, distance + level * 3.0);
 		relative = mix((tip - pivot) * 0.6, relative, detail);
 	}
-	posed = pivot + hinge * relative * size + offset * sqrt(strength);
+	posed = pivot + hinge * relative * size + offset * root_strength;
+	if (head && (hallucination_mode == 4 || hallucination_mode == 5)) {
+		// A long snout can rotate through the real precision face. Extra rank
+		// motion only rotates/shrinks, so this full swept sphere (plus VAT
+		// padding) also bounds every new beat/crystal orientation.
+		// Core clearance does not shrink into the target at low intensity.
+		float clearance = anatomy_head_radius * size * 1.2 + fusion_weak_spot.w * 1.35
+			+ abs(pivot.x - fusion_weak_spot.x);
+		posed.x += side * max(clearance - abs(offset.x) * root_strength, 0.0);
+	}
 	normal = hinge * normal;
 	tangent = hinge * tangent;
 	binormal = hinge * binormal;

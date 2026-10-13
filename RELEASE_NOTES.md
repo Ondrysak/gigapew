@@ -1,3 +1,101 @@
+# Unreleased
+
+- Fixed gun/crowbar overlap for automaty and cigarette salvage. Raised idle
+  crowbar and impact recovery exclusively replace the firearm; leaving restores it.
+- Reworked kick/parry poses with fast extension, contact hold and weighted return.
+  Sliding shows a forward leg and tucked/canted gun with a bounded bank/FOV rush;
+  standing kick, slide kick and downward stomp remain distinct without aim steering.
+- Added Doom-style daze: surviving damage at <=20% lifetime starting HP opens
+  one 2.8-second orange/gold window per non-boss life. Dazed bodies stop attacking,
+  remain damageable and cannot fuse away; expiry resumes pursuit. Lethal hits
+  still kill normally.
+- F now selects dazed bodies up to 8 m away and commits to a real
+  collision-driven leap, not teleportation. Cached hands brace, the knee tucks
+  and the boot rotates through a front-flip kick: contact at 0.46s, planted
+  recovery ending at 0.80s. Bounded camera bank/pitch and FOV rush preserve aim.
+- Successful melee contact adds a hollow gold/magenta crown, directed sparks,
+  tumbling debris and terrain-aligned stamp alongside species death FX.
+  Exact-once score/STYLE/DROP and up to 12 HP still use the shared healing budget.
+  Walls/ceilings interrupt flight; floors, intervening bodies, expired/stale
+  lives, pause and death prevent invalid contact. No warp, homing, immunity
+  or music pause. Held F never repeats; fresh F wins over firing and salvage.
+- Leaping-finisher verification: eight native combat/salvage/music/onboarding
+  scenarios, 57 captures, zero failures; final native finisher playback,
+  nine captures, zero failures, including live enemy death physics and range
+  limits. Combat regressions reported `failures=0`. Front-flip/contact/death/
+  recovery and interrupted leap captures were inspected visually. Frame rate
+  and long-session balance are not measured.
+- The three-sector score attack now links physical venue fights: choose an
+  unvisited hospoda, herna, nonstop or metro, travel there, then clear a finite
+  local fight. Each sector has seven distinct sites; 3/4/5 cleared sites reach
+  its shop. Arrival, routes, travel and empty breathers freeze STYLE decay.
+  Mining quotas, required stashes and extraction remain removed.
+- Machine salvage is optional smash-and-grab: one fresh F press opens one
+  compartment immediately. Held, duplicate and paused inputs cannot repeat payouts.
+- Added double jump and momentum slide. Sliding lowers the real collider and
+  head, supports shooting and waits for headroom before standing.
+- Draft two distinct guns at run start. Q/wheel swaps only that pair; the
+  combat-time catalogue is removed. Empty breaks and shops replace either
+  slot freely, with atomic cancellation and shared upgrades applied once.
+- Added fresh-press RMB kick/parry, a visible boot, slide launches and airborne
+  stomp/bounce (a missed stomp dives). Light bodies hit walls and other enemies;
+  heavies stagger. Real wall/ceiling constraints and menu/death release gates remain.
+- Four deliberate weapon interactions: freeze/kick/shatter, burning-target
+  shotgun flame bursts, launched-target ×2 rail AIR MAIL, and charged-target
+  explosive conduction. AIR MAIL requires flight, not height on a raised floor.
+  Manual chains are bounded and cannot recursively farm.
+- Explicit kicks, launch impacts, returned shots, manual combos and keg deaths
+  now join primary kills in exact-once STYLE/score credit. Ambient status deaths,
+  automatic weapons and nonlethal hit spam still earn none. A spent DROP's own
+  synchronous chains cannot refill its charge.
+- Successful projectile parries heal 6 HP; close finishes heal one 6 HP step per
+  transaction from a refilling budget. Misses, distant kills and corpse hits do not.
+- Added Flaškař's committed ballistic bottles, the physically blocking bouncer
+  and Hecíř's visible speed/cadence/damage aura. Kill or stun the source to remove
+  its buff; enemy health is never fabricated or healed by it.
+- Added finite kickable/shootable steel kegs, circular pub bars, herna bank lanes
+  and local role entrances. Kegs detonate once with real wall-clipped damage.
+- Three two-rank build perks specialize slide, shatter or projectile return.
+- Initial draft and route screens support keyboard/mouse at 960×600. The
+  compact HUD now separates vitals, all five skills and both gun names.
+- STYLE charges one DROP. A fresh manual heavy shot on the audible beat spends
+  it for ×10 damage and a gun-specific payoff. Off-beat, held, fast and muted
+  shots retain the charge. The unconditional ×10 perfect-beat reward is removed.
+- Enemies have distinct jobs: flanking grunts, committed runner dashes,
+  lane-denying ranged fans, recovering chargers and front-ramming plated carriers.
+  Grunt/runner/ranged/charger/carrier/boss base HP is 90/65/150/420/480/2600;
+  authored XP is 2/2/5/12/12/180 so finite arenas still reach upgrades.
+- Explosions now stagger, push and launch line-of-sight enemies without extra
+  damage or rewards. Deaths throw directional debris; blasts add ground rings
+  and a rate-limited boom without ducking hardtek.
+- Generated venues are two-door combat loops with clear aisles, 4.4 m ceilings
+  and outdoor escape lanes. Corridors widen to 6–8 m, dead-end alcoves are
+  removed, and lower decks allow double-jump shortcuts. WCs, metro halls,
+  furnished venues and hlášky signs remain.
+- Records add best score; the HUD tracks score, record and arena set.
+- STYLE escalation at 100 / 200 / 300+ retains the beat-kicked lettering,
+  print shards and preset-specific hallucination motifs. The saved intensity
+  ceiling is unchanged; zero disables the new tiers.
+- Combat-pinball verification passed the complete native lab: 38 scenarios /
+  607 captures, zero failures or script/engine errors. Combat regressions
+  reported `failures=0` with clean teardown. Compact draft/routes/indoor HUD,
+  launch/shatter/keg effects and hype aura were inspected visually.
+- Six saved hallucination presets: original feedback, vortex floors, liquid
+  vision, crystal mirrors, spinning phantom heads and the default Delirium mix.
+  Inspired by CrystalDive's polar folds, gradient lensing and twisted lattices.
+- Vortex/liquid fields deform authored outdoor and indoor floor patterns,
+  including metro terrazzo, public-WC tiles and all four venue finishes.
+  Floor geometry, collisions, wall tiles and industrial warning/navigation
+  markings are unchanged.
+- Phantom heads turn around their source-pose attachment with slow counter-spin,
+  nodding and breathing. Baked swept-radius clearance accommodates long snouts
+  without moving the main precision head or changing real shot damage.
+- Settings expose the preset beside the renamed intensity ceiling and remain
+  reachable at 960×600. Actual kill STYLE drives the ceiling; zero
+  restores the original appearance, and pause freezes the new effects.
+- Screen effects leave the central aim region and HUD clear. Head-only mode
+  avoids the screen-reading pass; no history buffers or camera steering added.
+
 # Kakaboomboom 0.7.0
 
 Reactive generated hardtek, richer Prague interiors, quote-inspired weapons and

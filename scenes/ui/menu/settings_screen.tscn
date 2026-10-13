@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/menu/settings_screen.gd" id="1_settings"]
 
-[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "hallucinations_slider", "hallucinations_value", "fullscreen_toggle", "guided_toggle", "reset_tips_button", "default_focus", "back_button")]
+[node name="Settings" type="Control" node_paths=PackedStringArray("master_slider", "music_slider", "sfx_slider", "sensitivity_slider", "master_value", "music_value", "sfx_value", "sensitivity_value", "hallucinations_slider", "hallucinations_value", "hallucinations_mode", "fullscreen_toggle", "guided_toggle", "reset_tips_button", "default_focus", "back_button")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,6 +21,7 @@ sfx_value = NodePath("Center/Panel/Rows/Grid/SfxValue")
 sensitivity_value = NodePath("Center/Panel/Rows/Grid/SensitivityValue")
 hallucinations_slider = NodePath("Center/Panel/Rows/Grid/HallucinationsSlider")
 hallucinations_value = NodePath("Center/Panel/Rows/Grid/HallucinationsValue")
+hallucinations_mode = NodePath("Center/Panel/Rows/Grid/HallucinationsMode")
 fullscreen_toggle = NodePath("Center/Panel/Rows/Fullscreen")
 guided_toggle = NodePath("Center/Panel/Rows/Guided")
 reset_tips_button = NodePath("Center/Panel/Rows/ResetTips")
@@ -42,7 +43,7 @@ layout_mode = 2
 
 [node name="Rows" type="VBoxContainer" parent="Center/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Center/Panel/Rows"]
 layout_mode = 2
@@ -60,7 +61,7 @@ layout_mode = 2
 [node name="Grid" type="GridContainer" parent="Center/Panel/Rows"]
 layout_mode = 2
 theme_override_constants/h_separation = 22
-theme_override_constants/v_separation = 18
+theme_override_constants/v_separation = 12
 columns = 3
 
 [node name="MasterName" type="Label" parent="Center/Panel/Rows/Grid"]
@@ -145,14 +146,14 @@ horizontal_alignment = 2
 
 [node name="HallucinationsName" type="Label" parent="Center/Panel/Rows/Grid"]
 layout_mode = 2
-text = "INTENZITA HALUCINACÍ"
+text = "STROP HALUCINACÍ"
 
 [node name="HallucinationsSlider" type="HSlider" parent="Center/Panel/Rows/Grid"]
 custom_minimum_size = Vector2(300, 28)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-tooltip_text = "Opakující se menší končetiny a hlavy, iluze nekonečného zoomu a rozmazané vidění se smyčkou zpětné vazby. Nula vypne nové efekty; nemění zásahy ani hlavní zamíření."
+tooltip_text = "Strop intenzity: skutečná série zásahů zvedá efekty z 28 % stropu na plný účinek při 100 zásazích. Nula vypne všechny režimy. Zamíření, zásahy a kolize se nemění."
 min_value = 0.0
 max_value = 1.0
 step = 0.01
@@ -163,6 +164,19 @@ custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
 text = "65%"
 horizontal_alignment = 2
+
+[node name="HallucinationsModeName" type="Label" parent="Center/Panel/Rows/Grid"]
+layout_mode = 2
+text = "REŽIM HALUCINACÍ"
+
+[node name="HallucinationsMode" type="OptionButton" parent="Center/Panel/Rows/Grid"]
+custom_minimum_size = Vector2(300, 32)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Vířivá podlaha kroutí skutečné vzory povrchů; tekuté vidění vlní okolí; krystalové zrcadlo skládá svět; kolotoč hlav otáčí přidané hlavy. Delirium mix kombinuje režimy plynule. Pauza zastaví pohyb."
+
+[node name="HallucinationsModeSpacer" type="Control" parent="Center/Panel/Rows/Grid"]
+layout_mode = 2
 
 [node name="Fullscreen" type="CheckButton" parent="Center/Panel/Rows"]
 layout_mode = 2

@@ -10,6 +10,8 @@ func summary() -> String:
 
 func run() -> void:
 	var game := await lab.start_game()
+	game.director.set_physics_process(false)
+	game.horde.clear()
 	var player := game.player
 	game.horde.target = null
 	player.global_position = Vector3(0, 1, 12)
@@ -40,6 +42,7 @@ func run() -> void:
 	var result := await _sample(player, 0.65)
 	var expected := result.y / (player.weapon.fire_interval / game.run_state.fire_rate_multiplier)
 	lab.check(result.x / result.y > 60.0 and absf(result.x - expected) <= 3.0, "upgraded primary exceeds one shot per physics tick without quantizing cadence (%.0f / %.3fs, expected %.1f)" % [result.x, result.y, expected])
+	lab.check(player.arena_score == 0 and player.drop_charge == 0.0, "rapid held fire without real primary kills never creates score or DROP")
 	await lab.capture_strip("rapid_primary", 4, 0.05, 4)
 	game.run_state.fire_rate_multiplier = 1.0
 	await lab.wait(1.0)

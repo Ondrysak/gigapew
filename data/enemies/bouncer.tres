@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="HordeEnemyDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/horde_enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://assets/monsters/robot_tank/robot_tank.glb" id="2_model"]
+[ext_resource type="Resource" path="res://assets/monsters/robot_tank/robot_tank_vat.tres" id="3_vat"]
+
+[resource]
+script = ExtResource("1_def")
+display_name = "Vyhazovač"
+behavior = 6
+max_health = 600.0
+speed = 2.4
+radius = 0.85
+height = 2.6
+weak_spot_offset = Vector3(0, 2.19, -0.05)
+weak_spot_radius = 0.26
+mass = 6.0
+contact_damage = 2.0
+xp_value = 14
+preferred_range = 2.2
+attack_range = 3.0
+attack_cooldown = 2.6
+telegraph_duration = 0.75
+recovery_duration = 1.1
+shove_impulse = 14.0
+faction = 1
+fx_color = Color(0.45, 0.06, 0.04, 1)
+model_scene = ExtResource("2_model")
+model_scale = 1.08
+bob_amplitude = 0.0
+bob_speed = 3.0
+flash_color = Color(1, 0.9, 0.75, 1)
+telegraph_color = Color(1, 0.04, 0.015, 1)
+tint = Color(0.42, 0.42, 0.5, 1)
+rim_color = Color(0.65, 0.5, 1, 0.22)
+face_atlas = Vector2i(5, 5)
+face_first = 20
+face_count = 2
+grime = 0.2
+vertex_animation = ExtResource("3_vat")
+move_clip = &"move"
+attack_clip = &"attack"
+death_clip = &"death"
+move_clip_speed = 1.9

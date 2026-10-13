@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/cryo_overclock.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"build_shatter"
+display_name = "Rozbitej led"
+description = "Build TŘÍŠŤ: kop do zmrzlého cíle roztříští led o 1,5 m dál a o 50 % silněji; přeživší v dosahu zamrznou."
+level_descriptions = PackedStringArray("Build TŘÍŠŤ: kop do zmrzlého cíle roztříští led o 1,5 m dál a o 50 % silněji. Přeživší v dosahu zamrznou.", "Build TŘÍŠŤ: kop do zmrzlého cíle roztříští led o 3 m dál a o 100 % silněji. Přeživší v dosahu zamrznou.")
+kind = 3
+max_level = 2
+weight = 1.2
+accent_color = Color(0.55, 0.9, 1, 1)
+icon = ExtResource("icon_px")

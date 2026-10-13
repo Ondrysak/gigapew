@@ -1,8 +1,9 @@
 class_name RoundShopScreen
 extends Control
 
-## One-primary exchange: persistent weapon comparison, five skill upgrades,
-## and scrollable mod/suit stock. All transactions belong to RoundShop.
+## Two-gun exchange: both equipped slots with a free per-slot replacement,
+## five skill upgrades, and scrollable mod/suit stock. All transactions
+## belong to RoundShop; gun pairs commit through RunState.equip_pair.
 signal continue_requested()
 
 const MENU_THEME := preload("res://scenes/ui/menu/menu_theme.tres")
@@ -21,12 +22,12 @@ var _title: Label
 var _venue_line: Label
 var _summary: Label
 var _wallet: Dictionary = {}
-var _primary_name: Label
-var _primary_icon: TextureRect
-var _primary_stats: Label
+var _slot_names: Array[Label] = []
+var _slot_stats: Array[Label] = []
 var _selector: OptionButton
 var _comparison: Label
-var _swap: Button
+## Free replacement of slot A (active) or B (partner) with the selected gun.
+var _replace_buttons: Array[Button] = []
 var _abilities: Array[Dictionary] = []
 var _offers: Array[Dictionary] = []
 var _reroll: Button
@@ -117,30 +118,41 @@ func _build_primary(parent: Container) -> void:
 	parent.add_child(panel)
 	var columns := _row()
 	panel.add_child(columns)
-	_primary_icon = GameIcons.rect(null, 48)
-	columns.add_child(_primary_icon)
-	var current := VBoxContainer.new()
-	current.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	columns.add_child(current)
-	_primary_name = _label("HLAVNÍ ZBRAŇ", 18, AMBER)
-	_primary_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	current.add_child(_primary_name)
-	_primary_stats = _label("", 13, TEXT)
-	_primary_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	current.add_child(_primary_stats)
+	for slot in 2:
+		var equipped := VBoxContainer.new()
+		equipped.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		equipped.add_theme_constant_override(&"separation", 0)
+		columns.add_child(equipped)
+		var name_label := _label("", 15, AMBER if slot == 0 else TEXT)
+		name_label.clip_text = true
+		equipped.add_child(name_label)
+		var stats := _label("", 12, DIM if slot == 1 else TEXT)
+		stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		equipped.add_child(stats)
+		_slot_names.append(name_label)
+		_slot_stats.append(stats)
 	var candidate := VBoxContainer.new()
 	candidate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	candidate.size_flags_stretch_ratio = 1.25
+	candidate.add_theme_constant_override(&"separation", 2)
 	columns.add_child(candidate)
+	var choice := _row()
+	choice.add_theme_constant_override(&"separation", 4)
+	candidate.add_child(choice)
 	_selector = OptionButton.new()
-	_selector.add_theme_font_size_override(&"font_size", 15)
+	_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_selector.clip_text = true
+	_selector.add_theme_font_size_override(&"font_size", 13)
 	_selector.item_selected.connect(_select_candidate)
-	candidate.add_child(_selector)
-	_comparison = _label("", 13, DIM)
+	choice.add_child(_selector)
+	for slot in 2:
+		var replace := _button("ZA A" if slot == 0 else "ZA B", _on_replace.bind(slot))
+		replace.tooltip_text = "Vymění %s zdarma. Druhá zbraň i koupené stupně úprav zůstávají." % ("zbraň v ruce (A)" if slot == 0 else "druhou zbraň (B)")
+		choice.add_child(replace)
+		_replace_buttons.append(replace)
+	_comparison = _label("", 12, DIM)
 	_comparison.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	candidate.add_child(_comparison)
-	_swap = _button("VYMĚNIT ZDARMA", _on_swap)
-	columns.add_child(_swap)
-	_swap.tooltip_text = "Vymění hlavní zbraň. Koupené stupně úprav zůstávají."
 
 func _build_ability(parent: Container, slot: int) -> void:
 	var panel := _panel()
@@ -210,14 +222,15 @@ func open(state: RunState, stage: int, final_stage: bool, summary: String, shop_
 	_summary.text = summary.replace("\n", "   ")
 	_continue.text = "ZPÁTKY DO BAZARU" if final_stage else "DO SEKTORU %d" % (stage + 2)
 	_selector.clear()
-	_candidate = 0
+	_candidate = -1
 	for index in state.available_weapons.size():
 		var source := state.available_weapons[index]
 		_selector.add_item(source.display_name)
-		if source == state.primary.source:
+		if _candidate < 0 and source != state.primary.source and source != state.secondary_primary_source:
 			_candidate = index
+	_candidate = maxi(_candidate, 0)
 	_selector.select(_candidate)
-	_status.text = "Výměna zdarma, úpravy zůstávají. Vylepši dovednosti, hlavní zbraň nebo hadry."
+	_status.text = "Výměna kterékoli zbraně zdarma, úpravy zůstávají. Vylepši dovednosti, zbraně nebo hadry."
 	show()
 	_refresh()
 	_continue.grab_focus.call_deferred()
@@ -227,9 +240,11 @@ func _refresh() -> void:
 		return
 	for id: StringName in _wallet:
 		_wallet[id].text = str(Profile.currency(id))
-	_primary_name.text = "HLAVNÍ · " + _state.primary.definition.display_name.to_upper()
-	_primary_icon.texture = _state.primary.definition.icon
-	_primary_stats.text = _weapon_text(_state.primary.definition)
+	var sources: Array[WeaponDefinition] = [_state.primary.source, _state.secondary_primary_source]
+	for slot in 2:
+		var effective := _state.preview_weapon(sources[slot])
+		_slot_names[slot].text = "%s · %s" % ["A · V RUCE" if slot == 0 else "B · DRUHÁ (Q)", effective.display_name.to_upper() if effective != null else "PRÁZDNÁ"]
+		_slot_stats[slot].text = _weapon_text(effective) if effective != null else "Vyber zbraň a dej ZA B."
 	_refresh_comparison()
 	for slot in _abilities.size():
 		var card: Dictionary = _abilities[slot]
@@ -282,25 +297,41 @@ func _weapon_text(definition: WeaponDefinition) -> String:
 	return "RÁNA %s · TEMPO %s · ×%s\nVÝBUCH %s · PRŮRAZ %s · %s" % [stats.DMG, stats.RATE, stats.PELLETS, stats.SPLASH, stats.PIERCE, stats.TYPE]
 
 func _refresh_comparison() -> void:
-	if _candidate < 0 or _candidate >= _state.available_weapons.size():
-		_swap.disabled = true
+	var source := _candidate_source()
+	if source == null:
+		_comparison.text = ""
+		for button in _replace_buttons:
+			button.disabled = true
 		return
-	var source := _state.available_weapons[_candidate]
-	var preview := WeaponBuild.new()
-	preview.upgrade_levels = _state.primary.upgrade_levels
-	preview.swap(source)
-	_comparison.text = _weapon_text(preview.definition)
-	var current := source == _state.primary.source
-	_swap.disabled = current
-	_swap.text = "NASAZENO" if current else "VYMĚNIT ZDARMA"
+	_comparison.text = "→ " + _weapon_text(_state.preview_weapon(source)).replace("\n", " · ")
+	var equipped := source == _state.primary.source or source == _state.secondary_primary_source
+	for button in _replace_buttons:
+		button.disabled = equipped
+
+func _candidate_source() -> WeaponDefinition:
+	if _state == null or _candidate < 0 or _candidate >= _state.available_weapons.size():
+		return null
+	return _state.available_weapons[_candidate]
 
 func _select_candidate(index: int) -> void:
 	_candidate = index
 	_refresh_comparison()
 
-func _on_swap() -> void:
-	if _candidate >= 0 and _candidate < _state.available_weapons.size() and _state.swap_primary(_state.available_weapons[_candidate]):
-		_status.text = "Hlavní zbraň vyměněna. Koupené stupně úprav zůstávají."
+## Slot 0 replaces the gun in hand, slot 1 its partner; the other slot stays.
+## Without a partner, the replaced gun in hand becomes slot B instead of vanishing.
+func _on_replace(slot: int) -> void:
+	var source := _candidate_source()
+	var first := _state.primary.source if _state.primary != null else null
+	var second := _state.secondary_primary_source
+	if slot == 0:
+		second = second if second != null else first
+		first = source
+	else:
+		second = source
+	if _state.equip_pair(first, second):
+		_status.text = "Zbraň %s vyměněna zdarma. Druhá zbraň i stupně úprav zůstávají." % ("A" if slot == 0 else "B")
+	else:
+		_status.text = "Tahle zbraň už je nasazená. Nic se nezměnilo."
 	_refresh()
 
 func _on_buy_ability(slot: int) -> void:

@@ -25,8 +25,7 @@ var _boss := Vector2.INF
 var _loot: PickupField
 var _vein := Vector2.INF
 var _vein_ready := false
-## Drop pod marker; INF when no extraction is running.
-var _pod := Vector2.INF
+var _route := Vector2.INF
 @onready var _vein_icon := GameIcons.lookup(&"resources", &"gold")
 @onready var _magnet_icon := GameIcons.lookup(&"hud", &"magnet")
 @onready var _repair_icon := GameIcons.lookup(&"hud", &"health")
@@ -43,8 +42,6 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	StreetWear.apply(self)
 
-func set_extraction_point(at: Vector2) -> void:
-	_pod = at
 
 ## Generated levels draw their nearby walls; authored arenas clear the layer.
 func set_layout(world: ProceduralWorld) -> void:
@@ -53,7 +50,6 @@ func set_layout(world: ProceduralWorld) -> void:
 	_floor_cells.clear()
 	_floor_levels.clear()
 	_floor_roofed.clear()
-	_pod = Vector2.INF
 	if world == null:
 		return
 	_wall_cell_size = ProceduralWorld.CELL_SIZE
@@ -103,6 +99,9 @@ func refresh(horde: Horde, player: Node3D, boss_index: int, loot: PickupField, e
 		_vein = Vector2(encounter.global_position.x, encounter.global_position.z)
 		_vein_ready = encounter.state == MiningDefense.State.READY
 	queue_redraw()
+
+func set_route_target(at: Vector3) -> void:
+	_route = Vector2(at.x, at.z) if at.is_finite() else Vector2.INF
 
 func _map(world: Vector2) -> Vector2:
 	var radius := size.x * 0.5
@@ -154,13 +153,6 @@ func _draw() -> void:
 		_draw_pickups(_loot._magnets, _magnet_icon)
 		_draw_pickups(_loot._repairs, _repair_icon)
 		_draw_pickups(_loot._supplies, _repair_icon)
-	if _pod != Vector2.INF:
-		# Clamped to the rim when out of range, so it always points the way.
-		var at := _map(_pod)
-		var ink := Color(0.73, 0.75, 0.43)
-		draw_circle(at, 9.0, Color(ink, 0.25))
-		draw_arc(at, 9.0, 0.0, TAU, 16, ink, 2.0, true)
-		draw_colored_polygon(PackedVector2Array([at + Vector2(0, -5), at + Vector2(4, 0), at + Vector2(0, 5), at + Vector2(-4, 0)]), ink)
 	if _vein != Vector2.INF:
 		var point := _map(_vein)
 		var color := Color(0.73, 0.75, 0.43) if _vein_ready else Color(0.83, 0.61, 0.3)
@@ -168,6 +160,12 @@ func _draw() -> void:
 		draw_arc(point, 10.0, 0.0, TAU, 16, color, 1.5, true)
 		if _vein_icon != null:
 			draw_texture_rect(_vein_icon, Rect2(point - Vector2(7, 7), Vector2(14, 14)), false)
+	if _route != Vector2.INF:
+		var at := _map(_route)
+		var ink := Color(0.2, 0.95, 0.94)
+		draw_arc(at, 7.0, 0.0, TAU, 16, ink, 2.0, true)
+		draw_line(at + Vector2(-4.0, 0.0), at + Vector2(4.0, 0.0), ink, 2.0)
+		draw_line(at + Vector2(0.0, -4.0), at + Vector2(0.0, 4.0), ink, 2.0)
 	if _boss != Vector2.INF:
 		var at := _map(_boss)
 		var skull := GameIcons.lookup(&"hud", &"boss")

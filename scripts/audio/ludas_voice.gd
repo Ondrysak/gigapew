@@ -15,7 +15,7 @@ const LINES := {
 	&"skill": {"priority": 3, "cooldown": 0.0, "sequence": [&"jaj", &"krajic", &"chleba"]},
 	&"hurt": {"priority": 2, "cooldown": 12.0, "clips": [&"hrrr"]},
 	&"heal": {"priority": 1, "cooldown": 15.0, "clips": [&"blp"]},
-	&"extraction": {"priority": 3, "cooldown": 0.0, "clips": [&"howl_1", &"howl_2", &"street_racer"]},
+	&"drop": {"priority": 3, "cooldown": 4.0, "clips": [&"howl_1", &"howl_2", &"street_racer"]},
 	&"clear": {"priority": 3, "cooldown": 0.0, "clips": [&"hehehe", &"takhle"]},
 	&"death": {"priority": 4, "cooldown": 0.0, "clips": [&"nee_old"]},
 }

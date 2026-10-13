@@ -11,6 +11,15 @@ const STRIDE := 16
 const GRAVITY := 16.0
 const MEGA_CAPACITY := Horde.CAPACITY / 6
 const FUSION_COLOR := Color(0.84, 0.52, 0.16)
+const HYPE_COLOR := Color(1.0, 0.25, 0.75)
+const HYPE_CAPACITY := 32
+const ICE_COLOR := Color(0.6, 0.92, 1.0)
+const FLAME_COLOR := Color(1.0, 0.45, 0.08)
+const ARC_COLOR := Color(0.7, 0.55, 1.0)
+const RETURN_COLOR := Color(0.35, 0.95, 1.0)
+const KICK_COLOR := Color(1.0, 0.85, 0.5)
+const FINISHER_COLOR := Color(1.0, 0.58, 0.12)
+const BOTTLE_COLOR := Color(0.3, 0.8, 0.3)
 
 enum { SPARK, DEBRIS, GOO, SPLAT, KIND_COUNT }
 
@@ -23,7 +32,7 @@ enum { SPARK, DEBRIS, GOO, SPLAT, KIND_COUNT }
 @export var splat_mesh: Mesh
 @export var splat_material: Material
 ## Pool sizes per kind (SPARK, DEBRIS, GOO, SPLAT).
-@export var capacities := PackedInt32Array([384, 192, 320, 96])
+@export var capacities := PackedInt32Array([512, 384, 448, 128])
 ## Hit effects spawned per rendered frame at most; extra hits are skipped.
 @export var max_hits_per_frame := 12
 ## Death bursts spawned per rendered frame at most; extra kills are skipped.
@@ -58,6 +67,11 @@ var _mega_generations := PackedInt64Array()
 var _mega_count := 0
 var _fusions_this_frame := 0
 var _world_area := Rect2()
+# Floor ring under each living hype man showing its actual aura radius.
+var _hype_renderer: MultiMeshInstance3D
+var _hype_buffer := PackedFloat32Array()
+var _hype_indices := PackedInt32Array()
+var _actions_this_frame := 0
 
 func _ready() -> void:
 	# Only stale crown identities are checked while pause/rewards stop particles.
@@ -99,9 +113,171 @@ func _ready() -> void:
 	_spin.resize(total)
 	_color.resize(total)
 	_setup_mega_marks()
+	_setup_hype_rings()
 	_sync_world_bounds()
 	if _horde != null:
 		_horde.enemy_fused.connect(_on_enemy_fused)
+
+func _setup_hype_rings() -> void:
+	var segment := BoxMesh.new()
+	segment.size = Vector3(0.42, 0.04, 0.08)
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for n in 16:
+		var angle := float(n) * TAU / 16.0
+		tool.append_from(segment, 0, Transform3D(Basis(Vector3.UP, -angle + PI * 0.5), Vector3(cos(angle), 0.0, sin(angle))))
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.use_colors = true
+	multimesh.mesh = tool.commit()
+	multimesh.instance_count = HYPE_CAPACITY
+	multimesh.visible_instance_count = 0
+	_hype_renderer = MultiMeshInstance3D.new()
+	_hype_renderer.multimesh = multimesh
+	_hype_renderer.material_override = material
+	_hype_renderer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_hype_renderer)
+	_hype_buffer.resize(HYPE_CAPACITY * STRIDE)
+	_hype_indices.resize(HYPE_CAPACITY)
+
+func _update_hype_rings() -> void:
+	if _horde == null:
+		return
+	var count := mini(_horde.query_hype_sources(_hype_indices), HYPE_CAPACITY)
+	var multimesh := _hype_renderer.multimesh
+	if count == 0:
+		multimesh.visible_instance_count = 0
+		return
+	var buffer := _hype_buffer
+	_hype_buffer = PackedFloat32Array()
+	for n in count:
+		var slot := _hype_indices[n]
+		var center := _horde.enemy_position(slot)
+		var floor_y := _horde.ground_height(Vector2(center.x, center.z))
+		if not is_finite(floor_y):
+			floor_y = center.y
+		var radius := _horde.get_definition(slot).aura_radius
+		var basis := Basis(Vector3.UP, _mega_time * 0.6 + float(slot)).scaled(Vector3(radius, 1.0, radius))
+		var k := n * STRIDE
+		buffer[k] = basis.x.x
+		buffer[k + 1] = basis.y.x
+		buffer[k + 2] = basis.z.x
+		buffer[k + 3] = center.x
+		buffer[k + 4] = basis.x.y
+		buffer[k + 5] = basis.y.y
+		buffer[k + 6] = basis.z.y
+		buffer[k + 7] = floor_y + 0.04
+		buffer[k + 8] = basis.x.z
+		buffer[k + 9] = basis.y.z
+		buffer[k + 10] = basis.z.z
+		buffer[k + 11] = center.z
+		# A surging hype man (its stationary punish window) flares brighter.
+		var surge := 1.6 if _horde.is_surging(slot) else 1.0
+		var pulse := (0.7 + 0.3 * sin(_mega_time * 9.0)) * surge
+		buffer[k + 12] = HYPE_COLOR.r * pulse
+		buffer[k + 13] = HYPE_COLOR.g * pulse
+		buffer[k + 14] = HYPE_COLOR.b * pulse
+		buffer[k + 15] = 1.0
+	RenderingServer.multimesh_set_buffer(multimesh.get_rid(), buffer)
+	multimesh.visible_instance_count = count
+	_hype_buffer = buffer
+
+func _action_allowed() -> bool:
+	if _offset.is_empty() or _actions_this_frame >= 8:
+		return false
+	_actions_this_frame += 1
+	return true
+
+## Kick contact or launched-body impact.
+func burst_kick(at: Vector3, slam: bool) -> void:
+	if not _action_allowed():
+		return
+	for n in (10 if slam else 6):
+		_emit(SPARK, at, _spray(7.0 if slam else 5.0, 3.0), 0.25, 0.05, KICK_COLOR)
+	if slam:
+		_emit(DEBRIS, at, _spray(4.0, 4.0), 0.8, 0.14, KICK_COLOR.darkened(0.5))
+
+## Successful finisher contact only; supplements the victim's species death FX.
+## A segmented crown and floor stamp stay hollow so the victim remains readable.
+func burst_finisher(at: Vector3, direction: Vector3) -> void:
+	if not _action_allowed():
+		return
+	var travel := direction.normalized() if direction.length_squared() > 0.0001 else Vector3.FORWARD
+	var forward := Vector3(travel.x, 0.0, travel.z)
+	forward = forward.normalized() if forward.length_squared() > 0.0001 else Vector3.FORWARD
+	var side := Vector3.UP.cross(forward)
+	var yaw := atan2(forward.z, forward.x)
+	# Gold/magenta spokes expand away from contact, rather than a dense cloud.
+	for n in 20:
+		var angle := yaw + float(n) * TAU / 20.0
+		var radial := Vector3(cos(angle), 0.0, sin(angle))
+		var color := FINISHER_COLOR if n % 2 == 0 else HYPE_COLOR
+		_emit(SPARK, at + radial * 0.28, radial * 6.5 + Vector3.UP * 2.4, 0.38, 0.075, color)
+	# The kick's lane continues through the victim, with narrow lateral jitter.
+	for n in 10:
+		var lane := (float(n) + 0.5) / 10.0
+		var origin := at + travel * (lane * 0.9) + side * _rng.randf_range(-0.14, 0.14)
+		var velocity := travel * _rng.randf_range(9.0, 13.0) + side * _rng.randf_range(-1.5, 1.5) + Vector3.UP * _rng.randf_range(1.0, 3.0)
+		_emit(SPARK, origin, velocity, 0.32, 0.065, FINISHER_COLOR)
+	for n in 8:
+		var velocity := forward * _rng.randf_range(3.0, 6.0) + side * _rng.randf_range(-3.5, 3.5) + Vector3.UP * _rng.randf_range(4.0, 7.0)
+		var color := FINISHER_COLOR.darkened(0.4) if n % 2 == 0 else HYPE_COLOR.darkened(0.45)
+		_emit(DEBRIS, at, velocity, 0.85, _rng.randf_range(0.09, 0.16), color)
+	# Stamp individual segments onto the actual terrain, never a solid disk.
+	for n in 12:
+		var angle := yaw + float(n) * TAU / 12.0
+		var stamp := at + Vector3(cos(angle), 0.0, sin(angle)) * 0.7
+		var floor_y := _horde.ground_height(Vector2(stamp.x, stamp.z)) if _horde != null else at.y
+		if not is_finite(floor_y):
+			continue
+		stamp.y = floor_y + 0.035
+		var color := FINISHER_COLOR.darkened(0.2) if n % 2 == 0 else HYPE_COLOR.darkened(0.25)
+		_emit(SPLAT, stamp, Vector3.ZERO, 0.75, 0.17, color)
+
+## Ice shards fill the actual shatter radius.
+func burst_shatter(at: Vector3, radius: float) -> void:
+	if not _action_allowed():
+		return
+	for n in 14:
+		var angle := float(n) * TAU / 14.0
+		var out := Vector3(cos(angle), 0.0, sin(angle)) * radius * 2.2
+		_emit(DEBRIS, at, out + Vector3(0.0, _rng.randf_range(3.0, 6.0), 0.0), 0.7, _rng.randf_range(0.1, 0.2), ICE_COLOR)
+	for n in 10:
+		_emit(SPARK, at, _spray(radius * 3.0, 3.0), 0.3, 0.05, ICE_COLOR)
+
+func burst_flame(at: Vector3, radius: float) -> void:
+	if not _action_allowed():
+		return
+	for n in 16:
+		var angle := float(n) * TAU / 16.0
+		_emit(SPARK, at, Vector3(cos(angle), 0.4, sin(angle)) * radius * 3.0, 0.35, 0.07, FLAME_COLOR)
+	_emit(SPLAT, Vector3(at.x, _horde.ground_height(Vector2(at.x, at.z)) + 0.02 if _horde != null else at.y, at.z), Vector3.ZERO, 0.9, radius, FLAME_COLOR.darkened(0.4))
+
+## Visible conduction arc: sparks strung along the actual lane.
+func arc(from: Vector3, to: Vector3) -> void:
+	if _offset.is_empty():
+		return
+	for n in 7:
+		var t := (float(n) + 0.5) / 7.0
+		var jitter := Vector3(_rng.randf_range(-0.15, 0.15), _rng.randf_range(-0.15, 0.15), _rng.randf_range(-0.15, 0.15))
+		_emit(SPARK, from.lerp(to, t) + jitter, Vector3(0.0, 1.5, 0.0), 0.22, 0.06, ARC_COLOR)
+
+func burst_return(at: Vector3) -> void:
+	if not _action_allowed():
+		return
+	for n in 8:
+		_emit(SPARK, at, _spray(6.0, 3.5), 0.25, 0.05, RETURN_COLOR)
+
+## A lobbed bottle shattering on the floor or the player.
+func burst_bottle(at: Vector3) -> void:
+	if not _action_allowed():
+		return
+	for n in 6:
+		_emit(DEBRIS, at, _spray(3.5, 3.0), 0.6, _rng.randf_range(0.05, 0.1), BOTTLE_COLOR)
+	_emit(SPLAT, Vector3(at.x, (_horde.ground_height(Vector2(at.x, at.z)) if _horde != null else at.y) + 0.02, at.z), Vector3.ZERO, 1.0, Horde.BOTTLE_SPLASH, BOTTLE_COLOR.darkened(0.3))
 
 func _setup_mega_marks() -> void:
 	var segment := BoxMesh.new()
@@ -139,6 +315,7 @@ func _sync_world_bounds() -> void:
 	for renderer in _renderers:
 		renderer.custom_aabb = bounds
 	_mega_renderer.custom_aabb = bounds
+	_hype_renderer.custom_aabb = bounds
 
 func _update_mega_marks(delta: float) -> void:
 	if _horde == null:
@@ -220,25 +397,27 @@ func burst_hit(definition: HordeEnemyDefinition, at: Vector3) -> void:
 			_emit(SPARK, at, _spray(6.0, 3.5), _rng.randf_range(0.15, 0.3), 0.045, color)
 
 ## One scaled visual burst per dead body, independent of constituent rewards.
-func burst_death(definition: HordeEnemyDefinition, at: Vector3, body_scale: float) -> void:
+func burst_death(definition: HordeEnemyDefinition, at: Vector3, body_scale: float, impulse: Vector3 = Vector3.ZERO) -> void:
 	if _offset.is_empty() or (_deaths_this_frame >= max_deaths_per_frame and not definition.is_boss):
 		return
 	_deaths_this_frame += 1
 	var bulk := clampf(definition.radius * body_scale / 0.4, 0.8, 5.0)
 	var reach := sqrt(bulk)
 	var color := definition.fx_color
-	var pieces := roundi(3.0 * bulk) * (3 if definition.is_boss else 1)
+	var pieces := roundi(5.0 * bulk) * (3 if definition.is_boss else 1)
 	if definition.faction == HordeEnemyDefinition.Faction.FLESH:
 		for n in pieces + 2:
-			_emit(GOO, at, _spray(4.5 * reach, 4.0), 0.8, _rng.randf_range(0.07, 0.13) * reach, color)
+			_emit(GOO, at, _spray(6.0 * reach, 5.5) + impulse * 0.35, 1.1, _rng.randf_range(0.1, 0.19) * reach, color)
 		var floor_y := _horde.ground_height(Vector2(at.x, at.z)) + 0.02
 		_emit(SPLAT, Vector3(at.x, floor_y, at.z), Vector3.ZERO, 1.4, definition.radius * body_scale * 1.6, color.darkened(0.25))
+		for n in maxi(2, pieces / 2):
+			_emit(DEBRIS, at, _spray(5.0 * reach, 6.0) + impulse * 0.45, 1.2, _rng.randf_range(0.12, 0.22) * reach, color.darkened(0.18))
 	else:
 		for n in pieces + 3:
 			_emit(SPARK, at, _spray(8.0 * reach, 5.0), _rng.randf_range(0.25, 0.45), 0.05, color)
 		var metal := Color(0.22, 0.24, 0.28).lerp(color, 0.2)
 		for n in pieces:
-			_emit(DEBRIS, at, _spray(4.5 * reach, 5.5), _rng.randf_range(0.7, 1.0), _rng.randf_range(0.07, 0.14) * reach, metal)
+			_emit(DEBRIS, at, _spray(6.0 * reach, 7.0) + impulse * 0.5, _rng.randf_range(1.0, 1.4), _rng.randf_range(0.12, 0.24) * reach, metal)
 
 func _process(delta: float) -> void:
 	if get_tree().paused:
@@ -252,8 +431,10 @@ func _process(delta: float) -> void:
 	_hits_this_frame = 0
 	_deaths_this_frame = 0
 	_fusions_this_frame = 0
+	_actions_this_frame = 0
 	_sync_world_bounds()
 	_update_mega_marks(delta)
+	_update_hype_rings()
 	for kind in KIND_COUNT:
 		_update(kind, delta)
 

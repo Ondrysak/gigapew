@@ -10,91 +10,100 @@
 [ext_resource type="Resource" path="res://data/enemies/robot_grunt.tres" id="8_street_grunt"]
 [ext_resource type="Resource" path="res://data/enemies/robot_runner.tres" id="9_street_runner"]
 [ext_resource type="Resource" path="res://data/enemies/robot_spitter.tres" id="10_street_drunk"]
+[ext_resource type="Resource" path="res://data/enemies/bouncer.tres" id="11_bouncer"]
+[ext_resource type="Resource" path="res://data/enemies/bottle_thrower.tres" id="12_thrower"]
+[ext_resource type="Resource" path="res://data/enemies/hype_man.tres" id="13_hype"]
 
-[sub_resource type="Resource" id="Wave_1"]
+[sub_resource type="Resource" id="Build_Grunt"]
 script = ExtResource("2_wave")
 enemy = ExtResource("4_grunt")
-rate_start = 8.0
-rate_end = 24.0
-group_size = 10
-health_multiplier = 1.6
+count = 16
+count_growth = 3
+health_multiplier = 1.3
 
-[sub_resource type="Resource" id="Wave_2"]
-script = ExtResource("2_wave")
-enemy = ExtResource("5_runner")
-rate_start = 3.0
-rate_end = 12.0
-group_size = 8
-health_multiplier = 1.6
-
-[sub_resource type="Resource" id="Wave_3"]
-script = ExtResource("2_wave")
-enemy = ExtResource("6_spitter")
-start_time = 20.0
-rate_start = 0.6
-rate_end = 3.0
-group_size = 2
-health_multiplier = 1.6
-
-[sub_resource type="Resource" id="Wave_4"]
-script = ExtResource("2_wave")
-enemy = ExtResource("7_tank")
-start_time = 50.0
-rate_start = 0.3
-rate_end = 1.2
-group_size = 2
-health_multiplier = 1.6
-
-[sub_resource type="Resource" id="Wave_5"]
-script = ExtResource("2_wave")
-enemy = ExtResource("4_grunt")
-start_time = 120.0
-end_time = 160.0
-rate_start = 7.25
-rate_end = 14.5
-group_size = 12
-health_multiplier = 1.6
-
-[sub_resource type="Resource" id="Wave_6"]
-script = ExtResource("2_wave")
-enemy = ExtResource("5_runner")
-start_time = 240.0
-rate_start = 2.9
-rate_end = 8.7
-group_size = 12
-health_multiplier = 1.6
-
-[sub_resource type="Resource" id="Wave_7"]
+[sub_resource type="Resource" id="Build_Street"]
 script = ExtResource("2_wave")
 enemy = ExtResource("8_street_grunt")
-rate_start = 3.6
-rate_end = 10.8
-group_size = 8
-health_multiplier = 1.6
+count = 12
+count_growth = 2
+health_multiplier = 1.3
 
-[sub_resource type="Resource" id="Wave_8"]
+[sub_resource type="Resource" id="Build_Runner"]
 script = ExtResource("2_wave")
 enemy = ExtResource("9_street_runner")
-start_time = 15.0
-rate_start = 1.35
-rate_end = 5.4
-group_size = 6
-health_multiplier = 1.6
+count = 6
+count_growth = 1
+group_size = 2
+health_multiplier = 1.3
 
-[sub_resource type="Resource" id="Wave_9"]
+[sub_resource type="Resource" id="Peak_Runner"]
+script = ExtResource("2_wave")
+enemy = ExtResource("5_runner")
+peak = true
+count = 10
+count_growth = 2
+group_size = 3
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Spitter"]
+script = ExtResource("2_wave")
+enemy = ExtResource("6_spitter")
+peak = true
+count = 3
+count_growth = 1
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Tank"]
+script = ExtResource("2_wave")
+enemy = ExtResource("7_tank")
+peak = true
+count = 2
+count_growth = 1
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Street_Spitter"]
 script = ExtResource("2_wave")
 enemy = ExtResource("10_street_drunk")
-start_time = 40.0
-rate_start = 0.2
-rate_end = 1.0
+encounter_start = 2
+peak = true
+count = 2
+count_growth = 0
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Build_Bouncer"]
+script = ExtResource("2_wave")
+enemy = ExtResource("11_bouncer")
+count = 2
+count_growth = 1
+group_size = 1
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Thrower"]
+script = ExtResource("2_wave")
+enemy = ExtResource("12_thrower")
+peak = true
+count = 3
+count_growth = 1
 group_size = 2
-health_multiplier = 1.6
+health_multiplier = 1.3
+
+[sub_resource type="Resource" id="Peak_Hype"]
+script = ExtResource("2_wave")
+enemy = ExtResource("13_hype")
+peak = true
+count = 1
+count_growth = 1
+group_size = 1
+health_multiplier = 1.3
 
 [resource]
 script = ExtResource("1_schedule")
-ramp_duration = 300.0
-max_alive = 2100
-waves = Array[ExtResource("2_wave")]([SubResource("Wave_1"), SubResource("Wave_2"), SubResource("Wave_3"), SubResource("Wave_4"), SubResource("Wave_5"), SubResource("Wave_6"), SubResource("Wave_7"), SubResource("Wave_8"), SubResource("Wave_9")])
+build_duration = 20.0
+peak_duration = 16.0
+max_alive = 56
+waves = Array[ExtResource("2_wave")]([SubResource("Build_Grunt"), SubResource("Build_Street"), SubResource("Build_Runner"), SubResource("Build_Bouncer"), SubResource("Peak_Runner"), SubResource("Peak_Spitter"), SubResource("Peak_Tank"), SubResource("Peak_Street_Spitter"), SubResource("Peak_Thrower"), SubResource("Peak_Hype")])
 boss = ExtResource("3_dreadnought")
 boss_health_multiplier = 2.4
-spawn_distance_min = 20.0

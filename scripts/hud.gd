@@ -30,13 +30,22 @@ const BOSS_CUE_TITLES: Array[String] = ["DRŽ SI ODSTUP", "ROZBĚH PROTI TOBĚ",
 @onready var resource_row: HBoxContainer = $Stage/Rows/Resources
 @onready var supply_bar: ProgressBar = $Stage/Rows/Supply/Bar
 @onready var supply_value: Label = $Stage/Rows/Supply/Value
-@onready var contract_box: Control = $Contract
-@onready var contract_label: Label = $Contract/Label
-@onready var quest_panel: PanelContainer = $Quests
-@onready var quest_list: VBoxContainer = $Quests/Rows/List
-@onready var quest_seed: Label = $Quests/Rows/Header/Seed
-var _quests: LevelQuests
-var _quest_rows: Array[Dictionary] = []
+@onready var arena_round_box: Control = $ArenaRound
+@onready var arena_round_label: Label = $ArenaRound/Label
+@onready var arena_panel: PanelContainer = $ArenaLedger
+@onready var arena_list: VBoxContainer = $ArenaLedger/Rows/List
+@onready var arena_seed: Label = $ArenaLedger/Rows/Header/Seed
+var _arena_points: Label
+var _arena_record: Label
+var _arena_phase: Label
+var _arena_progress: ProgressBar
+var _arena_score_value := -1
+var _arena_best_value := -1
+var _arena_phase_name := ""
+var _arena_wave := -1
+var _arena_route: Label
+var _arena_venue_name := ""
+var _arena_distance := -1
 @onready var boss_panel: Control = $Boss
 @onready var boss_name: Label = $Boss/Row/Info/Header/Name
 @onready var boss_phase: Label = $Boss/Row/Info/Header/Phase
@@ -101,6 +110,7 @@ var _vitals_style: StyleBoxFlat
 var _vitals_border := Color()
 var _primary_icon: TextureRect
 var _primary_stats: Label
+var _secondary_title: Label
 var _abilities: Array[ActiveAbility] = []
 var _ability_tiles: Array[Dictionary] = []
 # Boss frame: real fraction, delayed trail and hit flash.
@@ -160,7 +170,7 @@ func set_gear_loot(loot: GearLootDirector, playing: bool) -> void:
 	_gear_status.visible = available
 	_gear_prompt.visible = available
 	if available:
-		_gear_status.position.y = quest_panel.get_rect().end.y + 6.0
+		_gear_status.position.y = arena_panel.get_rect().end.y + 6.0
 		_gear_status.text = loot.status_text()
 		_gear_prompt.text = loot.interaction_text()
 
@@ -190,6 +200,32 @@ func _ready() -> void:
 	StreetWear.apply_tree(self)
 	StreetWear.apply(death_panel, true)
 
+	get_viewport().size_changed.connect(_layout_combat)
+	_layout_combat()
+
+func _layout_combat() -> void:
+	var compact := get_viewport().get_visible_rect().size.x < 1150.0
+	vitals.offset_right = 256.0 if compact else 372.0
+	ability_row.offset_left = -185.0 if compact else -231.0
+	ability_row.offset_right = 185.0 if compact else 231.0
+	ability_row.offset_top = -124.0 if compact else -142.0
+	ability_row.add_theme_constant_override(&"separation", 4 if compact else 8)
+	var primary: Control = $Primary
+	primary.offset_left = -272.0 if compact else -362.0
+	primary.offset_right = -8.0 if compact else -24.0
+	primary_title.add_theme_font_size_override(&"font_size", 14 if compact else 17)
+	_primary_icon.custom_minimum_size = Vector2.ONE * (32 if compact else 48)
+	_primary_stats.add_theme_font_size_override(&"font_size", 11 if compact else 13)
+	class_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	for tile in _ability_tiles:
+		(tile.root as Control).custom_minimum_size = Vector2(70, 88) if compact else Vector2(86, 106)
+		(tile.name as Label).custom_minimum_size.x = 60.0 if compact else 76.0
+		(tile.icon as Control).custom_minimum_size = Vector2.ONE * (24 if compact else 32)
+	controls_label.add_theme_font_size_override(&"font_size", 10 if compact else 11)
+
+func show_action(label: String) -> void:
+	if not feedback.terminal:
+		feedback.show_action(label)
 func _build_combo_callout() -> void:
 	_combo_callout = Label.new()
 	_combo_callout.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -329,7 +365,7 @@ func _refresh_abilities() -> void:
 	if unlocked_count != _unlocked_shown:
 		_unlocked_shown = unlocked_count
 		var skills := "1 TRIK" if unlocked_count <= 1 else "1–%d TRIKY" % unlocked_count
-		controls_label.text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · %s · E POUŽÍT · G VÝBAVA · ESC PAUZA" % skills
+		controls_label.text = "WASD · SPACE 2× SKOK · CTRL SLIDE · LMB ÚTOK · RMB KOP/PARRY · Q SWAP · F ROZBIJ/DORAZIT · %s · TAB ZBRANĚ V PAUZE · G VÝBAVA · ESC" % skills
 
 func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	death.hide()
@@ -337,71 +373,75 @@ func show_stage(stage: StageDefinition, index: int, total: int) -> void:
 	warning.hide()
 	objective.hide()
 	boss_cue.hide()
-	contract_box.show()
+	arena_round_box.show()
 	_last_health = 0
 	_stage_name = "OKRUH %02d  ·  %s" % [index + 1, stage.display_name.to_upper()]
 	sector_label.text = "%02d / %02d   %s" % [index + 1, total, stage.display_name.to_upper()]
 	subtitle_label.text = stage.subtitle
-	quest_panel.hide()
+	arena_panel.hide()
 	feedback.reset()
 	_reset_notices()
 
-## Build once per level; compartment loot/death signals update real counters.
-func set_quests(state: LevelQuests, seed_value: int) -> void:
-	_quests = state
-	for child in quest_list.get_children():
+## Score attack ledger: build once per arena, refresh only changed text.
+func setup_arena(seed_value: int) -> void:
+	for child in arena_list.get_children():
 		child.free()
-	_quest_rows.clear()
-	quest_seed.text = "#%08X" % seed_value
-	$Quests/Rows/Hint.text = "Zamiř zblízka na přihrádku · drž F a páč · dokonči zakázku pro odvoz"
-	for quest: Dictionary in state.quests:
-		var row := VBoxContainer.new()
-		row.add_theme_constant_override(&"separation", 3)
-		var line := HBoxContainer.new()
-		line.add_theme_constant_override(&"separation", 8)
-		line.add_child(_icon(quest.icon, 24))
-		var action: String
-		match quest.kind:
-			&"mine": action = "VYPÁČ"
-			&"kill": action = "ROZPRAŠ"
-			&"stash":
-				action = "VYBER"
-				$Quests/Rows/Hint.text = "F · páč přihrádky   E · vyber alespoň %d skrýše\nDokonči celou zakázku pro odvoz" % quest.target
-		var text := _label("%s %s" % [action, String(quest.name).to_upper()], 13, quest.color.lightened(0.15))
-		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		line.add_child(text)
-		var count := _label("", 13, Color.WHITE)
-		line.add_child(count)
-		row.add_child(line)
-		var bar := _progress_meter(quest.color)
-		bar.max_value = quest.target
-		row.add_child(bar)
-		quest_list.add_child(row)
-		_quest_rows.append({"row": row, "count": count, "bar": bar})
-	quest_panel.show()
-	refresh_quests()
+	arena_seed.text = "#%08X" % seed_value
+	_arena_points = _label("", 25, Color(0.2, 0.95, 0.94))
+	_arena_record = _label("", 12, Color(0.86, 0.79, 0.63))
+	_arena_phase = _label("", 13, Color(0.95, 0.72, 0.4))
+	_arena_progress = _progress_meter(ability_ready_color)
+	arena_list.add_child(_arena_points)
+	arena_list.add_child(_arena_record)
+	arena_list.add_child(_arena_phase)
+	arena_list.add_child(_arena_progress)
+	_arena_route = _label("", 12, Color(0.5, 0.89, 0.85))
+	_arena_route.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	arena_list.add_child(_arena_route)
+	_arena_score_value = -1
+	_arena_best_value = -1
+	_arena_phase_name = ""
+	_arena_wave = -1
+	_arena_venue_name = ""
+	_arena_distance = -1
+	arena_panel.show()
 
-func refresh_quests() -> void:
-	if _quests == null:
-		return
-	contract_label.text = "ZAKÁZKA  %d / %d" % [_quests.completed_count(), _quests.quests.size()]
-	for index in _quest_rows.size():
-		var quest: Dictionary = _quests.quests[index]
-		var row: Dictionary = _quest_rows[index]
-		var done: bool = quest.progress >= quest.target
-		(row.count as Label).text = "HOTOVO" if done else "%d / %d" % [quest.progress, quest.target]
-		(row.count as Label).modulate = ability_ready_color if done else Color.WHITE
-		(row.bar as ProgressBar).value = quest.progress
-		(row.row as Control).modulate.a = 0.65 if done else 1.0
+func set_arena_score(score: int, best: int) -> void:
+	if score != _arena_score_value:
+		_arena_score_value = score
+		_arena_points.text = "%d BODŮ" % score
+	if best != _arena_best_value:
+		_arena_best_value = best
+		_arena_record.text = "OSOBNÍ REKORD · %d" % best
 
-## One objective panel: the extraction once a contract is done, otherwise the
-## authored lab guarded machine when present.
-func set_objectives(encounter: MiningDefense, extraction: ExtractionPod, operator: ArenaPlayer) -> void:
-	if is_instance_valid(extraction) and extraction.state != ExtractionPod.State.DEPARTED and not death.visible:
-		objective.visible = true
-		_show_extraction(extraction, operator)
+func set_arena_progress(director: HordeDirector, operator: ArenaPlayer) -> void:
+	if not is_instance_valid(director) or _arena_progress == null:
 		return
+	_arena_progress.value = director.phase_fraction
+	var venue := director.current_venue_name
+	var distance := roundi(operator.global_position.distance_to(director.current_venue_position)) if director.phase_name == "TRAVEL" else -1
+	if distance != _arena_distance or venue != _arena_venue_name:
+		_arena_distance = distance
+		_arena_route.text = "%s · %dm · DOJDI NA MÍSTO" % [venue.to_upper(), distance] if distance >= 0 else venue.to_upper()
+	radar.set_route_target(director.current_venue_position if distance >= 0 else Vector3.INF)
+	if _arena_phase_name == director.phase_name and _arena_wave == director.encounter_index and _arena_venue_name == venue:
+		return
+	_arena_phase_name = director.phase_name
+	_arena_wave = director.encounter_index
+	_arena_venue_name = venue
+	arena_round_label.text = "SET %d / %d" % [maxi(1, _arena_wave), director.encounter_count]
+	match _arena_phase_name:
+		"ARRIVAL": _arena_phase.text = "ROZJEZD · VYBER SI TRASU"
+		"ROUTE": _arena_phase.text = "KAM DÁL? · VYBER DALŠÍ FIGHT"
+		"TRAVEL": _arena_phase.text = "PŘESUN · GROOVE ZŮSTÁVÁ"
+		"BUILD": _arena_phase.text = "NÁSTUP · MÍCHEJ ZBRANĚ A POHYB"
+		"PEAK": _arena_phase.text = "TRYHARD · ROZPRAŠ JE NA PRACH"
+		"CLEANUP": _arena_phase.text = "DOHRA · DORAZ ŽIVÉ HALUCINACE"
+		"RECOVERY": _arena_phase.text = "NÁDECH · GROOVE ZŮSTÁVÁ"
+		"CLEAR": _arena_phase.text = "SET HOTOVÝ · ODMĚNA"
+
+## Guarded cabinets are optional authored combat events, never arena goals.
+func set_objectives(encounter: MiningDefense, operator: ArenaPlayer) -> void:
 	objective.visible = is_instance_valid(encounter) and encounter.state != MiningDefense.State.CANCELLED and encounter.state != MiningDefense.State.CLAIMED and not death.visible
 	if not objective.visible:
 		return
@@ -411,10 +451,10 @@ func set_objectives(encounter: MiningDefense, extraction: ExtractionPod, operato
 	match encounter.state:
 		MiningDefense.State.WAITING:
 			objective_title.text = "VOLITELNĚ · HLÍDANÝ AUTOMAT"
-			objective_detail.text = "Zamiř zblízka na přihrádku a drž F · %dm\nVyprázdni automat a přežij pro vylepšení." % distance
+			objective_detail.text = "Zamiř na přihrádku a stiskni F · %dm\nVyber automat a přežij pro vylepšení." % distance
 		MiningDefense.State.MINING:
 			objective_title.text = "AUTOMAT · %d%% VYPÁČENO" % mined
-			objective_detail.text = "Páč mezi útoky · zbývá %d halucinací\nPři puštění F zůstává západka povolená." % encounter.enemies_remaining()
+			objective_detail.text = "Rozbíjej přihrádky mezi útoky · zbývá %d halucinací\nKořist je volitelná; set pokračuje bez ní." % encounter.enemies_remaining()
 		MiningDefense.State.DEFENDING:
 			objective_title.text = "AUTOMAT PRÁZDNÝ · UDRŽ MÍSTO"
 			objective_detail.text = "Zbývá %d halucinací · dokonči obranu\nPak si vybereš vylepšení." % encounter.enemies_remaining()
@@ -473,7 +513,7 @@ func show_boss(definition: HordeEnemyDefinition) -> void:
 	_boss_flash = 0.0
 	boss_phase.hide()
 	boss_percent.text = "100%"
-	contract_box.hide()
+	arena_round_box.hide()
 	boss_panel.show()
 	boss_panel.pivot_offset = boss_panel.size * 0.5
 	boss_panel.modulate.a = 0.0
@@ -505,13 +545,19 @@ func set_primary(state: RunState) -> void:
 	_primary_icon.texture = gun.icon
 	var projectiles := clampi(gun.pellet_count + state.projectile_bonus, 1, WeaponBuild.MAX_PROJECTILES)
 	_primary_stats.text = "%d ŠKODA · %.1f/s · ×%d\n%s · OKRUH %.1fm · PRŮRAZ %d" % [gun.damage, 1.0 / maxf(0.001, gun.fire_interval), projectiles, DamageType.label(gun.damage_type).to_upper(), gun.explosion_radius, gun.pierce + state.pierce_bonus]
+	var partner := state.secondary_primary_source
+	_secondary_title.text = "Q ↔ %s" % partner.display_name.to_upper() if partner != null else ""
 	_refresh_armor()
 
-## The crowbar prompt follows the same visible close compartment as its model.
+## F has one contextual owner: aimed dazed enemy first, otherwise a compartment.
 func set_gunplay(player: ArenaPlayer) -> void:
+	var finishing := player.finisher_ready()
+	if finishing:
+		tutor.offer(&"finisher")
 	var ready := player.mining_ready()
-	mining_prompt.visible = ready and not feedback.terminal and not get_tree().paused
-	mining_prompt.text = "F · PÁČENÍ ZÁMKU" if ready and player.drilling() else "DRŽ F · VYPÁČ PŘIHRÁDKU"
+	mining_prompt.visible = (finishing or ready) and not feedback.terminal and not get_tree().paused
+	mining_prompt.text = "F · DORAZIT" if finishing else "F · ROZBIJ PŘIHRÁDKU"
+	mining_prompt.modulate = Color(1.0, 0.65, 0.2) if finishing else Color.WHITE
 	primary_row.modulate = Color(0.62, 0.55, 0.43) if ready else Color.WHITE
 
 func _progress_meter(color: Color) -> ProgressBar:
@@ -598,18 +644,18 @@ func _advance_notices(delta: float) -> void:
 	_pickup_dirty = false
 
 ## Run-over panel: summary tiles plus the loot moved into the Profile.
-func finish_run(level: int, kills: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
+func finish_run(level: int, kills: int, score: int, seconds: float, stages_cleared: int, banked: Dictionary) -> void:
 	feedback.terminal = true
 	_reset_notices()
 	boss_panel.hide()
 	warning.hide()
-	contract_box.hide()
-	quest_panel.hide()
+	arena_round_box.hide()
+	arena_panel.hide()
 	death_where.text = "ZASE V SEPTIKU\nPOSLEDNÍ ŠTACE: %s" % _stage_name if not _stage_name.is_empty() else "ZASE V SEPTIKU"
 	for child in death_stats.get_children():
 		child.queue_free()
 	var whole := int(seconds)
-	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(level), "ÚROVEŇ"))
+	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"level"), str(score), "SKÓRE · ÚR %d" % level))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"kills"), str(kills), "ROZPRÁŠENO"))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"timer"), "%d:%02d" % [whole / 60, whole % 60], "ČAS NA NOHOU"))
 	death_stats.add_child(_stat_tile(GameIcons.lookup(&"hud", &"boss"), str(stages_cleared), "HOTOVÉ OKRUHY"))
@@ -715,25 +761,6 @@ func _draw_warning_band() -> void:
 	warning_band.draw_line(Vector2(0, 11), Vector2(size.x, 11), Color(0.57, 0.3, 0.18, 0.9), 2.0)
 	warning_band.draw_line(Vector2(0, size.y - 11), Vector2(size.x, size.y - 11), Color(0.57, 0.3, 0.18, 0.9), 2.0)
 
-func show_extraction_warning() -> void:
-	_show_warning("ODVOZ")
-
-func _show_extraction(extraction: ExtractionPod, operator: ArenaPlayer) -> void:
-	# The finished contract list gives way to the extraction objective.
-	quest_panel.hide()
-	contract_label.text = "ODVOZ"
-	var distance := roundi(extraction.distance_to(operator.global_position))
-	var left := extraction.hold_time - extraction.progress
-	objective_progress.value = extraction.fraction()
-	if extraction.state == ExtractionPod.State.LANDING:
-		objective_title.text = "ODVOZ · ZNAČKA SE BLÍŽÍ"
-		objective_detail.text = "Běž ke světelnému sloupu · %dm\nHalucinace přibývají až do odjezdu." % distance
-	elif extraction.player_inside():
-		objective_title.text = "DRŽ SE V KRUHU · %.1f s" % left
-		objective_detail.text = "Zůstaň uvnitř kruhu pro odvoz.\nHalucinace pořád přibývají."
-	else:
-		objective_title.text = "ODVOZ · DOBĚHNI KE ZNAČCE"
-		objective_detail.text = "%dm daleko · zbývá %.0f s v kruhu\nKdyž vyběhneš, postup zůstane." % [distance, left]
 
 func _show_warning(boss_title: String) -> void:
 	warning_subtitle.text = "BLÍŽÍ SE: %s" % boss_title
@@ -785,6 +812,12 @@ func _build_primary() -> void:
 	primary_row.add_child(_primary_icon)
 	_primary_stats = _label("", 13, Color(0.81, 0.76, 0.65))
 	primary_row.add_child(_primary_stats)
+	_primary_stats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_primary_stats.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	primary_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_secondary_title = _label("", 11, Color(0.5, 0.89, 0.85))
+	_secondary_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	$Primary.add_child(_secondary_title)
 
 func _build_abilities() -> void:
 	for index in range(5):

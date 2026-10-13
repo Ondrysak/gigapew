@@ -7,14 +7,15 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Absintovej molotov"
-description = "Rána s výbuchem do okolí. Rozhání namačkané halucinace."
-damage = 78
+description = "Výbuch rozežene houf a obejde čelní plát. Těžká rána do natěsnané party."
+damage = 75
 recoil_degrees = 0.24
-fire_interval = 0.19
+fire_interval = 0.38
 range_meters = 50.0
 knockback = 14.0
 screen_shake = 0.06
 view_scene = ExtResource("2_view")
 icon = ExtResource("icon_px")
-explosion_radius = 2.2
+explosion_radius = 3.2
+explosion_damage_fraction = 0.8
 explosion_knockback = 18.0

@@ -4,7 +4,7 @@ func title() -> String:
 	return "Žižkov guarded machine"
 
 func summary() -> String:
-	return "Real shooting/prying, three response packs, conserved compartment loot, one earned choice and round-end escrow"
+	return "Optional one-press machine smash, three response packs, conserved compartment loot and one independent earned choice"
 
 func run() -> void:
 	await _earned_choice_and_clear()
@@ -57,9 +57,9 @@ func _earned_choice_and_clear() -> void:
 	lab.check(not encounter.claim_reward(), "waiting cannot claim an upgrade")
 	lab.check(await lab.aim_deposit(vein, 2.2), "close crowbar ray reacquires a real compartment")
 	Input.action_press(&"mine")
-	await lab.wait(0.2)
+	await lab.frames(2)
 	Input.action_release(&"mine")
-	lab.check(vein.health < untouched and encounter.state == MiningDefense.State.MINING, "actual F-pried compartment damage starts response")
+	lab.check(vein.health < untouched and vein.yield_emitted > 0 and encounter.state == MiningDefense.State.MINING, "one fresh F press opens real loot and starts the optional response")
 	var timer_before := encounter.remaining()
 	var admitted_before := encounter.spawned_count
 	var progress_before := encounter.progress()
@@ -77,7 +77,7 @@ func _earned_choice_and_clear() -> void:
 	var emitted := vein.yield_emitted
 	await lab.capture("prying_under_pressure")
 	await lab.wait(0.5)
-	lab.check(vein.health == cut and vein.yield_emitted == emitted, "loosened compartments and emitted loot persist after releasing the crowbar")
+	lab.check(vein.health == cut and vein.yield_emitted == emitted, "opened compartments and emitted loot persist after releasing the crowbar")
 	lab.check(not encounter.claim_reward(), "partially emptied defended machine cannot reward")
 	await _mine_all(vein)
 	lab.check(vein.health == 0.0 and encounter.progress() == 1.0, "crowbar opens every real compartment")
@@ -111,11 +111,10 @@ func _earned_choice_and_clear() -> void:
 		return
 	var selected: UpgradeDefinition = game.level_up._offers[0]
 	var upgrade_before := game.run_state.level_of(selected)
-	# Earned encounter and XP choices remain independent of the level contract.
+	# Optional encounter and XP choices remain independent of arena completion.
 	game.run_state.add_xp(game.run_state.xp_required - game.run_state.xp)
 	var xp_pending := game.run_state.pending_level_ups
 	var schedule := game.campaign[0].schedule
-	game.director.boss_phase = true
 	var boss := game.horde.spawn(schedule.boss, Vector2(0, -8), schedule.boss_health_multiplier)
 	lab.check(boss >= 0, "real Yard boss spawns while earned chooser is open")
 	if boss < 0:
@@ -130,7 +129,7 @@ func _earned_choice_and_clear() -> void:
 	await lab.capture("reward_then_levelup")
 	game.level_up._choose(0)
 	await lab.wait(0.3)
-	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.quests.is_complete(), "encounter and boss rewards do not skip unfinished level objectives")
+	lab.check(game.round_state == ArenaGame.RoundState.PLAYING and not game.director.finished, "optional encounter and boss rewards do not skip the live arena encounters")
 
 func _combat_first_and_cancel() -> void:
 	var game := await _new_game()
@@ -141,7 +140,7 @@ func _combat_first_and_cancel() -> void:
 	lab.check(await lab.aim_deposit(vein, 2.2), "second run crowbar reaches the authored compartment")
 	var before := vein.health
 	Input.action_press(&"mine")
-	await lab.wait(0.35)
+	await lab.frames(2)
 	Input.action_release(&"mine")
 	lab.check(vein.health < before and encounter.state == MiningDefense.State.MINING, "first valid crowbar damage also starts the response")
 	await _finish_response(game, encounter)
@@ -166,8 +165,9 @@ func _mine_all(vein: MineralDeposit) -> void:
 			break
 		lab.check(await lab.aim_deposit(vein, 2.2), "crowbar reacquires a remaining physical compartment")
 		Input.action_press(&"mine")
-		await lab.wait(0.85)
+		await lab.frames(2)
 		Input.action_release(&"mine")
+		await lab.frames(2)
 	await lab.wait(0.1)
 
 func _finish_response(game: ArenaGame, encounter: MiningDefense) -> void:

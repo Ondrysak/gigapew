@@ -1,7 +1,7 @@
 class_name MiningFeedback
 extends CanvasLayer
 
-## Persistent close-range latch readout. No magical halo or temporal crystal echoes.
+## Nearby optional loot readout: press once, take the compartment's real stock.
 var telemetry_visible := false
 var _player: ArenaPlayer
 var _camera: Camera3D
@@ -9,12 +9,9 @@ var _panel: VBoxContainer
 var _backing: Panel
 var _name: Label
 var _status: Label
-var _bar: ProgressBar
 var _hint: Label
 var _seam: Label
 var _data: Dictionary = {}
-var _resonance := 0.0
-var _drilling := false
 
 func _ready() -> void:
 	layer = 2
@@ -34,18 +31,6 @@ func _ready() -> void:
 	add_child(_panel)
 	_name = _label(18)
 	_status = _label(14)
-	_bar = ProgressBar.new()
-	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bar.custom_minimum_size = Vector2(250.0, 5.0)
-	_bar.show_percentage = false
-	_bar.max_value = 1.0
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color(0.035, 0.028, 0.02)
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.78, 0.6, 0.3)
-	_bar.add_theme_stylebox_override(&"background", back)
-	_bar.add_theme_stylebox_override(&"fill", fill)
-	_panel.add_child(_bar)
 	_hint = _label(13)
 	_seam = Label.new()
 	_seam.text = "+"
@@ -74,15 +59,11 @@ func setup(player: ArenaPlayer) -> void:
 	_player = player
 	_camera = player.camera
 
-func set_target(data: Dictionary, drilling: bool, resonance: float) -> void:
+func set_target(data: Dictionary) -> void:
 	_data = data
-	_drilling = drilling and not data.is_empty()
-	_resonance = resonance
 
 func reset() -> void:
 	_data = {}
-	_drilling = false
-	_resonance = 0.0
 	telemetry_visible = false
 	_panel.hide()
 	_backing.hide()
@@ -104,15 +85,12 @@ func _process(_delta: float) -> void:
 	_panel.size.x = 350.0
 	_backing.position = _panel.position - Vector2(10, 6)
 	_backing.size = _panel.size + Vector2(20, 12)
-	var progress := clampf(float(_data["progress"]), 0.0, 1.0)
 	var weak := bool(_data["weak"])
 	_name.text = str(_data["name"]).to_upper()
 	var tint: Color = _data["color"]
 	_name.modulate = tint.lerp(Color(0.84, 0.73, 0.51), 0.6)
-	_status.text = "%s %d%% · ZBÝVÁ %d / %d PŘIHRÁDEK" % ["PÁČENÍ" if _drilling else "VYPÁČENO", roundi(progress * 100.0), int(_data["remaining"]), int(_data["total"])]
-	_bar.value = progress
-	_hint.text = "ZÁMEK ×1,75 · ROZHÝBANÁ ZÁPADKA +%d%%" % roundi(_resonance * 35.0) if weak \
-			else "Drž F · Páč zámek + · Rozhýbání +%d%%" % roundi(_resonance * 35.0)
+	_status.text = "ZBÝVÁ %d / %d PŘIHRÁDEK · %d KOŘISTI" % [int(_data["remaining"]), int(_data["total"]), int(_data["yield_remaining"])]
+	_hint.text = "Stiskni F · Rozbij přihrádku · Volitelná kořist"
 	_hint.modulate = Color(0.91, 0.73, 0.39) if weak else Color(0.84, 0.78, 0.65)
 	var point: Vector3 = _data["weak_position"]
 	if _camera == null or _camera.is_position_behind(point):

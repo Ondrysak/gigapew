@@ -7,15 +7,15 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Tvarohomet"
-description = "Tvaroh (hlasky.txt:68). Pumpa vystřelí bílou hroudu; studený rozstřik poškodí a zpomalí celý houf v okolí zásahu."
-damage = 115
+description = "Studený rozstřik poškodí a zpomalí houf. Zastav rozběh, obejdi plát, přepni na dorážku."
+damage = 65
 damage_type = 2
 recoil_degrees = 0.11
-fire_interval = 0.34
+fire_interval = 0.42
 range_meters = 26.0
 knockback = 5.0
 view_scene = ExtResource("2_view")
 icon = ExtResource("icon_px")
-explosion_radius = 2.8
+explosion_radius = 3.0
 explosion_damage_fraction = 0.65
 explosion_knockback = 7.0

@@ -13,7 +13,7 @@ rings = 4
 
 [sub_resource type="StandardMaterial3D" id="BoltMaterial"]
 shading_mode = 0
-albedo_color = Color(1, 0.55, 0.12, 1)
+vertex_color_use_as_albedo = true
 
 [node name="Horde" type="Node3D"]
 script = ExtResource("1_horde")

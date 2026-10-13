@@ -43,6 +43,9 @@ var gear_health_multiplier := 1.0
 
 ## Effective primary and ordered hero skills retained across stage loads.
 var primary: WeaponBuild
+## Inactive equipped gun source; upgrades belong to the shared run build.
+var secondary_primary_source: WeaponDefinition
+## Draft/shop source list only: combat toggles the two equipped guns.
 var available_weapons: Array[WeaponDefinition] = []
 var ability_scenes: Array[PackedScene] = []
 const MAX_ABILITY_RANK := 3
@@ -181,11 +184,39 @@ func initialize_primary(source: WeaponDefinition) -> void:
 	if not available_weapons.has(primary.source):
 		available_weapons.append(primary.source)
 
-func swap_primary(source: WeaponDefinition) -> bool:
-	if primary == null or source == null or not available_weapons.has(source):
+## Commits a distinct, available gun pair at once: `first` becomes the active
+## primary, `second` its inactive partner. Shared ranks and gadget mods stay.
+func equip_pair(first: WeaponDefinition, second: WeaponDefinition) -> bool:
+	if not can_equip_pair(first, second):
 		return false
-	primary.swap(source)
+	secondary_primary_source = second
+	if primary.source != first:
+		primary.swap(first)
 	return true
+
+func can_equip_pair(first: WeaponDefinition, second: WeaponDefinition) -> bool:
+	return primary != null and first != null and second != null and first != second \
+			and available_weapons.has(first) and available_weapons.has(second)
+
+## Toggles the active gun with its equipped partner; never touches the catalog.
+func swap_equipped() -> bool:
+	if primary == null or secondary_primary_source == null or secondary_primary_source == primary.source:
+		return false
+	var previous := primary.source
+	primary.swap(secondary_primary_source)
+	secondary_primary_source = previous
+	return true
+
+## Effective gun `source` would become under the current shared ranks.
+func preview_weapon(source: WeaponDefinition) -> WeaponDefinition:
+	if primary == null or source == null:
+		return null
+	if source == primary.source:
+		return primary.definition
+	var preview := WeaponBuild.new()
+	preview.upgrade_levels = primary.upgrade_levels
+	preview.swap(source)
+	return preview.definition
 
 func ability_rank(slot: int) -> int:
 	return ability_ranks[slot] if slot >= 0 and slot < ability_ranks.size() else 0

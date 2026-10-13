@@ -7,10 +7,10 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Cihlomet"
-description = "Cihlomet (hlasky.txt:32). Tři opravdové cihly v úzké salvě; prorazí dva nepřátele v řadě a odhodí je ze stavby."
-damage = 90
+description = "Tři cihly v úzké salvě. Každá prorazí dvě těla a odhodí je; pevná střední lajna."
+damage = 60
 recoil_degrees = 0.16
-fire_interval = 0.46
+fire_interval = 0.5
 range_meters = 32.0
 pellet_count = 3
 spread_degrees = 1.6

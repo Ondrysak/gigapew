@@ -19,11 +19,12 @@ uniform float spoke_count = 12.0;
 
 void fragment() {
 	vec2 p = world_position.xz;
+	vec2 pattern = floor_hallucinated_uv(p);
 	vec2 local = p - area_center;
 	float half_tile = tile_size * 0.5;
 
-	float tile = aa_checker(p + half_tile, tile_size);
-	float seam = max(aa_grid_line(p.x, tile_size, half_tile, 0.03), aa_grid_line(p.y, tile_size, half_tile, 0.03));
+	float tile = aa_checker(pattern + half_tile, tile_size);
+	float seam = max(aa_grid_line(pattern.x, tile_size, half_tile, 0.03), aa_grid_line(pattern.y, tile_size, half_tile, 0.03));
 	vec3 base = mix(tile_a, tile_b, tile);
 	base = mix(base, seam_color, seam * 0.8);
 

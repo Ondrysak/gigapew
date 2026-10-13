@@ -16,6 +16,9 @@ func summary() -> String:
 
 func run() -> void:
 	var game := await lab.start_game()
+	# Baseline armor/status arithmetic is independent of musical timing;
+	# rhythm_combo exercises the live beat reward through actual gunfire.
+	Music.stop(0.0)
 	var horde := game.horde
 	var player := game.player
 	# Fixtures hold movement, not damage: every shot uses the real camera rays,
@@ -83,6 +86,7 @@ func run() -> void:
 	await _tag_and_area(game)
 	await _independent_sources(game)
 	await _stun_and_turn(game)
+	await _roles_and_impulse(game)
 	await _reuse_and_gallery(game)
 	horde.damage_reported.disconnect(_on_damage)
 	player.set_physics_process(true)
@@ -255,6 +259,79 @@ func _stun_and_turn(game: ArenaGame) -> void:
 	lab.check(absf(angle_difference(0.0, horde._yaw[slot])) <= BULWARK.turn_speed * 1.3 + 0.0001, "a rear flank stays exploitable for more than a second of actual steering")
 	horde.target = null
 	await lab.capture("stun_reposition")
+
+func _roles_and_impulse(game: ArenaGame) -> void:
+	var horde := game.horde
+	var player := game.player
+	var carrier := _target(game)
+	horde.target = player
+	player.global_position = Vector3(0, 1, 4)
+	var definition := lab.enemy("robot_runner")
+	horde.register_definition(definition)
+	horde.register_definition(lab.enemy("robot_grunt"))
+	horde.register_definition(lab.enemy("robot_spitter"))
+	var runner := horde.spawn(definition, Vector2(2, 9), 100.0)
+	var type: int = horde._type[runner]
+	var direct := Vector2(-2, -5).normalized()
+	horde._cooldown[runner] = 0.0
+	horde._steer(runner, type, direct, direct, 5.4, 0.01)
+	var locked := horde._aim[runner]
+	lab.check(horde._mode[runner] == Horde.Mode.WINDUP, "runner warns before its dash instead of simply moving faster")
+	player.global_position.x += 4.0
+	horde._steer(runner, type, Vector2.RIGHT, Vector2.RIGHT, 5.0, definition.telegraph_duration + 0.01)
+	var dash := horde._steer(runner, type, Vector2.RIGHT, Vector2.RIGHT, 5.0, 0.01)
+	lab.check(dash.is_equal_approx(locked * definition.charge_speed), "runner dash commits to the warned direction even after player movement")
+	horde._steer(runner, type, direct, direct, 5.0, definition.charge_duration + 0.01)
+	lab.check(horde._mode[runner] == Horde.Mode.RECOVER and horde._steer(runner, type, direct, direct, 5.0, 0.05) == Vector2.ZERO, "runner leaves a real stationary recovery window after its committed dash")
+	horde._mode[carrier] = Horde.Mode.WINDUP
+	horde.stun(carrier, 0.3)
+	lab.check(horde._mode[carrier] == Horde.Mode.SEEK and horde.is_stunned(carrier), "stagger interrupts the plated carrier attack without disabling its armor")
+	var grunt := lab.enemy("robot_grunt")
+	var first := horde.spawn(grunt, Vector2(-2, 9), 100.0)
+	var second := horde.spawn(grunt, Vector2(-3, 9), 100.0)
+	type = horde._type[first]
+	horde._phase[first] = PI * 0.5
+	horde._phase[second] = PI * 1.5
+	var left := horde._steer(first, type, Vector2.DOWN, Vector2.DOWN, 6.0, 0.01, true)
+	var right := horde._steer(second, type, Vector2.DOWN, Vector2.DOWN, 6.0, 0.01, true)
+	lab.check(left.x * right.x < 0.0 and left.y > 0.0 and right.y > 0.0, "ordinary grunts visibly approach on opposite flanking lanes")
+	var routed := horde._steer(first, type, Vector2.DOWN, Vector2.DOWN, 6.0, 0.01, false)
+	lab.check(routed.is_equal_approx(Vector2.DOWN * grunt.speed), "off open level floor (ramps/decks) grunts follow the route without a flank push")
+	var hp := horde._hp[first]
+	var feet := horde._pos[first]
+	_reported_events = 0
+	horde.blast_react(horde.enemy_position(first) + Vector3(0.6, 0, 0), 3.0, 16.0)
+	lab.check(horde._hp[first] == hp and _reported_events == 0 and horde.is_stunned(first) and horde._vy[first] > 0.0, "blast pressure staggers and launches without inventing HP damage or hit rewards")
+	horde._physics_process(0.08)
+	lab.check(horde._pos[first].distance_to(feet) > 0.1 and horde._y[first] > horde.ground_height(horde._pos[first]), "blast visibly displaces the same physical/render/precision body above the floor")
+	var spitter := lab.enemy("robot_spitter")
+	var ranged := horde.spawn(spitter, Vector2(0, 9), 100.0)
+	type = horde._type[ranged]
+	player.global_position = Vector3(0, 1, 4)
+	horde._cooldown[ranged] = 0.0
+	horde._steer(ranged, type, Vector2.UP, Vector2.UP, 5.0, 0.01)
+	var target_at := horde._attack_target[ranged]
+	player.global_position.x = 5.0
+	horde._shot_count = 0
+	horde._steer(ranged, type, Vector2.RIGHT, Vector2.RIGHT, 5.0, spitter.telegraph_duration + 0.01)
+	lab.check(horde._shot_count == 3 and horde._attack_target[ranged] == target_at, "ranged attack denies three committed lanes instead of tracking the dodging player")
+	var wall := StaticBody3D.new()
+	wall.collision_layer = 1
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(4, 3, 0.2)
+	var collision := CollisionShape3D.new()
+	collision.shape = shape
+	wall.add_child(collision)
+	game.world.add_child(wall)
+	wall.global_position = Vector3(0, 1.5, 7)
+	await lab.frames(2)
+	player.global_position = Vector3(0, 1, 4)
+	horde._mode[ranged] = Horde.Mode.SEEK
+	horde._cooldown[ranged] = 0.0
+	horde._steer(ranged, type, Vector2.UP, Vector2.UP, 5.0, 0.01)
+	lab.check(horde._mode[ranged] == Horde.Mode.SEEK and horde._has_lane[ranged] == 0, "world collision blocks a ranged windup and forces repositioning for line of sight")
+	wall.free()
+	horde.target = null
 
 func _reuse_and_gallery(game: ArenaGame) -> void:
 	var horde := game.horde

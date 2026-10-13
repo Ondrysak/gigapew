@@ -52,18 +52,6 @@ func _health(horde: Horde, maximum: bool = false) -> float:
 			total += horde._max_hp[slot] if maximum else horde._hp[slot]
 	return total
 
-func _kill_progress(game: ArenaGame, definition: HordeEnemyDefinition) -> int:
-	for quest in game.quests.quests:
-		if quest["kind"] == &"kill" and quest["definition"] == definition:
-			return int(quest["progress"])
-	return -1
-
-func _kill_target(game: ArenaGame, definition: HordeEnemyDefinition) -> int:
-	for quest in game.quests.quests:
-		if quest["kind"] == &"kill" and quest["definition"] == definition:
-			return int(quest["target"])
-	return -1
-
 func _ground_xp(game: ArenaGame) -> int:
 	var value := 0
 	for n in game.pickups._gems.count:
@@ -91,7 +79,6 @@ func _conservation_and_combat(game: ArenaGame, grunt: HordeEnemyDefinition) -> v
 	var health_before := _health(game.horde)
 	var maximum_before := _health(game.horde, true)
 	var kills_before := game.kills
-	var progress_before := _kill_progress(game, grunt)
 	var xp_before := _ground_xp(game)
 	lab.aim_at(Vector3(CENTER.x, 1.2, CENTER.y))
 	await lab.capture("dense_before")
@@ -101,12 +88,12 @@ func _conservation_and_combat(game: ArenaGame, grunt: HordeEnemyDefinition) -> v
 	var mega_count := game.horde.query_megas(_megas)
 	lab.check(mega_count > 0 and game.horde.alive_count < 8 and game.horde.population_count == 8, "persistent local crowd condenses visible bodies without freeing represented spawn pressure")
 	lab.check(is_equal_approx(_health(game.horde), health_before) and is_equal_approx(_health(game.horde, true), maximum_before), "fusion preserves remaining and maximum health instead of healing damaged enemies")
-	lab.check(game.kills == kills_before and _kill_progress(game, grunt) == progress_before and _ground_xp(game) == xp_before, "fusion grants no kills, species-contract progress or XP")
+	lab.check(game.kills == kills_before and _ground_xp(game) == xp_before, "fusion grants no premature kills or XP")
 	if mega_count == 0:
 		return
 	var mega := _megas[0]
 	var members := game.horde.fusion_members(mega)
-	lab.check(members >= 6 and members <= 8 and game.horde.get_definition(mega) == grunt, "mega retains bounded constituent count and original quest species")
+	lab.check(members >= 6 and members <= 8 and game.horde.get_definition(mega) == grunt, "mega retains bounded constituent count and actual original species identity")
 	var invalidated := true
 	for n in slots.size():
 		if game.horde.is_alive(slots[n]) and game.horde.fusion_members(slots[n]) > 1:
@@ -120,6 +107,7 @@ func _conservation_and_combat(game: ArenaGame, grunt: HordeEnemyDefinition) -> v
 	budget.max_alive = game.horde.population_count
 	game.director.setup(game.horde, budget, game.player, 909)
 	game.director.grace = 0.0
+	game.director._physics_process(0.1)
 	game.director._physics_process(10.0)
 	lab.check(game.horde.population_count == 8, "director cannot refill a full pressure budget merely because fusion freed render slots")
 	var gun := lab.weapon("pulse").duplicate() as WeaponDefinition
@@ -142,7 +130,6 @@ func _conservation_and_combat(game: ArenaGame, grunt: HordeEnemyDefinition) -> v
 	game.player.refresh_weapon()
 	_shot(game, game.horde.weak_spot_position(mega))
 	lab.check(not game.horde.is_alive(mega) and game.kills == kills_before + members and game.horde.population_count == 8 - members, "one actual primary mega defeat credits each constituent exactly once and releases its full pressure budget")
-	lab.check(_kill_progress(game, grunt) == mini(_kill_target(game, grunt), progress_before + members), "mega death credits the actual original species contract, with normal target clamping")
 	var admitted := (game.pickups._nonboss_kills / game.pickups.xp_kill_interval) * grunt.xp_value
 	lab.check(_ground_xp(game) - xp_before == admitted, "mega death preserves sparse every-third-kill XP admission, not a bonus mega drop")
 	_reset(game)

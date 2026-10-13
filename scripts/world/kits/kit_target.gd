@@ -11,6 +11,9 @@ extends RefCounted
 ##   One Obstacles StaticBody3D + BoxShape3D (size = full extents, rotated by
 ##   `yaw` radians about +Y around `center`) plus a matching batched visual box.
 ##   Kits pass `material = null`: collider only, the visual is a palette box.
+## - `round_solid(center: Vector3, radius: float, height: float) -> void`
+##   One upright Obstacles CylinderShape3D collider (no visual): round bars and
+##   pillars the horde rasterises as exact circles.
 ## - `visual(kind: StringName, xform: Transform3D, material: Material) -> void`
 ##   Visual-only primitive; `kind` is `&"box"`, `&"cylinder"` or `&"sphere"`.
 ##   Unit meshes (box 1×1×1, cylinder radius 0.5 height 1, sphere radius 0.5);
@@ -37,6 +40,7 @@ const SIGN_GRID := Vector2i(8, 8)
 enum Finish { MATTE, SATIN, METAL, GLOSS, MIRROR, GRIME }
 
 var solid: Callable
+var round_solid: Callable
 var visual: Callable
 var label: Callable
 var light: Callable
@@ -63,6 +67,12 @@ func add_solid(center: Vector3, size: Vector3, yaw: float, material: Material) -
 	solids_added += 1
 	if solid.is_valid():
 		solid.call(center, size, yaw, material)
+
+
+func add_round_solid(center: Vector3, radius: float, height: float) -> void:
+	solids_added += 1
+	if round_solid.is_valid():
+		round_solid.call(center, radius, height)
 
 
 func add_visual(kind: StringName, xform: Transform3D, material: Material) -> void:

@@ -1,7 +1,7 @@
 extends LabScenario
 
 ## Luďas's recorded voice through real game events: arrival, kill bursts,
-## combos, a skill unlock sequence, hurt/heal, extraction, clear and death;
+## combos, a skill unlock sequence, hurt/heal, DROP, clear and death;
 ## plus priority interruption and cooldowns that stop spam.
 
 func title() -> String:
@@ -24,11 +24,12 @@ func run() -> void:
 		game.horde.damage_direct(slot, 1.0e6, Vector3.ZERO, Vector3.ZERO)
 	await lab.wait(0.1)
 	lab.check(voice.history.has(&"ijee_1") or voice.history.has(&"ijee_2"), "a burst of %d kills triggers a multikill Ijéé" % game.BURST_KILLS)
-	var count := voice.history.size()
+	var multikills := voice.history.count(&"ijee_1") + voice.history.count(&"ijee_2")
 	for slot in lab.spawn_pack(lab.enemy("robot_grunt"), lab.ahead(0.0), game.BURST_KILLS, 0.0):
 		game.horde.damage_direct(slot, 1.0e6, Vector3.ZERO, Vector3.ZERO)
 	await lab.wait(0.1)
-	lab.check(voice.history.size() == count, "a second burst inside the cooldown stays quiet")
+	# Real XP from these kills may legitimately level up and play the skill line.
+	lab.check(voice.history.count(&"ijee_1") + voice.history.count(&"ijee_2") == multikills, "a second burst inside the cooldown stays quiet (%s)" % [voice.history])
 	# A skill unlock plays the Jaj… krajíc… chleba sequence and outranks chatter.
 	voice.stop()
 	voice.history.clear()

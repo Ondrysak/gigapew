@@ -36,6 +36,7 @@ func run() -> void:
 
 	# Each gem is earned through a real horde kill, well outside pickup radius.
 	game.run_state.xp_multiplier = 2.0
+	var grunt_xp := lab.enemy("robot_grunt").xp_value
 	var xp_before := _total_xp(game.run_state)
 	for at in [Vector2(20, 12), Vector2(-20, 12), Vector2(0, -12), Vector2(18, -8), Vector2(-18, -8), Vector2(0, 30)]:
 		_kill(game, at)
@@ -48,7 +49,7 @@ func run() -> void:
 	await lab.wait(0.15)
 	await lab.capture("magnet_pull")
 	await lab.wait(1.6)
-	lab.check(field._gems.count == 0 and _total_xp(game.run_state) == xp_before + 12, "magnet gathers all distant and already-homing gems exactly once with the XP multiplier")
+	lab.check(field._gems.count == 0 and _total_xp(game.run_state) == xp_before + 6 * grunt_xp * 2, "magnet gathers all distant and already-homing gems exactly once with the XP multiplier")
 	_kill(game, Vector2(20, 12))
 	await lab.wait(0.1)
 	lab.check(field._gems.count == 1 and field._gems.speeds[0] == 0.0, "later XP drops are loose again instead of inheriting a permanent global vacuum")
@@ -68,7 +69,7 @@ func run() -> void:
 	xp_before = _total_xp(game.run_state)
 	for n in 3:
 		_kill(game, Vector2(20 + n * 0.2, 12))
-	lab.check(field._gems.count == 2 and field._gems.values[0] + field._gems.values[1] == 3, "saturated XP storage merges a new kill instead of dropping its value")
+	lab.check(field._gems.count == 2 and field._gems.values[0] + field._gems.values[1] == 3 * grunt_xp, "saturated XP storage merges a new kill instead of dropping its value")
 	field.magnetize_xp()
 	for n in 2:
 		_kill(game, Vector2(20 + n * 0.2, 12))
@@ -78,7 +79,7 @@ func run() -> void:
 			break
 		await lab.get_tree().physics_frame
 	var earned := _total_xp(game.run_state) - xp_before
-	lab.check(field._gems.count == 0 and earned == 10, "overflow into a fully homing pool preserves all XP and awards no duplicates (loose=%d earned=%d)" % [field._gems.count, earned])
+	lab.check(field._gems.count == 0 and earned == 5 * grunt_xp * 2, "overflow into a fully homing pool preserves all XP and awards no duplicates (loose=%d earned=%d)" % [field._gems.count, earned])
 
 	# An explicit configured cadence proves the magnet boundary, not a default.
 	field.magnet_kill_interval = 5

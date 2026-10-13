@@ -19,15 +19,15 @@ uniform vec3 delirium : source_color = vec3(0.5, 0.18, 0.78);
 uniform vec4 ring_radii = vec4(5.0, 10.0, 15.0, 27.0);
 
 void fragment() {
-	vec2 p = world_position.xz;
+	vec2 p = floor_hallucinated_uv(world_position.xz);
 	float checker = aa_checker(p + tile_size * 0.5, tile_size);
 	float grout = max(aa_grid_line(p.x, tile_size, tile_size * 0.5, 0.012), aa_grid_line(p.y, tile_size, tile_size * 0.5, 0.012));
 	float speckle = zz_noise(p * 14.0) * 0.6 + zz_noise(p * 31.0) * 0.4;
 	vec3 color = mix(tile_a, tile_b, checker) * (0.78 + 0.4 * speckle);
 	color = mix(color, grout_color, grout * 0.85);
 
-	// Brass inlay rings of the hall's mosaic.
-	float radius = length(p - center);
+	// Brass navigation inlays remain anchored while the terrazzo finish warps.
+	float radius = length(world_position.xz - center);
 	float ring = 0.0;
 	for (int i = 0; i < 4; i++) {
 		float r = ring_radii[i];
@@ -44,7 +44,10 @@ void fragment() {
 	// Violet seeping up out of the cracks, slowly breathing.
 	float crack = abs(zz_fbm(p * 0.45 + vec2(5.0, 1.0)) - 0.5);
 	float vein = (1.0 - smoothstep(0.0, 0.025 + fwidth(crack), crack)) * smoothstep(0.35, 0.6, zz_fbm(p * 0.09 + 3.0));
-	float pulse = 0.55 + 0.45 * sin(TIME * 0.8 + radius * 0.25);
+	// Keep the legacy finish unchanged when inactive; an active floor lens
+	// freezes this existing slow vein along with its pattern coordinates.
+	float pulse_time = floor_hallucination_active() ? hallucination_time : TIME;
+	float pulse = 0.55 + 0.45 * sin(pulse_time * 0.8 + radius * 0.25);
 
 	ALBEDO = color;
 	EMISSION = delirium * vein * pulse * 0.55;

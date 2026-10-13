@@ -16,7 +16,7 @@ uniform vec3 grime_color : source_color = vec3(0.12, 0.095, 0.07);
 uniform vec3 puddle_color : source_color = vec3(0.05, 0.05, 0.055);
 
 void fragment() {
-	vec2 p = world_position.xz;
+	vec2 p = floor_hallucinated_uv(world_position.xz);
 
 	vec2 stone;
 	float joint = zz_bond(p, sett_size, 0.018, stone);

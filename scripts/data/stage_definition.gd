@@ -15,14 +15,10 @@ extends Resource
 @export_range(4, 32, 1) var cover_count := 16
 ## Raised decks, each reached by one ramp: high ground the horde must funnel up.
 @export_range(0, 4, 1) var overlook_count := 1
-## Interior ore rocks whose long faces host contract ore before the perimeter.
+## Optional salvage outcrops, never required to finish the arena.
 @export_range(0, 6, 1) var outcrop_count := 2
-## Mining and kill contract difficulty relative to the first campaign stage.
-@export_range(0.1, 5.0, 0.05) var quest_scale := 1.0
-## Contract size: mining objectives (Gold, then Cinder) and enemy-species kill
-## objectives. Early sectors ask for less while the player learns the loop.
-@export_range(1, 2, 1) var mine_objectives := 2
-@export_range(1, 2, 1) var kill_objectives := 2
+## Finite BUILD / PEAK encounters, each followed by a real survivor cleanup.
+@export_range(1, 8, 1) var arena_encounters := 4
 ## Seconds of calm on arrival before the director starts spawning.
 @export_range(0.0, 30.0, 0.5) var spawn_grace := 0.0
 @export var schedule: SpawnSchedule

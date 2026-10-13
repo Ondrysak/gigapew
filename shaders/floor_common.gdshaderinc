@@ -2,6 +2,8 @@
 // Periodic patterns fade to their average coverage once a pixel covers a
 // large part of one period, so large arenas stay free of moire.
 
+#include "res://shaders/floor_hallucination.gdshaderinc"
+
 varying vec3 world_position;
 
 void vertex() {

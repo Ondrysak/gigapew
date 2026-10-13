@@ -7,11 +7,13 @@ extends PanelContainer
 ## than expiring behind them.
 
 const TIPS := {
-	&"basics": ["POHYB A RÁNY", "WASD pro pohyb, myš pro míření. Drž LMB a útoč: munice nikdy nedojde. Kolečkem myši měníš zbraně."],
-	&"contract": ["TVŮJ KŠEFT", "Seznam vlevo je zakázka: vypáč požadovanou kořist z automatů, rozpráš uvedené halucinace a vyber alespoň dvě různé skrýše. U skrýše drž E; můžeš ji ukrást i pod palbou. Elitní drop se nepočítá, odmítnutí výbavy nevadí. Až celá zakázka přivolá odvoz."],
-	&"mining": ["VYSEKEJ AUTOMAT", "Zamiř zblízka na přihrádku: páčidlo se zvedne samo. Drž F a páč zámek označený + pro ×1,75 síly. Vytrvalé páčení stejné západky přidá až 35 %. Drobné z výherního automatu, Cigára z cigaretového, Kešulky z jackpotu."],
-	&"repair": ["UŽ SE SYPEŠ", "Přejdi přes červené lékárničky a doplň zdraví. Padají z nepřátel; časem poblíž přistanou i balíky zásob."],
-	&"extraction": ["ODVOZ", "Zakázka hotová! Běž ke světelnému sloupu a zůstaň v kruhu odvozu až do odjezdu. Halucinace do té doby přibývají."],
+	&"basics": ["POHYB A RÁNY", "WASD, myš a LMB. SPACE skočí, druhý SPACE ve vzduchu vyskočí znovu. CTRL spustí slide; můžeš dál střílet. Q nebo kolečko přepíná vybranou dvojici. RMB kope a odráží blízké přilétající střely."],
+	&"arena": ["KAM DÁL?", "Vyber hospodu, hernu, nonstop nebo metro a dojdi na místo. Fight začíná až tam. Rozpraš všechny živé a vyber další trasu; mezi fighty groove zůstává. Dvojici zbraní měníš jen během přestávky nebo v obchodě."],
+	&"mining": ["VYSEKEJ AUTOMAT", "Zamiř zblízka na přihrádku a jednou stiskni F. Jedna rána ji otevře a vysype skutečnou kořist. Pro další přihrádku pusť a znovu stiskni F. Nemusíš stát a páčit; arena pokračuje i bez kořisti."],
+	&"repair": ["OTOČ TO PROTI NIM", "Úspěšné parry a riskantní zabití zblízka doplní zdraví okamžitě. Samotné kopání do rekvizit ani zásahy do mrtvol nic nevrátí. Lékárničky a zásoby zůstávají další možností."],
+	&"drop": ["TEĎ PŘIJDE DROP", "Zabití nabíjí jeden DROP; přesná, rytmická, vzdušná a slide zabití jej urychlí. Až je připravený, novým stiskem LMB vystřel pomalou zbraní na beat pro ×10 a speciální efekt. Mimo beat normálně střílíš a náboj zůstává."],
+	&"pinball": ["NEPŘÍTEL JE PROJEKTIL", "Zamraz tvarohem a kopni do davu. Hořícího doraz brokovnicí. Vyhozeného sejmi railem. Zelektrizovaný dav odpal výbuchem. Slide kop vyhazuje, kop ze vzduchu sráží dolů."],
+	&"finisher": ["SALTO DO KSICHTU", "Zesláblý nepřítel zlatě pulzuje jen krátce. Zamiř až na 8 metrů a jednou stiskni F: skočíš k němu a salto zakončí kopem pro větší doplnění zdraví. Zeď, strop nebo ztracený cíl skok přeruší. Nejsi nesmrtelný a bossové se takhle dorazit nedají."],
 	&"combos": ["TRIKY DOHROMADY", "Výbušné triky uvnitř Ban zóny spustí POWNED za +60 %. Valhalla poblíž zóny spustí PERMABAN. Úprk pod štítem spustí LAST TIME KRATOS."],
 }
 const MIN_SECONDS := 5.0

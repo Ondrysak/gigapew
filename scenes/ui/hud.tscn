@@ -170,7 +170,7 @@ theme_override_colors/font_color = Color(0.55, 0.62, 0.66, 1)
 theme_override_font_sizes/font_size = 11
 text = "0 / 60"
 
-[node name="Contract" type="HBoxContainer" parent="."]
+[node name="ArenaRound" type="HBoxContainer" parent="."]
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -160.0
@@ -182,7 +182,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Label" type="Label" parent="Contract"]
+[node name="Label" type="Label" parent="ArenaRound"]
 layout_mode = 2
 theme_type_variation = &"DisplayLabel"
 theme_override_colors/font_color = Color(0.89, 0.83, 0.7, 1)
@@ -190,7 +190,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 23
-text = "ZAKÁZKA  0 / 4"
+text = "SET 1 / 3"
 
 [node name="Boss" type="PanelContainer" parent="."]
 visible = false
@@ -574,7 +574,7 @@ theme_override_colors/font_color = Color(0.86, 0.73, 0.43, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 18
-text = "DRŽ F · VYPÁČ PŘIHRÁDKU"
+text = "F · ROZBIJ / DORAZIT"
 horizontal_alignment = 1
 
 [node name="Controls" type="Label" parent="."]
@@ -592,7 +592,7 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 11
-text = "WASD POHYB · SPACE SKOK · LMB ÚTOK · 1–5 TRIKY · KOLEČKO ZBRAŇ · F PÁČ AUTOMAT · E POUŽÍT · ESC PAUZA"
+text = "WASD · SPACE 2× SKOK · CTRL SLIDE · LMB ÚTOK · RMB KOP/PARRY · Q SWAP · F ROZBIJ/DORAZIT · TAB ZBRANĚ V PAUZE · ESC"
 horizontal_alignment = 1
 
 [node name="Warning" type="Control" parent="."]
@@ -889,43 +889,43 @@ theme_override_styles/fill = SubResource("Bar_supply")
 max_value = 1.0
 show_percentage = false
 
-[node name="Quests" type="PanelContainer" parent="."]
+[node name="ArenaLedger" type="PanelContainer" parent="."]
 visible = false
 offset_left = 0.0
 offset_top = 148.0
-offset_right = 320.0
-offset_bottom = 390.0
+offset_right = 288.0
+offset_bottom = 318.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("Style_panel")
 
-[node name="Rows" type="VBoxContainer" parent="Quests"]
+[node name="Rows" type="VBoxContainer" parent="ArenaLedger"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
-[node name="Header" type="HBoxContainer" parent="Quests/Rows"]
+[node name="Header" type="HBoxContainer" parent="ArenaLedger/Rows"]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Title" type="Label" parent="Quests/Rows/Header"]
+[node name="Title" type="Label" parent="ArenaLedger/Rows/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.8, 0.73, 0.46, 1)
 theme_override_font_sizes/font_size = 14
-text = "TVŮJ KŠEFT"
+text = "ROZPRAŠ JE NA PRACH"
 
-[node name="Seed" type="Label" parent="Quests/Rows/Header"]
+[node name="Seed" type="Label" parent="ArenaLedger/Rows/Header"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.69, 0.63, 0.5, 1)
 theme_override_font_sizes/font_size = 11
 
-[node name="List" type="VBoxContainer" parent="Quests/Rows"]
+[node name="List" type="VBoxContainer" parent="ArenaLedger/Rows"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 5
 
-[node name="Hint" type="Label" parent="Quests/Rows"]
+[node name="Hint" type="Label" parent="ArenaLedger/Rows"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.78, 0.71, 0.57, 1)
 theme_override_font_sizes/font_size = 11
-text = "Zamiř zblízka na přihrádku · drž F a páč · dokonči zakázku pro odvoz"
+text = "Killy · parry · řetěz komba · nabij DROP\nKořist je volitelná. Fight začíná na místě."

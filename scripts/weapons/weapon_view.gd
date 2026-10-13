@@ -91,7 +91,7 @@ extends Node3D
 ## Hidden node authored at radius 1; pooled for explosive shots.
 @export var blast_template: Node3D
 @export var blast_pool_size := 6
-@export var blast_duration := 0.26
+@export var blast_duration := 0.38
 ## Visual radius as a fraction of the damage radius.
 @export var blast_visual_scale := 0.75
 ## Keep the blast template's own materials instead of tinting it by damage type (e.g. a fireball).
@@ -148,6 +148,11 @@ var _casing_spin := PackedVector3Array()
 var _casing_age := PackedFloat32Array()
 var _casing_next := 0
 var _landing_dip := 0.0
+## Gun ducks aside while the boot or free hand strikes (0..1, decays).
+var _brace := 0.0
+## Persistent visual-only slide tuck, independent of recoil and strike brace.
+var _sliding := false
+var _slide_blend := 0.0
 var _stride := 0.0
 var _sway := Vector2.ZERO
 var _flash_time := 0.0
@@ -168,6 +173,10 @@ var _puff_to := PackedVector3Array()
 var _puff_age := PackedFloat32Array()
 var _puff_next := 0
 var _blasts: Array[Node3D] = []
+var _blast_rings: Array[MeshInstance3D] = []
+var _shockwave_material: StandardMaterial3D
+var _blast_audio: AudioStreamPlayer
+var _blast_sound_cooldown := 0.0
 var _blast_times := PackedFloat32Array()
 var _blast_radii := PackedFloat32Array()
 var _projectiles: Array[Node3D] = []
@@ -200,6 +209,8 @@ func _ready() -> void:
 	_shot_audio.volume_db = shot_volume_db
 	_hit_audio = _make_audio(hit_sound)
 	_kill_audio = _make_audio(kill_sound)
+	_blast_audio = _make_audio(SynthCue.make(&"seismic_boom"))
+	_blast_audio.volume_db = -17.0
 	var hum := spin_sound if spin_sound != null else SynthCue.make(synth_spin)
 	if hum != null:
 		_spin_audio = _make_audio(hum)
@@ -229,6 +240,9 @@ func prepare(pellet_count: int) -> void:
 	_critical_material = _local_material(target_impact_material)
 	_blast_material = _local_material(null)
 	_blast_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_shockwave_material = _local_material(null)
+	_shockwave_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_shockwave_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if flash is MeshInstance3D:
 		var mesh_flash := flash as MeshInstance3D
 		_flash_material = _local_material(mesh_flash.get_active_material(0))
@@ -293,6 +307,11 @@ func prepare(pellet_count: int) -> void:
 		_projectile_duration.resize(count)
 	var blast_count := maxi(pellet_count, blast_pool_size)
 	var blast_mesh := _sphere_mesh(12, 6) if blast_count > 0 else null
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 0.93
+	ring_mesh.outer_radius = 1.0
+	ring_mesh.rings = 32
+	ring_mesh.ring_segments = 6
 	if blast_template != null:
 		blast_template.hide()
 	for index in range(blast_count):
@@ -309,6 +328,11 @@ func prepare(pellet_count: int) -> void:
 		blast.top_level = true
 		blast.hide()
 		_blasts.append(blast)
+		var ring := MeshInstance3D.new()
+		ring.mesh = ring_mesh
+		ring.material_override = _shockwave_material
+		_add_world_visual(ring)
+		_blast_rings.append(ring)
 	_blast_times.resize(blast_count)
 	_blast_times.fill(0.0)
 	_blast_radii.resize(blast_count)
@@ -372,6 +396,7 @@ func configure(definition: WeaponDefinition) -> void:
 	_tint(_flash_material, color.lerp(Color.WHITE, 0.35))
 	_tint(_critical_material, color.lerp(Color.WHITE, 0.7))
 	_tint(_blast_material, Color(color.r, color.g, color.b, 0.25))
+	_tint(_shockwave_material, Color(color.r, color.g, color.b, 0.7))
 	if flash_light != null:
 		flash_light.light_color = color
 	if not blast_keep_materials:
@@ -415,6 +440,14 @@ func aim(relative: Vector2) -> void:
 func land(falling_speed: float) -> void:
 	_landing_dip = minf(-falling_speed * 0.006, 0.055)
 
+## The free limb takes the frame: lower and roll the gun out of the way.
+func brace(amount: float) -> void:
+	_brace = maxf(_brace, clampf(amount, 0.0, 1.0))
+
+## Called every render frame; repeating the state never restarts the blend.
+func set_sliding(enabled: bool) -> void:
+	_sliding = enabled
+
 ## Spin-up progress 0..1 of a spinning gun (drives the spinner and its hum).
 func set_spin(ratio: float) -> void:
 	_spin = ratio
@@ -430,17 +463,23 @@ func set_spin(ratio: float) -> void:
 		_spin_audio.play()
 
 func animate_motion(delta: float, speed_ratio: float, lateral_speed: float, grounded: bool, active: bool) -> void:
+	if get_tree().paused:
+		return
 	var blend := 1.0 - exp(-18.0 * delta)
 	_step_kick(delta)
 	_landing_dip = lerpf(_landing_dip, 0.0, 1.0 - exp(-12.0 * delta))
+	_brace = move_toward(_brace, 0.0, delta * 3.5)
 	_sway = _sway.lerp(Vector2.ZERO, blend)
+	_slide_blend = move_toward(_slide_blend, 1.0 if _sliding else 0.0, delta * 6.0)
 	if active and grounded:
 		_stride += delta * 12.0 * speed_ratio
-	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio
+	var slide := _slide_blend * _slide_blend * (3.0 - 2.0 * _slide_blend)
+	var bob := Vector3(sin(_stride) * 0.012, absf(cos(_stride)) * 0.009, 0.0) * speed_ratio * (1.0 - slide)
 	# A spinning gun hums with a slight shake.
 	var buzz := Vector3(sin(_stride * 31.0 + _spin * 7.0), cos(_stride * 27.0 + _spin * 5.0), 0.0) * _spin * 0.0025
-	position = _rest + bob + buzz + Vector3(-_sway.x, _sway.y - _landing_dip, 0.0) + _kick_offset
-	rotation = _rest_rotation + Vector3(_kick_angle.x, _kick_angle.y, _kick_angle.z - lateral_speed * 0.002)
+	var duck := _brace * _brace * (3.0 - 2.0 * _brace)
+	position = _rest + bob + buzz + Vector3(-_sway.x + duck * 0.05 + slide * 0.075, _sway.y - _landing_dip - duck * 0.13 - slide * 0.095, duck * 0.04 - slide * 0.035) + _kick_offset
+	rotation = _rest_rotation + Vector3(_kick_angle.x - duck * 0.35 - slide * 0.16, _kick_angle.y + slide * 0.1, _kick_angle.z - lateral_speed * 0.002 - duck * 0.45 - slide * 0.32)
 	if _pump != null:
 		_pump_cycle = maxf(0.0, _pump_cycle - delta)
 		_pump.position = _pump_rest + Vector3.BACK * (sin(_pump_cycle / 0.26 * PI) * 0.07)
@@ -492,6 +531,9 @@ func _kick() -> void:
 	_clamp_kick()
 
 func _process(delta: float) -> void:
+	if get_tree().paused:
+		return
+	_blast_sound_cooldown = maxf(0.0, _blast_sound_cooldown - delta)
 	_flash_time = maxf(0.0, _flash_time - delta)
 	var flash_left := _flash_time / flash_duration if flash_duration > 0.0 else 0.0
 	if flash != null:
@@ -649,13 +691,16 @@ func show_ray(index: int, end: Vector3, normal: Vector3, hit_surface: bool, hit_
 			spark.scale = Vector3.ONE
 			spark.show()
 
-## Explosion flash at `at` for a blast of damage radius `radius`.
+## Pooled expanding pressure ring remains visible even when the flash is too close.
 func show_blast(at: Vector3, radius: float) -> void:
-	if _blasts.is_empty():
+	if _blasts.is_empty() or radius <= 0.0:
 		return
 	var visual_radius := radius * blast_visual_scale
-	if _view_camera() != null and _camera.global_position.distance_to(at) < visual_radius + min_view_clearance:
-		return
+	var flash_safe := _view_camera() == null or _camera.global_position.distance_to(at) >= visual_radius + min_view_clearance
+	if _blast_sound_cooldown <= 0.0:
+		_blast_audio.pitch_scale = clampf(1.45 - radius * 0.055, 0.7, 1.35)
+		_blast_audio.play()
+		_blast_sound_cooldown = 0.07
 	var slot := 0
 	for index in range(_blasts.size()):
 		if _blast_times[index] <= 0.0:
@@ -666,9 +711,14 @@ func show_blast(at: Vector3, radius: float) -> void:
 	var blast := _blasts[slot]
 	blast.global_position = at
 	blast.scale = Vector3.ONE * visual_radius * 0.3
-	blast.show()
+	blast.visible = flash_safe
+	var ring := _blast_rings[slot]
+	ring.global_position = at + Vector3.UP * 0.03
+	ring.scale = Vector3.ONE * radius * 0.15
+	ring.transparency = 0.0
+	ring.show()
 	_blast_times[slot] = blast_duration
-	_blast_radii[slot] = visual_radius
+	_blast_radii[slot] = radius
 
 func confirm_hit(killed: bool, sound: CombatAudio, chain: int, critical: bool = false) -> void:
 	var pitch := 1.0 + 0.045 * float(mini(chain, 7)) + (0.18 if critical and not killed else 0.0)
@@ -777,8 +827,12 @@ func _update_blasts(delta: float) -> void:
 		var blast := _blasts[index]
 		if _blast_times[index] <= 0.0:
 			blast.hide()
+			_blast_rings[index].hide()
 			continue
 		var progress := 1.0 - _blast_times[index] / blast_duration
 		# Snap out to full radius, then collapse as the flash fades.
 		var size := sin(minf(progress * 1.6, 1.0) * PI * 0.5) * (1.0 - progress * progress * 0.7)
-		blast.scale = Vector3.ONE * maxf(size, 0.02) * _blast_radii[index]
+		blast.scale = Vector3.ONE * maxf(size, 0.02) * _blast_radii[index] * blast_visual_scale
+		var radius := _blast_radii[index] * (0.15 + 0.85 * sqrt(progress))
+		_blast_rings[index].scale = Vector3(radius, maxf(0.08, radius * 0.3), radius)
+		_blast_rings[index].transparency = progress * progress

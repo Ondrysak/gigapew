@@ -95,6 +95,8 @@ func run() -> void:
 			await lab.capture("mute_" + String(AudioServer.get_bus_name(bus)))
 			AudioServer.set_bus_mute(bus, false)
 		game.horde.clear()
+		# Earlier weapon-effect kills leave real style pressure; begin salvage from a calm mix.
+		game.player._reset_combo()
 		# Exponential pressure release must fall below the normal acid threshold.
 		await lab.wait(8.0)
 		var deposit: MineralDeposit
@@ -113,6 +115,7 @@ func run() -> void:
 			var peak_drive := idle_drive
 			var saw_salvage := false
 			var salvage_kick := INF
+			# One fresh press: the short crowbar smash is the whole salvage contact.
 			Input.action_press(&"mine")
 			for sample in 7:
 				await lab.wait(0.05)
@@ -122,8 +125,11 @@ func run() -> void:
 					saw_salvage = true
 					salvage_kick = minf(salvage_kick, meter.gains[2])
 			Input.action_release(&"mine")
-			lab.check(deposit.health < before and peak_drive > idle_drive + 0.02, "fast held-F fracture cannot fall between music contact updates: actual acid gain rises")
-			await lab.capture("fast_pry")
+			lab.check(deposit.health < before and peak_drive > idle_drive + 0.02, "one fresh F smash opens a real compartment and its short contact audibly raises acid gain")
+			await lab.capture("one_press_smash")
+			await lab.wait(0.6)
+			Music.sample_mix(meter)
+			lab.check(meter.gains[3] <= idle_drive + 0.02, "acid salvage drive returns to the calm mix once the smash ends")
 			# A beat-quantized 388 ms vocal may finish during the pry screenshot.
 			# Observe it during contact too, rather than requiring it afterwards.
 			for attempt in 50:

@@ -7,11 +7,11 @@
 [resource]
 script = ExtResource("1_definition")
 display_name = "Rum + zapalovač"
-description = "Krátký dosah, souvislý plamen. Propálí několik halucinací za sebou."
-damage = 11
+description = "Krátký plamen propálí několik těl. Hoření obejde plát; zapal, uhni, nech rum pracovat."
+damage = 5
 damage_type = 1
 recoil_degrees = 0.04
-fire_interval = 0.045
+fire_interval = 0.065
 range_meters = 10.0
 pellet_count = 6
 spread_degrees = 11.0

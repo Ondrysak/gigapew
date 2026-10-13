@@ -230,7 +230,7 @@ func _build_frame() -> void:
 	_box("BeaconMast", Vector3(-1.65, 4.0, 0.0), Vector3(0.09, 1.7, 0.09), frame_material)
 	_box("Beacon", Vector3(-1.65, 4.85, 0.0), Vector3(0.32, 0.32, 0.32), _beacon_material)
 	_box("MeterBack", Vector3(0.0, 2.84, 0.24), Vector3(2.8, 0.12, 0.05), frame_material)
-	_meter = _box("ExtractionMeter", Vector3(-1.39, 2.84, 0.28), Vector3(1.0, 0.065, 0.03), _beacon_material)
+	_meter = _box("StockMeter", Vector3(-1.39, 2.84, 0.28), Vector3(1.0, 0.065, 0.03), _beacon_material)
 	for index in 3:
 		_box("ResponseLamp%d" % index, Vector3(-0.55 + index * 0.55, 3.43, 0.16), Vector3(0.25, 0.12, 0.08), _beacon_material)
 	_status = Label3D.new()
@@ -262,10 +262,11 @@ func _update_frame() -> void:
 	var color := Color(0.25, 0.85, 0.95)
 	match state:
 		State.WAITING:
-			_status.text = "HLÍDANÝ AUTOMAT / DRŽ F A PÁČ"
+			_status.text = "VOLITELNÝ AUTOMAT / [F] ROZBIJ PŘIHRÁDKU"
 		State.MINING, State.DEFENDING:
 			color = Color(1.0, 0.48, 0.16)
-			_status.text = "%d%% VYPÁČENO / VLNA %d/3 / %d HALUCINACÍ" % [roundi(value * 100.0), mini(pack_index + 1, 3), enemies_remaining()]
+			var unopened := deposit._remaining if is_instance_valid(deposit) else 0
+			_status.text = "%d PŘIHRÁDEK / VLNA %d/3 / %d HALUCINACÍ" % [unopened, mini(pack_index + 1, 3), enemies_remaining()]
 		State.READY:
 			color = Color(0.3, 1.0, 0.65)
 			_status.text = "AUTOMAT TVŮJ / [E] VYBER VYLEPŠENÍ"

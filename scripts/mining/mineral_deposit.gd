@@ -251,10 +251,17 @@ func feedback_at(hit_position: Vector3, shape_index: int) -> Dictionary:
 		"yield_remaining": total_yield - yield_emitted,
 	}
 
+## One physical crowbar contact opens exactly the hit compartment.
+func smash_compartment(hit_position: Vector3, shape_index: int) -> void:
+	var index := _fragment_at(shape_index)
+	if index < 0:
+		return
+	take_mining_damage(float(_sections[index]["maximum"]), hit_position, shape_index)
+
 func take_mining_damage(amount: float, hit_position: Vector3, shape_index: int) -> void:
 	last_chunk_broken = false
 	last_hit_weak = false
-	if health <= 0.0 or amount <= 0.0:
+	if get_tree().paused or health <= 0.0 or amount <= 0.0:
 		return
 	var feedback := feedback_at(hit_position, shape_index)
 	if feedback.is_empty():
@@ -298,15 +305,18 @@ func take_mining_damage(amount: float, hit_position: Vector3, shape_index: int) 
 		collider.set_deferred("disabled", true)
 		# Book the payout before signals: re-entrant hits cannot pay twice.
 		yield_emitted += int(section["yield"])
-	struck.emit(self)
-	if last_chunk_broken:
-		fragment_mined.emit(self, int(section["yield"]), hit_position)
-	if _remaining == 0:
+	var opened := last_chunk_broken
+	var emptied := opened and _remaining == 0
+	if emptied:
 		if _lamps != null:
 			_lamps.set_instance_shader_parameter("out_of_order", 1.0)
 		else:
 			_set_slot("out_of_order", 1.0)
 		health = 0.0
+	struck.emit(self)
+	if opened:
+		fragment_mined.emit(self, int(section["yield"]), hit_position)
+	if emptied:
 		depleted.emit(self)
 
 ## Struck-door highlight: albedo on the vending doors, an instance uniform on fruit machines.

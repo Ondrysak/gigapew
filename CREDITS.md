@@ -28,6 +28,12 @@ bundled libraries, not the original game code.
 
 ## Visual and design inspiration
 
+CrystalDive's `src/modes/core_modes.wgsl`, `mode_moire.wgsl` and
+`mode_bragg_kaleido.wgsl` informed the hallucination presets: analytic-gradient
+lensing, twisted surface lattices and radius-preserving polar folds.
+The Godot floor fields, screen presets and rotating source-head copies are
+original adaptations; no CrystalDive assets or rendering pipeline are shipped.
+
 
 Derek Mattson's [GDC 2024 *A Second Shot*](https://media.gdcvault.com/gdc2024/Slides/GDC+slide+presentations/Mattson_Derek_ASecondShot_Notes.pdf)
 informed the emphasis on reliable target feedback before camera effects. The

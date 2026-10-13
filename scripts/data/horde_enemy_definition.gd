@@ -4,7 +4,10 @@ extends Resource
 ## Gameplay data for one horde enemy type. Enemies are simulated in bulk by
 ## Horde; `model_scene` is baked once into a shared mesh for batched drawing.
 
-enum Behavior { SWARM, RANGED, CHARGER }
+## THROWER lobs a parryable bottle at the spot the player stood; BOUNCER is a
+## heavy body that physically blocks the player and shoves after a windup;
+## HYPE hangs back and speeds up allies in its aura until it dies or they leave.
+enum Behavior { SWARM, RANGED, CHARGER, RUNNER, CARRIER, THROWER, BOUNCER, HYPE }
 enum Faction { MACHINE, FLESH }
 
 @export var display_name := "Grunt"
@@ -52,6 +55,17 @@ enum Faction { MACHINE, FLESH }
 @export var charge_range := 10.0
 @export var charge_speed := 14.0
 @export var charge_duration := 0.6
+## Committed attacks leave a real stationary punish window.
+@export var recovery_duration := 0.9
+
+@export_group("Bouncer")
+## Horizontal velocity given to the player by a landed shove (m/s).
+@export var shove_impulse := 13.0
+
+@export_group("Hype")
+## Allies within this radius of a living hype man move and attack faster.
+@export var aura_radius := 7.0
+
 
 @export_group("Faction")
 ## Selects hit/death effects: machines burst into sparks and debris, flesh into splatter.

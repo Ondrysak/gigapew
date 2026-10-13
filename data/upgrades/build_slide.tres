@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/servo_striders.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"build_slide"
+display_name = "Mokrá podlaha"
+description = "Build SKLUZ: skluz vyrazí o 25 % rychleji a kop, který trefí během skluzu, hned nabije další kop."
+level_descriptions = PackedStringArray("Build SKLUZ: skluz vyrazí o 25 % rychleji. Kop, který trefí během skluzu, hned nabije další kop.", "Build SKLUZ: skluz vyrazí o 50 % rychleji. Kop, který trefí během skluzu, hned nabije další kop.")
+kind = 3
+max_level = 2
+weight = 1.2
+accent_color = Color(0.36, 0.78, 1, 1)
+icon = ExtResource("icon_px")

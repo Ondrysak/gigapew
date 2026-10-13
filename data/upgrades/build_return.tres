@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_definition.gd" id="1_definition"]
+[ext_resource type="Texture2D" path="res://assets/icons/upgrades/perk_thorns.png" id="icon_px"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"build_return"
+display_name = "Zpátky k odesílateli"
+description = "Build ODRAZ: odpal dosáhne o 0,75 m dál, odražená střela dá dvojnásobek, letí na nejbližšího a nabije kop."
+level_descriptions = PackedStringArray("Build ODRAZ: odpal dosáhne o 0,75 m dál. Odražená střela dá dvojnásobek, sama letí na nejbližšího nepřítele a hned nabije kop.", "Build ODRAZ: odpal dosáhne o 1,5 m dál. Odražená střela dá trojnásobek, sama letí na nejbližšího nepřítele a hned nabije kop.")
+kind = 3
+max_level = 2
+weight = 1.2
+accent_color = Color(1, 0.62, 0.25, 1)
+icon = ExtResource("icon_px")

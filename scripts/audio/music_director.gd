@@ -2,7 +2,7 @@ extends Node
 ## Adaptive procedural soundtrack, registered as the `Music` autoload.
 ## Sample-backed hardtek stems and original stingers render on worker threads.
 ## Stems start under the audio lock; gameplay changes gains, not sample buffers.
-## Boss/extraction changes and short vocal accents land on musical boundaries.
+## Boss changes and short vocal accents land on musical boundaries.
 ## Spoken Luďas reactions take precedence over the chopped vocal layer.
 
 const BUS := &"Music"
@@ -21,7 +21,7 @@ const ACCENTS := {
 	&"salvage": [1, preload("res://assets/voice/ludas/chleba.wav"), 1.0],
 	&"combo": [2, preload("res://assets/voice/ludas/ijee_haa.wav"), 1.08],
 	&"danger": [3, preload("res://assets/voice/ludas/hrrr.wav"), 0.92],
-	&"extraction": [4, preload("res://assets/voice/ludas/plna_rychlost.wav"), 1.04],
+	&"drop": [4, preload("res://assets/voice/ludas/plna_rychlost.wav"), 1.04],
 }
 
 class Track:
@@ -428,6 +428,31 @@ func _time_to_next_bar() -> float:
 	var position := state.players[0].get_playback_position() + AudioServer.get_time_since_last_mix()
 	return bar - fmod(position, bar)
 
+
+## Quarter-note timing follows the rounded PCM grid, not the nominal BPM label.
+func beat_seconds() -> float:
+	if _composition == null:
+		return 0.0
+	var state: Track = _tracks.get(&"stage")
+	var pitch := state.players[0].pitch_scale if state != null and not state.players.is_empty() else 1.0
+	return MusicScore.bar_seconds(&"stage", _composition) * 0.25 / pitch
+
+## Audible stage phase; no invented oscillator while loading, muted or paused.
+## Playback position is in stream seconds, so compensate mixer/output latency
+## in the same domain before wrapping across the continuous loop boundary.
+func beat_phase() -> float:
+	if get_tree().paused or _current != &"stage" or _composition == null:
+		return -1.0
+	var state: Track = _tracks.get(&"stage")
+	if state == null or not state.playing or state.fade <= 0.001 or _meter_bus_gain(BUS) <= 0.0001:
+		return -1.0
+	var source := state.players[0]
+	if not source.playing:
+		return -1.0
+	var period := MusicScore.bar_seconds(&"stage", _composition) * 0.25
+	var audible := source.get_playback_position() \
+		+ (AudioServer.get_time_since_last_mix() - AudioServer.get_output_latency()) * source.pitch_scale
+	return fposmod(audible / period, 1.0)
 
 func _time_to_next_beat() -> float:
 	var state: Track = _tracks.get(_current)

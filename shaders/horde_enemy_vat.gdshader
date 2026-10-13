@@ -77,27 +77,48 @@ void vertex() {
 	// Fused stomps follow the sampled gait and freeze with it while paused.
 	float wave = v_fusion > 0.0 ? local / float(count) * HORDE_TAU + phase
 		: TIME * bob_speed * (1.0 + variation * 0.08) + phase;
+	bool spin_head = anatomy_enabled && mod(UV2.y, 8.0) < 2.5
+		&& (hallucination_mode == 4 || hallucination_mode == 5);
+	vec3 pivot_delta = vec3(0.0);
+	vec3 tip_delta = vec3(0.0);
+	if (anatomy_enabled) {
+		int piece = clamp(int(mod(UV2.y, 8.0)) - 1, 0, 5);
+		pivot_delta = anatomy_joint_delta(anatomy_pivot_refs[piece], start, f0, f1, blend, width, rows);
+		tip_delta = anatomy_joint_delta(anatomy_tip_refs[piece], start, f0, f1, blend, width, rows);
+	}
+	// Carry the attachment through exactly the same sampled VAT/procedural
+	// pose as its source head, before applying the phantom-only carousel.
+	vec3 head_pivot = anatomy_head_origin + pivot_delta;
 	if (sway_amplitude != 0.0 && v_fusion <= 0.0) {
 		float roll = sin(wave) * sway_amplitude * (1.0 + variation * 0.12);
 		float pitch = sin(wave * 0.5 + phase * 0.3 + 1.3) * sway_amplitude * 0.6;
 		mat3 lean = mat3(vec3(cos(roll), sin(roll), 0.0), vec3(-sin(roll), cos(roll), 0.0), vec3(0.0, 0.0, 1.0))
 			* mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, cos(pitch), sin(pitch)), vec3(0.0, -sin(pitch), cos(pitch)));
 		posed = lean * posed;
+		if (spin_head) {
+			head_pivot = lean * head_pivot;
+		}
 		normal = lean * normal;
 		TANGENT = lean * TANGENT;
 		BINORMAL = lean * BINORMAL;
 	}
 	if (v_fusion > 0.0) {
 		horde_fused_pose(posed, normal, TANGENT, BINORMAL, v_fusion, wave);
+		if (spin_head) {
+			head_pivot += horde_fusion_push(head_pivot, mix(0.85, 1.0, v_fusion), wave) * fusion_torso(head_pivot).w;
+		}
 	} else {
 		posed.y += sin(wave) * bob_amplitude * (1.0 + variation * 0.12);
+		if (spin_head) {
+			head_pivot.y += sin(wave) * bob_amplitude * (1.0 + variation * 0.12);
+		}
 	}
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	vec3 camera = INV_VIEW_MATRIX[3].xyz;
 	if (anatomy_enabled) {
-		int piece = clamp(int(mod(UV2.y, 8.0)) - 1, 0, 5);
-		vec3 pivot_delta = anatomy_joint_delta(anatomy_pivot_refs[piece], start, f0, f1, blend, width, rows);
-		vec3 tip_delta = anatomy_joint_delta(anatomy_tip_refs[piece], start, f0, f1, blend, width, rows);
+		if (spin_head) {
+			pivot_delta = head_pivot - anatomy_head_origin;
+		}
 		horde_anatomy_pose(posed, normal, TANGENT, BINORMAL, UV2.y, phase, pivot_delta, tip_delta, origin, camera);
 	}
 	VERTEX = posed;
@@ -105,13 +126,15 @@ void vertex() {
 	if (length(origin.xz - camera.xz) < near_cull) {
 		VERTEX = vec3(0.0);
 	}
-	v_flash = preview_frame >= 0.0 ? 0.0 : INSTANCE_CUSTOM.x * flash_strength;
+	v_flash = preview_frame >= 0.0 ? 0.0 : horde_flash(INSTANCE_CUSTOM.x) * flash_strength;
+	v_status = preview_frame >= 0.0 ? 0.0 : horde_status(INSTANCE_CUSTOM.x);
 	v_telegraph = preview_frame >= 0.0 ? 0.0 : INSTANCE_CUSTOM.y;
 	v_frost = preview_frame >= 0.0 ? 0.0 : INSTANCE_CUSTOM.w;
 }
 
 void fragment() {
 	horde_surface(UV, NORMAL, VIEW, TIME, v_local, v_fusion, v_flash, v_telegraph, v_frost, ALBEDO, ROUGHNESS, METALLIC, EMISSION);
+	horde_status_surface(v_status, NORMAL, VIEW, TIME, v_local, ALBEDO, EMISSION);
 	if (use_normal_texture) {
 		NORMAL_MAP = texture(normal_texture, UV).rgb;
 		NORMAL_MAP_DEPTH = normal_scale;
